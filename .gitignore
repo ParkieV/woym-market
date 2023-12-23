@@ -3,6 +3,7 @@ env/
 __pycache__/
 *.ipynb
 *.vscode/
+.idea
 
 
 node_modules/

@@ -4,7 +4,8 @@ from os import getenv
 
 DBUSER = getenv('DBUSER', 'admin123')
 DBPASSWORD = getenv('DBPASSWORD', 'p0ssw0rd')
-DBHOST = getenv('DBHOST', 'db')
+DBHOST = getenv('DBHOST', 'localhost')
 DBNAME = getenv('DBNAME', 'postgres')
 DBPORT = getenv('DBPORT', '5432')
 RESET_DB = getenv('RESET_DB', 'True')
+YANDEX_MARKET_TOKEN = getenv('YANDEX_MARKET_TOKEN', 'y0_AgAAAAAW8Hr_AAsIRgAAAAD1j7NA7uQ9YJbpR-elaniG1o-TiKxVJhU')

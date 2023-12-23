@@ -5,6 +5,7 @@ import src.database.user_db as db
 import src.services.auth_utils as auth
 from src.database.models.models import Users
 
+
 async def registration_user(login: str, password: str):
     new_user = await auth.reg_user(login, password)
     return new_user

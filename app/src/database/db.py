@@ -1,4 +1,4 @@
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy.engine.reflection import Inspector
@@ -11,7 +11,8 @@ from sqlalchemy.schema import (
     )
 
 
-import src.params.confing as env
+# import src.params.confing as env
+from ..params import confing as env
 from .models.base import Base
 
 
@@ -24,11 +25,19 @@ engine = create_async_engine(
     pool_pre_ping=True
 )
 
-async_session = sessionmaker(
+# async_session = sessionmaker(
+#     engine,
+#     expire_on_commit=False,
+#     class_=AsyncSession
+# )
+
+
+async_session = async_sessionmaker(
     engine,
     expire_on_commit=False,
     class_=AsyncSession
 )
+
 
 def drop_everything(engine):
     con = engine.connect()
