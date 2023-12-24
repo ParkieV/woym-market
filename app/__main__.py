@@ -1,19 +1,27 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
 from src.routers.offer_router import offer_router
 from src.database.db import db_create
-
+import aioschedule
 
 app: FastAPI = FastAPI()
+
+
+# async def test_job():
+#     print(1)
+#
+# aioschedule.every(5).seconds.do(test_job)
 
 
 @app.on_event('startup')
 async def startup():
     db_create()
+    # while True:
+    #     await aioschedule.run_pending()
+
 
 origins = [
     'http://localhost',
@@ -33,6 +41,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(offer_router)
+
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8000)

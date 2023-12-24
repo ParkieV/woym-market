@@ -1,4 +1,5 @@
 from fastapi import APIRouter, UploadFile
+from fastapi.responses import FileResponse
 from src.schemas.offer_schemas import OfferOut, OfferChange
 from src.services import offer_service as service
 
@@ -15,7 +16,7 @@ async def get_offers(limit: int = 600, offset: int = 0):
 
 @offer_router.post('/change')
 async def change_offer_fields(offers_data: list[OfferChange]):
-    raise NotImplementedError()
+    return await service.change_offer(offers_data)
 
 
 @offer_router.post('/setup')
@@ -25,7 +26,13 @@ async def setup_offers_data():
 
 @offer_router.get('/export')
 async def export_offers():
-    raise NotImplementedError()
+    path = await service.build_csv()
+    return FileResponse(path=path, filename='out.csv', media_type='multipart/form-data')
+
+
+@offer_router.get('/test_update')
+async def test_update():
+    return await service.update_offers()
 
 
 @offer_router.post('/import')

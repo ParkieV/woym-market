@@ -27,6 +27,7 @@ class OfferOut(BaseModel):
     price_before_discount: float
     profit: float
     payback: float
+    fby: float
 
     # User additional fields
     notation_1: str | None = None

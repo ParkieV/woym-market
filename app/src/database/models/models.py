@@ -53,6 +53,7 @@ class Offer(Base):
     price_before_discount = Column(Float)
     profit = Column(Float)
     payback = Column(Float)
+    fby = Column(Float)
 
     # User additional fields
     notation_1 = Column(String, nullable=True)
