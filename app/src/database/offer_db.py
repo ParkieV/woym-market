@@ -5,8 +5,8 @@ from ..schemas.offer_schemas import OfferChange
 import json
 
 
-async def get_offers(session: AsyncSession, limit: int = 600, offset: int = 0) -> list[Offer]:
-    query = select(Offer).offset(offset).limit(limit)
+async def get_offers(session: AsyncSession) -> list[Offer]:
+    query = select(Offer)
     offers = await session.execute(query)
     return offers.unique().scalars().all()
 
@@ -30,8 +30,8 @@ async def change_offer(session: AsyncSession, offers_data: list[OfferChange]):
 
 
 async def update_offers(session: AsyncSession, offers_data):
-
     for offer_data in offers_data:
+        del offer_data['id']
         await session.execute(update(Offer).where(Offer.sku == offer_data['sku']).values(**offer_data))
 
     await session.commit()

@@ -1,3 +1,5 @@
+import asyncio
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,20 +9,34 @@ from src.routers.offer_router import offer_router
 from src.database.db import db_create
 import aioschedule
 
+import io
+
+io.BytesIO()
+
 app: FastAPI = FastAPI()
 
 
-# async def test_job():
-#     print(1)
-#
-# aioschedule.every(5).seconds.do(test_job)
+async def test_job():
+    print(1)
+
+
+async def scheduler():
+    aioschedule.every(5).seconds.do(test_job)
+
+    while True:
+        await aioschedule.run_pending()
+        await asyncio.sleep(1)
+
+
+async def to_startup():
+    asyncio.create_task(scheduler())
 
 
 @app.on_event('startup')
 async def startup():
     db_create()
-    # while True:
-    #     await aioschedule.run_pending()
+    # await to_startup()
+
 
 
 origins = [

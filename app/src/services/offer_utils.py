@@ -26,7 +26,7 @@ def build_offers_data(yandex_offers: list[ExtendedYandexOfferInfo], settlement_p
                       minimum_markup: float = 200):
     course = 5
     data = pd.DataFrame(jsonable_encoder(yandex_offers))
-    data['parches'] = np.random.randint(5, 100, size=(100, 1))  # закупка
+    data['parches'] = np.random.randint(5, 100, size=(data.shape[0], 1))  # закупка
     data['settlement_price_factor'] = settlement_price_factor
     data['minimum_markup'] = minimum_markup
 

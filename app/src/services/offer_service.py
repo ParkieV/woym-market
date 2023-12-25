@@ -13,9 +13,9 @@ from ..database.models.models import Offer
 yandex_repository = YandexMarketRepository(env.YANDEX_MARKET_TOKEN)
 
 
-async def get_offers(limit: int = 600, offset: int = 0):
+async def get_offers():
     async with async_session() as session:
-        return await db.get_offers(session, limit, offset)
+        return await db.get_offers(session)
 
 
 async def change_offer(offers_data: list[OfferChange]):
@@ -30,7 +30,7 @@ async def change_offer(offers_data: list[OfferChange]):
 
 
 async def setup_offers_data():
-    yandex_offers = yandex_repository.get_offers()
+    yandex_offers = await yandex_repository.get_offers()
     data = utils.build_offers_data(yandex_offers)
 
     async with async_session() as session:
@@ -41,7 +41,7 @@ async def setup_offers_data():
 async def update_offers():
     db_offers = jsonable_encoder(await get_offers())
     offers_df = pd.DataFrame(db_offers)
-    yandex_offers = jsonable_encoder(yandex_repository.get_offers())
+    yandex_offers = jsonable_encoder(await yandex_repository.get_offers())
     yandex_offers_df = pd.DataFrame(yandex_offers)
 
     json_data = utils.update_offers_data(offers_df, yandex_offers_df)
@@ -57,3 +57,5 @@ async def build_csv():
     df = pd.DataFrame(offers)
     df.to_csv('data/out.csv', encoding='utf-8')
     return 'data/out.csv'
+
+

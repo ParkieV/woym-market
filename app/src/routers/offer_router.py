@@ -10,8 +10,8 @@ offer_router = APIRouter(
 
 
 @offer_router.get('/', response_model=list[OfferOut])
-async def get_offers(limit: int = 600, offset: int = 0):
-    return await service.get_offers(limit, offset)
+async def get_offers():
+    return await service.get_offers()
 
 
 @offer_router.post('/change')
