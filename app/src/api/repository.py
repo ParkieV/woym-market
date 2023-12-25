@@ -86,10 +86,10 @@ class YandexMarketRepository:
                 sku=offer['offerId'],
                 name=offer['name'],
                 weight=offer['weightDimensions']['weight'],
-                length=offer['weightDimensions']['length'],
-                width=offer['weightDimensions']['width'],
-                height=offer['weightDimensions']['height'],
-                volume_from_yandex=0, # не нашел
+                length=offer['weightDimensions']['length']/100,
+                width=offer['weightDimensions']['width']/100,
+                height=offer['weightDimensions']['height']/100,
+                volume_from_yandex=(offer['weightDimensions']['length'] * offer['weightDimensions']['width'] * offer['weightDimensions']['height'])/5000,
                 photo=offer['pictures'][0] if len(offer['pictures']) > 0 else None,
             ))
 

@@ -43,7 +43,7 @@ class OfferOut(BaseModel):
 
 class OfferChange(BaseModel):
     sku: str
-
+    parches: float
     minimum_markup: float
     settlement_price_factor: float
 

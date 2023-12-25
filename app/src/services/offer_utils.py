@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import json
 from src.schemas.yandex_api_schemas import ExtendedYandexOfferInfo
+from src.schemas.offer_schemas import OfferChange
 
 
 def count_fby(data: pd.DataFrame) -> float:
@@ -11,7 +12,7 @@ def count_fby(data: pd.DataFrame) -> float:
 
 def calculate_offers_values(data: pd.DataFrame, course: float) -> pd.DataFrame:
     data['fby'] = count_fby(data)
-    data['volume'] = (data['length'] * data['width'] * data['height']) / 100
+    data['volume'] = data['length'] * data['width'] * data['height']
     data['cost_price'] = data['parches'] * course
     data['settlement_price'] = np.where(data['cost_price'] > 200, data['cost_price'] * data['settlement_price_factor'],
                                         data['cost_price'] * data['settlement_price_factor'] + data['minimum_markup'])
@@ -34,6 +35,20 @@ def build_offers_data(yandex_offers: list[ExtendedYandexOfferInfo], settlement_p
     return json.loads(data.to_json(orient='records'))
 
 
+def change_offers_editable_fields(data: pd.DataFrame, changes: list[OfferChange]):
+    course = 5
+
+    changes = pd.DataFrame(jsonable_encoder(changes))
+
+    for column_name in changes.columns:
+        data[column_name] = changes[column_name]
+
+    data = calculate_offers_values(data, course)
+    data.drop('id', axis=1)
+
+    return json.loads(data.to_json(orient='records'))
+
+
 def update_offers_data(last_frame: pd.DataFrame, yandex_frame: pd.DataFrame):
     course = 5
     updated_data = last_frame.copy()
@@ -41,6 +56,7 @@ def update_offers_data(last_frame: pd.DataFrame, yandex_frame: pd.DataFrame):
         updated_data[column_name] = yandex_frame[column_name]
 
     updated_data = calculate_offers_values(updated_data, course)
+    updated_data.drop('id', axis=1)
 
     return json.loads(updated_data.to_json(orient='records'))
 

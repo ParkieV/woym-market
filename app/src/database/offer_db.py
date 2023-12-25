@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from .models.models import Offer
 from ..schemas.offer_schemas import OfferChange
+import json
 
 
 async def get_offers(session: AsyncSession, limit: int = 600, offset: int = 0) -> list[Offer]:
@@ -28,4 +29,17 @@ async def change_offer(session: AsyncSession, offers_data: list[OfferChange]):
     return None
 
 
+async def update_offers(session: AsyncSession, offers_data):
+
+    for offer_data in offers_data:
+        await session.execute(update(Offer).where(Offer.sku == offer_data['sku']).values(**offer_data))
+
+    await session.commit()
+    return None
+
+
+async def get_offers_by_sku(session: AsyncSession, skus: list[str]):
+    query = select(Offer).where(Offer.sku.in_(skus))
+    offers_db = await session.execute(query)
+    return offers_db.unique().scalars().all()
 

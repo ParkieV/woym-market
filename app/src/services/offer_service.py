@@ -20,7 +20,13 @@ async def get_offers(limit: int = 600, offset: int = 0):
 
 async def change_offer(offers_data: list[OfferChange]):
     async with async_session() as session:
-        return await db.change_offer(session, offers_data)
+        offers = await db.get_offers_by_sku(session, [i.sku for i in offers_data])
+        offers_df = pd.DataFrame(jsonable_encoder(offers))
+
+        changed_offers = utils.change_offers_editable_fields(offers_df, offers_data)
+        return await db.update_offers(session, changed_offers)
+    # async with async_session() as session:
+    #     return await db.change_offer(session, offers_data)
 
 
 async def setup_offers_data():
@@ -39,8 +45,11 @@ async def update_offers():
     yandex_offers_df = pd.DataFrame(yandex_offers)
 
     json_data = utils.update_offers_data(offers_df, yandex_offers_df)
-    return json_data
 
+    async with async_session() as session:
+        await db.update_offers(session, json_data)
+
+    return json_data
 
 
 async def build_csv():
