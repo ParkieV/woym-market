@@ -10,6 +10,7 @@ class YandexOfferInfo(BaseModel):
     height: float
     volume_from_yandex: float
     photo: str | None
+    market_price: float
 
 
 class ExtendedYandexOfferInfo(YandexOfferInfo):

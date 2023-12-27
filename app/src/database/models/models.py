@@ -24,6 +24,13 @@ class Users(Base):
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
 
 
+class Settings(Base):
+    __tablename__ = 'settings'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+
+
 class Offer(Base):
     __tablename__ = 'offers'
     # from yandex api
@@ -54,6 +61,8 @@ class Offer(Base):
     profit = Column(Float)
     payback = Column(Float)
     fby = Column(Float)
+
+    market_price = Column(Float,nullable=True)
 
     # User additional fields
     notation_1 = Column(String, nullable=True)

@@ -3,6 +3,7 @@ from collections import defaultdict
 from requests import Session, get
 from src.schemas.yandex_api_schemas import ExtendedYandexOfferInfo, YandexOfferInfo, CampaignInfo
 from asyncio import sleep
+from fastapi import HTTPException
 from io import BytesIO
 import pandas as pd
 
@@ -15,7 +16,11 @@ class YandexMarketRepository:
             'Authorization': f'Bearer {token}'
         }
 
+    def raise_request_exception(self, status_code: int, detail: str):
+        raise HTTPException(status_code, detail)
+
     async def get_offers(self) -> list[ExtendedYandexOfferInfo]:
+        """Returns a list of full Yandex offers data"""
         campaigns = self.get_campaigns()
 
         offers_stock = {}
@@ -24,7 +29,7 @@ class YandexMarketRepository:
 
         minimum_group_prices = {}
         for campaign in campaigns:
-            minimum_group_prices.update( await self.get_market_price_report(campaign.id))
+            minimum_group_prices.update(await self.get_market_price_report(campaign.id))
 
         offers: list[YandexOfferInfo] = []
         for campaign in campaigns:
@@ -70,7 +75,7 @@ class YandexMarketRepository:
             )
 
             if response.status_code != 200:
-                return None
+                self.raise_request_exception(response.status_code, response.text)
 
             data = response.json()
 
@@ -94,12 +99,14 @@ class YandexMarketRepository:
             )
 
             if response.status_code != 200:
-                return None
+                self.raise_request_exception(response.status_code, response.text)
 
             data = response.json()
 
             for offer in data['result']['offerMappings']:
                 offer = offer['offer']
+                if 'basicPrice' not in offer:
+                    print(offer['offerId'], business_id)
                 offer_data = YandexOfferInfo(
                     sku=offer['offerId'],
                     name=offer['name'],
@@ -110,6 +117,7 @@ class YandexMarketRepository:
                     volume_from_yandex=(offer['weightDimensions']['length'] * offer['weightDimensions']['width'] *
                                         offer['weightDimensions']['height']) / 5000 if 'weightDimensions' in offer else 0,
                     photo=offer['pictures'][0] if len(offer['pictures']) > 0 else None,
+                    market_price=offer['basicPrice']['value'] if 'basicPrice' in offer else 0
                 )
                 results.append(offer_data)
 
@@ -118,8 +126,17 @@ class YandexMarketRepository:
                 break
         return results
 
-    def update_campaign_offers(self, campaign_id: int, offers: dict):
+    def update_offers_price(self, business_id: int, offers: dict):
         raise NotImplementedError()
+
+        response = self.session.post(
+            f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
+            headers=self.auth_headers,
+            json=...
+        )
+
+        if response.status_code != 200:
+            self.raise_request_exception(response.status_code, response.text)
 
     async def get_report_info(self, report_id: str):
         while True:
@@ -132,7 +149,7 @@ class YandexMarketRepository:
                 path = self._download_report(data['result']['file'])
                 return path
             elif data['result']['status'] == 'FAILED':
-                return None
+                self.raise_request_exception(response.status_code, response.text)
 
             await sleep(10)
 
@@ -141,7 +158,7 @@ class YandexMarketRepository:
                                      json={'campaignId': campaign_id}, headers=self.auth_headers)
 
         if response.status_code != 200:
-            return None
+            self.raise_request_exception(response.status_code, response.text)
 
         data = response.json()
         report_id = data['result']['reportId']
@@ -160,7 +177,6 @@ class YandexMarketRepository:
         data.columns.values[1] = 'price'
 
         d = dict()
-        print(data.to_json(orient='records'))
 
         for i in json.loads(data.to_json(orient='records')):
             d[i['sku']] = i['price']

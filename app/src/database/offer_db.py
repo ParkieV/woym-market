@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from .models.models import Offer
 from ..schemas.offer_schemas import OfferChange
 import json
@@ -18,6 +18,12 @@ async def create_offers(session: AsyncSession, offers_data):
         session.add(offer_db)
 
     await session.commit()
+    return None
+
+
+async def delete_offers(session: AsyncSession, offers_sku: list[str]):
+    query = delete(Offer).where(Offer.sku.in_(offers_sku))
+    await session.execute(query)
     return None
 
 

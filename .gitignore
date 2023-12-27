@@ -5,6 +5,8 @@ __pycache__/
 *.vscode/
 .idea
 
+app/data/*
+.DS_Store
 
 node_modules/
 **js/

@@ -8,20 +8,17 @@ from src.routers.auth_router import auth_router
 from src.routers.offer_router import offer_router
 from src.database.db import db_create
 import aioschedule
-
+from src.services.offer_service import update_offers
 import io
+from src.params import confing as env
 
 io.BytesIO()
 
 app: FastAPI = FastAPI()
 
 
-async def test_job():
-    print(1)
-
-
 async def scheduler():
-    aioschedule.every(5).seconds.do(test_job)
+    aioschedule.every(60).minutes.do(update_offers)
 
     while True:
         await aioschedule.run_pending()
@@ -29,13 +26,14 @@ async def scheduler():
 
 
 async def to_startup():
-    asyncio.create_task(scheduler())
+    if env.SCHEDULE_UPDATE:
+        asyncio.create_task(scheduler())
 
 
 @app.on_event('startup')
 async def startup():
     db_create()
-    # await to_startup()
+    await to_startup()
 
 
 

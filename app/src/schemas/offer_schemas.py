@@ -21,13 +21,14 @@ class OfferOut(BaseModel):
     settlement_price_factor: float
     volume: float
     cost_price: float
-    settlement_price_factor: float
     minimum_markup: float
     settlement_price: float
     price_before_discount: float
     profit: float
     payback: float
     fby: float
+
+    market_price: float | None
 
     # User additional fields
     notation_1: str | None = None
@@ -53,3 +54,7 @@ class OfferChange(BaseModel):
 
     automatic_price_management: bool = True
     manual_control_min_price: bool = False
+
+
+class OfferDelete(BaseModel):
+    sku: str
