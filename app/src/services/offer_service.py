@@ -46,12 +46,6 @@ async def update_offers():
     yandex_offers = jsonable_encoder(await yandex_repository.get_offers())
     yandex_offers_df = pd.DataFrame(yandex_offers)
 
-    offers_df.sort_values(by='sku', inplace=True)
-    yandex_offers_df.sort_values(by='sku', inplace=True)
-
-    print(offers_df['sku'])
-    print(yandex_offers_df['sku'])
-
     json_data = utils.update_offers_data(offers_df, yandex_offers_df)
 
     async with async_session() as session:
@@ -67,10 +61,25 @@ async def build_csv():
     offers = jsonable_encoder(await get_offers())
     df = pd.DataFrame(offers)
     df.drop('id', axis=1, inplace=True)
-    df = df[OfferOut.model_fields.keys()]
+    df = df[OfferOut.__fields__.keys()]
     translated_columns = ['sku', 'Название', 'Вес', 'Длинна', 'Ширина', 'Высота', 'Объём с яндекса', 'Фото', 'Остатки на складах', 'Минимальная цена на рынке', 'Название магазина', 'Количество продавцов в группе', 'Закупка', 'Коэфициент расчетной цены', 'Объём', 'Себестоимость', 'Мин. наценка на расчетную цену', 'Расчетная цена', 'Цена до скидки', 'Прибыль', 'Окупаемость', 'Цена за FBY', 'Цена на маркете', 'Примечание 1', 'Примечание 2', 'Примечание 3', 'Автоматическое управление ценами', 'Ручное управление min цена']
     df.columns = translated_columns
     df.to_excel('data/out.xlsx', index=False)
     return 'data/out.xlsx'
+
+
+async def import_offers_data(data: bytes):
+    changes = utils.bytes_to_data_frame(data)
+    print(OfferOut.__fields__.keys())
+    changes.columns = list(OfferOut.__fields__.keys())
+
+    db_offers = jsonable_encoder(await get_offers())
+    offers_df = pd.DataFrame(db_offers)
+
+    json_data = utils.update_offers_data(offers_df, changes)
+
+    async with async_session() as session:
+        await db.update_offers(session, json_data)
+
 
 

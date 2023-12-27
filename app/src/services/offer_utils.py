@@ -4,6 +4,7 @@ import numpy as np
 import json
 from src.schemas.yandex_api_schemas import ExtendedYandexOfferInfo
 from src.schemas.offer_schemas import OfferChange
+from io import BytesIO
 
 
 def count_fby(data: pd.DataFrame) -> float:
@@ -45,26 +46,6 @@ def build_offers_data(yandex_offers: list[ExtendedYandexOfferInfo], settlement_p
     return json.loads(data.to_json(orient='records'))
 
 
-# def change_offers_editable_fields(data: pd.DataFrame, changes: pd.DataFrame):
-#     course = 5
-#
-#     update_data: pd.DataFrame = data.copy()
-#
-#     update_data.sort_values(by='sku', inplace=True)
-#     update_data.reset_index(drop=True, inplace=True)
-#
-#     changes.sort_values(by='sku', inplace=True)
-#     changes.reset_index(drop=True, inplace=True)
-#
-#     update_data.update(changes)
-#
-#     update_data = calculate_offers_values(update_data, course)
-#
-#     update_data.drop('id', axis=1)
-#
-#     return json.loads(update_data.to_json(orient='records'))
-
-
 def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame):
     course = 5
     updated_offers: pd.DataFrame = data.copy()
@@ -81,3 +62,9 @@ def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame):
     updated_offers = calculate_offers_values(updated_offers, course)
 
     return json.loads(updated_offers.to_json(orient='records'))
+
+
+def bytes_to_data_frame(data: bytes) -> pd.DataFrame:
+    io = BytesIO(data)
+    return pd.read_excel(io)
+

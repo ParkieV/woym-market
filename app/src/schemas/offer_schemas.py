@@ -58,3 +58,4 @@ class OfferChange(BaseModel):
 
 class OfferDelete(BaseModel):
     sku: str
+

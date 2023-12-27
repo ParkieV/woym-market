@@ -41,7 +41,7 @@ class YandexMarketRepository:
         extended_offers = []
         for offer in offers:
             extended_offers.append(ExtendedYandexOfferInfo(
-                **offer.model_dump(),
+                **dict(offer),
                 remaining_stock=offers_stock.get(offer.sku, 0),
                 minimum_group_price=minimum_group_prices.get(offer.sku, 0),
                 name_of_shop="",

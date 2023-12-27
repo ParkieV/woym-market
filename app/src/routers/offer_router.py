@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, File
 from fastapi.responses import FileResponse
 from src.schemas.offer_schemas import OfferOut, OfferChange, OfferDelete
 from src.services import offer_service as service
@@ -21,27 +21,34 @@ async def change_offer_fields(offers_data: list[OfferChange]):
 
 @offer_router.delete('/')
 async def delete_offers(offers: list[OfferDelete]):
-    return await service.delete_offers(offers)
+    await service.delete_offers(offers)
+    return {'status': 'OK'}
 
 
 @offer_router.post('/setup')
 async def setup_offers_data():
-    return await service.setup_offers_data()
+    await service.setup_offers_data()
+    return {'status': 'OK'}
 
 
-@offer_router.get('/csv')
+@offer_router.get('/xlsx')
 async def export_offers():
     path = await service.build_csv()
     return FileResponse(path=path, filename='out.xlsx', media_type='multipart/form-data')
 
 
-@offer_router.get('/test_update')
+@offer_router.get('/test_update', response_model=list[OfferOut])
 async def test_update():
     return await service.update_offers()
 
 
-@offer_router.post('/csv')
-async def import_offers(data: UploadFile):
-    raise NotImplementedError()
+@offer_router.post('/xlsx')
+async def import_offers(data: bytes = File()):
+    try:
+        await service.import_offers_data(data)
+    except Exception as e:
+        print(e)
+        return {'status': 'ERROR', 'detail': e}
+    return {'status': 'OK'}
 
 
