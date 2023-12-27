@@ -1,13 +1,8 @@
 from fastapi import APIRouter, status, Depends
-from fastapi.responses import JSONResponse
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.encoders import jsonable_encoder
-
+from src.services.user_service import get_settings, update_user_settings
 from src.schemas.user_schemas import *
 from src.services.user_service import *
 from src.services.auth_utils import get_current_user
-from requests import post
-import json
 
 user_router = APIRouter(
     tags=['User'],
@@ -15,15 +10,25 @@ user_router = APIRouter(
 )
 
 
+@user_router.get('/settings')
+async def get_user_settings(current_user=Depends(get_current_user)):
+    return await get_settings(current_user.id)
+
+
+@user_router.patch('/settings')
+async def update_settings(settings_data: SettingsUpdate, current_user=Depends(get_current_user)):
+    await update_user_settings(current_user.id, settings_data)
+    return {'status': 'OK'}
+
+
 @user_router.get('/hello')
 async def route_get_user(data: str):
     return {'msg': f'Hello {data}!'}
 
 
-@user_router.get('/me',  response_model=UserOut)
-async def route_get_user(current_user: dict = Depends(get_current_user)):
+@user_router.get('/me', response_model=UserOut)
+async def route_get_user(current_user=Depends(get_current_user)):
     return current_user
-
 
 # TODO refactor this route
 # @user_router.put('/')

@@ -1,5 +1,6 @@
-from fastapi import APIRouter, File
+from fastapi import APIRouter, File, Depends
 from fastapi.responses import FileResponse
+from src.services.auth_utils import get_current_user
 from src.schemas.offer_schemas import OfferOut, OfferChange, OfferDelete
 from src.services import offer_service as service
 
@@ -15,14 +16,19 @@ async def get_offers():
 
 
 @offer_router.patch('/', response_model=list[OfferOut])
-async def change_offer_fields(offers_data: list[OfferChange]):
-    return await service.change_offers(offers_data)
+async def change_offer_fields(offers_data: list[OfferChange], current_user=Depends(get_current_user)):
+    return await service.change_offers(offers_data, current_user.id)
 
 
 @offer_router.delete('/')
 async def delete_offers(offers: list[OfferDelete]):
     await service.delete_offers(offers)
     return {'status': 'OK'}
+
+
+@offer_router.post('/send')
+async def send_offer_to_yandex():
+    raise NotImplementedError()
 
 
 @offer_router.post('/setup')
@@ -38,8 +44,8 @@ async def export_offers():
 
 
 @offer_router.get('/test_update', response_model=list[OfferOut])
-async def test_update():
-    return await service.update_offers()
+async def test_update(current_user=Depends(get_current_user)):
+    return await service.update_offers(current_user.id)
 
 
 @offer_router.post('/xlsx')

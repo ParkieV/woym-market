@@ -29,9 +29,9 @@ def calculate_offers_values(data: pd.DataFrame, course: float) -> pd.DataFrame:
     return data
 
 
-def build_offers_data(yandex_offers: list[ExtendedYandexOfferInfo], settlement_price_factor: float = 2.4,
+def build_offers_data(yandex_offers: list[ExtendedYandexOfferInfo], course: float = 5,  settlement_price_factor: float = 2.4,
                       minimum_markup: float = 200, auto_min_price: bool = True, setup_mode: bool = False):
-    course = 5
+
     data = pd.DataFrame(jsonable_encoder(yandex_offers))
     if setup_mode:
         data['parches'] = np.random.randint(5, 100, size=(data.shape[0], 1))  # закупка
@@ -46,8 +46,7 @@ def build_offers_data(yandex_offers: list[ExtendedYandexOfferInfo], settlement_p
     return json.loads(data.to_json(orient='records'))
 
 
-def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame):
-    course = 5
+def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, course: float):
     updated_offers: pd.DataFrame = data.copy()
 
     updated_offers.sort_values('sku', inplace=True)

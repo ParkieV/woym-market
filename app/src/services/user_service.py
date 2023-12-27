@@ -4,10 +4,12 @@ import requests
 import src.database.user_db as db
 import src.services.auth_utils as auth
 from src.database.models.models import Users
+from src.database.db import async_session
 
 
 async def registration_user(login: str, password: str):
     new_user = await auth.reg_user(login, password)
+    settings = await create_user_settings(new_user.id)
     return new_user
 
 
@@ -22,6 +24,20 @@ async def login_user(login, password):
 
     return user_data
 
+
+async def get_settings(user_id):
+    async with async_session() as session:
+        return await db.get_user_settings(session, user_id)
+
+
+async def update_user_settings(user_id: int, settings_data):
+    async with async_session() as session:
+        return await db.update_user_settings(session, user_id, settings_data)
+
+
+async def create_user_settings(user_id):
+    async with async_session() as session:
+        return await db.create_user_settings(session, user_id)
 
 # async def update_user_info(id_user: int, user_data: NewUserData):
 #     await db.update_user(id_user, user_data)

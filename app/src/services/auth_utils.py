@@ -10,6 +10,7 @@ import src.database.user_db as db
 from ..database.models.models import Users
 from ..schemas.user_schemas import Token, TokenData
 
+
 def hash_password(password: str) -> str:
     return auth.pwd_context.hash(password)
 
@@ -21,7 +22,6 @@ def verify_password(plain_password: str, hashed_password: str):
 async def reg_user(login: str, password: str):
     pass_hash = hash_password(password)
     new_user = await db.reg_user(login, pass_hash)
-
     return new_user
 
 
@@ -53,8 +53,8 @@ async def create_access_token(data: dict):
     )
     return encoded_jwt
 
-def verify_access_token(token: str, credentials_exception):
 
+def verify_access_token(token: str, credentials_exception):
     try:
         payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
         id = payload.get("user_id")
@@ -67,12 +67,17 @@ def verify_access_token(token: str, credentials_exception):
 
     return token_data
 
-async def get_current_user(token: str = Depends(auth.oauth2_scheme)):
+
+async def get_current_user(token: str = Depends(auth.oauth2_scheme)) -> Users:
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                                          detail=f"Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
+                                          detail=f"Could not validate credentials",
+                                          headers={"WWW-Authenticate": "Bearer"})
 
     token = verify_access_token(token, credentials_exception)
 
     user = await db.get_user_by_id(token.id)
+
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     return user

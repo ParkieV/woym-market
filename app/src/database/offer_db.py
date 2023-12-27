@@ -29,7 +29,7 @@ async def delete_offers(session: AsyncSession, offers_sku: list[str]):
 
 async def change_offer(session: AsyncSession, offers_data: list[OfferChange]):
     for offer_data in offers_data:
-        await session.execute(update(Offer).where(Offer.sku == offer_data.sku).values(**offer_data.model_dump()))
+        await session.execute(update(Offer).where(Offer.sku == offer_data.sku).values(**dict(offer_data)))
 
     await session.commit()
     return None

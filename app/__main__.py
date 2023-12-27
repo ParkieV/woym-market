@@ -26,8 +26,9 @@ async def scheduler():
 
 
 async def to_startup():
-    if env.SCHEDULE_UPDATE:
-        asyncio.create_task(scheduler())
+    # if env.SCHEDULE_UPDATE:
+    #     asyncio.create_task(scheduler())
+    pass
 
 
 @app.on_event('startup')

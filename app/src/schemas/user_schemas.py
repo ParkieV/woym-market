@@ -25,3 +25,13 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     id: Optional[str] = None
+
+
+class SettingsOut(BaseModel):
+    id: int
+    user_id: int
+    rate: float
+
+
+class SettingsUpdate(BaseModel):
+    rate: float

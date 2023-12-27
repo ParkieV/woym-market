@@ -30,6 +30,8 @@ class Settings(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     user_id = Column(Integer, ForeignKey('users.id'))
 
+    rate = Column(Float, default=10)
+
 
 class Offer(Base):
     __tablename__ = 'offers'
