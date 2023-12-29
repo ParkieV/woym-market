@@ -7,15 +7,17 @@ from src.schemas.offer_schemas import OfferChange
 from io import BytesIO
 
 
-def count_fby(data: pd.DataFrame) -> float:
-    return 100
+def count_fby(data: pd.DataFrame):
+    dimensions_sum = data['length'] + data['width'] + data['height']
+    data['fby'] = np.where(dimensions_sum < (150 / 100), data['market_price'] * 0.085, 850)
+    return data['fby']
 
 
 def calculate_offers_values(data: pd.DataFrame, course: float) -> pd.DataFrame:
     data['fby'] = count_fby(data)
     data['volume'] = data['length'] * data['width'] * data['height']
     data['cost_price'] = data['parches'] * course
-    data['settlement_price'] = np.where(data['cost_price'] > 200, data['cost_price'] * data['settlement_price_factor'],
+    data['settlement_price'] = np.where(data['cost_price'] > data['minimum_markup'], data['cost_price'] * data['settlement_price_factor'],
                                         data['cost_price'] * data['settlement_price_factor'] + data['minimum_markup'])
     data['price_before_discount'] = data['settlement_price'] * 1.2
     data['profit'] = data['settlement_price'] - data['fby'] - data['cost_price']
