@@ -50,6 +50,7 @@ class Offer(Base):
     minimum_group_price = Column(Float)
     name_of_shop = Column(String)
     group_sellers_amount = Column(Integer)
+    business_id = Column(Integer)
 
     # countable/editable values
     parches = Column(Float)
@@ -64,7 +65,7 @@ class Offer(Base):
     payback = Column(Float)
     fby = Column(Float)
 
-    market_price = Column(Float,nullable=True)
+    market_price = Column(Float, nullable=True)
 
     # User additional fields
     notation_1 = Column(String, nullable=True)

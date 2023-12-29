@@ -44,7 +44,7 @@ class YandexMarketRepository:
                 **dict(offer),
                 remaining_stock=offers_stock.get(offer.sku, 0),
                 minimum_group_price=minimum_group_prices.get(offer.sku, 0),
-                name_of_shop="",
+                name_of_shop=list(filter(lambda x: x.business_id == offer.business_id, campaigns))[0].business_name,
                 group_sellers_amount=0,
             ))
         return extended_offers
@@ -117,7 +117,8 @@ class YandexMarketRepository:
                     volume_from_yandex=(offer['weightDimensions']['length'] * offer['weightDimensions']['width'] *
                                         offer['weightDimensions']['height']) / 5000 if 'weightDimensions' in offer else 0,
                     photo=offer['pictures'][0] if len(offer['pictures']) > 0 else None,
-                    market_price=offer['basicPrice']['value'] if 'basicPrice' in offer else 0
+                    market_price=offer['basicPrice']['value'] if 'basicPrice' in offer else None,
+                    business_id=business_id
                 )
                 results.append(offer_data)
 
@@ -126,17 +127,31 @@ class YandexMarketRepository:
                 break
         return results
 
-    def update_offers_price(self, business_id: int, offers: dict):
-        raise NotImplementedError()
+    def update_offers_price(self, offers: list[dict]):
+        chunk_size = 500
+        for business_id in set([i['business_id'] for i in offers]):
+            _offers = list(filter(lambda x: x['business_id'] == business_id, offers))
+            for i in range(0, len(_offers), chunk_size):
+                data = [{
+                    'offerId': offer['sku'], 'price': {
+                        'value' : offer['market_price'],
+                        'currencyId' : 'RUB'
+                    }
+                }
+                        for offer in _offers[i:i+chunk_size]]
+                body = {
+                    'offers': data
+                }
+                print(body)
 
-        response = self.session.post(
-            f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
-            headers=self.auth_headers,
-            json=...
-        )
-
-        if response.status_code != 200:
-            self.raise_request_exception(response.status_code, response.text)
+            # response = self.session.post(
+            #     f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
+            #     headers=self.auth_headers,
+            #     json=body
+            # )
+            #
+            # if response.status_code != 200:
+            #     self.raise_request_exception(response.status_code, response.text)
 
     async def get_report_info(self, report_id: str):
         while True:

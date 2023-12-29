@@ -15,6 +15,7 @@ class OfferOut(BaseModel):
     minimum_group_price: float
     name_of_shop: str
     group_sellers_amount: int
+    business_id: int
 
     # countable/editable values
     parches: float

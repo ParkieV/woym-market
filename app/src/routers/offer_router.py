@@ -28,7 +28,7 @@ async def delete_offers(offers: list[OfferDelete]):
 
 @offer_router.post('/send')
 async def send_offer_to_yandex():
-    raise NotImplementedError()
+    return await service.update_yandex_offers_price()
 
 
 @offer_router.post('/setup')
@@ -49,9 +49,9 @@ async def test_update(current_user=Depends(get_current_user)):
 
 
 @offer_router.post('/xlsx')
-async def import_offers(data: bytes = File()):
+async def import_offers(data: bytes = File(), current_user=Depends(get_current_user)):
     try:
-        await service.import_offers_data(data)
+        await service.import_offers_data(data, current_user.id)
     except Exception as e:
         print(e)
         return {'status': 'ERROR', 'detail': e}

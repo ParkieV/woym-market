@@ -3,6 +3,7 @@ from sqlalchemy import select, update, delete
 from .models.models import Offer
 from ..schemas.offer_schemas import OfferChange
 import json
+from typing import Iterable
 
 
 async def get_offers(session: AsyncSession) -> list[Offer]:
@@ -21,9 +22,10 @@ async def create_offers(session: AsyncSession, offers_data):
     return None
 
 
-async def delete_offers(session: AsyncSession, offers_sku: list[str]):
+async def delete_offers(session: AsyncSession, offers_sku: Iterable[str]):
     query = delete(Offer).where(Offer.sku.in_(offers_sku))
     await session.execute(query)
+    await session.commit()
     return None
 
 

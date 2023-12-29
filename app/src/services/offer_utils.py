@@ -20,19 +20,23 @@ def calculate_offers_values(data: pd.DataFrame, course: float) -> pd.DataFrame:
     data['price_before_discount'] = data['settlement_price'] * 1.2
     data['profit'] = data['settlement_price'] - data['fby'] - data['cost_price']
     data['payback'] = data['cost_price'] * 100 / data['profit']
+
+    return data
+
+
+def calculate_yandex_price(data: pd.DataFrame) -> pd.DataFrame:
     data['market_price'] = np.where(
         data['automatic_price_management'],
         np.where(
             data['minimum_group_price'] > data['cost_price'],
             data['minimum_group_price'], data['cost_price']
         ), None)
+
     return data
 
 
-def build_offers_data(yandex_offers: list[ExtendedYandexOfferInfo], course: float = 5,  settlement_price_factor: float = 2.4,
+def build_offers_data(data: pd.DataFrame, course: float = 5,  settlement_price_factor: float = 2.4,
                       minimum_markup: float = 200, auto_min_price: bool = True, setup_mode: bool = False):
-
-    data = pd.DataFrame(jsonable_encoder(yandex_offers))
     if setup_mode:
         data['parches'] = np.random.randint(5, 100, size=(data.shape[0], 1))  # закупка
     data['settlement_price_factor'] = settlement_price_factor
