@@ -69,5 +69,5 @@ def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, course: float)
 
 def bytes_to_data_frame(data: bytes) -> pd.DataFrame:
     io = BytesIO(data)
-    return pd.read_excel(io)
+    return pd.read_excel(io, engine='openpyxl')
 

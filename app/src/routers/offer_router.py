@@ -20,18 +20,18 @@ async def change_offer_fields(offers_data: list[OfferChange], current_user=Depen
     return await service.change_offers(offers_data, current_user.id)
 
 
-@offer_router.delete('/')
+@offer_router.delete('/', dependencies=[Depends(get_current_user)])
 async def delete_offers(offers: list[OfferDelete]):
     await service.delete_offers(offers)
     return {'status': 'OK'}
 
 
-@offer_router.post('/send')
+@offer_router.post('/send', dependencies=[Depends(get_current_user)])
 async def send_offer_to_yandex():
     return await service.update_yandex_offers_price()
 
 
-@offer_router.post('/setup')
+@offer_router.post('/setup', dependencies=[Depends(get_current_user)])
 async def setup_offers_data():
     await service.setup_offers_data()
     return {'status': 'OK'}
@@ -53,8 +53,7 @@ async def import_offers(data: bytes = File(), current_user=Depends(get_current_u
     try:
         await service.import_offers_data(data, current_user.id)
     except Exception as e:
-        print(e)
-        return {'status': 'ERROR', 'detail': e}
+        return {'status': 'ERROR', 'detail':'Файл поврежден или имеет неподдерживаемый формат'}
     return {'status': 'OK'}
 
 

@@ -106,8 +106,9 @@ async def import_offers_data(data: bytes, user_id: int):
     async with async_session() as session:
         settings = await get_settings(user_id)
         changes = utils.bytes_to_data_frame(data)
-        changes.columns = list(OfferOut.__fields__.keys())
-
+        columns = list(OfferOut.__fields__.keys())
+        columns.remove('business_id')
+        changes.columns = columns
         db_offers = jsonable_encoder(await get_offers())
         offers_df = pd.DataFrame(db_offers)
 
