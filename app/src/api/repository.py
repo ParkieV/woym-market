@@ -114,10 +114,10 @@ class YandexMarketRepository:
                     length=offer['weightDimensions']['length'] / 100 if 'weightDimensions' in offer else 0,
                     width=offer['weightDimensions']['width'] / 100 if 'weightDimensions' in offer else 0,
                     height=offer['weightDimensions']['height'] / 100 if 'weightDimensions' in offer else 0,
-                    volume_from_yandex=(offer['weightDimensions']['length'] * offer['weightDimensions']['width'] *
+                    volume_yandex=(offer['weightDimensions']['length'] * offer['weightDimensions']['width'] *
                                         offer['weightDimensions']['height']) / 5000 if 'weightDimensions' in offer else 0,
                     photo=offer['pictures'][0] if len(offer['pictures']) > 0 else None,
-                    market_price=offer['basicPrice']['value'] if 'basicPrice' in offer else None,
+                    current_price=offer['basicPrice']['value'] if 'basicPrice' in offer else None,
                     business_id=business_id
                 )
                 results.append(offer_data)
@@ -134,24 +134,30 @@ class YandexMarketRepository:
             for i in range(0, len(_offers), chunk_size):
                 data = [{
                     'offerId': offer['sku'], 'price': {
-                        'value' : offer['market_price'],
-                        'currencyId' : 'RUB'
+                        'value' : offer['current_price'],
+                        'currencyId' : "RUR"
                     }
                 }
-                        for offer in _offers[i:i+chunk_size]]
+                        for offer in _offers[i:i+chunk_size] if offer['auto_min_price']]
                 body = {
                     'offers': data
                 }
+
                 print(body)
 
-            # response = self.session.post(
-            #     f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
-            #     headers=self.auth_headers,
-            #     json=body
-            # )
-            #
-            # if response.status_code != 200:
-            #     self.raise_request_exception(response.status_code, response.text)
+                if len(body['offers']) <= 0:
+                    break
+
+                response = self.session.post(
+                    f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
+                    headers=self.auth_headers,
+                    json=body
+                )
+
+                if response.status_code != 200:
+                    self.raise_request_exception(response.status_code, response.text)
+
+
 
     async def get_report_info(self, report_id: str):
         while True:

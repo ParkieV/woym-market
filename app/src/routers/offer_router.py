@@ -10,12 +10,12 @@ offer_router = APIRouter(
 )
 
 
-@offer_router.get('/', response_model=list[OfferOut])
+@offer_router.get('/')
 async def get_offers():
     return await service.get_offers()
 
 
-@offer_router.patch('/', response_model=list[OfferOut])
+@offer_router.patch('/')
 async def change_offer_fields(offers_data: list[OfferChange], current_user=Depends(get_current_user)):
     return await service.change_offers(offers_data, current_user.id)
 
@@ -43,7 +43,7 @@ async def export_offers():
     return FileResponse(path=path, filename='out.xlsx', media_type='multipart/form-data')
 
 
-@offer_router.get('/test_update', response_model=list[OfferOut])
+@offer_router.get('/test_update')
 async def test_update(current_user=Depends(get_current_user)):
     return await service.update_offers(current_user.id)
 
