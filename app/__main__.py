@@ -18,7 +18,7 @@ app: FastAPI = FastAPI()
 
 
 async def scheduler():
-    aioschedule.every(60).minutes.do(update_offers)
+    aioschedule.every(60).minutes.do(update_offers, 1)
 
     while True:
         await aioschedule.run_pending()

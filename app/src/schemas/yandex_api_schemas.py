@@ -8,9 +8,9 @@ class YandexOfferInfo(BaseModel):
     length: float
     width: float
     height: float
-    volume_from_yandex: float
+    volume_yandex: float
     photo: str | None
-    market_price: float | None
+    current_price: float | None
     business_id: int
 
 

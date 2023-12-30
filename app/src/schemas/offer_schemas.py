@@ -9,7 +9,8 @@ class OfferOut(BaseModel):
     length: float
     width: float
     height: float
-    volume_from_yandex: float
+    current_price: float
+    volume_yandex: float
     photo: str | None
     remaining_stock: int
     minimum_group_price: float
@@ -18,26 +19,26 @@ class OfferOut(BaseModel):
     business_id: int
 
     # countable/editable values
-    parches: float
-    settlement_price_factor: float
+    dollar_cost_price: float
+    total_price_coeff: float
     volume: float
     cost_price: float
-    minimum_markup: float
-    settlement_price: float
-    price_before_discount: float
+    total_price_min_additional: float
+    total_price: float
+    discount_base_price: float
     profit: float
-    payback: float
+    margin: float
     fby: float
 
-    market_price: float | None
+    current_price: float | None
 
     # User additional fields
-    notation_1: str | None = None
-    notation_2: str | None = None
-    notation_3: str | None = None
+    note_1: str | None = None
+    note_2: str | None = None
+    note_3: str | None = None
 
-    automatic_price_management: bool = True
-    manual_control_min_price: bool = False
+    auto_min_price: bool = True
+    use_manual_min_price: bool = False
 
     class Config:
         orm_mode = True
@@ -45,16 +46,18 @@ class OfferOut(BaseModel):
 
 class OfferChange(BaseModel):
     sku: str
-    parches: float
-    minimum_markup: float
-    settlement_price_factor: float
+    dollar_cost_price: float
+    total_price_min_additional: float
+    total_price_coeff: float
 
-    notation_1: str | None = None
-    notation_2: str | None = None
-    notation_3: str | None = None
+    note_1: str | None = None
+    note_2: str | None = None
+    note_3: str | None = None
 
-    automatic_price_management: bool = True
-    manual_control_min_price: bool = False
+    auto_min_price: bool = False # цена может обновляться
+    use_manual_min_price: bool = False # цена обновляется только в ручном режиме
+
+    current_price: float
 
 
 class OfferDelete(BaseModel):

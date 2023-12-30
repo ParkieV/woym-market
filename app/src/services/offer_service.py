@@ -46,6 +46,9 @@ async def setup_offers_data(course: float = 15):
 
 
 async def update_offers(user_id: int):
+    """Прежде всего нужно отправить новые цены в яндекс"""
+    await update_yandex_offers_price()
+
     settings = await get_settings(user_id)
 
     db_offers = jsonable_encoder(await get_offers())
@@ -56,9 +59,6 @@ async def update_offers(user_id: int):
 
     db_offers_skus = set(offers_df['sku'])
     yandex_offers_skus = set(yandex_offers_df['sku'])
-
-    print(db_offers_skus)
-    print(yandex_offers_skus)
 
     to_delete_skus = db_offers_skus - yandex_offers_skus
     offers_df = offers_df[~offers_df['sku'].isin(to_delete_skus)]
@@ -75,6 +75,7 @@ async def update_offers(user_id: int):
         await db.delete_offers(session, to_delete_skus)
         await db.create_offers(session, json.loads(to_create_rows.to_json(orient='records')))
         await db.update_offers(session, json_data)
+
     return json_data
 
 
@@ -86,7 +87,11 @@ async def delete_offers(offers: list[OfferDelete]):
 async def update_yandex_offers_price():
     async with async_session() as session:
         offers_db = jsonable_encoder(await db.get_offers(session))
-        yandex_repository.update_offers_price(offers_db)
+        offers_df = pd.DataFrame(offers_db)
+        offers_df = utils.calculate_yandex_price(offers_df)
+        json_data = json.loads(offers_df.to_json(orient='records'))
+        yandex_repository.update_offers_price(json_data)
+        await db.update_offers(session, json_data)
 
 
 async def build_csv():

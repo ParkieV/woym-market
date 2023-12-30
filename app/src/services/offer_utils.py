@@ -9,43 +9,43 @@ from io import BytesIO
 
 def count_fby(data: pd.DataFrame):
     dimensions_sum = data['length'] + data['width'] + data['height']
-    data['fby'] = np.where(dimensions_sum < (150 / 100), data['market_price'] * 0.085, 850)
+    data['fby'] = np.where(dimensions_sum < (150 / 100), data['current_price'] * 0.085, 850)
     return data['fby']
 
 
 def calculate_offers_values(data: pd.DataFrame, course: float) -> pd.DataFrame:
     data['fby'] = count_fby(data)
     data['volume'] = data['length'] * data['width'] * data['height']
-    data['cost_price'] = data['parches'] * course
-    data['settlement_price'] = np.where(data['cost_price'] > data['minimum_markup'], data['cost_price'] * data['settlement_price_factor'],
-                                        data['cost_price'] * data['settlement_price_factor'] + data['minimum_markup'])
-    data['price_before_discount'] = data['settlement_price'] * 1.2
-    data['profit'] = data['settlement_price'] - data['fby'] - data['cost_price']
-    data['payback'] = data['cost_price'] * 100 / data['profit']
+    data['cost_price'] = data['dollar_cost_price'] * course
+    data['total_price'] = np.where(data['cost_price'] > data['total_price_min_additional'], data['cost_price'] * data['total_price_coeff'],
+                                        data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional'])
+    data['discount_base_price'] = data['total_price'] * 1.2
+    data['profit'] = data['total_price'] - data['fby'] - data['cost_price']
+    data['margin'] = data['cost_price'] * 100 / data['profit']
 
     return data
 
 
 def calculate_yandex_price(data: pd.DataFrame) -> pd.DataFrame:
-    data['market_price'] = np.where(
-        data['automatic_price_management'],
+    data['current_price'] = np.where(
+        data['auto_min_price'] & ~data['use_manual_min_price'],
         np.where(
             data['minimum_group_price'] > data['cost_price'],
             data['minimum_group_price'], data['cost_price']
-        ), None)
+        ), data['current_price'])
 
     return data
 
 
-def build_offers_data(data: pd.DataFrame, course: float = 5,  settlement_price_factor: float = 2.4,
-                      minimum_markup: float = 200, auto_min_price: bool = True, setup_mode: bool = False):
+def build_offers_data(data: pd.DataFrame, course: float = 5,  total_price_coeff: float = 2.4,
+                      total_price_min_additional: float = 200, setup_mode: bool = False):
     if setup_mode:
-        data['parches'] = np.random.randint(5, 100, size=(data.shape[0], 1))  # закупка
-    data['settlement_price_factor'] = settlement_price_factor
-    data['minimum_markup'] = minimum_markup
+        data['dollar_cost_price'] = np.random.randint(5, 100, size=(data.shape[0], 1))  # закупка
+    data['total_price_coeff'] = total_price_coeff
+    data['total_price_min_additional'] = total_price_min_additional
 
-    data['automatic_price_management'] = auto_min_price
-    data['manual_control_min_price'] = not auto_min_price
+    data['auto_min_price'] = False
+    data['use_manual_min_price'] = False
 
     data = calculate_offers_values(data, course)
 
