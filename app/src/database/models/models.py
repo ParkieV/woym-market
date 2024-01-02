@@ -71,5 +71,8 @@ class Offer(Base):
     note_2 = Column(String, nullable=True)
     note_3 = Column(String, nullable=True)
 
-    auto_min_price = Column(Boolean, default=True)
-    use_manual_min_price = Column(Boolean, default=False)
+    use_manual_min_price = Column(Boolean, default=True)
+    auto_min_price = Column(Float)
+    manual_min_price = Column(Float, nullable=True, default=None)
+
+    auto_price_control = Column(Boolean, default=False)

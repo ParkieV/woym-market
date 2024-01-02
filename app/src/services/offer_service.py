@@ -88,7 +88,7 @@ async def update_yandex_offers_price():
     async with async_session() as session:
         offers_db = jsonable_encoder(await db.get_offers(session))
         offers_df = pd.DataFrame(offers_db)
-        offers_df = utils.calculate_yandex_price(offers_df)
+        offers_df = utils.calculate_price(offers_df)
         json_data = json.loads(offers_df.to_json(orient='records'))
         yandex_repository.update_offers_price(json_data)
         await db.update_offers(session, json_data)
@@ -101,7 +101,7 @@ async def build_csv():
 
     df.drop(['business_id'], axis=1, inplace=True)
 
-    translated_columns = ['sku', 'Название', 'Вес', 'Длинна', 'Ширина', 'Высота', 'Объём с яндекса', 'Фото', 'Остатки на складах', 'Минимальная цена на рынке', 'Название магазина', 'Количество продавцов в группе', 'Закупка', 'Коэфициент расчетной цены', 'Объём', 'Себестоимость', 'Мин. наценка на расчетную цену', 'Расчетная цена', 'Цена до скидки', 'Прибыль', 'Окупаемость', 'Цена за FBY', 'Цена на маркете', 'Примечание 1', 'Примечание 2', 'Примечание 3', 'Автоматическое управление ценами', 'Ручное управление min цена']
+    translated_columns = ['sku', 'Название', 'Вес', 'Длинна', 'Ширина', 'Высота', 'Объём с яндекса', 'Фото', 'Остатки на складах', 'Минимальная цена на рынке', 'Название магазина', 'Количество продавцов в группе', 'Закупка', 'Коэфициент расчетной цены', 'Объём', 'Себестоимость', 'Мин. наценка на расчетную цену', 'Расчетная цена', 'Цена до скидки', 'Прибыль', 'Окупаемость', 'Цена за FBY', 'Цена на маркете', 'Примечание 1', 'Примечание 2', 'Примечание 3', 'Использовать ручную мин. цену', 'Авто мин. цена %', 'Ручная мин. цена', 'Авто контроль цен']
     df.columns = translated_columns
     df.to_excel('data/out.xlsx', index=False)
     return 'data/out.xlsx'

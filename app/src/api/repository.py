@@ -133,12 +133,13 @@ class YandexMarketRepository:
             _offers = list(filter(lambda x: x['business_id'] == business_id, offers))
             for i in range(0, len(_offers), chunk_size):
                 data = [{
-                    'offerId': offer['sku'], 'price': {
+                    'offerId': offer['sku'],
+                    'price': {
                         'value' : offer['current_price'],
                         'currencyId' : "RUR"
                     }
                 }
-                        for offer in _offers[i:i+chunk_size] if offer['auto_min_price']]
+                        for offer in _offers[i:i+chunk_size] if offer['current_price'] is not None]
                 body = {
                     'offers': data
                 }
@@ -148,14 +149,14 @@ class YandexMarketRepository:
                 if len(body['offers']) <= 0:
                     break
 
-                response = self.session.post(
-                    f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
-                    headers=self.auth_headers,
-                    json=body
-                )
-
-                if response.status_code != 200:
-                    self.raise_request_exception(response.status_code, response.text)
+                # response = self.session.post(
+                #     f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
+                #     headers=self.auth_headers,
+                #     json=body
+                # )
+                #
+                # if response.status_code != 200:
+                #     self.raise_request_exception(response.status_code, response.text)
 
 
 
