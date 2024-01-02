@@ -2,8 +2,6 @@ from fastapi.encoders import jsonable_encoder
 import pandas as pd
 import numpy as np
 import json
-from src.schemas.yandex_api_schemas import ExtendedYandexOfferInfo
-from src.schemas.offer_schemas import OfferChange
 from io import BytesIO
 
 
@@ -17,35 +15,47 @@ def calculate_offers_values(data: pd.DataFrame, course: float) -> pd.DataFrame:
     data['fby'] = count_fby(data)
     data['volume'] = data['length'] * data['width'] * data['height']
     data['cost_price'] = data['dollar_cost_price'] * course
-    data['total_price'] = np.where(data['cost_price'] > data['total_price_min_additional'], data['cost_price'] * data['total_price_coeff'],
-                                        data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional'])
+    data['total_price'] = np.where(data['cost_price'] > data['total_price_min_additional'],
+                                   data['cost_price'] * data['total_price_coeff'],
+                                   data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional'])
     data['discount_base_price'] = data['total_price'] * 1.2
     data['profit'] = data['total_price'] - data['fby'] - data['cost_price']
     data['margin'] = data['cost_price'] * 100 / data['profit']
-
+    data = calculate_price(data)
     return data
 
 
-def calculate_yandex_price(data: pd.DataFrame) -> pd.DataFrame:
+def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
+    data['temp_auto_min_price'] = data['total_price'] * data['auto_min_price'] / 100 # временно значение для автоматической минимальной планки
+
     data['current_price'] = np.where(
-        data['auto_min_price'] & ~data['use_manual_min_price'],
+        data['auto_price_control'] == False,
+        data['current_price'],
         np.where(
-            data['minimum_group_price'] > data['cost_price'],
-            data['minimum_group_price'], data['cost_price']
-        ), data['current_price'])
-
+            data['current_price'] > data['minimum_group_price'],
+            np.where(
+                data['use_manual_min_price'],
+                data[['minimum_group_price', 'manual_min_price']].max(axis=1), # если используем ручную минимальную планку
+                data[['minimum_group_price', 'temp_auto_min_price']].max(axis=1)
+            ),
+            data[['total_price', 'minimum_group_price']].min(axis=1)
+        )
+    )
+    data.drop('temp_auto_min_price', axis=1, inplace=True)
     return data
 
 
-def build_offers_data(data: pd.DataFrame, course: float = 5,  total_price_coeff: float = 2.4,
+def build_offers_data(data: pd.DataFrame, course: float = 5, total_price_coeff: float = 2.4,
                       total_price_min_additional: float = 200, setup_mode: bool = False):
     if setup_mode:
         data['dollar_cost_price'] = np.random.randint(5, 100, size=(data.shape[0], 1))  # закупка
     data['total_price_coeff'] = total_price_coeff
     data['total_price_min_additional'] = total_price_min_additional
 
-    data['auto_min_price'] = False
-    data['use_manual_min_price'] = False
+    data['use_manual_min_price'] = True
+    data['auto_min_price'] = 110
+    data['manual_min_price'] = None
+    data['auto_price_control'] = False
 
     data = calculate_offers_values(data, course)
 
@@ -72,4 +82,3 @@ def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, course: float)
 def bytes_to_data_frame(data: bytes) -> pd.DataFrame:
     io = BytesIO(data)
     return pd.read_excel(io, engine='openpyxl')
-

@@ -37,8 +37,14 @@ class OfferOut(BaseModel):
     note_2: str | None = None
     note_3: str | None = None
 
-    auto_min_price: bool = True
-    use_manual_min_price: bool = False
+    use_manual_min_price: bool = True # использовать ли автоматический расчет нижней планки цены
+    auto_min_price: float # в процентах
+    manual_min_price: float | None = None
+
+    auto_price_control: bool = False # автоматическое управление ценами
+
+    # auto_min_price: float
+    # use_manual_min_price: bool = False
 
     class Config:
         orm_mode = True
@@ -54,10 +60,12 @@ class OfferChange(BaseModel):
     note_2: str | None = None
     note_3: str | None = None
 
-    auto_min_price: bool = False # цена может обновляться
-    use_manual_min_price: bool = False # цена обновляется только в ручном режиме
-
     current_price: float
+    use_manual_min_price: bool = True # использовать ли автоматический расчет нижней планки цены
+    auto_min_price: float # в процентах
+    manual_min_price: float | None = None
+    auto_price_control: bool = False # ручное управление ценами
+
 
 
 class OfferDelete(BaseModel):
