@@ -93,7 +93,8 @@ export function DataGridOptions(onPhotoClicked: (src: string) => void): GridOpti
                     {
                         field: "current_price",
                         headerName: "Текущая цена",
-                        valueFormatter: params => `${params.value}₽`
+                        valueFormatter: params =>
+                            params.value === null ? "N/A" : `${params.value}₽`
                     },
                     {
                         field: "cost_price",

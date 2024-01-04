@@ -27,7 +27,7 @@ export type Offer = {
     /** Final price calculated by service. */
     total_price: number;
     /** Price that is currently set in Yandex Market. */
-    current_price: number;
+    current_price?: number;
     /** The price **in rubles** at which goods are or have been bought by a merchant or retailer. */
     cost_price: number;
     /** The price **in dollars** at which goods are or have been bought by a merchant or retailer. */
