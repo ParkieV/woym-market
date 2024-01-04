@@ -103,12 +103,6 @@
                         border: 0;
                         color: white;
                     }
-                    > button.cancel {
-                        background-color: #cc1821;
-                    }
-                    > button.confirm {
-                        background-color: #25692e;
-                    }
                 }
             }
             #grid {
