@@ -1,10 +1,12 @@
 import type { Offer } from "$lib";
-import type { ColDef, ColGroupDef, GridOptions } from "ag-grid-community";
+import type { ColDef, ColGroupDef, GridOptions, IRowNode } from "ag-grid-community";
 import { notNullFieldColumn } from "./util";
 
 export function DataGridOptions(init: {
-    onPhotoClicked: (src: string) => void,
-    changed: Map<string, Offer>,
+    onPhotoClicked: (src: string) => void;
+    changed: Map<string, Offer>;
+    isFilterEnabled: () => boolean;
+    filter: (offer: IRowNode<Offer>) => boolean;
 }): GridOptions<Offer> {
     return {
         suppressDragLeaveHidesColumns: true,
@@ -16,7 +18,13 @@ export function DataGridOptions(init: {
                 editable: true
             }
         },
-        rowHeight: 75
+        rowHeight: 75,
+        isExternalFilterPresent: init.isFilterEnabled,
+        doesExternalFilterPass: init.filter,
+        onCellValueChanged: e => {
+            init.changed.set(e.data.sku, e.data);
+            e.api.redrawRows({ rowNodes: [e.node] });
+        }
     };
 
     function columnDefs(): (ColDef<Offer> | ColGroupDef<Offer>)[] {
@@ -27,11 +35,9 @@ export function DataGridOptions(init: {
                 lockPosition: "left",
                 pinned: "left",
                 cellClass: params => {
-                    if (init.changed.has(params.value))
-                    {
+                    if (init.changed.has(params.value)) {
                         return ["changed"];
-                    }
-                    else {
+                    } else {
                         return [];
                     }
                 }

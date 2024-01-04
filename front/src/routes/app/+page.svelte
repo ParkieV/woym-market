@@ -16,18 +16,26 @@
     let selected_image = "";
     let changed: Map<string, Offer> = new Map();
     let grid: GridApi;
+    let search = "";
+    $: if (grid) {
+        search;
+        grid.onFilterChanged();
+    }
 
     onMount(() => {
         const gridElement = document.querySelector("#grid")! as HTMLElement;
         const options = DataGridOptions({
             changed,
-            onPhotoClicked: src => selected_image = src,
+            onPhotoClicked: src => (selected_image = src),
+            isFilterEnabled: () => search != "",
+            filter: e => {
+                let _search = search.trim().toLowerCase().replaceAll("ё", "е");
+                let name = e.data!.name.toLowerCase().replaceAll("ё", "е");
+                let sku = e.data!.sku.toLowerCase().replaceAll("ё", "е");
+                return name.includes(_search) || sku.includes(_search);
+            }
         });
         options.rowData = data.offers;
-        options.onCellValueChanged = e => {
-            changed.set(e.data.sku, e.data);
-            e.api.redrawRows({ rowNodes: [e.node] });
-        }
         grid = createGrid(gridElement, options);
     });
 
@@ -100,7 +108,7 @@
             <button on:click={export_excel}>Экспорт</button>
             <button on:click={import_excel}>Импорт</button>
             <div style="flex: 1;" />
-            <Search placeholder="Поиск..." />
+            <Search placeholder="Поиск..." bind:value={search} />
         </menu>
         <div id="grid" class="ag-theme-quartz"></div>
         <menu class="buttons">
