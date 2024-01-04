@@ -5,7 +5,17 @@ import { get, type Readable, type Writable } from 'svelte/store';
 const _Token: Writable<string | null> = persisted('token', null);
 export const Token: Readable<string | null> = _Token;
 
-export async function Login(name: string, password: string): Promise<boolean>
+export async function fetchAuthenticated(endpoint: string, init?: RequestInit): Promise<Response> {
+    let token = get(Token);
+    if (!token) throw new Error("403");
+
+    if (!init) init = {};
+    init.headers = new Headers(init.headers);
+    init.headers.append("Authorization", "Bearer " + token);
+    return fetch(BaseUrl + endpoint, init);
+}
+
+export async function login(name: string, password: string): Promise<boolean>
 {
     let credentials = { username: name, password };
     let response = await fetch(
@@ -29,7 +39,7 @@ export async function Login(name: string, password: string): Promise<boolean>
     return true;
 }
 
-export function Logout()
+export function logout()
 {
     _Token.set(null);
     document.cookie = `mpToken=; max-age=0;`;

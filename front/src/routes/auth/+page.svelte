@@ -1,15 +1,14 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import Input from "$lib/Input.svelte";
-    import { Login } from "$lib/auth";
-    import { createEventDispatcher } from "svelte";
+    import { login as login_request } from "$lib/auth";
 
     let login: string;
     let password: string;
 
     async function onclick()
     {
-        if (await Login(login, password))
+        if (await login_request(login, password))
         {
             goto("/app");
         }
