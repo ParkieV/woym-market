@@ -34,7 +34,8 @@ export async function login(name: string, password: string): Promise<boolean>
     let token = body.access_token;
 
     _Token.set(token);
-    document.cookie = `mpToken=${token}; max-age=3600; secure`;
+    // TODO: Add `secure; ` field if https is implemented.
+    document.cookie = `mpToken=${token}; max-age=3600`;
 
     return true;
 }
