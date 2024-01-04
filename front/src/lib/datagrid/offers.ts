@@ -5,6 +5,7 @@ import { notNullFieldColumn } from "./util";
 export function DataGridOptions(init: {
     onPhotoClicked: (src: string) => void;
     changed: Map<string, Offer>;
+    onChangedUpdated?: () => void;
     isFilterEnabled: () => boolean;
     filter: (offer: IRowNode<Offer>) => boolean;
 }): GridOptions<Offer> {
@@ -23,6 +24,7 @@ export function DataGridOptions(init: {
         doesExternalFilterPass: init.filter,
         onCellValueChanged: e => {
             init.changed.set(e.data.sku, e.data);
+            if (init.onChangedUpdated) init.onChangedUpdated();
             e.api.redrawRows({ rowNodes: [e.node] });
         }
     };

@@ -33,6 +33,9 @@
                 let name = e.data!.name.toLowerCase().replaceAll("ё", "е");
                 let sku = e.data!.sku.toLowerCase().replaceAll("ё", "е");
                 return name.includes(_search) || sku.includes(_search);
+            },
+            onChangedUpdated: () => {
+                changed = changed;
             }
         });
         options.rowData = data.offers;
@@ -87,6 +90,7 @@
 
     async function reloadGrid() {
         changed.clear();
+        changed = changed;
         await invalidateAll();
         grid.setGridOption("rowData", data.offers);
     }
@@ -114,8 +118,12 @@
         </menu>
         <div id="grid" class="ag-theme-quartz"></div>
         <menu class="buttons">
-            <button class="cancel" on:click={cancel_edits}>Отмена</button>
-            <button class="confirm" on:click={confirm_edits}>Сохранить изменения</button>
+            <button class="cancel" on:click={cancel_edits} disabled={changed.size == 0}>
+                Отмена
+            </button>
+            <button class="confirm" on:click={confirm_edits} disabled={changed.size == 0}>
+                Сохранить изменения
+            </button>
         </menu>
     </main>
 </div>
