@@ -2,7 +2,6 @@
     export let src: string;
 
     let dialog: HTMLDialogElement;
-
     $: if (src && dialog) {
         dialog.showModal();
     } else if (dialog) {

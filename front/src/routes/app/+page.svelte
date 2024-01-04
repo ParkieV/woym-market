@@ -53,6 +53,8 @@
     }
 </script>
 
+ <!-- TODO: ConfirmationDialog when data is updated -->
+<!-- <ConfirmationDialog open={true} text="Это действие обновит 100500 строк."/> -->
 <ImageModal bind:src={selected_image} />
 <SettingsDialog bind:open={settings_open} />
 

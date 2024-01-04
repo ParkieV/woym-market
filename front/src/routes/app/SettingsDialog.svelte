@@ -5,7 +5,6 @@
     export let open: boolean;
 
     let dialog: HTMLDialogElement | null;
-
     $: if (open && dialog) {
         dialog.showModal();
     } else if (dialog) {
