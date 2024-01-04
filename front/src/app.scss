@@ -35,6 +35,10 @@ button {
     &.ag-right-aligned-cell {
         justify-content: end;
     }
+    &.changed {
+        text-decoration: underline;
+        background-color: #e7b93c;
+    }
 }
 
 .product-photo-cell {

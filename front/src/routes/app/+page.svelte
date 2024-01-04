@@ -2,25 +2,33 @@
     import { goto } from "$app/navigation";
     import Search from "$lib/Search.svelte";
     import { fetchAuthenticated, logout } from "$lib/auth";
-    import { createGrid } from "ag-grid-community";
+    import { GridApi, createGrid } from "ag-grid-community";
     import { onMount } from "svelte";
     import type { PageData } from "./$types";
     import { DataGridOptions } from "$lib/datagrid/offers";
     import Sidebar from "./Sidebar.svelte";
     import ImageModal from "./ImageModal.svelte";
     import SettingsDialog from "./SettingsDialog.svelte";
+    import type { Offer } from "$lib";
 
     export let data: PageData;
     let settings_open: boolean = false;
     let selected_image = "";
+    let changed: Map<string, Offer> = new Map();
+    let grid: GridApi;
 
     onMount(() => {
         const gridElement = document.querySelector("#grid")! as HTMLElement;
-        const options = DataGridOptions(src => {
-            selected_image = src;
+        const options = DataGridOptions({
+            changed,
+            onPhotoClicked: src => selected_image = src,
         });
         options.rowData = data.offers;
-        let grid = createGrid(gridElement, options);
+        options.onCellValueChanged = e => {
+            changed.set(e.data.sku, e.data);
+            e.api.redrawRows({ rowNodes: [e.node] });
+        }
+        grid = createGrid(gridElement, options);
     });
 
     async function export_excel() {
@@ -42,10 +50,9 @@
             formData.append("data", file);
             let responce = await fetchAuthenticated("offers/xlsx", {
                 method: "POST",
-                body: formData,
+                body: formData
             });
-            if (!responce.ok)
-            {
+            if (!responce.ok) {
                 alert("Импорт не удался");
             }
         };
@@ -53,7 +60,7 @@
     }
 </script>
 
- <!-- TODO: ConfirmationDialog when data is updated -->
+<!-- TODO: Show ConfirmationDialog before any dangerous action -->
 <!-- <ConfirmationDialog open={true} text="Это действие обновит 100500 строк."/> -->
 <ImageModal bind:src={selected_image} />
 <SettingsDialog bind:open={settings_open} />

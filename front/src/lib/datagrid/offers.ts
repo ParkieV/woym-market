@@ -2,7 +2,10 @@ import type { Offer } from "$lib";
 import type { ColDef, ColGroupDef, GridOptions } from "ag-grid-community";
 import { notNullFieldColumn } from "./util";
 
-export function DataGridOptions(onPhotoClicked: (src: string) => void): GridOptions<Offer> {
+export function DataGridOptions(init: {
+    onPhotoClicked: (src: string) => void,
+    changed: Map<string, Offer>,
+}): GridOptions<Offer> {
     return {
         suppressDragLeaveHidesColumns: true,
         autoSizeStrategy: { type: "fitCellContents" },
@@ -22,7 +25,16 @@ export function DataGridOptions(onPhotoClicked: (src: string) => void): GridOpti
                 field: "sku",
                 headerName: "SKU",
                 lockPosition: "left",
-                pinned: "left"
+                pinned: "left",
+                cellClass: params => {
+                    if (init.changed.has(params.value))
+                    {
+                        return ["changed"];
+                    }
+                    else {
+                        return [];
+                    }
+                }
             },
             {
                 headerName: "Информация",
@@ -34,7 +46,7 @@ export function DataGridOptions(onPhotoClicked: (src: string) => void): GridOpti
                         cellRenderer: (params: any) =>
                             params.value != null ? `<img src="${params.value}" />` : "",
                         cellClass: "product-photo-cell",
-                        onCellClicked: e => onPhotoClicked(e.value.toString())
+                        onCellClicked: e => init.onPhotoClicked(e.value.toString())
                     },
                     { field: "name", headerName: "Название" },
                     {
