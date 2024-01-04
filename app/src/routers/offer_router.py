@@ -28,7 +28,8 @@ async def delete_offers(offers: list[OfferDelete]):
 
 @offer_router.post('/send', dependencies=[Depends(get_current_user)])
 async def send_offer_to_yandex():
-    return await service.update_yandex_offers_price()
+    await service.update_yandex_offers_price()
+    return {'status': 'OK'}
 
 
 @offer_router.post('/setup', dependencies=[Depends(get_current_user)])

@@ -34,7 +34,6 @@ async def change_offer(session: AsyncSession, offers_data: list[OfferChange]):
         await session.execute(update(Offer).where(Offer.sku == offer_data.sku).values(**dict(offer_data)))
 
     await session.commit()
-    return None
 
 
 async def update_offers(session: AsyncSession, offers_data):
@@ -43,7 +42,6 @@ async def update_offers(session: AsyncSession, offers_data):
         await session.execute(update(Offer).where(Offer.sku == offer_data['sku']).values(**offer_data))
 
     await session.commit()
-    return None
 
 
 async def get_offers_by_sku(session: AsyncSession, skus: list[str]):

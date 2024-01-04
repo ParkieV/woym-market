@@ -60,12 +60,10 @@ class OfferChange(BaseModel):
     note_2: str | None = None
     note_3: str | None = None
 
-    current_price: float
     use_manual_min_price: bool = True # использовать ли автоматический расчет нижней планки цены
     auto_min_price: float # в процентах
     manual_min_price: float | None = None
     auto_price_control: bool = False # ручное управление ценами
-
 
 
 class OfferDelete(BaseModel):

@@ -21,6 +21,9 @@ async def get_offers():
 
 
 async def change_offers(offers_data: list[OfferChange], user_id: int):
+    if len(offers_data) <= 0:
+        return []
+
     settings = await get_settings(user_id)
 
     async with async_session() as session:
@@ -31,8 +34,6 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
         changed_offers = utils.update_offers_data(offers_df, changes, settings.rate)
         await db.update_offers(session, changed_offers)
         return await db.get_offers_by_sku(session, [i.sku for i in offers_data])
-    # async with async_session() as session:
-    #     return await db.change_offer(session, offers_data)
 
 
 async def setup_offers_data(course: float = 15):

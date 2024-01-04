@@ -34,10 +34,7 @@ class YandexMarketRepository:
         offers: list[YandexOfferInfo] = []
         for campaign in campaigns:
             offers += self.get_campaign_offers(campaign.business_id)
-            # path = await self.get_market_price_report(campaign.id)
-            # print(path)
-        print(len(offers))
-        print(len(offers_stock.keys()))
+
         extended_offers = []
         for offer in offers:
             extended_offers.append(ExtendedYandexOfferInfo(
@@ -105,8 +102,6 @@ class YandexMarketRepository:
 
             for offer in data['result']['offerMappings']:
                 offer = offer['offer']
-                if 'basicPrice' not in offer:
-                    print(offer['offerId'], business_id)
                 offer_data = YandexOfferInfo(
                     sku=offer['offerId'],
                     name=offer['name'],
@@ -115,7 +110,7 @@ class YandexMarketRepository:
                     width=offer['weightDimensions']['width'] / 100 if 'weightDimensions' in offer else 0,
                     height=offer['weightDimensions']['height'] / 100 if 'weightDimensions' in offer else 0,
                     volume_yandex=(offer['weightDimensions']['length'] * offer['weightDimensions']['width'] *
-                                        offer['weightDimensions']['height']) / 5000 if 'weightDimensions' in offer else 0,
+                                   offer['weightDimensions']['height']) / 5000 if 'weightDimensions' in offer else 0,
                     photo=offer['pictures'][0] if len(offer['pictures']) > 0 else None,
                     current_price=offer['basicPrice']['value'] if 'basicPrice' in offer else None,
                     business_id=business_id
@@ -135,16 +130,14 @@ class YandexMarketRepository:
                 data = [{
                     'offerId': offer['sku'],
                     'price': {
-                        'value' : offer['current_price'],
-                        'currencyId' : "RUR"
+                        'value': offer['current_price'],
+                        'currencyId': "RUR"
                     }
                 }
-                        for offer in _offers[i:i+chunk_size] if offer['current_price'] is not None]
+                    for offer in _offers[i:i + chunk_size] if offer['current_price'] is not None]
                 body = {
                     'offers': data
                 }
-
-                print(body)
 
                 if len(body['offers']) <= 0:
                     break
@@ -157,8 +150,6 @@ class YandexMarketRepository:
                 #
                 # if response.status_code != 200:
                 #     self.raise_request_exception(response.status_code, response.text)
-
-
 
     async def get_report_info(self, report_id: str):
         while True:

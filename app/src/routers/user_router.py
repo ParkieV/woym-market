@@ -21,15 +21,6 @@ async def update_settings(settings_data: SettingsUpdate, current_user=Depends(ge
     return {'status': 'OK'}
 
 
-@user_router.get('/hello')
-async def route_get_user(data: str):
-    return {'msg': f'Hello {data}!'}
-
-
-@user_router.get('/me', response_model=UserOut)
-async def route_get_user(current_user=Depends(get_current_user)):
-    return current_user
-
 # TODO refactor this route
 # @user_router.put('/')
 # async def route_update_user(id_user: int, new_user_data: NewUserData, user = Depends(get_current_user)):
