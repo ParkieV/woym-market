@@ -1,3 +1,5 @@
+import { fetchAuthenticated } from "./auth";
+
 export const BaseUrl = "http://5.35.88.225:8000/";
 
 // TODO: Improve documentation
@@ -63,4 +65,9 @@ export async function patchUserInfo(val: { rate: number }): Promise<void> {
 export async function fetchUserInfo(): Promise<{ rate: number }> {
     let info = await (await fetchAuthenticated("users/settings")).json();
     return info;
+}
+
+export async function fetchOfferList(): Promise<Offer[]> {
+    let offers = await (await fetch("http://5.35.88.225:8000/offers/")).json();
+    return offers;
 }

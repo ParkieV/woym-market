@@ -1,9 +1,8 @@
-import type { ColDef } from "ag-grid-community";
+import { fetchOfferList } from "$lib";
 import type { PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ fetch }) => {
-    let offers = await ((await fetch("http://5.35.88.225:8000/offers/")).json())
+export const load: PageServerLoad = async ({}) => {
     return {
-        offers,
+        offers: await fetchOfferList()
     };
 };
