@@ -1,7 +1,7 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
     import Search from "$lib/Search.svelte";
-    import { Logout } from "$lib/auth";
+    import { fetchAuthenticated, logout } from "$lib/auth";
     import { createGrid } from "ag-grid-community";
     import { onMount } from "svelte";
     import type { PageData } from "./$types";
@@ -23,9 +23,33 @@
         let grid = createGrid(gridElement, options);
     });
 
-    function SignOut() {
-        Logout();
-        goto("/auth");
+    async function export_excel() {
+        let blob = await (await fetchAuthenticated("offers/xlsx")).blob();
+        let url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "report.xlsx";
+        link.click();
+    }
+
+    async function import_excel() {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.onchange = async e => {
+            let target = e.target as HTMLInputElement;
+            let file = target.files![0];
+            let formData = new FormData();
+            formData.append("data", file);
+            let responce = await fetchAuthenticated("offers/xlsx", {
+                method: "POST",
+                body: formData,
+            });
+            if (!responce.ok)
+            {
+                alert("Импорт не удался");
+            }
+        };
+        input.click();
     }
 </script>
 
