@@ -6,13 +6,21 @@
     import { onMount } from "svelte";
     import type { PageData } from "./$types";
     import { DataGridOptions } from "$lib/datagrid/offers";
+    import Sidebar from "./Sidebar.svelte";
+    import ImageModal from "./ImageModal.svelte";
+    import SettingsDialog from "./SettingsDialog.svelte";
 
     export let data: PageData;
+    let settings_open: boolean = false;
+    let selected_image = "";
 
     onMount(() => {
-        const myGridElement = document.querySelector("#grid")! as HTMLElement;
-        const options = DataGridOptions(data.offers);
-        let grid = createGrid(myGridElement, options);
+        const gridElement = document.querySelector("#grid")! as HTMLElement;
+        const options = DataGridOptions(src => {
+            selected_image = src;
+        });
+        options.rowData = data.offers;
+        let grid = createGrid(gridElement, options);
     });
 
     function SignOut() {
@@ -21,20 +29,21 @@
     }
 </script>
 
+<ImageModal bind:src={selected_image} />
+<SettingsDialog bind:open={settings_open} />
+
 <div id="wrapper">
-    <nav>
-        <h1>mp-auto-price</h1>
-        <div style="flex: 1;" />
-        <button>Настройки</button>
-        <button class="sign-out" on:click={SignOut}>
-            <img src="sign-out.svg" alt="" />
-            <span>Выход</span>
-        </button>
-    </nav>
+    <Sidebar
+        on:settings={() => (settings_open = true)}
+        on:exit={() => {
+            logout();
+            goto("/auth");
+        }}
+    />
     <main>
         <menu class="toolbar">
-            <button>Импорт</button>
-            <button>Экспорт</button>
+            <button on:click={export_excel}>Экспорт</button>
+            <button on:click={import_excel}>Импорт</button>
             <div style="flex: 1;" />
             <Search placeholder="Поиск..." />
         </menu>
@@ -79,37 +88,6 @@
             #grid {
                 flex: 1;
                 height: 100%;
-            }
-        }
-    }
-
-    nav {
-        display: flex;
-        align-items: center;
-        width: 160px;
-        flex-direction: column;
-        padding: 20px 10px 20px 10px;
-        gap: 10px;
-
-        color: white;
-        background-color: #455561;
-        > button {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            align-self: stretch;
-            gap: 4px;
-            color: white;
-            background-color: transparent;
-            padding: 10px 20px;
-            border: none;
-            > img {
-                width: 16px;
-                height: 16px;
-                filter: invert(1);
-            }
-            &:hover {
-                background-color: rgba(0, 0, 0, 0.2);
             }
         }
     }
