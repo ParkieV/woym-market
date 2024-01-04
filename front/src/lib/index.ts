@@ -1,6 +1,7 @@
 import { fetchAuthenticated } from "./auth";
+import { PUBLIC_BASE_URL } from "$env/static/public";
 
-export const BaseUrl = "http://5.35.88.225:8000/";
+export const BaseUrl = PUBLIC_BASE_URL;
 
 // TODO: Improve documentation
 export type Offer = {
