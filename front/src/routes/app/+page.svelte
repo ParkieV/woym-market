@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
+    import { goto, invalidateAll } from "$app/navigation";
     import Search from "$lib/Search.svelte";
     import { fetchAuthenticated, logout } from "$lib/auth";
     import { GridApi, createGrid } from "ag-grid-community";
@@ -58,6 +58,28 @@
         };
         input.click();
     }
+
+    async function cancel_edits() {
+        await reloadGrid();
+    }
+
+    async function confirm_edits() {
+        let data = Array.from(changed.values());
+        await fetchAuthenticated("offers", {
+            method: "PATCH",
+            body: JSON.stringify(data),
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+        await reloadGrid();
+    }
+
+    async function reloadGrid() {
+        changed.clear();
+        await invalidateAll();
+        grid.setGridOption("rowData", data.offers);
+    }
 </script>
 
 <!-- TODO: Show ConfirmationDialog before any dangerous action -->
@@ -82,8 +104,8 @@
         </menu>
         <div id="grid" class="ag-theme-quartz"></div>
         <menu class="buttons">
-            <button class="cancel"> Отмена </button>
-            <button class="confirm"> Подтвердить </button>
+            <button class="cancel" on:click={cancel_edits}>Отмена</button>
+            <button class="confirm" on:click={confirm_edits}>Сохранить изменения</button>
         </menu>
     </main>
 </div>
