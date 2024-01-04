@@ -86,20 +86,16 @@ export function DataGridOptions(onPhotoClicked: (src: string) => void): GridOpti
                 headerName: "Цена",
                 children: [
                     {
-                        field: "total_price",
-                        headerName: "Расчётная цена",
-                        valueFormatter: params => `${params.value}₽`
+                        ...money_column("total_price", "₽"),
+                        headerName: "Расчётная цена"
                     },
                     {
-                        field: "current_price",
-                        headerName: "Текущая цена",
-                        valueFormatter: params =>
-                            params.value === null ? "N/A" : `${params.value}₽`
+                        ...money_column("current_price", "₽"),
+                        headerName: "Текущая цена"
                     },
                     {
-                        field: "cost_price",
+                        ...money_column("cost_price", "₽"),
                         headerName: "Закупка",
-                        valueFormatter: params => `${params.value}₽`,
                         columnGroupShow: "open"
                     },
                     {
@@ -119,31 +115,30 @@ export function DataGridOptions(onPhotoClicked: (src: string) => void): GridOpti
                         type: "editable",
                         cellEditor: "agNumberCellEditor",
                         cellEditorParams: {
-                            min: 0,
+                            min: 0
                         },
+                        cellClass: "ag-right-aligned-cell",
                         columnGroupShow: "open"
                     },
                     {
-                        field: "discount_base_price",
+                        ...money_column("discount_base_price", "₽"),
                         headerName: "Цена до скидки",
-                        valueFormatter: params => `${params.value}₽`,
                         columnGroupShow: "open"
                     },
                     {
-                        field: "profit",
+                        ...money_column("profit", "₽"),
                         headerName: "Прибыль",
-                        valueFormatter: params => `${params.value}₽`,
                         columnGroupShow: "open"
                     },
                     {
                         field: "payback",
                         headerName: "Окупаемость",
-                        columnGroupShow: "open"
+                        columnGroupShow: "open",
+                        cellClass: "ag-right-aligned-cell"
                     },
                     {
-                        field: "fby",
+                        ...money_column("fby", "₽"),
                         headerName: "FBY",
-                        valueFormatter: params => `${params.value}₽`,
                         columnGroupShow: "open"
                     }
                 ]
@@ -151,7 +146,10 @@ export function DataGridOptions(onPhotoClicked: (src: string) => void): GridOpti
             {
                 headerName: "Группа",
                 children: [
-                    { field: "minimum_group_price", headerName: "Мин. цена в группе" }
+                    {
+                        ...money_column("minimum_group_price", "₽"),
+                        headerName: "Мин. цена в группе"
+                    }
                     // TODO: Uncomment after backend fix lands.
                     // { field: "group_sellers_amount", headerName: "Продавцов в группе" }
                 ]
@@ -161,26 +159,37 @@ export function DataGridOptions(onPhotoClicked: (src: string) => void): GridOpti
                 field: "remaining_stock",
                 headerName: "Остаток на складе",
                 wrapHeaderText: true,
-                width: 105
+                cellClass: "ag-right-aligned-cell",
+                initialWidth: 120
             },
             {
                 field: "auto_price_control",
                 headerName: "Автоматическое управление ценами",
                 wrapHeaderText: true,
-                width: 200,
+                initialWidth: 200,
                 type: "editable"
             },
             {
                 field: "use_manual_min_price",
                 headerName: "Ручное управление мин. ценой",
                 wrapHeaderText: true,
+                initialWidth: 200,
                 type: "editable"
             }
         ];
     }
 }
 
-function editable_money_column(field: keyof Offer, currency: string = ""): ColDef<Offer> {
+function money_column(field: keyof Offer, currency: string): ColDef<Offer> {
+    return {
+        field,
+        cellClass: "ag-right-aligned-cell",
+        valueFormatter: params =>
+            params.value === null ? "N/A" : `${params.value.toFixed(2)} ${currency}`
+    };
+}
+
+function editable_money_column(field: keyof Offer, currency: string): ColDef<Offer> {
     return {
         ...notNullFieldColumn(field),
         cellEditor: "agNumberCellEditor",
@@ -191,6 +200,6 @@ function editable_money_column(field: keyof Offer, currency: string = ""): ColDe
         },
         type: "editable",
         cellClass: "ag-right-aligned-cell",
-        valueFormatter: params => `${params.value}${currency}`
+        valueFormatter: params => `${params.value.toFixed(2)} ${currency}`
     };
 }
