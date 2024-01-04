@@ -39,7 +39,7 @@
         grid = createGrid(gridElement, options);
     });
 
-    async function export_excel() {
+    async function exportXlsx() {
         let blob = await (await fetchAuthenticated("offers/xlsx")).blob();
         let url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -48,7 +48,7 @@
         link.click();
     }
 
-    async function import_excel() {
+    async function importXlsx() {
         const input = document.createElement("input");
         input.type = "file";
         input.onchange = async e => {
@@ -62,6 +62,8 @@
             });
             if (!responce.ok) {
                 alert("Импорт не удался");
+            } else {
+                await reloadGrid();
             }
         };
         input.click();
@@ -105,8 +107,8 @@
     />
     <main>
         <menu class="toolbar">
-            <button on:click={export_excel}>Экспорт</button>
-            <button on:click={import_excel}>Импорт</button>
+            <button on:click={exportXlsx}>Экспорт</button>
+            <button on:click={importXlsx}>Импорт</button>
             <div style="flex: 1;" />
             <Search placeholder="Поиск..." bind:value={search} />
         </menu>
