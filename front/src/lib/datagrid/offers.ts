@@ -114,10 +114,13 @@ export function DataGridOptions(onPhotoClicked: (src: string) => void): GridOpti
                         columnGroupShow: "open"
                     },
                     {
-                        field: "total_price_coeff",
+                        ...notNullFieldColumn("total_price_coeff"),
                         headerName: "Коэффициент",
                         type: "editable",
                         cellEditor: "agNumberCellEditor",
+                        cellEditorParams: {
+                            min: 0,
+                        },
                         columnGroupShow: "open"
                     },
                     {
