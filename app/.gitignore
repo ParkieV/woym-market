@@ -3,7 +3,7 @@ env/
 __pycache__/
 *.ipynb
 *.vscode/
-.idea
+*.idea
 
 app/data/*
 .DS_Store

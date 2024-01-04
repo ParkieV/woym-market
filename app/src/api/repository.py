@@ -134,7 +134,7 @@ class YandexMarketRepository:
                         'currencyId': "RUR"
                     }
                 }
-                    for offer in _offers[i:i + chunk_size] if offer['current_price'] is not None]
+                    for offer in _offers[i:i + chunk_size] if offer['current_price'] is not None and not offer['auto_price_control']]
                 body = {
                     'offers': data
                 }

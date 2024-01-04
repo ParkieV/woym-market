@@ -14,18 +14,18 @@ services:
     ports:
       - 8000:8000
 
-#   frontend:
-#     container_name: frontend
-#     restart: always
-#     env_file: .env
-#     build:
-#       context: ./front
-#       dockerfile: front.dockerfile
-#     depends_on:
-#       - app
-#     ports:
-#       - 3000:3000
-#
+  frontend:
+   container_name: frontend
+   restart: always
+   env_file: .env
+   build:
+     context: ./front
+     dockerfile: front.dockerfile
+   depends_on:
+     - app
+   ports:
+     - 3000:3000
+
   nginx:
     image: nginx:latest
     container_name: nginx
@@ -36,7 +36,6 @@ services:
       - ./nginx:/etc/nginx/conf.d
       # - /etc/letsencrypt:/etc/letsencrypt
       # - /var/www/html:/var/www/html
-      # - ./front:/etc/nginx/front
       # - ./static:/etc/nginx/static_img
     ports:
       - 80:80
