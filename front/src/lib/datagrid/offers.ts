@@ -121,7 +121,7 @@ export function DataGridOptions(onPhotoClicked: (src: string) => void): GridOpti
                         columnGroupShow: "open"
                     },
                     {
-                        field: "price_before_discount",
+                        field: "discount_base_price",
                         headerName: "Цена до скидки",
                         valueFormatter: params => `${params.value}₽`,
                         columnGroupShow: "open"

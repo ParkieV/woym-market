@@ -36,7 +36,7 @@ export type Offer = {
     total_price_min_additional: number;
 
     total_price_coeff: number;
-    price_before_discount: number;
+    discount_base_price: number;
     profit: number;
     payback: number;
     fby: number;
