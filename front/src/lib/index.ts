@@ -69,6 +69,6 @@ export async function fetchUserInfo(): Promise<{ rate: number }> {
 }
 
 export async function fetchOfferList(): Promise<Offer[]> {
-    let offers = await (await fetch("http://5.35.88.225:8000/offers/")).json();
+    let offers = await (await fetch(BaseUrl + "offers")).json();
     return offers;
 }
