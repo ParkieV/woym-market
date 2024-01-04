@@ -5,7 +5,7 @@
     import { createGrid } from "ag-grid-community";
     import { onMount } from "svelte";
     import type { PageData } from "./$types";
-    import { DataGridOptions } from "$lib/datagrid";
+    import { DataGridOptions } from "$lib/datagrid/offers";
 
     export let data: PageData;
 
