@@ -39,7 +39,7 @@ export type Offer = {
     total_price_coeff: number;
     discount_base_price: number;
     profit: number;
-    payback: number;
+    margin: number;
     fby: number;
     minimum_group_price: number;
     group_sellers_amount: number;

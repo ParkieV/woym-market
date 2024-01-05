@@ -151,10 +151,11 @@ export function DataGridOptions(init: {
                         columnGroupShow: "open"
                     },
                     {
-                        field: "payback",
+                        field: "margin",
                         headerName: "Окупаемость",
                         columnGroupShow: "open",
-                        cellClass: "ag-right-aligned-cell"
+                        cellClass: "ag-right-aligned-cell",
+                        valueFormatter: params => `${params.value ? params.value.toFixed(3) : ""}%`
                     },
                     {
                         ...money_column("fby", "₽"),
