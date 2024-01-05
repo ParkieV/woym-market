@@ -107,7 +107,7 @@
 <!-- TODO: Show ConfirmationDialog before any dangerous action -->
 <!-- <ConfirmationDialog open={true} text="Это действие обновит 100500 строк."/> -->
 <ImageModal bind:src={selected_image} />
-<SettingsDialog bind:open={settings_open} />
+<SettingsDialog bind:open={settings_open} on:confirm={() => reloadGrid()} />
 
 <div id="wrapper">
     <Sidebar
