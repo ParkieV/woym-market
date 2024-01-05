@@ -12,11 +12,15 @@
     import { patchOfferList, type Offer } from "$lib";
 
     export let data: PageData;
-    let settings_open: boolean = false;
-    let selected_image = "";
+
     let changed: Map<string, Offer> = new Map();
     let grid: GridApi;
+
+    let settings_open: boolean = false;
+    let selected_image = "";
     let search = "";
+    let last_updated = new Date(0);
+
     $: if (grid) {
         search;
         grid.onFilterChanged();
@@ -88,6 +92,16 @@
         await invalidateAll();
         grid.setGridOption("rowData", data.offers);
     }
+
+    async function refreshData() {
+        if (
+            changed.size == 0 ||
+            confirm(`Вы внесли ${changed.size} изменений. Они будут потеряны, вы уверены?`) // TODO: use custom confirmation dialog
+        ) {
+            // TODO: implement after backend endpoint is completed.
+            alert("Этот функционал в разработке!");
+        }
+    }
 </script>
 
 <!-- TODO: Show ConfirmationDialog before any dangerous action -->
@@ -111,7 +125,10 @@
             <Search placeholder="Поиск..." bind:value={search} />
         </menu>
         <div id="grid" class="ag-theme-quartz"></div>
-        <menu class="buttons">
+        <menu class="bottombar">
+            <button on:click={refreshData} class="refresh"> Обновить данные </button>
+            <span>{`Последнее обновление:\n${last_updated.toLocaleString("en-GB", {})}`}</span>
+            <div style:flex="1" />
             <button class="cancel" on:click={cancel_edits} disabled={changed.size == 0}>
                 Отмена
             </button>
@@ -132,20 +149,6 @@
             display: flex;
             flex-direction: column;
             flex: 1;
-            > menu {
-                &.buttons {
-                    display: flex;
-                    padding: 20px;
-                    justify-content: end;
-                    gap: 20px;
-                    > button {
-                        padding: 0 20px;
-                        height: 40px;
-                        border: 0;
-                        color: white;
-                    }
-                }
-            }
             #grid {
                 flex: 1;
                 height: 100%;
@@ -164,6 +167,29 @@
             &:hover {
                 background-color: #dddddd;
             }
+        }
+    }
+
+    .bottombar {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        gap: 16px;
+        > button {
+            padding: 0 16px;
+            height: 40px;
+            border: 0;
+            color: white;
+            &.refresh {
+                background-color: #252525;
+                &:hover {
+                    background-color: #111111;
+                }
+            }
+        }
+        > span {
+            font-size: 16px;
+            white-space: pre-wrap;
         }
     }
 
