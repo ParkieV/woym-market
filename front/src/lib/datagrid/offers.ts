@@ -215,8 +215,8 @@ function editable_money_column(field: keyof Offer, currency: string): ColDef<Off
         cellEditor: "agNumberCellEditor",
         cellEditorParams: {
             min: 0,
-            step: 0.25,
-            precision: 2
+            precision: 2,
+            preventStepping: true
         },
         type: "editable",
         cellClass: "ag-right-aligned-cell",
