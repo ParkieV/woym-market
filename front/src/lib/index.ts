@@ -72,3 +72,20 @@ export async function fetchOfferList(): Promise<Offer[]> {
     let offers = await (await fetch(BaseUrl + "offers")).json();
     return offers;
 }
+
+export async function patchOfferList(changed: Offer[]): Promise<void> {
+    for (const offer of changed) {
+        // Backend doesn't handle null values well, replace them with empty string before patching.
+        offer.note_1 = offer.note_1 ? offer.note_1 : "";
+        offer.note_2 = offer.note_2 ? offer.note_2 : "";
+        offer.note_3 = offer.note_3 ? offer.note_3 : "";
+    }
+
+    await fetchAuthenticated("offers", {
+        method: "PATCH",
+        body: JSON.stringify(changed),
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+}

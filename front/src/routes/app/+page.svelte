@@ -9,7 +9,7 @@
     import Sidebar from "./Sidebar.svelte";
     import ImageModal from "./ImageModal.svelte";
     import SettingsDialog from "./SettingsDialog.svelte";
-    import type { Offer } from "$lib";
+    import { patchOfferList, type Offer } from "$lib";
 
     export let data: PageData;
     let settings_open: boolean = false;
@@ -78,13 +78,7 @@
 
     async function confirm_edits() {
         let data = Array.from(changed.values());
-        await fetchAuthenticated("offers", {
-            method: "PATCH",
-            body: JSON.stringify(data),
-            headers: {
-                "Content-Type": "application/json"
-            }
-        });
+        await patchOfferList(data);
         await reloadGrid();
     }
 
