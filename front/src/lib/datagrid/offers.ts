@@ -50,7 +50,11 @@ export function DataGridOptions(init: {
                         cellRenderer: (params: any) =>
                             params.value != null ? `<img src="${params.value}" />` : "",
                         cellClass: "product-photo-cell",
-                        onCellClicked: e => init.onPhotoClicked(e.value.toString())
+                        onCellClicked: e => {
+                            if (e.value) {
+                                init.onPhotoClicked(e.value.toString());
+                            }
+                        }
                     },
                     { field: "name", headerName: "Название" },
                     {
