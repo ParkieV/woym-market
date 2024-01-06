@@ -18,10 +18,13 @@ def calculate_offers_values(data: pd.DataFrame, course: float) -> pd.DataFrame:
     data['total_price'] = np.where(data['cost_price'] > data['total_price_min_additional'],
                                    data['cost_price'] * data['total_price_coeff'],
                                    data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional'])
-    data['discount_base_price'] = data['total_price'] * 1.2
-    data['profit'] = data['total_price'] - data['fby'] - data['cost_price']
+    data['profit'] = data['current_price'] - data['fby'] - data['cost_price']
     data['margin'] = data['cost_price'] * 100 / data['profit']
+
     data = calculate_price(data)
+
+    data['discount_base_price'] = data['current_price'] * 1.2
+
     return data
 
 

@@ -47,9 +47,6 @@ async def setup_offers_data(course: float = 15):
 
 
 async def update_offers(user_id: int):
-    """Прежде всего нужно отправить новые цены в яндекс"""
-    await update_yandex_offers_price()
-
     settings = await get_settings(user_id)
 
     db_offers = jsonable_encoder(await get_offers())
@@ -77,6 +74,8 @@ async def update_offers(user_id: int):
         await db.create_offers(session, json.loads(to_create_rows.to_json(orient='records')))
         await db.update_offers(session, json_data)
 
+    await update_yandex_offers_price()
+
     return json_data
 
 
@@ -98,12 +97,11 @@ async def update_yandex_offers_price():
 async def build_csv():
     offers = jsonable_encoder(await get_offers())
     df = pd.DataFrame(offers)
-    df = df[OfferOut.__fields__.keys()]
+    df.drop('id', inplace=True, axis=1)
+    df = df[OfferOut.fields().keys()]
 
     df.drop(['business_id'], axis=1, inplace=True)
-
-    translated_columns = ['sku', 'Название', 'Вес', 'Длинна', 'Ширина', 'Высота', 'Объём с яндекса', 'Фото', 'Остатки на складах', 'Минимальная цена на рынке', 'Название магазина', 'Количество продавцов в группе', 'Закупка', 'Коэфициент расчетной цены', 'Объём', 'Себестоимость', 'Мин. наценка на расчетную цену', 'Расчетная цена', 'Цена до скидки', 'Прибыль', 'Окупаемость', 'Цена за FBY', 'Цена на маркете', 'Примечание 1', 'Примечание 2', 'Примечание 3', 'Использовать ручную мин. цену', 'Авто мин. цена %', 'Ручная мин. цена', 'Авто контроль цен']
-    df.columns = translated_columns
+    df.rename(columns=OfferOut.fields(), inplace=True)
     df.to_excel('data/out.xlsx', index=False)
     return 'data/out.xlsx'
 
@@ -112,11 +110,16 @@ async def import_offers_data(data: bytes, user_id: int):
     async with async_session() as session:
         settings = await get_settings(user_id)
         changes = utils.bytes_to_data_frame(data)
-        columns = list(OfferOut.__fields__.keys())
+        columns = list(OfferOut.fields().keys())
         columns.remove('business_id')
-        changes.columns = columns
+
+        changes.rename(columns=OfferOut.fields(), inplace=True)
+
         db_offers = jsonable_encoder(await get_offers())
         offers_df = pd.DataFrame(db_offers)
+
+        changes = changes[changes['sku'].isin(offers_df['sku'])]
+        offers_df = offers_df[offers_df['sku'].isin(changes['sku'])]
 
         json_data = utils.update_offers_data(offers_df, changes, settings.rate)
 

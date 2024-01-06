@@ -1,47 +1,53 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from abc import ABC
 
 
-class OfferOut(BaseModel):
+class BaseModelFields(ABC):
+    @classmethod
+    def fields(cls):
+        return {name: field.field_info.title for name, field in cls.__fields__.items()}
+
+
+class OfferOut(BaseModel, BaseModelFields):
     # from yandex api
-    sku: str
-    name: str
-    weight: float
-    length: float
-    width: float
-    height: float
-    current_price: float
-    volume_yandex: float
-    photo: str | None
-    remaining_stock: int
-    minimum_group_price: float
-    name_of_shop: str
-    group_sellers_amount: int
-    business_id: int
+    sku: str = Field(title='sku')
+    name: str = Field(title='Название')
+    weight: float = Field(title='Вес')
+    length: float = Field(title='Длинна')
+    width: float = Field(title='Ширина')
+    height: float = Field(title='Высота')
+    volume_yandex: float = Field(title='Объём с яндекса')
+    photo: str | None = Field(title='Фото')
+    remaining_stock: int = Field(title='Остатки на складах')
+    minimum_group_price: float = Field(title='Минимальная цена в группе')
+    name_of_shop: str = Field(title='Название магазина')
+    group_sellers_amount: int = Field(title='Количество продавцов в группе')
+    business_id: int = Field(title='id бизнесса')
 
     # countable/editable values
-    dollar_cost_price: float
-    total_price_coeff: float
-    volume: float
-    cost_price: float
-    total_price_min_additional: float
-    total_price: float
-    discount_base_price: float
-    profit: float
-    margin: float
-    fby: float
+    dollar_cost_price: float = Field(title='Закупка')
+    total_price_coeff: float = Field(title='Коэфициент расчетной цены')
+    volume: float = Field(title='Объём')
+    cost_price: float = Field(title='Себестоимость')
+    total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену')
+    total_price: float = Field(title='Расчетная цена')
+    discount_base_price: float = Field(title='Цена до скидки')
+    profit: float = Field(title='Прибыль')
+    margin: float = Field(title='Окупаемость')
+    fby: float = Field(title='Цена за FBY')
 
-    current_price: float | None
+    current_price: float | None = Field(title='Цена на маркете')
 
     # User additional fields
-    note_1: str | None = None
-    note_2: str | None = None
-    note_3: str | None = None
+    note_1: str | None = Field(None, title='Примечание 1')
+    note_2: str | None = Field(None, title='Примечание 2')
+    note_3: str | None = Field(None, title='Примечание 3')
 
-    use_manual_min_price: bool = True # использовать ли автоматический расчет нижней планки цены
-    auto_min_price: float # в процентах
-    manual_min_price: float | None = None
+    use_manual_min_price: bool =  Field(True, title='Использовать ручную мин. цену') # использовать ли автоматический расчет нижней планки цены
+    auto_min_price: float = Field(title='Авто мин. цена %') # в процентах
+    manual_min_price: float | None = Field(None, title='Ручная мин. цена')
 
-    auto_price_control: bool = False # автоматическое управление ценами
+    auto_price_control: bool = Field(False, title='Авто контроль цен') # автоматическое управление ценами
 
     # auto_min_price: float
     # use_manual_min_price: bool = False
@@ -68,4 +74,3 @@ class OfferChange(BaseModel):
 
 class OfferDelete(BaseModel):
     sku: str
-

@@ -51,10 +51,8 @@ async def test_update(current_user=Depends(get_current_user)):
 
 @offer_router.post('/xlsx')
 async def import_offers(data: bytes = File(), current_user=Depends(get_current_user)):
-    try:
-        await service.import_offers_data(data, current_user.id)
-    except Exception as e:
-        return {'status': 'ERROR', 'detail':'Файл поврежден или имеет неподдерживаемый формат'}
+    await service.import_offers_data(data, current_user.id)
+        # return {'status': 'ERROR', 'detail':'Файл поврежден или имеет неподдерживаемый формат'}
     return {'status': 'OK'}
 
 

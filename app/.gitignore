@@ -1,16 +1,16 @@
-venv/
+/venv/
 env/
 __pycache__/
 *.ipynb
 *.vscode/
 *.idea
-
+/data/
 app/data/*
 .DS_Store
 
 node_modules/
 **js/
-db-data/
+/db-data/
 static/
 nginx/*
 !nginx/server.conf

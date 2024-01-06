@@ -7,7 +7,6 @@ from sqlalchemy import (
     TIMESTAMP,
     Float
 )
-from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.expression import text
 
 from .base import Base

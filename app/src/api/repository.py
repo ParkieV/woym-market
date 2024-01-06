@@ -185,7 +185,7 @@ class YandexMarketRepository:
         output.write(response.content)
         df = pd.read_excel(output, engine='openpyxl')
         df.drop([0, 1, 2, 3], inplace=True)
-        data: pd.DataFrame = df.iloc[:, [0, 10]].replace('–', 0)
+        data: pd.DataFrame = df.iloc[:, [0, 14]].replace('–', 0)
         data.columns.values[0] = 'sku'
         data.columns.values[1] = 'price'
 
