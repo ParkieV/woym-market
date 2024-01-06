@@ -1,3 +1,4 @@
+from datetime import datetime
 from src.api.repository import YandexMarketRepository
 from src.params import confing as env
 from src.database.db import async_session
@@ -6,11 +7,11 @@ import src.services.offer_utils as utils
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete
 import pandas as pd
 from fastapi.encoders import jsonable_encoder
-from sqlalchemy import select
-from src.services.user_service import get_settings
-from ..database.models.models import Offer
+
+from src.services.logs_service import update_logs
 import json
 
+from src.services.user_service import get_settings
 
 yandex_repository = YandexMarketRepository(env.YANDEX_MARKET_TOKEN)
 
@@ -75,6 +76,7 @@ async def update_offers(user_id: int):
         await db.update_offers(session, json_data)
 
     await update_yandex_offers_price()
+    await update_logs(user_id, {'updated_at': datetime.now()})
 
     return json_data
 
@@ -124,6 +126,7 @@ async def import_offers_data(data: bytes, user_id: int):
         json_data = utils.update_offers_data(offers_df, changes, settings.rate)
 
         await db.update_offers(session, json_data)
+
 
 
 

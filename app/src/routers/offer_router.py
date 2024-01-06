@@ -1,8 +1,11 @@
 from fastapi import APIRouter, File, Depends
 from fastapi.responses import FileResponse
+
+from src.schemas.logs_schemas import LogsOut
 from src.services.auth_utils import get_current_user
 from src.schemas.offer_schemas import OfferOut, OfferChange, OfferDelete
 from src.services import offer_service as service
+from src.services import logs_service
 
 offer_router = APIRouter(
     prefix='/offers',
@@ -54,5 +57,10 @@ async def import_offers(data: bytes = File(), current_user=Depends(get_current_u
     await service.import_offers_data(data, current_user.id)
         # return {'status': 'ERROR', 'detail':'Файл поврежден или имеет неподдерживаемый формат'}
     return {'status': 'OK'}
+
+
+@offer_router.get('/logs')
+async def get_logs(current_user=Depends(get_current_user)):
+    return await logs_service.get_logs(current_user.id)
 
 

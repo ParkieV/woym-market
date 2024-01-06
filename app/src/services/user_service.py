@@ -5,11 +5,13 @@ import src.database.user_db as db
 import src.services.auth_utils as auth
 from src.database.models.models import Users
 from src.database.db import async_session
+from .logs_service import create_logs
 
 
 async def registration_user(login: str, password: str):
     new_user = await auth.reg_user(login, password)
     settings = await create_user_settings(new_user.id)
+    logs = await create_logs(new_user.id)
     return new_user
 
 

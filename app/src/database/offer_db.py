@@ -49,3 +49,4 @@ async def get_offers_by_sku(session: AsyncSession, skus: list[str]):
     offers_db = await session.execute(query)
     return offers_db.unique().scalars().all()
 
+

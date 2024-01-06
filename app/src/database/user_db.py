@@ -81,6 +81,7 @@ async def update_user_settings(session: AsyncSession, user_id: int, settings_upd
     await session.execute(query)
     await session.commit()
 
+
 # async def update_user(id_user: int, new_data: NewUserData):
 #     session: AsyncSession
 #     async with async_session() as session:

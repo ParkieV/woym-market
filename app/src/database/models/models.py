@@ -5,7 +5,8 @@ from sqlalchemy import (
     String,
     Boolean,
     TIMESTAMP,
-    Float
+    Float,
+DateTime
 )
 from sqlalchemy.sql.expression import text
 
@@ -75,3 +76,11 @@ class Offer(Base):
     manual_min_price = Column(Float, nullable=True, default=None)
 
     auto_price_control = Column(Boolean, default=False)
+
+
+class Logs(Base):
+    __tablename__ = 'logs'
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+
+    updated_at = Column(DateTime(timezone=True), nullable=True, default=None)
