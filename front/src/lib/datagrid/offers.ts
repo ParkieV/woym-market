@@ -226,9 +226,16 @@ function editable_money_column(field: keyof Offer, currency: string): ColDef<Off
 }
 
 function filter(search: string, offer: Offer): boolean {
-    const normalize = (term: string) => term.trim().toLowerCase().replaceAll("ё", "е");
+    const normalize = (term: string | null | undefined) =>
+        term ? term.trim().toLowerCase().replaceAll("ё", "е") : "";
+
     const _search = normalize(search);
-    const name = normalize(offer.name);
-    const sku = normalize(offer.sku);
-    return name.includes(_search) || sku.includes(_search);
+    return (
+        normalize(offer.name).includes(_search) ||
+        normalize(offer.sku).includes(_search) ||
+        normalize(offer.note_1).includes(_search) ||
+        normalize(offer.note_2).includes(_search) ||
+        normalize(offer.note_3).includes(_search) ||
+        normalize(offer.name_of_shop).includes(_search)
+    );
 }
