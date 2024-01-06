@@ -1,14 +1,17 @@
 import type { Offer } from "$lib";
-import type { ColDef, ColGroupDef, GridOptions, IRowNode } from "ag-grid-community";
+import type { CellClassParams, ColDef, ColGroupDef, GridOptions } from "ag-grid-community";
 import { notNullFieldColumn } from "./util";
 
 export function DataGridOptions(init: {
+    search: () => string;
     onPhotoClicked: (src: string) => void;
-    changed: Map<string, Offer>;
-    onChangedUpdated?: () => void;
-    isFilterEnabled: () => boolean;
-    filter: (offer: IRowNode<Offer>) => boolean;
+    onOfferChanged?: (value: Offer) => void;
+    isOfferChanged?: (sku: string) => boolean;
 }): GridOptions<Offer> {
+    const isOfferChanged = init.isOfferChanged ? init.isOfferChanged : () => false;
+    const changedClass = (e: CellClassParams<Offer>) =>
+        isOfferChanged(e.data!.sku) ? "changed" : [];
+
     return {
         suppressDragLeaveHidesColumns: true,
         autoSizeStrategy: { type: "fitCellContents" },
@@ -20,11 +23,10 @@ export function DataGridOptions(init: {
             }
         },
         rowHeight: 75,
-        isExternalFilterPresent: init.isFilterEnabled,
-        doesExternalFilterPass: init.filter,
+        isExternalFilterPresent: () => init.search.length == 0,
+        doesExternalFilterPass: e => filter(init.search(), e.data!),
         onCellValueChanged: e => {
-            init.changed.set(e.data.sku, e.data);
-            if (init.onChangedUpdated) init.onChangedUpdated();
+            if (init.onOfferChanged) init.onOfferChanged(e.data);
             e.api.redrawRows({ rowNodes: [e.node] });
         }
     };
@@ -36,13 +38,7 @@ export function DataGridOptions(init: {
                 headerName: "SKU",
                 lockPosition: "left",
                 pinned: "left",
-                cellClass: params => {
-                    if (init.changed.has(params.value)) {
-                        return ["changed"];
-                    } else {
-                        return [];
-                    }
-                }
+                cellClass: changedClass
             },
             {
                 headerName: "Информация",
@@ -223,4 +219,12 @@ function editable_money_column(field: keyof Offer, currency: string): ColDef<Off
         cellClass: "ag-right-aligned-cell",
         valueFormatter: params => `${params.value.toFixed(2)} ${currency}`
     };
+}
+
+function filter(search: string, offer: Offer): boolean {
+    const normalize = (term: string) => term.trim().toLowerCase().replaceAll("ё", "е");
+    const _search = normalize(search);
+    const name = normalize(offer.name);
+    const sku = normalize(offer.sku);
+    return name.includes(_search) || sku.includes(_search);
 }

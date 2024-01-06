@@ -1,50 +1,21 @@
 <script lang="ts">
-    import { goto, invalidateAll } from "$app/navigation";
+    import { goto } from "$app/navigation";
     import Search from "$lib/Search.svelte";
     import { fetchAuthenticated, logout } from "$lib/auth";
-    import { GridApi, createGrid } from "ag-grid-community";
-    import { onMount } from "svelte";
-    import type { PageData } from "./$types";
-    import { DataGridOptions } from "$lib/datagrid/offers";
     import Sidebar from "./Sidebar.svelte";
     import ImageModal from "./ImageModal.svelte";
     import SettingsDialog from "./SettingsDialog.svelte";
-    import { patchOfferList, type Offer } from "$lib";
+    import { patchOfferList, type Offer, fetchOfferList } from "$lib";
+    import Grid from "./Grid.svelte";
+    import { onMount } from "svelte";
 
-    export let data: PageData;
-
+    let data: "loading" | Offer[] = "loading";
     let changed: Map<string, Offer> = new Map();
-    let grid: GridApi;
 
     let settings_open: boolean = false;
     let selected_image = "";
     let search = "";
     let last_updated = new Date(0);
-
-    $: if (grid) {
-        search;
-        grid.onFilterChanged();
-    }
-
-    onMount(() => {
-        const gridElement = document.querySelector("#grid")! as HTMLElement;
-        const options = DataGridOptions({
-            changed,
-            onPhotoClicked: src => (selected_image = src),
-            isFilterEnabled: () => search != "",
-            filter: e => {
-                let _search = search.trim().toLowerCase().replaceAll("ё", "е");
-                let name = e.data!.name.toLowerCase().replaceAll("ё", "е");
-                let sku = e.data!.sku.toLowerCase().replaceAll("ё", "е");
-                return name.includes(_search) || sku.includes(_search);
-            },
-            onChangedUpdated: () => {
-                changed = changed;
-            }
-        });
-        options.rowData = data.offers;
-        grid = createGrid(gridElement, options);
-    });
 
     async function exportXlsx() {
         let blob = await (await fetchAuthenticated("offers/xlsx")).blob();
@@ -70,30 +41,23 @@
             if (!responce.ok) {
                 alert("Импорт не удался");
             } else {
-                await reloadGrid();
+                await refreshData();
             }
         };
         input.click();
     }
 
-    async function cancel_edits() {
-        await reloadGrid();
+    async function cancelEdits() {
+        await refreshData();
     }
 
-    async function confirm_edits() {
+    async function confirmEdits() {
         let data = Array.from(changed.values());
         await patchOfferList(data);
-        await reloadGrid();
+        await refreshData();
     }
 
-    async function reloadGrid() {
-        changed.clear();
-        changed = changed;
-        await invalidateAll();
-        grid.setGridOption("rowData", data.offers);
-    }
-
-    async function refreshData() {
+    async function refreshRemoteData() {
         if (
             changed.size == 0 ||
             confirm(`Вы внесли ${changed.size} изменений. Они будут потеряны, вы уверены?`) // TODO: use custom confirmation dialog
@@ -102,12 +66,24 @@
             alert("Этот функционал в разработке!");
         }
     }
+
+    /** Refreshes data displayed in the grid. */
+    async function refreshData() {
+        data = "loading";
+        changed.clear();
+        changed = changed;
+        data = await fetchOfferList();
+    }
+
+    onMount(() => {
+        refreshData();
+    });
 </script>
 
 <!-- TODO: Show ConfirmationDialog before any dangerous action -->
 <!-- <ConfirmationDialog open={true} text="Это действие обновит 100500 строк."/> -->
 <ImageModal bind:src={selected_image} />
-<SettingsDialog bind:open={settings_open} on:confirm={() => reloadGrid()} />
+<SettingsDialog bind:open={settings_open} on:confirm={() => refreshData()} />
 
 <div id="wrapper">
     <Sidebar
@@ -124,15 +100,20 @@
             <div style="flex: 1;" />
             <Search placeholder="Поиск..." bind:value={search} />
         </menu>
-        <div id="grid" class="ag-theme-quartz"></div>
+        <Grid
+            bind:data
+            bind:changed
+            bind:search
+            on:photoClicked={e => (selected_image = e.detail)}
+        />
         <menu class="bottombar">
-            <button on:click={refreshData} class="refresh"> Обновить данные </button>
+            <button on:click={refreshRemoteData} class="refresh">Обновить данные</button>
             <span>{`Последнее обновление:\n${last_updated.toLocaleString("en-GB", {})}`}</span>
             <div style:flex="1" />
-            <button class="cancel" on:click={cancel_edits} disabled={changed.size == 0}>
+            <button class="cancel" on:click={cancelEdits} disabled={changed.size == 0}>
                 Отмена
             </button>
-            <button class="confirm" on:click={confirm_edits} disabled={changed.size == 0}>
+            <button class="confirm" on:click={confirmEdits} disabled={changed.size == 0}>
                 Сохранить изменения
             </button>
         </menu>
@@ -149,10 +130,6 @@
             display: flex;
             flex-direction: column;
             flex: 1;
-            #grid {
-                flex: 1;
-                height: 100%;
-            }
         }
     }
 
