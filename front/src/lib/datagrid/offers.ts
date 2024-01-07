@@ -98,8 +98,6 @@ export function DataGridOptions(init: {
                             return (p.data!.length * p.data!.width * p.data!.height).toFixed(4);
                         }
                     }
-                    // TODO: Uncomment after backend fix lands.
-                    // { field: "volume_yandex", headerName: "Объём (Яндекс)" }
                 ]
             },
             {
@@ -171,15 +169,8 @@ export function DataGridOptions(init: {
                 ]
             },
             {
-                headerName: "Группа",
-                children: [
-                    {
-                        ...money_column("minimum_group_price", "₽"),
-                        headerName: "Мин. цена в группе"
-                    }
-                    // TODO: Uncomment after backend fix lands.
-                    // { field: "group_sellers_amount", headerName: "Продавцов в группе" }
-                ]
+                ...money_column("minimum_group_price", "₽"),
+                headerName: "Мин. цена в группе"
             },
             { field: "name_of_shop", headerName: "Название магазина" },
             {
