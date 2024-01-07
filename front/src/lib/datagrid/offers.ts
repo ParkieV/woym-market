@@ -155,6 +155,8 @@ export function DataGridOptions(init: {
                         headerName: "Окупаемость",
                         columnGroupShow: "open",
                         cellClass: "ag-right-aligned-cell",
+                        valueFormatter: params =>
+                            params.value ? `${params.value.toFixed(3)}%` : "",
                         valueFormatter: params => `${params.value ? params.value.toFixed(3) : ""}%`
                     },
                     {
