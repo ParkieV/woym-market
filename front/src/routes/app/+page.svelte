@@ -5,15 +5,16 @@
     import Sidebar from "./Sidebar.svelte";
     import ImageModal from "./ImageModal.svelte";
     import SettingsDialog from "./SettingsDialog.svelte";
-    import { patchOfferList, type Offer, fetchOfferList } from "$lib";
+    import { patchOfferList, type Offer, fetchOfferList, fetchLogs } from "$lib";
     import Grid from "./Grid.svelte";
     import { onMount } from "svelte";
     import type { DialogData } from "$lib/ConfirmationDialog.svelte";
     import ConfirmationDialog from "$lib/ConfirmationDialog.svelte";
     import { num_word } from "$lib/util";
+    import OutdatedDataDialog from "./OutdatedDataDialog.svelte";
 
-    let data: "loading" | Offer[] = "loading";
     let changed: Map<string, Offer> = new Map();
+    let data: "loading" | Offer[] = "loading";
 
     let confirmationDialog: DialogData | undefined = undefined;
     export function confirmChangesLoss(confirmed: () => void) {
@@ -37,7 +38,9 @@
     let settings_open: boolean = false;
     let selected_image = "";
     let search = "";
-    let last_updated = new Date(0);
+
+    let updated_at: Date | null;
+    let is_outdated: boolean = false;
 
     async function exportXlsx() {
         let blob = await (await fetchAuthenticated("offers/xlsx")).blob();
@@ -99,9 +102,24 @@
 
     onMount(() => {
         refreshData();
+        let fetchDate = async () => {
+            let settings = await fetchLogs();
+            let new_updated_at = settings.updated_at ? new Date(settings.updated_at) : null;
+            if (new_updated_at === null) {
+                return;
+            }
+            if (updated_at ? updated_at < new_updated_at : false) {
+                is_outdated = true;
+                await refreshData();
+            }
+            updated_at = new_updated_at;
+        };
+        fetchDate();
+        setInterval(fetchDate, 15 * 1000);
     });
 </script>
 
+<OutdatedDataDialog bind:open={is_outdated} />
 <ConfirmationDialog bind:data={confirmationDialog} />
 <ImageModal bind:src={selected_image} />
 <SettingsDialog bind:open={settings_open} on:confirm={() => refreshData()} />
@@ -128,7 +146,11 @@
             on:photoClicked={e => (selected_image = e.detail)}
         />
         <menu class="bottombar">
-            <span>{`Последнее обновление:\n${last_updated.toLocaleString("en-GB", {})}`}</span>
+            <span
+                >{`Последнее обновление:\n${
+                    updated_at ? updated_at.toLocaleString("en-GB") : "N/A"
+                }`}</span
+            >
             <div style:flex="1" />
             <button class="cancel" on:click={cancelEdits} disabled={changed.size == 0}>
                 Отмена

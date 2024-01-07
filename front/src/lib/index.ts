@@ -89,3 +89,7 @@ export async function patchOfferList(changed: Offer[]): Promise<void> {
         }
     });
 }
+
+export async function fetchLogs(): Promise<{ updated_at: string | null }> {
+    return await (await fetchAuthenticated("offers/logs")).json();
+}
