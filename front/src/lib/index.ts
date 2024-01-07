@@ -39,7 +39,7 @@ export type Offer = {
     total_price_coeff: number;
     discount_base_price: number;
     profit: number;
-    payback: number;
+    margin: number;
     fby: number;
     minimum_group_price: number;
     group_sellers_amount: number;
@@ -71,4 +71,25 @@ export async function fetchUserInfo(): Promise<{ rate: number }> {
 export async function fetchOfferList(): Promise<Offer[]> {
     let offers = await (await fetch(BaseUrl + "offers")).json();
     return offers;
+}
+
+export async function patchOfferList(changed: Offer[]): Promise<void> {
+    for (const offer of changed) {
+        // Backend doesn't handle null values well, replace them with empty string before patching.
+        offer.note_1 = offer.note_1 ? offer.note_1 : "";
+        offer.note_2 = offer.note_2 ? offer.note_2 : "";
+        offer.note_3 = offer.note_3 ? offer.note_3 : "";
+    }
+
+    await fetchAuthenticated("offers", {
+        method: "PATCH",
+        body: JSON.stringify(changed),
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+}
+
+export async function fetchLogs(): Promise<{ updated_at: string | null }> {
+    return await (await fetchAuthenticated("offers/logs")).json();
 }

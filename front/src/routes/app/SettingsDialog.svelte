@@ -1,10 +1,11 @@
 <script lang="ts">
     import { fetchUserInfo, patchUserInfo } from "$lib";
-    import { onMount } from "svelte";
+    import { createEventDispatcher, onMount } from "svelte";
 
     export let open: boolean;
 
     let dialog: HTMLDialogElement | null;
+    let dispatch = createEventDispatcher<{ confirm: void }>();
     $: if (open && dialog) {
         dialog.showModal();
     } else if (dialog) {
@@ -16,9 +17,10 @@
     async function ok() {
         try {
             await patchUserInfo({ rate });
+            dispatch("confirm");
             dialog?.close();
         } catch {
-            alert("Произошла ошибка при обновлении данных.");
+            alert("Произошла ошибка при обновлении настроек.");
         }
     }
 

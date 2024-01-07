@@ -1,13 +1,17 @@
 import type { Offer } from "$lib";
-import type { ColDef, ColGroupDef, GridOptions, IRowNode } from "ag-grid-community";
+import type { CellClassParams, ColDef, ColGroupDef, GridOptions } from "ag-grid-community";
 import { notNullFieldColumn } from "./util";
 
 export function DataGridOptions(init: {
+    search: () => string;
     onPhotoClicked: (src: string) => void;
-    changed: Map<string, Offer>;
-    isFilterEnabled: () => boolean;
-    filter: (offer: IRowNode<Offer>) => boolean;
+    onOfferChanged?: (value: Offer) => void;
+    isOfferChanged?: (sku: string) => boolean;
 }): GridOptions<Offer> {
+    const isOfferChanged = init.isOfferChanged ? init.isOfferChanged : () => false;
+    const changedClass = (e: CellClassParams<Offer>) =>
+        isOfferChanged(e.data!.sku) ? "changed" : [];
+
     return {
         suppressDragLeaveHidesColumns: true,
         autoSizeStrategy: { type: "fitCellContents" },
@@ -19,10 +23,10 @@ export function DataGridOptions(init: {
             }
         },
         rowHeight: 75,
-        isExternalFilterPresent: init.isFilterEnabled,
-        doesExternalFilterPass: init.filter,
+        isExternalFilterPresent: () => init.search.length == 0,
+        doesExternalFilterPass: e => filter(init.search(), e.data!),
         onCellValueChanged: e => {
-            init.changed.set(e.data.sku, e.data);
+            if (init.onOfferChanged) init.onOfferChanged(e.data);
             e.api.redrawRows({ rowNodes: [e.node] });
         }
     };
@@ -34,13 +38,7 @@ export function DataGridOptions(init: {
                 headerName: "SKU",
                 lockPosition: "left",
                 pinned: "left",
-                cellClass: params => {
-                    if (init.changed.has(params.value)) {
-                        return ["changed"];
-                    } else {
-                        return [];
-                    }
-                }
+                cellClass: changedClass
             },
             {
                 headerName: "Информация",
@@ -52,7 +50,11 @@ export function DataGridOptions(init: {
                         cellRenderer: (params: any) =>
                             params.value != null ? `<img src="${params.value}" />` : "",
                         cellClass: "product-photo-cell",
-                        onCellClicked: e => init.onPhotoClicked(e.value.toString())
+                        onCellClicked: e => {
+                            if (e.value) {
+                                init.onPhotoClicked(e.value.toString());
+                            }
+                        }
                     },
                     { field: "name", headerName: "Название" },
                     {
@@ -96,8 +98,6 @@ export function DataGridOptions(init: {
                             return (p.data!.length * p.data!.width * p.data!.height).toFixed(4);
                         }
                     }
-                    // TODO: Uncomment after backend fix lands.
-                    // { field: "volume_yandex", headerName: "Объём (Яндекс)" }
                 ]
             },
             {
@@ -105,7 +105,8 @@ export function DataGridOptions(init: {
                 children: [
                     {
                         ...money_column("total_price", "₽"),
-                        headerName: "Расчётная цена"
+                        headerName: "Расчётная цена",
+                        headerTooltip: "Закупка * коэф. + мин. наценка"
                     },
                     {
                         ...money_column("current_price", "₽"),
@@ -114,7 +115,8 @@ export function DataGridOptions(init: {
                     {
                         ...money_column("cost_price", "₽"),
                         headerName: "Закупка",
-                        columnGroupShow: "open"
+                        columnGroupShow: "open",
+                        headerTooltip: "Закупка у. е. * курс"
                     },
                     {
                         ...editable_money_column("dollar_cost_price", "$"),
@@ -141,18 +143,23 @@ export function DataGridOptions(init: {
                     {
                         ...money_column("discount_base_price", "₽"),
                         headerName: "Цена до скидки",
-                        columnGroupShow: "open"
+                        columnGroupShow: "open",
+                        headerTooltip: "Цена + 20%"
                     },
                     {
                         ...money_column("profit", "₽"),
                         headerName: "Прибыль",
-                        columnGroupShow: "open"
+                        columnGroupShow: "open",
+                        headerTooltip: "Цена - закупка - FBY"
                     },
                     {
-                        field: "payback",
+                        field: "margin",
                         headerName: "Окупаемость",
                         columnGroupShow: "open",
-                        cellClass: "ag-right-aligned-cell"
+                        cellClass: "ag-right-aligned-cell",
+                        valueFormatter: params =>
+                            params.value ? `${params.value.toFixed(3)}%` : "",
+                        headerTooltip: "Прибыль / закупка * 100"
                     },
                     {
                         ...money_column("fby", "₽"),
@@ -162,15 +169,8 @@ export function DataGridOptions(init: {
                 ]
             },
             {
-                headerName: "Группа",
-                children: [
-                    {
-                        ...money_column("minimum_group_price", "₽"),
-                        headerName: "Мин. цена в группе"
-                    }
-                    // TODO: Uncomment after backend fix lands.
-                    // { field: "group_sellers_amount", headerName: "Продавцов в группе" }
-                ]
+                ...money_column("minimum_group_price", "₽"),
+                headerName: "Мин. цена в группе"
             },
             { field: "name_of_shop", headerName: "Название магазина" },
             {
@@ -213,11 +213,26 @@ function editable_money_column(field: keyof Offer, currency: string): ColDef<Off
         cellEditor: "agNumberCellEditor",
         cellEditorParams: {
             min: 0,
-            step: 0.25,
-            precision: 2
+            precision: 2,
+            preventStepping: true
         },
         type: "editable",
         cellClass: "ag-right-aligned-cell",
         valueFormatter: params => `${params.value.toFixed(2)} ${currency}`
     };
+}
+
+function filter(search: string, offer: Offer): boolean {
+    const normalize = (term: string | null | undefined) =>
+        term ? term.trim().toLowerCase().replaceAll("ё", "е") : "";
+
+    const _search = normalize(search);
+    return (
+        normalize(offer.name).includes(_search) ||
+        normalize(offer.sku).includes(_search) ||
+        normalize(offer.note_1).includes(_search) ||
+        normalize(offer.note_2).includes(_search) ||
+        normalize(offer.note_3).includes(_search) ||
+        normalize(offer.name_of_shop).includes(_search)
+    );
 }

@@ -1,45 +1,48 @@
 <script lang="ts">
-    import { goto, invalidateAll } from "$app/navigation";
+    import { goto } from "$app/navigation";
     import Search from "$lib/Search.svelte";
     import { fetchAuthenticated, logout } from "$lib/auth";
-    import { GridApi, createGrid } from "ag-grid-community";
-    import { onMount } from "svelte";
-    import type { PageData } from "./$types";
-    import { DataGridOptions } from "$lib/datagrid/offers";
     import Sidebar from "./Sidebar.svelte";
     import ImageModal from "./ImageModal.svelte";
     import SettingsDialog from "./SettingsDialog.svelte";
-    import type { Offer } from "$lib";
+    import { patchOfferList, type Offer, fetchOfferList, fetchLogs } from "$lib";
+    import Grid from "./Grid.svelte";
+    import { onMount } from "svelte";
+    import type { DialogData } from "$lib/ConfirmationDialog.svelte";
+    import ConfirmationDialog from "$lib/ConfirmationDialog.svelte";
+    import { num_word } from "$lib/util";
+    import OutdatedDataDialog from "./OutdatedDataDialog.svelte";
 
-    export let data: PageData;
-    let settings_open: boolean = false;
-    let selected_image = "";
     let changed: Map<string, Offer> = new Map();
-    let grid: GridApi;
-    let search = "";
-    $: if (grid) {
-        search;
-        grid.onFilterChanged();
+    let data: "loading" | Offer[] = "loading";
+
+    let confirmationDialog: DialogData | undefined = undefined;
+    export function confirmChangesLoss(confirmed: () => void) {
+        if (changed.size !== 0) {
+            let word = num_word(changed.size, ["изменение", "изменения", "изменений"]);
+            let part = num_word(changed.size, [
+                "Оно будет потеряно",
+                "Они будут потеряны",
+                "Они будут потеряны"
+            ]);
+            confirmationDialog = {
+                header: "Изменения будут потеряны",
+                text: `Вы внесли ${changed.size} ${word}. ${part}, продолжить?`,
+                onConfirm: confirmed
+            };
+        } else {
+            confirmed();
+        }
     }
 
-    onMount(() => {
-        const gridElement = document.querySelector("#grid")! as HTMLElement;
-        const options = DataGridOptions({
-            changed,
-            onPhotoClicked: src => (selected_image = src),
-            isFilterEnabled: () => search != "",
-            filter: e => {
-                let _search = search.trim().toLowerCase().replaceAll("ё", "е");
-                let name = e.data!.name.toLowerCase().replaceAll("ё", "е");
-                let sku = e.data!.sku.toLowerCase().replaceAll("ё", "е");
-                return name.includes(_search) || sku.includes(_search);
-            }
-        });
-        options.rowData = data.offers;
-        grid = createGrid(gridElement, options);
-    });
+    let settings_open: boolean = false;
+    let selected_image = "";
+    let search = "";
 
-    async function export_excel() {
+    let updated_at: Date | null;
+    let is_outdated: boolean = false;
+
+    async function exportXlsx() {
         let blob = await (await fetchAuthenticated("offers/xlsx")).blob();
         let url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -48,52 +51,78 @@
         link.click();
     }
 
-    async function import_excel() {
-        const input = document.createElement("input");
-        input.type = "file";
-        input.onchange = async e => {
-            let target = e.target as HTMLInputElement;
-            let file = target.files![0];
-            let formData = new FormData();
-            formData.append("data", file);
-            let responce = await fetchAuthenticated("offers/xlsx", {
-                method: "POST",
-                body: formData
-            });
-            if (!responce.ok) {
-                alert("Импорт не удался");
+    async function importXlsx() {
+        confirmChangesLoss(async () => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.onchange = async e => {
+                let target = e.target as HTMLInputElement;
+                let file = target.files![0];
+                let formData = new FormData();
+                formData.append("data", file);
+                let responce = await fetchAuthenticated("offers/xlsx", {
+                    method: "POST",
+                    body: formData
+                });
+                if (!responce.ok) {
+                    alert("Импорт не удался");
+                } else {
+                    await refreshData();
+                }
+            };
+            input.click();
+        });
+    }
+
+    function cancelEdits() {
+        confirmChangesLoss(async () => {
+            await refreshData();
+        });
+    }
+
+    async function confirmEdits() {
+        confirmationDialog = {
+            header: "Сохранить изменения?",
+            text: `Данные обновятся на сервере`,
+            onConfirm: async () => {
+                let data = Array.from(changed.values());
+                await patchOfferList(data);
+                await refreshData();
             }
         };
-        input.click();
     }
 
-    async function cancel_edits() {
-        await reloadGrid();
-    }
-
-    async function confirm_edits() {
-        let data = Array.from(changed.values());
-        await fetchAuthenticated("offers", {
-            method: "PATCH",
-            body: JSON.stringify(data),
-            headers: {
-                "Content-Type": "application/json"
-            }
-        });
-        await reloadGrid();
-    }
-
-    async function reloadGrid() {
+    /** Refreshes data displayed in the grid. */
+    async function refreshData() {
+        data = "loading";
         changed.clear();
-        await invalidateAll();
-        grid.setGridOption("rowData", data.offers);
+        changed = changed;
+        data = await fetchOfferList();
     }
+
+    onMount(() => {
+        refreshData();
+        let fetchDate = async () => {
+            let settings = await fetchLogs();
+            let new_updated_at = settings.updated_at ? new Date(settings.updated_at) : null;
+            if (new_updated_at === null) {
+                return;
+            }
+            if (updated_at ? updated_at < new_updated_at : false) {
+                is_outdated = true;
+                await refreshData();
+            }
+            updated_at = new_updated_at;
+        };
+        fetchDate();
+        setInterval(fetchDate, 15 * 1000);
+    });
 </script>
 
-<!-- TODO: Show ConfirmationDialog before any dangerous action -->
-<!-- <ConfirmationDialog open={true} text="Это действие обновит 100500 строк."/> -->
+<OutdatedDataDialog bind:open={is_outdated} />
+<ConfirmationDialog bind:data={confirmationDialog} />
 <ImageModal bind:src={selected_image} />
-<SettingsDialog bind:open={settings_open} />
+<SettingsDialog bind:open={settings_open} on:confirm={() => refreshData()} />
 
 <div id="wrapper">
     <Sidebar
@@ -105,15 +134,30 @@
     />
     <main>
         <menu class="toolbar">
-            <button on:click={export_excel}>Экспорт</button>
-            <button on:click={import_excel}>Импорт</button>
+            <button on:click={exportXlsx}>Экспорт</button>
+            <button on:click={importXlsx}>Импорт</button>
             <div style="flex: 1;" />
             <Search placeholder="Поиск..." bind:value={search} />
         </menu>
-        <div id="grid" class="ag-theme-quartz"></div>
-        <menu class="buttons">
-            <button class="cancel" on:click={cancel_edits}>Отмена</button>
-            <button class="confirm" on:click={confirm_edits}>Сохранить изменения</button>
+        <Grid
+            bind:data
+            bind:changed
+            bind:search
+            on:photoClicked={e => (selected_image = e.detail)}
+        />
+        <menu class="bottombar">
+            <span
+                >{`Последнее обновление:\n${
+                    updated_at ? updated_at.toLocaleString("en-GB") : "N/A"
+                }`}</span
+            >
+            <div style:flex="1" />
+            <button class="cancel" on:click={cancelEdits} disabled={changed.size == 0}>
+                Отмена
+            </button>
+            <button class="confirm" on:click={confirmEdits} disabled={changed.size == 0}>
+                Сохранить изменения
+            </button>
         </menu>
     </main>
 </div>
@@ -128,24 +172,6 @@
             display: flex;
             flex-direction: column;
             flex: 1;
-            > menu {
-                &.buttons {
-                    display: flex;
-                    padding: 20px;
-                    justify-content: end;
-                    gap: 20px;
-                    > button {
-                        padding: 0 20px;
-                        height: 40px;
-                        border: 0;
-                        color: white;
-                    }
-                }
-            }
-            #grid {
-                flex: 1;
-                height: 100%;
-            }
         }
     }
 
@@ -160,6 +186,23 @@
             &:hover {
                 background-color: #dddddd;
             }
+        }
+    }
+
+    .bottombar {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        gap: 16px;
+        > button {
+            padding: 0 16px;
+            height: 40px;
+            border: 0;
+            color: white;
+        }
+        > span {
+            font-size: 16px;
+            white-space: pre-wrap;
         }
     }
 
