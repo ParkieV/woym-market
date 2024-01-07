@@ -10,7 +10,7 @@ class UserCreate(BaseModel):
 
 
 class UserOut(BaseModel):
-    id: str
+    id: int
     login: str
     created_at: datetime
 

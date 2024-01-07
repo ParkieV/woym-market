@@ -1,5 +1,4 @@
 from fastapi import APIRouter, status, Depends
-from src.services.user_service import get_settings, update_user_settings
 from src.schemas.user_schemas import *
 from src.services.user_service import *
 from src.services.auth_utils import get_current_user
@@ -10,12 +9,12 @@ user_router = APIRouter(
 )
 
 
-@user_router.get('/settings')
+@user_router.get('/settings', response_model=SettingsOut)
 async def get_user_settings(current_user=Depends(get_current_user)):
     return await get_settings(current_user.id)
 
 
-@user_router.patch('/settings')
+@user_router.patch('/settings', response_model=SettingsUpdate)
 async def update_settings(settings_data: SettingsUpdate, current_user=Depends(get_current_user)):
     await update_user_settings(current_user.id, settings_data)
     return {'status': 'OK'}

@@ -1,6 +1,6 @@
 from datetime import datetime
 from src.api.repository import YandexMarketRepository
-from src.params import confing as env
+from src.params.confing import config
 from src.database.db import async_session
 from src.database import offer_db as db
 import src.services.offer_utils as utils
@@ -13,7 +13,7 @@ import json
 
 from src.services.user_service import get_settings
 
-yandex_repository = YandexMarketRepository(env.YANDEX_MARKET_TOKEN)
+yandex_repository = YandexMarketRepository(config.yandex_token)
 
 
 async def get_offers():

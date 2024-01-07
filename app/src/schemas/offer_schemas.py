@@ -7,7 +7,7 @@ from abc import ABC
 class BaseModelFields(ABC):
     @classmethod
     def fields(cls):
-        return {name: field.field_info.title for name, field in cls.__fields__.items()}
+        return {name: field.title for name, field in cls.model_fields.items()}
 
 
 class OfferOut(BaseModel, BaseModelFields):
@@ -33,10 +33,10 @@ class OfferOut(BaseModel, BaseModelFields):
     cost_price: float = Field(title='Себестоимость')
     total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену')
     total_price: float = Field(title='Расчетная цена')
-    discount_base_price: float = Field(title='Цена до скидки')
-    profit: float = Field(title='Прибыль')
-    margin: float = Field(title='Окупаемость')
-    fby: float = Field(title='Цена за FBY')
+    discount_base_price: float | None = Field(title='Цена до скидки')
+    profit: float | None = Field(title='Прибыль')
+    margin: float | None = Field(title='Окупаемость')
+    fby: float | None = Field(title='Цена за FBY')
 
     current_price: float | None = Field(title='Цена на маркете')
 

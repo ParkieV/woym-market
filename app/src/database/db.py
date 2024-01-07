@@ -1,5 +1,4 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.schema import (
@@ -12,11 +11,11 @@ from sqlalchemy.schema import (
 
 
 # import src.params.confing as env
-from ..params import confing as env
+from ..params.confing import config
 from .models.base import Base
 
 
-url = f'postgresql+asyncpg://{env.DBUSER}:{env.DBPASSWORD}@{env.DBHOST}:{env.DBPORT}/{env.DBNAME}'
+url = f'postgresql+asyncpg://{config.dbuser}:{config.dbpassword}@{config.dbhost}:{config.dbport}/{config.dbname}'
 
 engine = create_async_engine(
     url, 
@@ -70,8 +69,8 @@ def drop_everything(engine):
 
 
 def db_create() -> None:
-    if env.RESET_DB == 'True':
-        sync_url = f'postgresql://{env.DBUSER}:{env.DBPASSWORD}@{env.DBHOST}:{env.DBPORT}/{env.DBNAME}'
+    if config.reset_db:
+        sync_url = f'postgresql://{config.dbuser}:{config.dbpassword}@{config.dbhost}:{config.dbport}/{config.dbname}'
         sync_engine = create_engine(sync_url)
         drop_everything(sync_engine)
         Base.metadata.create_all(sync_engine)

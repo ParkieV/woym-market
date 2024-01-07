@@ -1,13 +1,13 @@
-venv/
+app/venv/
 env/
-__pycache__/
+__pycache__
 *.ipynb
-*.vscode/
+*.vscode
 *.idea
 data
 app/data/*
 .DS_Store
-
+.idea
 node_modules/
 **js/
 db-data/

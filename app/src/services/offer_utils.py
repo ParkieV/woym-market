@@ -18,11 +18,11 @@ def calculate_offers_values(data: pd.DataFrame, course: float) -> pd.DataFrame:
     data['total_price'] = np.where(data['cost_price'] > data['total_price_min_additional'],
                                    data['cost_price'] * data['total_price_coeff'],
                                    data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional'])
-    data['profit'] = data['current_price'] - data['fby'] - data['cost_price']
-    data['margin'] = data['cost_price'] * 100 / data['profit']
 
     data = calculate_price(data)
 
+    data['profit'] = data['current_price'] - data['fby'] - data['cost_price']
+    data['margin'] = data['cost_price'] * 100 / data['profit']
     data['discount_base_price'] = data['current_price'] * 1.2
 
     return data
@@ -48,10 +48,9 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-def build_offers_data(data: pd.DataFrame, course: float = 5, total_price_coeff: float = 2.4,
-                      total_price_min_additional: float = 200, setup_mode: bool = False):
+def build_offers_data(data: pd.DataFrame, course: float = 5, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False):
     if setup_mode:
-        data['dollar_cost_price'] = np.random.randint(5, 100, size=(data.shape[0], 1))  # закупка
+        data['dollar_cost_price'] = 0  # закупка
     data['total_price_coeff'] = total_price_coeff
     data['total_price_min_additional'] = total_price_min_additional
 

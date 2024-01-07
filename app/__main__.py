@@ -8,7 +8,7 @@ from src.routers.offer_router import offer_router
 from src.database.db import db_create
 import aioschedule
 from src.services.offer_service import update_offers
-from src.params import confing as env
+from src.params.confing import config
 
 
 app: FastAPI = FastAPI()
@@ -23,7 +23,7 @@ async def scheduler():
 
 
 async def to_startup():
-    if env.SCHEDULE_UPDATE == 'True':
+    if config.schedule_update:
         asyncio.create_task(scheduler())
 
 

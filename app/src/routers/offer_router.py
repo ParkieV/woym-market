@@ -1,8 +1,8 @@
 from fastapi import APIRouter, File, Depends
 from fastapi.responses import FileResponse
 
-from src.schemas.logs_schemas import LogsOut
 from src.services.auth_utils import get_current_user
+from src.schemas.logs_schemas import LogsOut
 from src.schemas.offer_schemas import OfferOut, OfferChange, OfferDelete
 from src.services import offer_service as service
 from src.services import logs_service
@@ -13,12 +13,12 @@ offer_router = APIRouter(
 )
 
 
-@offer_router.get('/')
+@offer_router.get('/', response_model=list[OfferOut])
 async def get_offers():
     return await service.get_offers()
 
 
-@offer_router.patch('/')
+@offer_router.patch('/', response_model=list[OfferOut])
 async def change_offer_fields(offers_data: list[OfferChange], current_user=Depends(get_current_user)):
     return await service.change_offers(offers_data, current_user.id)
 
@@ -47,7 +47,7 @@ async def export_offers():
     return FileResponse(path=path, filename='out.xlsx', media_type='multipart/form-data')
 
 
-@offer_router.get('/test_update')
+@offer_router.get('/test_update', response_model=list[OfferOut])
 async def test_update(current_user=Depends(get_current_user)):
     return await service.update_offers(current_user.id)
 
@@ -59,7 +59,7 @@ async def import_offers(data: bytes = File(), current_user=Depends(get_current_u
     return {'status': 'OK'}
 
 
-@offer_router.get('/logs')
+@offer_router.get('/logs', response_model=LogsOut)
 async def get_logs(current_user=Depends(get_current_user)):
     return await logs_service.get_logs(current_user.id)
 
