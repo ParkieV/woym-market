@@ -8,9 +8,31 @@
     import { patchOfferList, type Offer, fetchOfferList } from "$lib";
     import Grid from "./Grid.svelte";
     import { onMount } from "svelte";
+    import type { DialogData } from "$lib/ConfirmationDialog.svelte";
+    import ConfirmationDialog from "$lib/ConfirmationDialog.svelte";
+    import { num_word } from "$lib/util";
 
     let data: "loading" | Offer[] = "loading";
     let changed: Map<string, Offer> = new Map();
+
+    let confirmationDialog: DialogData | undefined = undefined;
+    export function confirmChangesLoss(confirmed: () => void) {
+        if (changed.size !== 0) {
+            let word = num_word(changed.size, ["изменение", "изменения", "изменений"]);
+            let part = num_word(changed.size, [
+                "Оно будет потеряно",
+                "Они будут потеряны",
+                "Они будут потеряны"
+            ]);
+            confirmationDialog = {
+                header: "Изменения будут потеряны",
+                text: `Вы внесли ${changed.size} ${word}. ${part}, продолжить?`,
+                onConfirm: confirmed
+            };
+        } else {
+            confirmed();
+        }
+    }
 
     let settings_open: boolean = false;
     let selected_image = "";
@@ -27,44 +49,44 @@
     }
 
     async function importXlsx() {
-        const input = document.createElement("input");
-        input.type = "file";
-        input.onchange = async e => {
-            let target = e.target as HTMLInputElement;
-            let file = target.files![0];
-            let formData = new FormData();
-            formData.append("data", file);
-            let responce = await fetchAuthenticated("offers/xlsx", {
-                method: "POST",
-                body: formData
-            });
-            if (!responce.ok) {
-                alert("Импорт не удался");
-            } else {
-                await refreshData();
-            }
-        };
-        input.click();
+        confirmChangesLoss(async () => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.onchange = async e => {
+                let target = e.target as HTMLInputElement;
+                let file = target.files![0];
+                let formData = new FormData();
+                formData.append("data", file);
+                let responce = await fetchAuthenticated("offers/xlsx", {
+                    method: "POST",
+                    body: formData
+                });
+                if (!responce.ok) {
+                    alert("Импорт не удался");
+                } else {
+                    await refreshData();
+                }
+            };
+            input.click();
+        });
     }
 
-    async function cancelEdits() {
-        await refreshData();
+    function cancelEdits() {
+        confirmChangesLoss(async () => {
+            await refreshData();
+        });
     }
 
     async function confirmEdits() {
-        let data = Array.from(changed.values());
-        await patchOfferList(data);
-        await refreshData();
-    }
-
-    async function refreshRemoteData() {
-        if (
-            changed.size == 0 ||
-            confirm(`Вы внесли ${changed.size} изменений. Они будут потеряны, вы уверены?`) // TODO: use custom confirmation dialog
-        ) {
-            // TODO: implement after backend endpoint is completed.
-            alert("Этот функционал в разработке!");
-        }
+        confirmationDialog = {
+            header: "Сохранить изменения?",
+            text: `Данные обновятся на сервере`,
+            onConfirm: async () => {
+                let data = Array.from(changed.values());
+                await patchOfferList(data);
+                await refreshData();
+            }
+        };
     }
 
     /** Refreshes data displayed in the grid. */
@@ -80,8 +102,7 @@
     });
 </script>
 
-<!-- TODO: Show ConfirmationDialog before any dangerous action -->
-<!-- <ConfirmationDialog open={true} text="Это действие обновит 100500 строк."/> -->
+<ConfirmationDialog bind:data={confirmationDialog} />
 <ImageModal bind:src={selected_image} />
 <SettingsDialog bind:open={settings_open} on:confirm={() => refreshData()} />
 
