@@ -107,7 +107,6 @@
             on:photoClicked={e => (selected_image = e.detail)}
         />
         <menu class="bottombar">
-            <button on:click={refreshRemoteData} class="refresh">Обновить данные</button>
             <span>{`Последнее обновление:\n${last_updated.toLocaleString("en-GB", {})}`}</span>
             <div style:flex="1" />
             <button class="cancel" on:click={cancelEdits} disabled={changed.size == 0}>
@@ -157,12 +156,6 @@
             height: 40px;
             border: 0;
             color: white;
-            &.refresh {
-                background-color: #252525;
-                &:hover {
-                    background-color: #111111;
-                }
-            }
         }
         > span {
             font-size: 16px;
