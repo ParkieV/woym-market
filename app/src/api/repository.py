@@ -134,7 +134,7 @@ class YandexMarketRepository:
                         'currencyId': "RUR"
                     }
                 }
-                    for offer in _offers[i:i + chunk_size] if offer['current_price'] is not None and not offer['auto_price_control']]
+                    for offer in _offers[i:i + chunk_size] if offer['current_price'] is not None and offer['auto_price_control']]
                 body = {
                     'offers': data
                 }
@@ -142,14 +142,14 @@ class YandexMarketRepository:
                 if len(body['offers']) <= 0:
                     break
 
-                # response = self.session.post(
-                #     f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
-                #     headers=self.auth_headers,
-                #     json=body
-                # )
-                #
-                # if response.status_code != 200:
-                #     self.raise_request_exception(response.status_code, response.text)
+                response = self.session.post(
+                    f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
+                    headers=self.auth_headers,
+                    json=body
+                )
+
+                if response.status_code != 200:
+                    self.raise_request_exception(response.status_code, response.text)
 
     async def get_report_info(self, report_id: str):
         while True:
