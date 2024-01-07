@@ -107,7 +107,8 @@ export function DataGridOptions(init: {
                 children: [
                     {
                         ...money_column("total_price", "₽"),
-                        headerName: "Расчётная цена"
+                        headerName: "Расчётная цена",
+                        headerTooltip: "Закупка * коэф. + мин. наценка"
                     },
                     {
                         ...money_column("current_price", "₽"),
@@ -116,7 +117,8 @@ export function DataGridOptions(init: {
                     {
                         ...money_column("cost_price", "₽"),
                         headerName: "Закупка",
-                        columnGroupShow: "open"
+                        columnGroupShow: "open",
+                        headerTooltip: "Закупка у. е. * курс"
                     },
                     {
                         ...editable_money_column("dollar_cost_price", "$"),
@@ -143,12 +145,14 @@ export function DataGridOptions(init: {
                     {
                         ...money_column("discount_base_price", "₽"),
                         headerName: "Цена до скидки",
-                        columnGroupShow: "open"
+                        columnGroupShow: "open",
+                        headerTooltip: "Цена + 20%"
                     },
                     {
                         ...money_column("profit", "₽"),
                         headerName: "Прибыль",
-                        columnGroupShow: "open"
+                        columnGroupShow: "open",
+                        headerTooltip: "Цена - закупка - FBY"
                     },
                     {
                         field: "margin",
@@ -157,7 +161,7 @@ export function DataGridOptions(init: {
                         cellClass: "ag-right-aligned-cell",
                         valueFormatter: params =>
                             params.value ? `${params.value.toFixed(3)}%` : "",
-                        valueFormatter: params => `${params.value ? params.value.toFixed(3) : ""}%`
+                        headerTooltip: "Прибыль / закупка * 100"
                     },
                     {
                         ...money_column("fby", "₽"),
