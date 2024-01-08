@@ -1,6 +1,6 @@
 import type { Offer } from "$lib";
 import type { CellClassParams, ColDef, ColGroupDef, GridOptions } from "ag-grid-community";
-import { notNullFieldColumn } from "./util";
+import { numberColumnDefinition } from "./util";
 
 export function DataGridOptions(init: {
     search: () => string;
@@ -104,80 +104,92 @@ export function DataGridOptions(init: {
                 headerName: "Цена",
                 children: [
                     {
-                        ...money_column("total_price", "₽"),
+                        ...numberColumnDefinition("total_price", { kind: "money", currency: "₽" }),
                         headerName: "Расчётная цена",
                         headerTooltip: "Закупка * коэф. + мин. наценка"
                     },
                     {
-                        ...money_column("current_price", "₽"),
+                        ...numberColumnDefinition("current_price", {
+                            kind: "money",
+                            currency: "₽"
+                        }),
                         headerName: "Текущая цена"
                     },
                     {
-                        ...money_column("cost_price", "₽"),
+                        ...numberColumnDefinition("cost_price", { kind: "money", currency: "₽" }),
                         headerName: "Закупка",
                         columnGroupShow: "open",
                         headerTooltip: "Закупка у. е. * курс"
                     },
                     {
-                        ...editable_money_column("dollar_cost_price", "$"),
+                        ...numberColumnDefinition(
+                            "dollar_cost_price",
+                            { kind: "money", currency: "$" },
+                            true
+                        ),
                         headerName: "Закупка (у. е.)",
                         columnGroupShow: "open"
                     },
                     {
-                        ...editable_money_column("total_price_min_additional", "₽"),
+                        ...numberColumnDefinition(
+                            "total_price_min_additional",
+                            { kind: "money", currency: "₽" },
+                            true
+                        ),
                         headerName: "Минимальная наценка",
                         wrapHeaderText: true,
                         columnGroupShow: "open"
                     },
                     {
-                        ...notNullFieldColumn("total_price_coeff"),
+                        ...numberColumnDefinition(
+                            "total_price_coeff",
+                            { kind: "number", precision: 2 },
+                            true
+                        ),
                         headerName: "Коэффициент",
-                        type: "editable",
-                        cellEditor: "agNumberCellEditor",
-                        cellEditorParams: {
-                            min: 0
-                        },
-                        cellClass: "ag-right-aligned-cell",
                         columnGroupShow: "open"
                     },
                     {
-                        ...money_column("discount_base_price", "₽"),
+                        ...numberColumnDefinition("discount_base_price", {
+                            kind: "money",
+                            currency: "₽"
+                        }),
                         headerName: "Цена до скидки",
                         columnGroupShow: "open",
                         headerTooltip: "Цена + 20%"
                     },
                     {
-                        ...money_column("profit", "₽"),
+                        ...numberColumnDefinition("profit", { kind: "money", currency: "₽" }),
                         headerName: "Прибыль",
                         columnGroupShow: "open",
                         headerTooltip: "Цена - закупка - FBY"
                     },
                     {
-                        field: "margin",
+                        ...numberColumnDefinition("margin", { kind: "percent" }),
                         headerName: "Окупаемость",
                         columnGroupShow: "open",
-                        cellClass: "ag-right-aligned-cell",
-                        valueFormatter: params =>
-                            params.value ? `${params.value.toFixed(3)}%` : "",
                         headerTooltip: "Прибыль / закупка * 100"
                     },
                     {
-                        ...money_column("fby", "₽"),
+                        ...numberColumnDefinition("fby", { kind: "money", currency: "₽" }),
                         headerName: "FBY",
                         columnGroupShow: "open"
                     },
                     {
-                        ...money_column("minimum_group_price", "₽"),
-                        headerName: "Мин. цена в группе"
+                        ...numberColumnDefinition("minimum_group_price", {
+                            kind: "money",
+                            currency: "₽"
+                        }),
+                        headerName: "Мин. цена в группе",
+                        columnGroupShow: "open"
                     }
                 ]
             },
             { field: "name_of_shop", headerName: "Название магазина" },
             {
-                field: "remaining_stock",
+                ...numberColumnDefinition("remaining_stock", { kind: "number", precision: 0 }),
                 headerName: "Остаток на складе",
                 wrapHeaderText: true,
-                cellClass: "ag-right-aligned-cell",
                 initialWidth: 120
             },
             {
@@ -196,30 +208,6 @@ export function DataGridOptions(init: {
             }
         ];
     }
-}
-
-function money_column(field: keyof Offer, currency: string): ColDef<Offer> {
-    return {
-        field,
-        cellClass: "ag-right-aligned-cell",
-        valueFormatter: params =>
-            params.value === null ? "N/A" : `${params.value.toFixed(2)} ${currency}`
-    };
-}
-
-function editable_money_column(field: keyof Offer, currency: string): ColDef<Offer> {
-    return {
-        ...notNullFieldColumn(field),
-        cellEditor: "agNumberCellEditor",
-        cellEditorParams: {
-            min: 0,
-            precision: 2,
-            preventStepping: true
-        },
-        type: "editable",
-        cellClass: "ag-right-aligned-cell",
-        valueFormatter: params => `${params.value.toFixed(2)} ${currency}`
-    };
 }
 
 function filter(search: string, offer: Offer): boolean {
