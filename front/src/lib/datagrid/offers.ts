@@ -165,12 +165,12 @@ export function DataGridOptions(init: {
                         ...money_column("fby", "₽"),
                         headerName: "FBY",
                         columnGroupShow: "open"
+                    },
+                    {
+                        ...money_column("minimum_group_price", "₽"),
+                        headerName: "Мин. цена в группе"
                     }
                 ]
-            },
-            {
-                ...money_column("minimum_group_price", "₽"),
-                headerName: "Мин. цена в группе"
             },
             { field: "name_of_shop", headerName: "Название магазина" },
             {
