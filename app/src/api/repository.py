@@ -140,7 +140,7 @@ class YandexMarketRepository:
                 }
 
                 if len(body['offers']) <= 0:
-                    break
+                    continue
 
                 response = self.session.post(
                     f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
