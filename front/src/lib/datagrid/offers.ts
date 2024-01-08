@@ -182,6 +182,26 @@ export function DataGridOptions(init: {
                         }),
                         headerName: "Мин. цена в группе",
                         columnGroupShow: "open"
+                    },
+                    {
+                        ...numberColumnDefinition(
+                            "auto_min_price",
+                            {
+                                kind: "percent"
+                            },
+                            true
+                        ),
+                        headerName: "Авто мин. цена %",
+                        columnGroupShow: "open"
+                    },
+                    {
+                        ...numberColumnDefinition(
+                            "manual_min_price",
+                            { kind: "money", currency: "₽" },
+                            true
+                        ),
+                        headerName: "Ручная мин. цена",
+                        columnGroupShow: "open"
                     }
                 ]
             },
