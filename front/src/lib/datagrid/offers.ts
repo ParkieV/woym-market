@@ -18,7 +18,7 @@ export function DataGridOptions(init: {
         columnDefs: columnDefs(),
         columnTypes: {
             editable: {
-                headerClass: "editable-column-header",
+                cellClass: "editable",
                 editable: true
             }
         },

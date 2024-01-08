@@ -60,8 +60,10 @@ button {
     }
 }
 
-.editable-column-header {
-    text-decoration: underline;
+:not(:hover) {
+    .editable {
+        background-color: hsl(180, 47%, 97%);
+    }
 }
 
 .cancel {

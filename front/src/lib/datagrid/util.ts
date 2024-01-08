@@ -18,6 +18,9 @@ export function numberColumnDefinition<T, V = any>(
         precision = init.precision;
     }
 
+    let cellClass = ["ag-right-aligned-cell"];
+    if (editable) cellClass.push("editable");
+
     let editable_def = {};
     if (editable) {
         editable_def = {
@@ -27,7 +30,7 @@ export function numberColumnDefinition<T, V = any>(
                 precision,
                 preventStepping: true
             },
-            type: "editable"
+            editable: true
         };
     }
 
@@ -35,7 +38,7 @@ export function numberColumnDefinition<T, V = any>(
         ...notNullFieldColumn(field),
         ...notNullNumberFormatter(field, precision, postfix),
         ...editable_def,
-        cellClass: "ag-right-aligned-cell"
+        cellClass
     };
 }
 
