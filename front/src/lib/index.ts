@@ -5,15 +5,14 @@ export const BaseUrl = PUBLIC_BASE_URL;
 
 // TODO: Improve documentation
 export type Offer = {
-    id: number;
     sku: string;
     /** URL to the photo of the product */
-    photo?: string;
+    photo?: string | null;
     /** Name of the product. */
     name: string;
-    note_1?: string;
-    note_2?: string;
-    note_3?: string;
+    note_1?: string | null;
+    note_2?: string | null;
+    note_3?: string | null;
     /** Weight of the product. */
     weight: number;
     /** Length of the product. */
@@ -22,13 +21,11 @@ export type Offer = {
     width: number;
     /** Height of the product. */
     height: number;
-    /** Volume that is provided by Yandex (may differ from self-calculated one). */
-    volume_yandex: number;
 
     /** Final price calculated by service. */
     total_price: number;
     /** Price that is currently set in Yandex Market. */
-    current_price?: number;
+    current_price?: number | null;
     /** The price **in rubles** at which goods are or have been bought by a merchant or retailer. */
     cost_price: number;
     /** The price **in dollars** at which goods are or have been bought by a merchant or retailer. */
@@ -37,14 +34,15 @@ export type Offer = {
     total_price_min_additional: number;
 
     total_price_coeff: number;
-    discount_base_price: number;
-    profit: number;
-    margin: number;
-    fby: number;
+    discount_base_price: number | null;
+    profit: number | null;
+    margin: number | null;
+    fby: number | null;
     minimum_group_price: number;
-    group_sellers_amount: number;
     name_of_shop: string;
     remaining_stock: number;
+    auto_min_price: number;
+    manual_min_price: number | null;
 
     /** Sets if automatic control of the current price is enabled. */
     auto_price_control: boolean;
