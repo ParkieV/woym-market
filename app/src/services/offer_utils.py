@@ -74,7 +74,7 @@ def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, course: float)
     changes.reset_index(drop=True, inplace=True)
 
     updated_offers.update(changes)
-    updated_offers.drop('id', axis=1)
+    updated_offers.drop('id', axis=1, errors='ignore')
 
     updated_offers = calculate_offers_values(updated_offers, course)
 

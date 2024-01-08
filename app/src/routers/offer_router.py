@@ -29,12 +29,6 @@ async def delete_offers(offers: list[OfferDelete]):
     return {'status': 'OK'}
 
 
-@offer_router.post('/send', dependencies=[Depends(get_current_user)])
-async def send_offer_to_yandex():
-    await service.update_yandex_offers_price()
-    return {'status': 'OK'}
-
-
 @offer_router.post('/setup', dependencies=[Depends(get_current_user)])
 async def setup_offers_data():
     await service.setup_offers_data()
@@ -47,7 +41,7 @@ async def export_offers():
     return FileResponse(path=path, filename='out.xlsx', media_type='multipart/form-data')
 
 
-@offer_router.get('/test_update', response_model=list[OfferOut])
+@offer_router.post('/force-update', response_model=list[OfferOut])
 async def test_update(current_user=Depends(get_current_user)):
     return await service.update_offers(current_user.id)
 

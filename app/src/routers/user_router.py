@@ -14,7 +14,7 @@ async def get_user_settings(current_user=Depends(get_current_user)):
     return await get_settings(current_user.id)
 
 
-@user_router.patch('/settings', response_model=SettingsUpdate)
+@user_router.patch('/settings')
 async def update_settings(settings_data: SettingsUpdate, current_user=Depends(get_current_user)):
     await update_user_settings(current_user.id, settings_data)
     return {'status': 'OK'}

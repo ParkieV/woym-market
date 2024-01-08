@@ -9,6 +9,10 @@ class BaseModelFields(ABC):
     def fields(cls):
         return {name: field.title for name, field in cls.model_fields.items()}
 
+    @classmethod
+    def reverse_fields(cls):
+        return {field.title: name for name, field in cls.model_fields.items()}
+
 
 class OfferOut(BaseModel, BaseModelFields):
     # from yandex api

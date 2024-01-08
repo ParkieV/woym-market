@@ -115,11 +115,14 @@ async def import_offers_data(data: bytes, user_id: int):
         columns = list(OfferOut.fields().keys())
         columns.remove('business_id')
 
-        changes.rename(columns=OfferOut.fields(), inplace=True)
+        changes.rename(columns=OfferOut.reverse_fields(), inplace=True)
 
         db_offers = jsonable_encoder(await get_offers())
         offers_df = pd.DataFrame(db_offers)
 
+        columns_to_change = list(set(changes.columns) & set(offers_df.columns))
+
+        changes = changes[columns_to_change]
         changes = changes[changes['sku'].isin(offers_df['sku'])]
         offers_df = offers_df[offers_df['sku'].isin(changes['sku'])]
 
