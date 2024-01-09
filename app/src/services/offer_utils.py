@@ -35,7 +35,7 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
         data['auto_price_control'] == False,
         data['current_price'],
         np.where(
-            data['current_price'] > data['minimum_group_price'],
+            data['current_price'] >= data['minimum_group_price'],
             np.where(
                 data['use_manual_min_price'],
                 data[['minimum_group_price', 'manual_min_price']].max(axis=1), # если используем ручную минимальную планку

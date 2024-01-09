@@ -47,6 +47,9 @@ class YandexMarketRepository:
         return extended_offers
 
     def get_campaigns(self) -> list[CampaignInfo] | None:
+        return [CampaignInfo(id=21952451, business_id=980790, business_name="CALMAR.SHOP")]
+
+        #TODO баги с остатками на складах при использовании с несколькими компаниями
         response = self.session.get('https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
 
         if response.status_code != 200:
@@ -195,3 +198,4 @@ class YandexMarketRepository:
             d[i['sku']] = i['price']
 
         return d
+
