@@ -99,7 +99,7 @@ async def update_yandex_offers_price():
 async def build_csv():
     offers = jsonable_encoder(await get_offers())
     df = pd.DataFrame(offers)
-    df.drop('id', inplace=True, axis=1)
+    df.drop(['id', 'minimum_group_price_shop'], inplace=True, axis=1, errors='ignore')
     df = df[OfferOut.fields().keys()]
 
     df.drop(['business_id'], axis=1, inplace=True)

@@ -29,23 +29,41 @@ def calculate_offers_values(data: pd.DataFrame, course: float) -> pd.DataFrame:
 
 
 def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
-    data['temp_auto_min_price'] = data['total_price'] * data['auto_min_price'] / 100 # временно значение для автоматической минимальной планки
+    data = data.copy()
+    # data['temp_auto_min_price'] = data['total_price'] * data['auto_min_price'] / 100 # временно значение для автоматической минимальной планки
 
-    data['current_price'] = np.where(
-        data['auto_price_control'] == False,
-        data['current_price'],
-        np.where(
-            data['current_price'] >= data['minimum_group_price'],
-            np.where(
-                data['use_manual_min_price'],
-                data[['minimum_group_price', 'manual_min_price']].max(axis=1), # если используем ручную минимальную планку
-                data[['minimum_group_price', 'temp_auto_min_price']].max(axis=1)
-            ),
-            data[['total_price', 'minimum_group_price']].min(axis=1)
-        )
+    # не меняем цену
+    sub_data_1 = data[data['auto_price_control'] == False]
+    sub_data_1.loc[:, 'current_price'] = sub_data_1['current_price']
+
+    # используем ручную мин планку
+    sub_data_2 = data[((data['auto_price_control'] == True) & (data['use_manual_min_price'] == True))]
+    sub_data_2.loc[:, 'current_price'] = np.where(
+        sub_data_2['current_price'] >= sub_data_2['minimum_group_price'],
+        sub_data_2[['minimum_group_price', 'manual_min_price']].max(axis=1),
+        sub_data_2[['total_price', 'minimum_group_price']].min(axis=1)
     )
-    data.drop('temp_auto_min_price', axis=1, inplace=True)
-    return data
+
+    #  используем автоматическую мин планку
+    sub_data_3 = data[((data['auto_price_control'] == True) & (data['use_manual_min_price'] == False))]
+    sub_data_3['temp_auto_min_price'] = sub_data_3['total_price'] * sub_data_3['auto_min_price'] / 100
+    sub_data_3.loc[:, 'current_price'] = np.where(
+        sub_data_3['current_price'] >= sub_data_3['minimum_group_price'],
+        sub_data_3[['minimum_group_price', 'temp_auto_min_price']].max(axis=1),
+        sub_data_3[['total_price', 'minimum_group_price']].min(axis=1)
+    )
+    sub_data_3.drop('temp_auto_min_price', axis=1, inplace=True)
+
+    df = pd.concat([sub_data_1, sub_data_2, sub_data_3])
+    df.reset_index(drop=True, inplace=True)
+
+    # прибовляем 5% если магазин с лучшей ценой это текущий магазин
+    df['current_price'] = np.where(
+        (df['auto_price_control'] == True) & (df['minimum_group_price_shop'] == df['name_of_shop']),
+        df['current_price'] * 1.05,
+        df['current_price']
+    )
+    return df
 
 
 def build_offers_data(data: pd.DataFrame, course: float = 5, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False):

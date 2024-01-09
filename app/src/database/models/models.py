@@ -48,6 +48,7 @@ class Offer(Base):
     photo = Column(String, nullable=True)
     remaining_stock = Column(Integer)
     minimum_group_price = Column(Float)
+    minimum_group_price_shop = Column(String, nullable=True)
     name_of_shop = Column(String)
     group_sellers_amount = Column(Integer)
     business_id = Column(Integer)
