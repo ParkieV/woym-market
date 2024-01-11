@@ -11,24 +11,20 @@ services:
       dockerfile: app.dockerfile
     depends_on:
       - db
-    ports:
-      - 8000:8000
-#    expose:
-#      - 8000
+    expose:
+      - 8000
 
   frontend:
-   container_name: frontend
-   restart: always
-   env_file: .env
-   build:
-     context: ./front
-     dockerfile: front.dockerfile
-   depends_on:
-     - app
-   ports:
-     - 3000:3000
-#   expose:
-#     - 3000
+    container_name: frontend
+    restart: always
+    env_file: .env
+    build:
+      context: ./front
+      dockerfile: front.dockerfile
+    depends_on:
+      - app
+    expose:
+      - 3000
 
   nginx:
     image: nginx:latest
@@ -38,12 +34,12 @@ services:
       - app
     volumes:
       - ./nginx:/etc/nginx/conf.d
-      # - /etc/letsencrypt:/etc/letsencrypt
-      # - /var/www/html:/var/www/html
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/html:/var/www/html
       # - ./static:/etc/nginx/static_img
     ports:
       - 80:80
-#      - 443:443
+      - 443:443
 
   db:
     container_name: db
@@ -53,5 +49,3 @@ services:
       - ./db-data:/var/lib/postgresql/data
     ports:
       - 5432:5432
-
-
