@@ -13,17 +13,17 @@ offer_router = APIRouter(
 )
 
 
-@offer_router.get('/', response_model=list[OfferOut])
+@offer_router.get('', response_model=list[OfferOut])
 async def get_offers():
     return await service.get_offers()
 
 
-@offer_router.patch('/', response_model=list[OfferOut])
+@offer_router.patch('', response_model=list[OfferOut])
 async def change_offer_fields(offers_data: list[OfferChange], current_user=Depends(get_current_user)):
     return await service.change_offers(offers_data, current_user.id)
 
 
-@offer_router.delete('/', dependencies=[Depends(get_current_user)])
+@offer_router.delete('', dependencies=[Depends(get_current_user)])
 async def delete_offers(offers: list[OfferDelete]):
     await service.delete_offers(offers)
     return {'status': 'OK'}
