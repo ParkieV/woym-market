@@ -42,7 +42,8 @@ class OfferOut(BaseModel, BaseModelFields):
     margin: float | None = Field(title='Окупаемость')
     fby: float | None = Field(title='Цена за FBY')
 
-    current_price: float | None = Field(title='Цена на маркете')
+    current_price: float | None = Field(title='Текущая цена')
+    target_price: float | None = Field(title='Целевая цена')
 
     # User additional fields
     note_1: str | None = Field(None, title='Примечание 1')
