@@ -135,11 +135,11 @@ class YandexMarketRepository:
                 data = [{
                     'offerId': offer['sku'],
                     'price': {
-                        'value': offer['current_price'],
+                        'value': offer['target_price'],
                         'currencyId': "RUR"
                     }
                 }
-                    for offer in _offers[i:i + chunk_size] if offer['current_price'] is not None and offer['auto_price_control']]
+                    for offer in _offers[i:i + chunk_size] if offer['target_price'] is not None and offer['auto_price_control']]
                 body = {
                     'offers': data
                 }

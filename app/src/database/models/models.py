@@ -66,6 +66,7 @@ class Offer(Base):
     fby = Column(Float)
 
     current_price = Column(Float, nullable=True)
+    target_price = Column(Float, nullable=True, default=None)
 
     # User additional fields
     note_1 = Column(String, nullable=True)
