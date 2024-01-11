@@ -19,6 +19,7 @@ class ExtendedYandexOfferInfo(YandexOfferInfo):
     minimum_group_price: float
     name_of_shop: str
     group_sellers_amount: int
+    minimum_group_price_shop: str | None
 
 
 class CampaignInfo(BaseModel):

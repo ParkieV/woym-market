@@ -1,3 +1,4 @@
+import asyncio
 import json
 from collections import defaultdict
 from requests import Session, get
@@ -40,7 +41,8 @@ class YandexMarketRepository:
             extended_offers.append(ExtendedYandexOfferInfo(
                 **dict(offer),
                 remaining_stock=offers_stock.get(offer.sku, 0),
-                minimum_group_price=minimum_group_prices.get(offer.sku, 0),
+                minimum_group_price=minimum_group_prices[offer.sku]['price'] if offer.sku in minimum_group_prices.keys() else 0,
+                minimum_group_price_shop=minimum_group_prices[offer.sku]['shop'] if offer.sku in minimum_group_prices.keys() else None,
                 name_of_shop=list(filter(lambda x: x.business_id == offer.business_id, campaigns))[0].business_name,
                 group_sellers_amount=0,
             ))
@@ -182,20 +184,17 @@ class YandexMarketRepository:
         data = await self.get_report_info(report_id)
         return data
 
-    def _download_report(self, url_path: str) -> dict[str, float]:
+    def _download_report(self, url_path: str) -> dict[str, tuple[float, str]]:
         output = BytesIO()
         response = self.session.get(url_path)
         output.write(response.content)
         df = pd.read_excel(output, engine='openpyxl')
         df.drop([0, 1, 2, 3], inplace=True)
-        data: pd.DataFrame = df.iloc[:, [0, 14]].replace('–', 0)
-        data.columns.values[0] = 'sku'
-        data.columns.values[1] = 'price'
+        new_df = pd.DataFrame()
+        new_df[['sku', 'shop', 'price']] = df.iloc[:, [0, 13, 14]].replace('–', 0)
 
-        d = dict()
+        result = new_df.to_dict('records')
+        result = {i['sku']: {'price': i['price'], 'shop': str(i['shop']).replace(' • FBY', '').replace(' • FBS', '')} for i in result}
 
-        for i in json.loads(data.to_json(orient='records')):
-            d[i['sku']] = i['price']
-
-        return d
+        return result
 
