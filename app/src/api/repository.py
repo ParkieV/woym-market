@@ -111,9 +111,9 @@ class YandexMarketRepository:
                     sku=offer['offerId'],
                     name=offer['name'],
                     weight=offer['weightDimensions']['weight'] if 'weightDimensions' in offer else 0,
-                    length=offer['weightDimensions']['length'] / 100 if 'weightDimensions' in offer else 0,
-                    width=offer['weightDimensions']['width'] / 100 if 'weightDimensions' in offer else 0,
-                    height=offer['weightDimensions']['height'] / 100 if 'weightDimensions' in offer else 0,
+                    length=offer['weightDimensions']['length'] if 'weightDimensions' in offer else 0,
+                    width=offer['weightDimensions']['width'] if 'weightDimensions' in offer else 0,
+                    height=offer['weightDimensions']['height'] if 'weightDimensions' in offer else 0,
                     volume_yandex=(offer['weightDimensions']['length'] * offer['weightDimensions']['width'] *
                                    offer['weightDimensions']['height']) / 5000 if 'weightDimensions' in offer else 0,
                     photo=offer['pictures'][0] if len(offer['pictures']) > 0 else None,
