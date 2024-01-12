@@ -116,6 +116,13 @@ export function DataGridOptions(init: {
                         headerName: "Текущая цена"
                     },
                     {
+                        ...numberColumnDefinition("target_price", {
+                            kind: "money",
+                            currency: "₽"
+                        }),
+                        headerName: "Целевая цена"
+                    },
+                    {
                         ...numberColumnDefinition("cost_price", { kind: "money", currency: "₽" }),
                         headerName: "Закупка",
                         columnGroupShow: "open",
