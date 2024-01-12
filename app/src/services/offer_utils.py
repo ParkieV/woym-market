@@ -13,7 +13,7 @@ def count_fby(data: pd.DataFrame):
 
 def calculate_offers_values(data: pd.DataFrame, course: float) -> pd.DataFrame:
     data['fby'] = count_fby(data)
-    data['volume'] = data['length'] * data['width'] * data['height'] * 100 * 1000
+    data['volume'] = data['length'] * data['width'] * data['height'] / 1000
     data['cost_price'] = data['dollar_cost_price'] * course
     data['total_price'] = np.where(data['cost_price'] > data['total_price_min_additional'],
                                    data['cost_price'] * data['total_price_coeff'],
