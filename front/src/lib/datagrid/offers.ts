@@ -80,23 +80,44 @@ export function DataGridOptions(init: {
             {
                 headerName: "Габариты",
                 children: [
-                    { field: "weight", headerName: "Вес" },
+                    {
+                        ...numberColumnDefinition("weight", { kind: "number", precision: 2 }),
+                        headerName: "Вес"
+                    },
                     {
                         headerName: "Размеры",
                         valueGetter: p => {
-                            return `${p.data!.length}x${p.data!.width}x${p.data!.height}`;
+                            let l = p.data!.length.toFixed(1);
+                            let w = p.data!.width.toFixed(1);
+                            let h = p.data!.height.toFixed(1);
+                            return `${l}x${w}x${h}`;
                         },
                         columnGroupShow: "closed",
-                        sortable: false
+                        sortable: false,
+                        cellClass: "ag-right-aligned-cell"
                     },
-                    { field: "length", headerName: "Длина", columnGroupShow: "open", width: 100 },
-                    { field: "width", headerName: "Ширина", columnGroupShow: "open", width: 100 },
-                    { field: "height", headerName: "Высота", columnGroupShow: "open", width: 100 },
                     {
+                        ...numberColumnDefinition("length", { kind: "number", precision: 1 }),
+                        headerName: "Длина",
+                        columnGroupShow: "open",
+                        initialWidth: 100
+                    },
+                    {
+                        ...numberColumnDefinition("width", { kind: "number", precision: 1 }),
+                        headerName: "Ширина",
+                        columnGroupShow: "open",
+                        initialWidth: 100
+                    },
+                    {
+                        ...numberColumnDefinition("height", { kind: "number", precision: 1 }),
+                        headerName: "Высота",
+                        columnGroupShow: "open",
+                        initialWidth: 100
+                    },
+                    {
+                        ...numberColumnDefinition("volume", { kind: "number", precision: 2 }),
                         headerName: "Объём",
-                        valueGetter: p => {
-                            return (p.data!.length * p.data!.width * p.data!.height).toFixed(4);
-                        }
+                        initialWidth: 100
                     }
                 ]
             },

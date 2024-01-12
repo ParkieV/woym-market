@@ -13,6 +13,7 @@ export type Offer = {
     note_1?: string | null;
     note_2?: string | null;
     note_3?: string | null;
+
     /** Weight of the product. */
     weight: number;
     /** Length of the product. */
@@ -21,6 +22,8 @@ export type Offer = {
     width: number;
     /** Height of the product. */
     height: number;
+    /** Volume of the product. */
+    volume: number;
 
     /** Final price calculated by service. */
     total_price: number;
