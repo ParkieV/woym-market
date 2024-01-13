@@ -6,8 +6,19 @@ from io import BytesIO
 
 
 def count_fby(data: pd.DataFrame):
+    # 19% - коммисия за продажу (дача, сад и огород, содовый инвентарь)
+    # 1% - перевод денежных средств магазину
+    # если dimensions_sum < 150 и вес < 25 кг, то 3% (20 <= x <= 60), иначе 350 - доставка внутри округа
+    # если dimensions_sum < 150 и вес < 25 кг, то 3% (20 <= x <= 60), иначе 350 - доставка внутри округа
+
     dimensions_sum = data['length'] + data['width'] + data['height']
-    data['fby'] = np.where(dimensions_sum < 150, data['current_price'] * 0.085, 850)
+    delivery_and_warehouse_processing_price = np.where(
+        (dimensions_sum < 150) | (data['weight'] < 25),
+        data['current_price'] * 0.06,
+        350 * 2
+    )
+
+    data['fby'] = data['current_price'] * 0.2 + delivery_and_warehouse_processing_price
     return data['fby']
 
 
