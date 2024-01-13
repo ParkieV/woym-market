@@ -30,7 +30,7 @@ class YandexMarketRepository:
 
         minimum_group_prices = {}
         for campaign in campaigns:
-            minimum_group_prices.update(await self.get_market_price_report(campaign.id))
+            minimum_group_prices.update(await self.get_market_price_report(campaign.business_id))
 
         offers: list[YandexOfferInfo] = []
         for campaign in campaigns:
@@ -171,9 +171,9 @@ class YandexMarketRepository:
 
             await sleep(10)
 
-    async def get_market_price_report(self, campaign_id: int):
+    async def get_market_price_report(self, business_id: int):
         response = self.session.post('https://api.partner.market.yandex.ru/reports/prices/generate',
-                                     json={'campaignId': campaign_id}, headers=self.auth_headers)
+                                     json={'businessId': business_id}, headers=self.auth_headers)
 
         if response.status_code != 200:
             self.raise_request_exception(response.status_code, response.text)
