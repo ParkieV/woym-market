@@ -28,7 +28,8 @@ export function DataGridOptions(init: {
         onCellValueChanged: e => {
             if (init.onOfferChanged) init.onOfferChanged(e.data);
             e.api.redrawRows({ rowNodes: [e.node] });
-        }
+        },
+        tooltipShowDelay: 500
     };
 
     function columnDefs(): (ColDef<Offer> | ColGroupDef<Offer>)[] {
