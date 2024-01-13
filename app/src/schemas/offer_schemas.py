@@ -31,15 +31,15 @@ class OfferOut(BaseModel, BaseModelFields):
     business_id: int = Field(title='id бизнесса')
 
     # countable/editable values
-    dollar_cost_price: float = Field(title='Закупка')
+    dollar_cost_price: float = Field(title='Закупка у. е.')
     total_price_coeff: float = Field(title='Коэфициент расчетной цены')
-    volume: float = Field(title='Объём')
-    cost_price: float = Field(title='Себестоимость')
+    volume: float = Field(title='Объём (Длинна * ширина * высота / 1000)')
+    cost_price: float = Field(title='Себестоимость (Закупка у. е. * курс)')
     total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену')
-    total_price: float = Field(title='Расчетная цена')
-    discount_base_price: float | None = Field(title='Цена до скидки')
-    profit: float | None = Field(title='Прибыль')
-    margin: float | None = Field(title='Окупаемость')
+    total_price: float = Field(title='Расчетная цена (Закупка * коэф. + мин. наценка)')
+    discount_base_price: float | None = Field(title='Цена до скидки (Текущая цена + 20%)')
+    profit: float | None = Field(title='Прибыль (Текущая цена - закупка - FBY)')
+    margin: float | None = Field(title='Окупаемость (Прибыль / закупка * 100)')
     fby: float | None = Field(title='Цена за FBY')
 
     current_price: float | None = Field(title='Текущая цена')
@@ -50,7 +50,7 @@ class OfferOut(BaseModel, BaseModelFields):
     note_2: str | None = Field(None, title='Примечание 2')
     note_3: str | None = Field(None, title='Примечание 3')
 
-    use_manual_min_price: bool =  Field(True, title='Использовать ручную мин. цену') # использовать ли автоматический расчет нижней планки цены
+    use_manual_min_price: bool = Field(True, title='Использовать ручную мин. цену') # использовать ли автоматический расчет нижней планки цены
     auto_min_price: float = Field(title='Авто мин. цена %') # в процентах
     manual_min_price: float | None = Field(None, title='Ручная мин. цена')
 

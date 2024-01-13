@@ -7,7 +7,7 @@ from io import BytesIO
 
 def count_fby(data: pd.DataFrame):
     dimensions_sum = data['length'] + data['width'] + data['height']
-    data['fby'] = np.where(dimensions_sum < (150 / 100), data['current_price'] * 0.085, 850)
+    data['fby'] = np.where(dimensions_sum < 150, data['current_price'] * 0.085, 850)
     return data['fby']
 
 
@@ -32,12 +32,12 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     data = data.copy()
 
     # не меняем цену
-    sub_data_1 = data[data['auto_price_control'] == False]
-    sub_data_1.loc[:, 'target_price'] = sub_data_1['target_price']
+    # sub_data_1 = data[data['auto_price_control'] == False]
+    # sub_data_1.loc[:, 'target_price'] = sub_data_1['target_price']
 
 
     # используем ручную мин планку
-    sub_data_2 = data[((data['auto_price_control'] == True) & (data['use_manual_min_price'] == True))]
+    sub_data_2 = data[data['use_manual_min_price'] == True]
     sub_data_2.loc[:, 'target_price'] = np.where(
         sub_data_2['current_price'] >= sub_data_2['minimum_group_price'],
         sub_data_2[['minimum_group_price', 'manual_min_price']].max(axis=1),
@@ -45,7 +45,7 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     )
 
     #  используем автоматическую мин планку
-    sub_data_3 = data[((data['auto_price_control'] == True) & (data['use_manual_min_price'] == False))]
+    sub_data_3 = data[data['use_manual_min_price'] == False]
     sub_data_3['temp_auto_min_price'] = sub_data_3['total_price'] * sub_data_3['auto_min_price'] / 100
     sub_data_3.loc[:, 'target_price'] = np.where(
         sub_data_3['current_price'] >= sub_data_3['minimum_group_price'],
@@ -54,12 +54,12 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     )
     sub_data_3.drop('temp_auto_min_price', axis=1, inplace=True)
 
-    df = pd.concat([sub_data_1, sub_data_2, sub_data_3])
+    df = pd.concat([sub_data_2, sub_data_3])
     df.reset_index(drop=True, inplace=True)
 
     # прибовляем 5% если магазин с лучшей ценой это текущий магазин
     df['target_price'] = np.where(
-        (df['auto_price_control'] == True) & (df['minimum_group_price_shop'] == df['name_of_shop']) & (df['minimum_group_price'] == df['target_price']),
+        (df['minimum_group_price_shop'] == df['name_of_shop']) & (df['minimum_group_price'] == df['target_price']),
         df['target_price'] * 1.05,
         df['target_price']
     )
@@ -72,13 +72,15 @@ def build_offers_data(data: pd.DataFrame, course: float = 5, total_price_coeff: 
     data['total_price_coeff'] = total_price_coeff
     data['total_price_min_additional'] = total_price_min_additional
 
-    data['use_manual_min_price'] = True
-    data['auto_min_price'] = 110
-    data['manual_min_price'] = None
-    data['auto_price_control'] = False
+    data['auto_min_price'] = 100
+    data['manual_min_price'] = 100
     data['target_price'] = None
 
+    data['use_manual_min_price'] = False
+    data['auto_price_control'] = True
+
     data = calculate_offers_values(data, course)
+    data['auto_price_control'] = False
 
     return json.loads(data.to_json(orient='records'))
 
