@@ -10,7 +10,7 @@
     import { onMount } from "svelte";
     import type { DialogData } from "$lib/ConfirmationDialog.svelte";
     import ConfirmationDialog from "$lib/ConfirmationDialog.svelte";
-    import { num_word } from "$lib/util";
+    import { downloadFile, num_word, uploadFile } from "$lib/util";
     import OutdatedDataDialog from "./OutdatedDataDialog.svelte";
 
     let changed: Map<string, Offer> = new Map();
@@ -44,33 +44,23 @@
 
     async function exportXlsx() {
         let blob = await (await fetchAuthenticated("offers/xlsx")).blob();
-        let url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "report.xlsx";
-        link.click();
+        downloadFile(blob, "report.xlsx");
     }
 
     async function importXlsx() {
         confirmChangesLoss(async () => {
-            const input = document.createElement("input");
-            input.type = "file";
-            input.onchange = async e => {
-                let target = e.target as HTMLInputElement;
-                let file = target.files![0];
-                let formData = new FormData();
-                formData.append("data", file);
-                let responce = await fetchAuthenticated("offers/xlsx", {
-                    method: "POST",
-                    body: formData
-                });
-                if (!responce.ok) {
-                    alert("Импорт не удался");
-                } else {
-                    await refreshData();
-                }
-            };
-            input.click();
+            let blob = await uploadFile();
+            let formData = new FormData();
+            formData.append("data", blob);
+            let responce = await fetchAuthenticated("offers/xlsx", {
+                method: "POST",
+                body: formData
+            });
+            if (!responce.ok) {
+                alert("Импорт не удался");
+            } else {
+                await refreshData();
+            }
         });
     }
 

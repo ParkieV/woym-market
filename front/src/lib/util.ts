@@ -12,3 +12,29 @@ export function num_word(value: number, words: [string, string, string]) {
     if (num == 1) return words[0];
     return words[2];
 }
+
+/** Loads user-selected file as a Blob. */
+export async function uploadFile(): Promise<Blob> {
+    const input = document.createElement("input");
+    input.type = "file";
+
+    let promise = new Promise<Blob>(resolve => {
+        input.onchange = async e => {
+            let target = e.target as HTMLInputElement;
+            let file = target.files![0];
+            resolve(file);
+        };
+    });
+    input.click();
+
+    return promise;
+}
+
+/** Downloads blob as a file. */
+export function downloadFile(blob: Blob, defaultFilename: string) {
+    let url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = defaultFilename;
+    link.click();
+}
