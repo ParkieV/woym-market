@@ -1,11 +1,11 @@
-app/venv/
+venv/
 env/
 __pycache__
 *.ipynb
 *.vscode
 *.idea
 data
-app/data/*
+data/*
 .DS_Store
 .idea
 node_modules/
