@@ -1,7 +1,30 @@
 import { BaseUrl } from "$lib";
 import { fetchAuthenticated } from "$lib/auth";
 
-// TODO: Improve documentation
+/** Class that manages list of offers. */
+export class OffersData {
+    private _offers: Offer[];
+
+    /** Datetime when offer list was last updated from remote. */
+    public updated_at: Date | null = null;
+
+    constructor() {
+        this._offers = [];
+    }
+
+    /** Returns current list of offers. */
+    public get offers(): Offer[] {
+        return this._offers;
+    }
+
+    /** Updates data from remote. */
+    public async update() {
+        let data = await fetchOfferList();
+        this._offers.splice(0, this._offers.length, ...data);
+    }
+}
+
+/** Product in store. */
 export type Offer = {
     sku: string;
     /** URL to the photo of the product */
@@ -52,6 +75,8 @@ export type Offer = {
     /** If set to true, manual min price (manual_min_price) will be used. */
     use_manual_min_price: boolean;
 };
+
+type OfferPatch = { sku: string } & Partial<Offer>;
 
 export async function fetchOfferList(): Promise<Offer[]> {
     let offers = await (await fetch(BaseUrl + "offers")).json();

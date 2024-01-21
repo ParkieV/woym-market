@@ -1,17 +1,18 @@
 <script lang="ts">
-    import type { Offer } from "$lib/data/offers";
+    import type { Offer, OffersData } from "$lib/data/offers";
+    import { ChangeList } from "$lib/datagrid/changes";
     import { DataGridOptions } from "$lib/datagrid/offers";
     import { createGrid, type GridApi } from "ag-grid-community";
     import { createEventDispatcher, onMount } from "svelte";
 
-    export let data: "loading" | Offer[];
-    export let changed: Map<string, Offer> = new Map();
+    export let data: OffersData;
+    export let changes: ChangeList<Offer, "sku">;
 
     let grid: GridApi;
-    $: if (grid && data == "loading") {
+    $: if (grid && data.offers.length != 0) {
+        grid.setGridOption("rowData", data.offers);
+    } else if (grid) {
         grid.showLoadingOverlay();
-    } else if (grid && typeof data == "object") {
-        grid.setGridOption("rowData", data);
     }
 
     export let search: string;
@@ -27,10 +28,10 @@
             search: () => search,
             onPhotoClicked: src => dispatch("photoClicked", src),
             onOfferChanged: offer => {
-                changed.set(offer.sku, offer);
-                changed = changed;
+                changes.add(offer.sku);
+                changes = changes;
             },
-            isOfferChanged: sku => changed.has(sku)
+            isOfferChanged: sku => changes.isChanged(sku)
         });
         grid = createGrid(gridElement, options);
     });

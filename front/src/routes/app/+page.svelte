@@ -8,23 +8,24 @@
     import Grid from "./Grid.svelte";
     import { onMount } from "svelte";
     import { downloadFile, uploadFile } from "$lib/util";
-    import { fetchOfferList, patchOfferList, type Offer } from "$lib/data/offers";
+    import { patchOfferList, OffersData, type Offer } from "$lib/data/offers";
     import { fetchLogs } from "$lib/data/logs";
     import Modals from "./Modals.svelte";
     import type { ModalKind } from "./Modals.svelte";
+    import { ChangeList } from "$lib/datagrid/changes";
 
-    let changed: Map<string, Offer> = new Map();
-    let data: "loading" | Offer[] = "loading";
+    let data = new OffersData();
+    let changes = new ChangeList<Offer, "sku">();
 
     let modals: ModalKind[] = [];
 
     export function confirmChangesLoss(confirmed: () => void) {
-        if (changed.size !== 0) {
+        if (changes.hasChanges) {
             modals = [
                 ...modals,
                 {
                     kind: "confirmChangesLoss",
-                    changed: changed.size,
+                    changed: changes.count,
                     onConfirm: confirmed
                 }
             ];
@@ -37,7 +38,7 @@
     let selected_image = "";
     let search = "";
 
-    let updated_at: Date | null;
+    let updated_at: Date | null = null;
 
     async function exportXlsx() {
         let blob = await (await fetchAuthenticated("offers/xlsx")).blob();
@@ -73,8 +74,8 @@
             {
                 kind: "confirmSave",
                 onConfirm: async () => {
-                    let data = Array.from(changed.values());
-                    await patchOfferList(data);
+                    if (!data) return;
+                    await patchOfferList(data.offers.filter(x => changes.isChanged(x.sku)));
                     await refreshData();
                 }
             }
@@ -83,25 +84,27 @@
 
     /** Refreshes data displayed in the grid. */
     async function refreshData() {
-        data = "loading";
-        changed.clear();
-        changed = changed;
-        data = await fetchOfferList();
+        changes.clear();
+        changes = changes;
+
+        await data.update();
+        data = data;
     }
 
     onMount(() => {
         refreshData();
         let fetchDate = async () => {
-            let settings = await fetchLogs();
-            let new_updated_at = settings.updated_at ? new Date(settings.updated_at) : null;
-            if (new_updated_at === null) {
-                return;
-            }
-            if (updated_at ? updated_at < new_updated_at : false) {
+            let logs = await fetchLogs();
+            if (!logs.updated_at) return;
+            let new_updated_at = new Date(logs.updated_at);
+
+            if (updated_at === null) {
+                updated_at = new_updated_at;
+            } else if (updated_at < new_updated_at) {
+                updated_at = new_updated_at;
                 modals = [...modals, { kind: "dataUpdatedOnServer" }];
                 await refreshData();
             }
-            updated_at = new_updated_at;
         };
         fetchDate();
         setInterval(fetchDate, 15 * 1000);
@@ -129,7 +132,7 @@
         </menu>
         <Grid
             bind:data
-            bind:changed
+            bind:changes
             bind:search
             on:photoClicked={e => (selected_image = e.detail)}
         />
@@ -140,10 +143,10 @@
                 }`}</span
             >
             <div style:flex="1" />
-            <button class="cancel" on:click={cancelEdits} disabled={changed.size == 0}>
+            <button class="cancel" on:click={cancelEdits} disabled={!changes.hasChanges}>
                 Отмена
             </button>
-            <button class="confirm" on:click={confirmSave} disabled={changed.size == 0}>
+            <button class="confirm" on:click={confirmSave} disabled={!changes.hasChanges}>
                 Сохранить изменения
             </button>
         </menu>
