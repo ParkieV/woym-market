@@ -7,30 +7,27 @@
     import SettingsDialog from "./SettingsDialog.svelte";
     import Grid from "./Grid.svelte";
     import { onMount } from "svelte";
-    import type { DialogData } from "$lib/ConfirmationDialog.svelte";
-    import ConfirmationDialog from "$lib/ConfirmationDialog.svelte";
-    import { downloadFile, num_word, uploadFile } from "$lib/util";
-    import OutdatedDataDialog from "./OutdatedDataDialog.svelte";
+    import { downloadFile, uploadFile } from "$lib/util";
     import { fetchOfferList, patchOfferList, type Offer } from "$lib/data/offers";
     import { fetchLogs } from "$lib/data/logs";
+    import Modals from "./Modals.svelte";
+    import type { ModalKind } from "./Modals.svelte";
 
     let changed: Map<string, Offer> = new Map();
     let data: "loading" | Offer[] = "loading";
 
-    let confirmationDialog: DialogData | undefined = undefined;
+    let modals: ModalKind[] = [];
+
     export function confirmChangesLoss(confirmed: () => void) {
         if (changed.size !== 0) {
-            let word = num_word(changed.size, ["изменение", "изменения", "изменений"]);
-            let part = num_word(changed.size, [
-                "Оно будет потеряно",
-                "Они будут потеряны",
-                "Они будут потеряны"
-            ]);
-            confirmationDialog = {
-                header: "Изменения будут потеряны",
-                text: `Вы внесли ${changed.size} ${word}. ${part}, продолжить?`,
-                onConfirm: confirmed
-            };
+            modals = [
+                ...modals,
+                {
+                    kind: "confirmChangesLoss",
+                    changed: changed.size,
+                    onConfirm: confirmed
+                }
+            ];
         } else {
             confirmed();
         }
@@ -41,7 +38,6 @@
     let search = "";
 
     let updated_at: Date | null;
-    let is_outdated: boolean = false;
 
     async function exportXlsx() {
         let blob = await (await fetchAuthenticated("offers/xlsx")).blob();
@@ -71,16 +67,18 @@
         });
     }
 
-    async function confirmEdits() {
-        confirmationDialog = {
-            header: "Сохранить изменения?",
-            text: `Данные обновятся на сервере`,
-            onConfirm: async () => {
-                let data = Array.from(changed.values());
-                await patchOfferList(data);
-                await refreshData();
+    async function confirmSave() {
+        modals = [
+            ...modals,
+            {
+                kind: "confirmSave",
+                onConfirm: async () => {
+                    let data = Array.from(changed.values());
+                    await patchOfferList(data);
+                    await refreshData();
+                }
             }
-        };
+        ];
     }
 
     /** Refreshes data displayed in the grid. */
@@ -100,7 +98,7 @@
                 return;
             }
             if (updated_at ? updated_at < new_updated_at : false) {
-                is_outdated = true;
+                modals = [...modals, { kind: "dataUpdatedOnServer" }];
                 await refreshData();
             }
             updated_at = new_updated_at;
@@ -110,10 +108,9 @@
     });
 </script>
 
-<OutdatedDataDialog bind:open={is_outdated} />
-<ConfirmationDialog bind:data={confirmationDialog} />
 <ImageModal bind:src={selected_image} />
 <SettingsDialog bind:open={settings_open} on:confirm={() => refreshData()} />
+<Modals bind:modals />
 
 <div id="wrapper">
     <Sidebar
@@ -146,7 +143,7 @@
             <button class="cancel" on:click={cancelEdits} disabled={changed.size == 0}>
                 Отмена
             </button>
-            <button class="confirm" on:click={confirmEdits} disabled={changed.size == 0}>
+            <button class="confirm" on:click={confirmSave} disabled={changed.size == 0}>
                 Сохранить изменения
             </button>
         </menu>
