@@ -1,4 +1,4 @@
-import type { Offer } from "$lib";
+import type { Offer } from "$lib/data/offers";
 import type { CellClassParams, ColDef, ColGroupDef, GridOptions } from "ag-grid-community";
 import { numberColumnDefinition } from "./util";
 

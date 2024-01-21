@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { fetchUserInfo, patchUserInfo } from "$lib";
+    import { fetchUserInfo, patchUserInfo } from "$lib/data/settings";
     import { createEventDispatcher, onMount } from "svelte";
 
     export let open: boolean;

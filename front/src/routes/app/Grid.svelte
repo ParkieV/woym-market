@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Offer } from "$lib";
+    import type { Offer } from "$lib/data/offers";
     import { DataGridOptions } from "$lib/datagrid/offers";
     import { createGrid, type GridApi } from "ag-grid-community";
     import { createEventDispatcher, onMount } from "svelte";

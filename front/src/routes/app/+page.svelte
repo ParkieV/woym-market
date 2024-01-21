@@ -5,13 +5,14 @@
     import Sidebar from "./Sidebar.svelte";
     import ImageModal from "./ImageModal.svelte";
     import SettingsDialog from "./SettingsDialog.svelte";
-    import { patchOfferList, type Offer, fetchOfferList, fetchLogs } from "$lib";
     import Grid from "./Grid.svelte";
     import { onMount } from "svelte";
     import type { DialogData } from "$lib/ConfirmationDialog.svelte";
     import ConfirmationDialog from "$lib/ConfirmationDialog.svelte";
     import { downloadFile, num_word, uploadFile } from "$lib/util";
     import OutdatedDataDialog from "./OutdatedDataDialog.svelte";
+    import { fetchOfferList, patchOfferList, type Offer } from "$lib/data/offers";
+    import { fetchLogs } from "$lib/data/logs";
 
     let changed: Map<string, Offer> = new Map();
     let data: "loading" | Offer[] = "loading";
