@@ -38,24 +38,31 @@ class Offer(Base):
     # from yandex api
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
 
-    sku = Column(String, unique=True, index=True) # same as id
+    sku = Column(String, index=True) # same as id
     name = Column(String)
-    weight = Column(Float)
-    length = Column(Float)
-    width = Column(Float)
-    height = Column(Float)
-    volume_yandex = Column(Float)
+
+    self_weight = Column(Float, default=0)
+    self_length = Column(Float, default=0)
+    self_width = Column(Float, default=0)
+    self_height = Column(Float, default=0)
+
+    yandex_weight = Column(Float)
+    yandex_length = Column(Float)
+    yandex_width = Column(Float)
+    yandex_height = Column(Float)
+
+    volume = Column(Float, default=0)
+    yandex_volume = Column(Float)
+    volume_difference = Column(Float, nullable=True, default=None)
+
     photo = Column(String, nullable=True)
     remaining_stock = Column(Integer)
-    minimum_group_price = Column(Float)
-    minimum_group_price_shop = Column(String, nullable=True)
     name_of_shop = Column(String)
     group_sellers_amount = Column(Integer)
     business_id = Column(Integer)
 
     # countable/editable values
     dollar_cost_price = Column(Float)
-    volume = Column(Float)
     cost_price = Column(Float)
     total_price_coeff = Column(Float)
     total_price_min_additional = Column(Float)
@@ -64,6 +71,14 @@ class Offer(Base):
     profit = Column(Float)
     margin = Column(Float)
     fby = Column(Float)
+
+    attractive_price_threshold = Column(Float)
+    moderately_attractive_price_threshold = Column(Float)
+    best_place_wm = Column(String)
+    best_price_wm = Column(Float)
+    best_place_im = Column(String)
+    best_price_im = Column(Float)
+    minimum_group_price = Column(Float)
 
     current_price = Column(Float, nullable=True)
     target_price = Column(Float, nullable=True, default=None)

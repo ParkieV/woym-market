@@ -1,5 +1,6 @@
 from datetime import datetime
-from src.api.repository import YandexMarketRepository
+from src.api.yandex_market.repository import YandexMarketRepository
+from src.api.yandex_market.api import YandexMarketAPI
 from src.params.confing import config
 from src.database.db import async_session
 from src.database import offer_db as db
@@ -7,13 +8,12 @@ import src.services.offer_utils as utils
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete
 import pandas as pd
 from fastapi.encoders import jsonable_encoder
-
 from src.services.logs_service import update_logs
 import json
-
 from src.services.user_service import get_settings
 
-yandex_repository = YandexMarketRepository(config.yandex_token)
+yandex_market_api = YandexMarketAPI(config.yandex_token)
+yandex_repository = YandexMarketRepository(yandex_market_api)
 
 
 async def get_offers():
@@ -28,17 +28,18 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
     settings = await get_settings(user_id)
 
     async with async_session() as session:
-        offers = await db.get_offers_by_sku(session, [i.sku for i in offers_data])
+        offers = await db.get_offers_by_sku_and_shop_name(session, [(i.sku, i.name_of_shop, ) for i in offers_data])
+
         offers_df = pd.DataFrame(jsonable_encoder(offers))
         changes = pd.DataFrame(jsonable_encoder(offers_data))
 
         changed_offers = utils.update_offers_data(offers_df, changes, settings.rate)
-        await db.update_offers(session, changed_offers)
-        return await db.get_offers_by_sku(session, [i.sku for i in offers_data])
+        await db.update_offers(session, changed_offers, True)
+        return await db.get_offers_by_sku_and_shop_name(session, [(i.sku, i.name_of_shop, ) for i in offers_data])
 
 
 async def setup_offers_data(course: float = 15):
-    yandex_offers = await yandex_repository.get_offers()
+    yandex_offers = await yandex_market_api.get_offers()
     yandex_offers_df = pd.DataFrame(jsonable_encoder(yandex_offers))
     data = utils.build_offers_data(yandex_offers_df, setup_mode=True, course=course)
 
@@ -51,7 +52,7 @@ async def update_offers(user_id: int):
     settings = await get_settings(user_id)
 
     db_offers = jsonable_encoder(await get_offers())
-    yandex_offers = jsonable_encoder(await yandex_repository.get_offers())
+    yandex_offers = jsonable_encoder(await yandex_market_api.get_offers())
 
     offers_df = pd.DataFrame(db_offers)
     yandex_offers_df = pd.DataFrame(yandex_offers)
@@ -73,7 +74,7 @@ async def update_offers(user_id: int):
     async with async_session() as session:
         await db.delete_offers(session, to_delete_skus)
         await db.create_offers(session, json.loads(to_create_rows.to_json(orient='records')))
-        await db.update_offers(session, json_data)
+        await db.update_offers(session, json_data, True)
 
     await update_yandex_offers_price()
     await update_logs(user_id, {'updated_at': datetime.now()})
@@ -92,8 +93,8 @@ async def update_yandex_offers_price():
         offers_df = pd.DataFrame(offers_db)
         offers_df = utils.calculate_price(offers_df)
         json_data = json.loads(offers_df.to_json(orient='records'))
-        yandex_repository.update_offers_price(json_data)
-        await db.update_offers(session, json_data)
+        yandex_market_api.change_offers_price(json_data)
+        await db.update_offers(session, json_data, True)
 
 
 async def build_csv():
@@ -128,7 +129,7 @@ async def import_offers_data(data: bytes, user_id: int):
 
         json_data = utils.update_offers_data(offers_df, changes, settings.rate)
 
-        await db.update_offers(session, json_data)
+        await db.update_offers(session, json_data, True)
 
 
 

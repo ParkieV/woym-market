@@ -1,28 +1,45 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 
-class YandexOfferInfo(BaseModel):
+@dataclass(frozen=True)
+class YandexOfferInfoPartial:
     sku: str
     name: str
-    weight: float
-    length: float
-    width: float
-    height: float
-    volume_yandex: float
+    yandex_weight: float
+    yandex_length: float
+    yandex_width: float
+    yandex_height: float
+    yandex_volume: float
     photo: str | None
     current_price: float | None
     business_id: int
 
 
-class ExtendedYandexOfferInfo(YandexOfferInfo):
+@dataclass(frozen=True)
+class YandexOfferInfo(YandexOfferInfoPartial):
     remaining_stock: int
-    minimum_group_price: float
     name_of_shop: str
     group_sellers_amount: int
-    minimum_group_price_shop: str | None
+
+    attractive_price_threshold: float | None
+    moderately_attractive_price_threshold: float | None
+    best_place_wm: str | None
+    best_price_wm: float | None
+    best_place_im: str | None
+    best_price_im: float | None
+    minimum_group_price: float | None
 
 
-class CampaignInfo(BaseModel):
+@dataclass(frozen=True)
+class BusinessInfo:
     id: int
-    business_id: int
-    business_name: str
+    name: str
+
+
+@dataclass(frozen=True)
+class CampaignInfo:
+    id: int
+    client_id: int
+    domain: str
+    business: BusinessInfo
+
