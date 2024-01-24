@@ -2,7 +2,6 @@ from dataclasses import asdict
 from io import BytesIO
 import asyncio
 from typing import Any
-
 from fastapi import HTTPException
 from requests import Session, Response
 from src.schemas.yandex_api_schemas import CampaignInfo, BusinessInfo, YandexOfferInfo, YandexOfferInfoPartial
@@ -29,7 +28,7 @@ class YandexMarketAPI:
     async def get_offers(self) -> [YandexOfferInfo]:
         result = []
 
-        campaigns = self._get_campaigns()
+        campaigns = self.get_campaigns()
 
         for campaign in campaigns:
             stocks = self.get_stocks(campaign.id, OFFERS)
@@ -65,7 +64,7 @@ class YandexMarketAPI:
         # TODO write logs
         raise HTTPException(status_code, detail)
 
-    def _get_campaigns(self) -> [CampaignInfo]:
+    def get_campaigns(self) -> [CampaignInfo]:
         response = self.session.get('https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
 
         if response.status_code != 200:

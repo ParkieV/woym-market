@@ -1,24 +1,24 @@
 from datetime import datetime
-from src.api.yandex_market.repository import YandexMarketRepository
-from src.api.yandex_market.api import YandexMarketAPI
-from src.params.confing import config
+from typing import Any
+
 from src.database.db import async_session
 from src.database import offer_db as db
 import src.services.offer_utils as utils
-from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete
+from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market
 import pandas as pd
 from fastapi.encoders import jsonable_encoder
 from src.services.logs_service import update_logs
 import json
 from src.services.user_service import get_settings
+from src.api.factory import RepositoryFactory, MPTypes
+import numpy as np
 
-yandex_market_api = YandexMarketAPI(config.yandex_token)
-yandex_repository = YandexMarketRepository(yandex_market_api)
+yandex_repository = RepositoryFactory.get(MPTypes.YANDEX)
 
 
-async def get_offers():
+async def get_offers(filters: dict[str, Any] | None = None):
     async with async_session() as session:
-        return await db.get_offers(session)
+        return await db.get_offers(session, filters)
 
 
 async def change_offers(offers_data: list[OfferChange], user_id: int):
@@ -28,18 +28,18 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
     settings = await get_settings(user_id)
 
     async with async_session() as session:
-        offers = await db.get_offers_by_sku_and_shop_name(session, [(i.sku, i.name_of_shop, ) for i in offers_data])
+        offers = await db.get_offers_by_sku_and_shop_name(session, [(i.sku, i.name_of_shop,) for i in offers_data])
 
         offers_df = pd.DataFrame(jsonable_encoder(offers))
         changes = pd.DataFrame(jsonable_encoder(offers_data))
 
         changed_offers = utils.update_offers_data(offers_df, changes, settings.rate)
-        await db.update_offers(session, changed_offers, True)
-        return await db.get_offers_by_sku_and_shop_name(session, [(i.sku, i.name_of_shop, ) for i in offers_data])
+        await db.update_offers(session, changed_offers, mapping_columns=['name_of_shop'])
+        return await db.get_offers_by_sku_and_shop_name(session, [(i.sku, i.name_of_shop,) for i in offers_data])
 
 
 async def setup_offers_data(course: float = 15):
-    yandex_offers = await yandex_market_api.get_offers()
+    yandex_offers = await yandex_repository.get_offers()
     yandex_offers_df = pd.DataFrame(jsonable_encoder(yandex_offers))
     data = utils.build_offers_data(yandex_offers_df, setup_mode=True, course=course)
 
@@ -52,7 +52,7 @@ async def update_offers(user_id: int):
     settings = await get_settings(user_id)
 
     db_offers = jsonable_encoder(await get_offers())
-    yandex_offers = jsonable_encoder(await yandex_market_api.get_offers())
+    yandex_offers = jsonable_encoder(await yandex_repository.get_offers())
 
     offers_df = pd.DataFrame(db_offers)
     yandex_offers_df = pd.DataFrame(yandex_offers)
@@ -73,8 +73,8 @@ async def update_offers(user_id: int):
 
     async with async_session() as session:
         await db.delete_offers(session, to_delete_skus)
-        await db.create_offers(session, json.loads(to_create_rows.to_json(orient='records')))
-        await db.update_offers(session, json_data, True)
+        await db.create_offers(session, to_create_rows.to_dict('records'))
+        await db.update_offers(session, json_data, mapping_columns=['name_of_shop'])
 
     await update_yandex_offers_price()
     await update_logs(user_id, {'updated_at': datetime.now()})
@@ -93,8 +93,8 @@ async def update_yandex_offers_price():
         offers_df = pd.DataFrame(offers_db)
         offers_df = utils.calculate_price(offers_df)
         json_data = json.loads(offers_df.to_json(orient='records'))
-        yandex_market_api.change_offers_price(json_data)
-        await db.update_offers(session, json_data, True)
+        await yandex_repository.change_prices(json_data)
+        await db.update_offers(session, json_data, mapping_columns=['name_of_shop'])
 
 
 async def build_csv():
@@ -109,28 +109,171 @@ async def build_csv():
     return 'data/out.xlsx'
 
 
-async def import_offers_data(data: bytes, user_id: int):
+async def recalculate_values(settings):
+    offers = jsonable_encoder(await get_offers())
+    df = pd.DataFrame(offers)
+    df = utils.calculate_offers_values(df, settings.rate)
+    df.drop('id', axis=1, inplace=True)
+
+    changes = df.to_dict('records')
+
     async with async_session() as session:
-        settings = await get_settings(user_id)
-        changes = utils.bytes_to_data_frame(data)
-        columns = list(OfferOut.fields().keys())
-        columns.remove('business_id')
-
-        changes.rename(columns=OfferOut.reverse_fields(), inplace=True)
-
-        db_offers = jsonable_encoder(await get_offers())
-        offers_df = pd.DataFrame(db_offers)
-
-        columns_to_change = list(set(changes.columns) & set(offers_df.columns))
-
-        changes = changes[columns_to_change]
-        changes = changes[changes['sku'].isin(offers_df['sku'])]
-        offers_df = offers_df[offers_df['sku'].isin(changes['sku'])]
-
-        json_data = utils.update_offers_data(offers_df, changes, settings.rate)
-
-        await db.update_offers(session, json_data, True)
+        await db.update_offers(session, changes, mapping_columns=['sku', 'name_of_shop'])
 
 
+
+# async def import_offers_data(data: bytes, user_id: int):
+#     async with async_session() as session:
+#         settings = await get_settings(user_id)
+#         changes = utils.bytes_to_data_frame(data)
+#         columns = list(OfferOut.fields().keys())
+#         columns.remove('business_id')
+#
+#         changes.rename(columns=OfferOut.reverse_fields(), inplace=True)
+#
+#         db_offers = jsonable_encoder(await get_offers())
+#         offers_df = pd.DataFrame(db_offers)
+#
+#         columns_to_change = list(set(changes.columns) & set(offers_df.columns))
+#
+#         changes = changes[columns_to_change]
+#         changes = changes[changes['sku'].isin(offers_df['sku'])]
+#         offers_df = offers_df[offers_df['sku'].isin(changes['sku'])]
+#
+#         json_data = utils.update_offers_data(offers_df, changes, settings.rate)
+#
+#         await db.update_offers(session, json_data, mapping_columns=['name_of_shop'])
+
+
+async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None,
+                      user_id: int) -> None:
+    settings = await get_settings(user_id)
+
+    match import_type:
+        case ImportType.TABLE:
+            return await import_offers(data, settings, name_of_shop, market)
+
+        case ImportType.SIZES:
+            return await import_sizes(data, settings, name_of_shop, market)
+
+        case ImportType.PRICES:
+            return await import_prices(data, settings, name_of_shop, market)
+
+        case _:
+            raise NotImplemented(f'Import type "{import_type}" not implemented yet')
+
+
+async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None):
+    df = utils.bytes_to_data_frame(data)
+    df.rename(columns=OfferOut.reverse_fields(), inplace=True)
+
+    if name_of_shop:
+        df = df[df['name_of_shop'] == name_of_shop]
+
+    if market:
+        df = df[df['market'] == market]
+
+    db_offers = jsonable_encoder(await get_offers())
+    offers_df = pd.DataFrame(db_offers)
+
+    columns_to_change = list(set(df.columns) & set(offers_df.columns))
+    df = df[columns_to_change]
+    df = df[df['sku'].isin(offers_df['sku'])]
+    offers_df = offers_df[offers_df['sku'].isin(df['sku'])]
+
+    changes = utils.update_offers_data(offers_df, df, settings.rate)
+
+    async with async_session() as session:
+        await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
+
+
+async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None):
+    df = utils.bytes_to_data_frame(data)
+    df.drop(df.columns[[3, 4, 6, 7]], axis=1, inplace=True, errors='ignore')
+    df.drop([i for i in range(8)], axis=0, inplace=True, errors='ignore')
+    df.columns = ['sku', 'name', 'discount_price', 'price']
+    df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
+
+    df['dollar_cost_price'] = np.where(
+        np.isnan(df['discount_price']),
+        df['price'] * (1 - settings.discount_purchase / 100),
+        df['discount_price']
+    )
+    df.drop(['name', 'discount_price', 'price'], axis=1, inplace=True)
+
+    mapping_columns = []
+
+    if name_of_shop:
+        df['name_of_shop'] = name_of_shop
+        mapping_columns.append('name_of_shop')
+
+    if market:
+        df['market'] = market
+        mapping_columns.append('market')
+
+    changes = df.to_dict('records')
+
+    async with async_session() as session:
+        await db.update_offers(session, changes, mapping_columns=mapping_columns, endswith_sku=True)
+
+    # await recalculate_values(settings)
+
+
+async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None):
+    df = utils.bytes_to_data_frame(data, 'Список товаров')
+    df.drop([0, 1], axis=0, inplace=True, errors='ignore')
+    df: pd.DataFrame = df[df.columns[[2, 13, 14]]]
+    df.columns = ['sku', 'self_weight', 'sizes']
+    df[['self_length', 'self_width', 'self_height']] = df['sizes'].str.split('/', expand=True)
+    df[['self_length', 'self_width', 'self_height', 'self_weight']] = df[
+        ['self_length', 'self_width', 'self_height', 'self_weight']].astype(float)
+    df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
+    df.fillna(0, inplace=True)
+    df.drop('sizes', axis=1, inplace=True)
+
+    mapping_columns = []
+
+    if name_of_shop:
+        df['name_of_shop'] = name_of_shop
+        mapping_columns.append('name_of_shop')
+
+    if market:
+        df['market'] = market
+        mapping_columns.append('market')
+
+    changes = df.to_dict('records')
+
+    async with async_session() as session:
+        await db.update_offers(session, changes, mapping_columns=mapping_columns, endswith_sku=True)
+
+    # await recalculate_values(settings)
+
+
+async def export_data(market: Market, export_type: ExportType, name_of_shop: str | None):
+    match export_type:
+        case ExportType.TABLE:
+            return await export_offers(name_of_shop, market)
+
+        case _:
+            raise NotImplemented(f'Export type "{export_type}" not implemented yet')
+
+
+async def export_offers(name_of_shop: str | None = None, market: str | None = None) -> str:
+    filters = {}
+
+    if name_of_shop:
+        filters['name_of_shop'] = name_of_shop
+
+    if market:
+        filters['market'] = market
+
+    offers = jsonable_encoder(await get_offers(filters))
+
+    df = pd.DataFrame(offers, columns=OfferOut.fields().keys())
+    df.drop(['id', 'business_id', 'group_sellers_amount'], axis=1, inplace=True, errors='ignore')
+
+    df.rename(columns=OfferOut.fields(), inplace=True)
+    df.to_excel('data/out.xlsx', index=False)
+    return 'data/out.xlsx'
 
 

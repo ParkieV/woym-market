@@ -28,6 +28,7 @@ class YandexOfferInfo(YandexOfferInfoPartial):
     best_place_im: str | None
     best_price_im: float | None
     minimum_group_price: float | None
+    market: str = 'yandex'
 
 
 @dataclass(frozen=True)

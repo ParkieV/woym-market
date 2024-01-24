@@ -31,6 +31,8 @@ class SettingsOut(BaseModel):
     id: int
     user_id: int
     rate: float
+    discount: float = 20
+    discount_promotional: float = 0
 
 
 class SettingsUpdate(BaseModel):

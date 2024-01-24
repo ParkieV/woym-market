@@ -4,7 +4,7 @@ from src.api.yandex_market.api import YandexMarketAPI
 from src.services.stocks_response_handlers import WAREHOUSES, OFFERS, OFFERS_DETAIL
 
 api = YandexMarketAPI('y0_AgAAAAAW8Hr_AAsIRgAAAAD1j7NA7uQ9YJbpR-elaniG1o-TiKxVJhU')
-campaigns = api._get_campaigns()
+campaigns = api.get_campaigns()
 
 pytest_plugins = ('pytest_asyncio',)
 

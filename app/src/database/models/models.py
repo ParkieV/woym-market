@@ -29,7 +29,9 @@ class Settings(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     user_id = Column(Integer, ForeignKey('users.id'))
-
+    discount = Column(Float, default=20)
+    discount_promotional = Column(Float, default=0)
+    discount_purchase = Column(Float, default=20)
     rate = Column(Float, default=10)
 
 
@@ -58,6 +60,7 @@ class Offer(Base):
     photo = Column(String, nullable=True)
     remaining_stock = Column(Integer)
     name_of_shop = Column(String)
+    market = Column(String)
     group_sellers_amount = Column(Integer)
     business_id = Column(Integer)
 
@@ -84,9 +87,9 @@ class Offer(Base):
     target_price = Column(Float, nullable=True, default=None)
 
     # User additional fields
-    note_1 = Column(String, nullable=True)
-    note_2 = Column(String, nullable=True)
-    note_3 = Column(String, nullable=True)
+    note_1 = Column(String, default='')
+    note_2 = Column(String, default='')
+    note_3 = Column(String, default='')
 
     use_manual_min_price = Column(Boolean, default=True)
     auto_min_price = Column(Float)

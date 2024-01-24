@@ -112,6 +112,6 @@ def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, course: float)
     return json.loads(updated_offers.to_json(orient='records'))
 
 
-def bytes_to_data_frame(data: bytes) -> pd.DataFrame:
+def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0) -> pd.DataFrame:
     io = BytesIO(data)
-    return pd.read_excel(io, engine='openpyxl')
+    return pd.read_excel(io, engine='openpyxl', sheet_name=sheet_name)

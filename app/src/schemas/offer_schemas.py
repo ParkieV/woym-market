@@ -1,17 +1,18 @@
 from pydantic import BaseModel, Field
 from abc import ABC
+from enum import Enum
 
 
 class BaseModelFields(ABC):
     skip_fields = []
 
     @classmethod
-    def fields(cls):
-        return {name: field.title for name, field in cls.model_fields.items()}
+    def fields(cls, *exclude):
+        return {name: field.title for name, field in cls.model_fields.items() if name not in exclude}
 
     @classmethod
-    def reverse_fields(cls):
-        return {field.title: name for name, field in cls.model_fields.items()}
+    def reverse_fields(cls, *exclude):
+        return {field.title: name for name, field in cls.model_fields.items() if name not in exclude}
 
 
 class OfferOut(BaseModel, BaseModelFields):
@@ -36,11 +37,12 @@ class OfferOut(BaseModel, BaseModelFields):
     photo: str | None = Field(title='Фото')
     remaining_stock: int = Field(title='Остатки на складах')
     name_of_shop: str = Field(title='Название магазина')
+    market: str = Field(title='Площадка')
     group_sellers_amount: int = Field(title='Количество продавцов в группе')
     business_id: int = Field(title='id бизнесса')
 
     # countable/editable values
-    dollar_cost_price: float = Field(title='Закупка у. е.')
+    dollar_cost_price: float = Field(title='Закупка у. е.', default=0)
     total_price_coeff: float = Field(title='Коэфициент расчетной цены')
     cost_price: float = Field(title='Себестоимость (Закупка у. е. * курс)')
     total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену')
@@ -62,9 +64,9 @@ class OfferOut(BaseModel, BaseModelFields):
     target_price: float | None = Field(title='Целевая цена')
 
     # User additional fields
-    note_1: str | None = Field(None, title='Примечание 1')
-    note_2: str | None = Field(None, title='Примечание 2')
-    note_3: str | None = Field(None, title='Примечание 3')
+    note_1: str = Field('', title='Примечание 1')
+    note_2: str = Field('', title='Примечание 2')
+    note_3: str = Field('', title='Примечание 3')
 
     use_manual_min_price: bool = Field(True, title='Использовать ручную мин. цену') # использовать ли автоматический расчет нижней планки цены
     auto_min_price: float = Field(title='Авто мин. цена %') # в процентах
@@ -80,21 +82,41 @@ class OfferChange(BaseModel):
     sku: str
     name_of_shop: str
     dollar_cost_price: float
-    total_price_min_additional: float
-    total_price_coeff: float
+    total_price_min_additional: float = 200
+    total_price_coeff: float = 2.4
 
-    note_1: str | None = None
-    note_2: str | None = None
-    note_3: str | None = None
+    note_1: str = ''
+    note_2: str = ''
+    note_3: str = ''
 
     use_manual_min_price: bool = True # использовать ли автоматический расчет нижней планки цены
-    auto_min_price: float # в процентах
+    auto_min_price: float = 100 # в процентах
     manual_min_price: float | None = None
     auto_price_control: bool = False # ручное управление ценами
 
 
 class OfferDelete(BaseModel):
     sku: str
+
+
+class Market(str, Enum):
+    OZON = 'ozon'
+    YANDEX = 'yandex'
+    ALL = 'all'
+
+
+class ImportType(str, Enum):
+    PRICES = 'prices'
+    SIZES = 'sizes'
+    TABLE = 'table'
+    MATRIX_STOCKS = 'matrix-stocks'
+
+
+class ExportType(str, Enum):
+    TABLE = 'table'
+    MATRIX_STOCKS = 'matrix-stocks'
+    MATRIX_OFFERS = 'matrix-offers'
+
 
 
 
