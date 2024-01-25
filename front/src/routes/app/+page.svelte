@@ -1,40 +1,32 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
     import Search from "$lib/Search.svelte";
-    import { fetchAuthenticated, logout } from "$lib/auth";
-    import Sidebar from "./Sidebar.svelte";
+    import { fetchAuthenticated } from "$lib/auth";
     import ImageModal from "./ImageModal.svelte";
-    import SettingsDialog from "./SettingsDialog.svelte";
     import Grid from "./Grid.svelte";
-    import { onMount } from "svelte";
+    import { getContext, onMount } from "svelte";
     import { downloadFile, uploadFile } from "$lib/util";
     import { patchOfferList, OffersData, type Offer } from "$lib/data/offers";
     import { fetchLogs } from "$lib/data/logs";
-    import Modals from "./Modals.svelte";
     import type { ModalKind } from "./Modals.svelte";
     import { ChangeList } from "$lib/datagrid/changes";
 
     let data = new OffersData();
     let changes = new ChangeList<Offer, "sku">();
 
-    let modals: ModalKind[] = [];
+    const addModal = getContext<(modal: ModalKind) => void>("addModal");
 
     export function confirmChangesLoss(confirmed: () => void) {
         if (changes.hasChanges) {
-            modals = [
-                ...modals,
-                {
-                    kind: "confirmChangesLoss",
-                    changed: changes.count,
-                    onConfirm: confirmed
-                }
-            ];
+            addModal({
+                kind: "confirmChangesLoss",
+                changed: changes.count,
+                onConfirm: confirmed
+            });
         } else {
             confirmed();
         }
     }
 
-    let settings_open: boolean = false;
     let selected_image = "";
     let search = "";
 
@@ -69,17 +61,13 @@
     }
 
     async function confirmSave() {
-        modals = [
-            ...modals,
-            {
-                kind: "confirmSave",
-                onConfirm: async () => {
-                    if (!data) return;
-                    await patchOfferList(data.offers.filter(x => changes.isChanged(x.sku)));
-                    await refreshData();
-                }
+        addModal({
+            kind: "confirmSave",
+            onConfirm: async () => {
+                await patchOfferList(data.offers.filter(x => changes.isChanged(x.sku)));
+                await refreshData();
             }
-        ];
+        });
     }
 
     /** Refreshes data displayed in the grid. */
@@ -102,7 +90,7 @@
                 updated_at = new_updated_at;
             } else if (updated_at < new_updated_at) {
                 updated_at = new_updated_at;
-                modals = [...modals, { kind: "dataUpdatedOnServer" }];
+                addModal({ kind: "dataUpdatedOnServer" });
                 await refreshData();
             }
         };
@@ -112,58 +100,35 @@
 </script>
 
 <ImageModal bind:src={selected_image} />
-<SettingsDialog bind:open={settings_open} on:confirm={() => refreshData()} />
-<Modals bind:modals />
-
-<div id="wrapper">
-    <Sidebar
-        on:settings={() => (settings_open = true)}
-        on:exit={() => {
-            logout();
-            goto("/auth");
-        }}
-    />
-    <main>
-        <menu class="toolbar">
-            <button on:click={exportXlsx}>Экспорт</button>
-            <button on:click={importXlsx}>Импорт</button>
-            <div style="flex: 1;" />
-            <Search placeholder="Поиск..." bind:value={search} />
-        </menu>
-        <Grid
-            bind:data
-            bind:changes
-            bind:search
-            on:photoClicked={e => (selected_image = e.detail)}
-        />
-        <menu class="bottombar">
-            <span
-                >{`Последнее обновление:\n${
-                    updated_at ? updated_at.toLocaleString("en-GB") : "N/A"
-                }`}</span
-            >
-            <div style:flex="1" />
-            <button class="cancel" on:click={cancelEdits} disabled={!changes.hasChanges}>
-                Отмена
-            </button>
-            <button class="confirm" on:click={confirmSave} disabled={!changes.hasChanges}>
-                Сохранить изменения
-            </button>
-        </menu>
-    </main>
-</div>
+<main>
+    <menu class="toolbar">
+        <button on:click={exportXlsx}>Экспорт</button>
+        <button on:click={importXlsx}>Импорт</button>
+        <div style="flex: 1;" />
+        <Search placeholder="Поиск..." bind:value={search} />
+    </menu>
+    <Grid bind:data bind:changes bind:search on:photoClicked={e => (selected_image = e.detail)} />
+    <menu class="bottombar">
+        <span
+            >{`Последнее обновление:\n${
+                updated_at ? updated_at.toLocaleString("en-GB") : "N/A"
+            }`}</span
+        >
+        <div style:flex="1" />
+        <button class="cancel" on:click={cancelEdits} disabled={!changes.hasChanges}>
+            Отмена
+        </button>
+        <button class="confirm" on:click={confirmSave} disabled={!changes.hasChanges}>
+            Сохранить изменения
+        </button>
+    </menu>
+</main>
 
 <style lang="scss">
-    #wrapper {
+    main {
         display: flex;
-        align-items: stretch;
-        height: 100%;
-
-        > main {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-        }
+        flex-direction: column;
+        flex: 1;
     }
 
     .toolbar {

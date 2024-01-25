@@ -3,6 +3,10 @@ import { fetchAuthenticated } from "$lib/auth";
 export type Settings = {
     /** Exchange rate (rubles per dollar). */
     rate: number;
+    /** Discount for common items in percent. */
+    discount: number;
+    /** Discount for promotional items in percent. */
+    discount_promotional: number;
 };
 
 export async function patchUserInfo(val: Settings): Promise<void> {
