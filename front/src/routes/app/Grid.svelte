@@ -15,17 +15,18 @@
         grid.showLoadingOverlay();
     }
 
-    export let search: string;
+    export let filter: (offer: Offer) => boolean;
     $: if (grid) {
-        search;
+        filter;
+        grid.setGridOption("doesExternalFilterPass", e => filter(e.data!));
+        grid.setGridOption("isExternalFilterPresent", () => true);
         grid.onFilterChanged();
     }
 
     let dispatch = createEventDispatcher<{ photoClicked: string }>();
-    onMount(() => {
+    onMount(async () => {
         const gridElement = document.querySelector("#grid")! as HTMLElement;
-        const options = DataGridOptions({
-            search: () => search,
+        const options = await DataGridOptions({
             onPhotoClicked: src => dispatch("photoClicked", src),
             onOfferChanged: offer => {
                 changes.add(offer.sku);

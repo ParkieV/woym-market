@@ -9,6 +9,7 @@
     import { fetchLogs } from "$lib/data/settings";
     import type { ModalKind } from "./Modals.svelte";
     import { ChangeList } from "$lib/datagrid/changes";
+    import Toolbar from "./Toolbar.svelte";
 
     let data = new OffersData();
     let changes = new ChangeList<Offer, "sku">();
@@ -28,7 +29,6 @@
     }
 
     let selected_image = "";
-    let search = "";
 
     let updated_at: Date | null = null;
 
@@ -97,17 +97,24 @@
         fetchDate();
         setInterval(fetchDate, 15 * 1000);
     });
+
+    let filter: (offer: Offer) => boolean = () => true;
 </script>
 
 <ImageModal bind:src={selected_image} />
 <main>
-    <menu class="toolbar">
-        <button on:click={exportXlsx}>Экспорт</button>
-        <button on:click={importXlsx}>Импорт</button>
-        <div style="flex: 1;" />
-        <Search placeholder="Поиск..." bind:value={search} />
-    </menu>
-    <Grid bind:data bind:changes bind:search on:photoClicked={e => (selected_image = e.detail)} />
+    <header>
+        <menu class="menu">
+            <button on:click={exportXlsx}>Экспорт</button>
+            <button on:click={importXlsx}>Импорт</button>
+        </menu>
+        <Toolbar
+            on:filterChanged={e => {
+                filter = e.detail;
+            }}
+        />
+    </header>
+    <Grid bind:data bind:changes bind:filter on:photoClicked={e => (selected_image = e.detail)} />
     <menu class="bottombar">
         <span
             >{`Последнее обновление:\n${
@@ -131,16 +138,19 @@
         flex: 1;
     }
 
-    .toolbar {
+    header {
         display: flex;
-        padding: 10px;
-
-        > button {
-            background-color: transparent;
-            border: none;
-            padding: 10px 20px;
-            &:hover {
-                background-color: #dddddd;
+        flex-direction: column;
+        .menu {
+            display: flex;
+            > button {
+                background-color: transparent;
+                border: 0;
+                padding: 4px 20px;
+                border-radius: 0;
+                &:hover {
+                    background-color: #dddddd;
+                }
             }
         }
     }
@@ -155,14 +165,11 @@
             height: 40px;
             border: 0;
             color: white;
+            border-radius: 4px;
         }
         > span {
             font-size: 16px;
             white-space: pre-wrap;
         }
-    }
-
-    button {
-        border-radius: 4px;
     }
 </style>
