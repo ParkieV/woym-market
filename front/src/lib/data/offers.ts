@@ -27,24 +27,30 @@ export class OffersData {
 /** Product in store. */
 export type Offer = {
     sku: string;
-    /** URL to the photo of the product */
-    photo?: string | null;
-    /** Name of the product. */
     name: string;
+    photo?: string | null;
     note_1?: string | null;
     note_2?: string | null;
     note_3?: string | null;
 
-    /** Weight of the product. */
-    weight: number;
-    /** Length of the product. */
-    length: number;
-    /** Width of the product. */
-    width: number;
-    /** Height of the product. */
-    height: number;
-    /** Volume of the product. */
+    self_weight: number;
+    self_length: number;
+    self_width: number;
+    self_height: number;
+
+    yandex_weight: number;
+    yandex_length: number;
+    yandex_width: number;
+    yandex_height: number;
+
     volume: number;
+    yandex_volume: number;
+    volumn_difference: number | null;
+
+    name_of_shop: string;
+    market: string;
+    group_sellers_amount: number;
+    business_id: number;
 
     /** Final price calculated by service. */
     total_price: number;
@@ -65,10 +71,17 @@ export type Offer = {
     margin: number | null;
     fby: number | null;
     minimum_group_price: number;
-    name_of_shop: string;
     remaining_stock: number;
     auto_min_price: number;
     manual_min_price: number | null;
+
+    attractive_price_threshold: number;
+    moderately_attractive_price_threshold: number;
+
+    best_place_wm: string;
+    best_price_wm: number;
+    best_place_im: string;
+    best_price_im: number;
 
     /** Sets if automatic control of the current price is enabled. */
     auto_price_control: boolean;
