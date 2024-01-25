@@ -1,6 +1,6 @@
 <script lang="ts">
-    import ButtonGroup from "$lib/ButtonGroup.svelte";
-    import Search from "$lib/Search.svelte";
+    import ButtonGroup from "$lib/components/ButtonGroup.svelte";
+    import Search from "$lib/components/Search.svelte";
     import type { Offer } from "$lib/data/offers";
     import { createEventDispatcher } from "svelte";
 
