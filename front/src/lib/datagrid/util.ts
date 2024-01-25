@@ -1,64 +1,24 @@
-import type { ColDef, ValueGetterParams, ValueSetterParams } from "ag-grid-community";
+import type { ColDef, ValueSetterParams } from "ag-grid-community";
 
-export function numberColumnDefinition<T, V = any>(
-    field: keyof T,
-    init:
-        | { kind: "money"; currency: "$" | "₽" }
-        | { kind: "percent" }
-        | { kind: "number"; precision: number },
-    editable: boolean = false
-): ColDef<T, V> {
-    let postfix = "";
-    let precision = 2;
-    if (init.kind == "money") {
-        postfix = ` ${init.currency}`;
-    } else if (init.kind == "percent") {
-        postfix = "%";
-    } else if (init.kind == "number") {
-        precision = init.precision;
-    }
-
-    let cellClass = ["ag-right-aligned-cell"];
-    if (editable) cellClass.push("editable");
-
-    let editable_def = {};
-    if (editable) {
-        editable_def = {
-            cellEditor: "agNumberCellEditor",
-            cellEditorParams: {
-                min: 0,
-                precision,
-                preventStepping: true
-            },
-            editable: true
-        };
-    }
-
-    return {
-        ...notNullFieldColumn(field),
-        ...notNullNumberFormatter(field, precision, postfix),
-        ...editable_def,
-        cellClass
-    };
-}
-
-/** Constructs column definition that rejects null or undefined values on set. */
-export function notNullFieldColumn<T, V = any>(field: keyof T): ColDef<T> {
-    return {
-        valueGetter: (params: ValueGetterParams<T, V>) => params.data![field],
-        valueSetter: notNullValueSetter<T, V>(field)
-    };
-}
-
-/** Value setter that rejects null or undefined value. */
-export function notNullValueSetter<T, V = any>(field: keyof T) {
-    return (params: ValueSetterParams<T, V | null | undefined>) => {
+export function numberValueSetter(field: string) {
+    return (params: ValueSetterParams<any, number | null | undefined>) => {
         if (params.newValue === null || params.newValue === undefined) {
             return false;
         } else {
             params.data[field] = params.newValue as any;
             return true;
         }
+    };
+}
+
+export function stringValueSetter(field: string) {
+    return (params: ValueSetterParams<any, string | null | undefined>) => {
+        if (params.newValue === null || params.newValue === undefined) {
+            params.data[field] = "";
+        } else {
+            params.data[field] = params.newValue as any;
+        }
+        return true;
     };
 }
 
