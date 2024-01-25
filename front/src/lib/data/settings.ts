@@ -9,6 +9,10 @@ export type Settings = {
     discount_promotional: number;
 };
 
+export type Logs = {
+    updated_at: string | null;
+};
+
 export async function patchUserInfo(val: Settings): Promise<void> {
     let init: RequestInit = {
         method: "PATCH",
@@ -17,10 +21,14 @@ export async function patchUserInfo(val: Settings): Promise<void> {
             "Content-Type": "application/json"
         }
     };
-    await fetchAuthenticated("users/settings", init);
+    await fetchAuthenticated("settings", init);
 }
 
 export async function fetchUserInfo(): Promise<Settings> {
-    let info = await (await fetchAuthenticated("users/settings")).json();
+    let info = await (await fetchAuthenticated("settings")).json();
     return info;
+}
+
+export async function fetchLogs(): Promise<Logs> {
+    return await (await fetchAuthenticated("settings/logs")).json();
 }

@@ -6,7 +6,7 @@
     import { getContext, onMount } from "svelte";
     import { downloadFile, uploadFile } from "$lib/util";
     import { patchOfferList, OffersData, type Offer } from "$lib/data/offers";
-    import { fetchLogs } from "$lib/data/logs";
+    import { fetchLogs } from "$lib/data/settings";
     import type { ModalKind } from "./Modals.svelte";
     import { ChangeList } from "$lib/datagrid/changes";
 
