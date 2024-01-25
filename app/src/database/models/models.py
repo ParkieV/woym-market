@@ -117,11 +117,13 @@ class ColumnInfo(Base):
     settings = relationship("Settings", back_populates='columns')
 
     name = Column(String)
-    key = Column(String)
+    key = Column(String, unique=True, index=True)
     data_type = Column(String)
     index = Column(Integer)
     width = Column(Float, default=0)
-    editable = Column(Float, default=True)
-    is_visible = Column(Float, default=True)
+    editable = Column(Boolean)
+    is_visible = Column(Boolean, default=True)
+    pinned = Column(Boolean, default=False)
+    tooltip = Column(String, default='')
 
 

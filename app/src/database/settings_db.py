@@ -52,7 +52,7 @@ async def create_columns(session: AsyncSession, settings: int,  data: list):
 
 async def update_columns(session: AsyncSession, settings_id: int,  data: list[schema.ColumnUpdate]):
     for column in data:
-        query = update(ColumnInfo).where((ColumnInfo.settings_id == settings_id) & (ColumnInfo.id == column.id)).values(**dict(column))
+        query = update(ColumnInfo).where((ColumnInfo.settings_id == settings_id) & (ColumnInfo.key == column.key)).values(**dict(column))
         await session.execute(query)
 
     await session.commit()

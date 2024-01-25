@@ -14,64 +14,6 @@ class BaseModelFields(ABC):
     def reverse_fields(cls, *exclude):
         return {field.title: name for name, field in cls.model_fields.items() if name not in exclude}
 
-    @classmethod
-    def columns_info(cls, exclude: list[str] | None = None):
-        _fields = cls.schema()['properties']
-
-        if exclude:
-            for i in exclude:
-                if i in _fields.keys():
-                    del _fields[i]
-
-        type_aliases = {
-            'integer': 'int',
-            'number': 'float',
-            'boolean': 'boolean',
-            'string': 'string'
-        }
-
-        columns = []
-        for i, (name, field) in enumerate(_fields.items()):
-            if 'type' in field.keys():
-                column_type = field['type']
-            else:
-                column_type = field['anyOf'][0]['type']
-
-            column_type = type_aliases[column_type]
-
-            if name == 'photo':
-                column_type = 'photo'
-            elif name in [
-                'cost_price',
-                'total_price_min_additional',
-                'total_price',
-                'discount_base_price',
-                'profit',
-                'fby',
-                'attractive_price_threshold',
-                'moderately_attractive_price_threshold',
-                'best_price_wm',
-                'best_price_im',
-                'minimum_group_price',
-                'current_price',
-                'target_price',
-                'manual_min_price'
-            ]:
-                column_type = 'ruble'
-            elif name in ['dollar_cost_price']:
-                column_type = 'dollar'
-
-            columns.append(
-                {
-                    'name': field['title'],
-                    'key': name,
-                    'data_type': column_type,
-                    'index': i
-                }
-            )
-
-        return columns
-
 
 class OfferOut(BaseModel, BaseModelFields):
     # from yandex api
@@ -79,7 +21,7 @@ class OfferOut(BaseModel, BaseModelFields):
     name: str = Field(title='Название')
 
     self_weight: float = Field(title='Вес')
-    self_length: float = Field(title='Длинна')
+    self_length: float = Field(title='Длина')
     self_width: float = Field(title='Ширина')
     self_height: float = Field(title='Высота')
 

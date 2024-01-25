@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from enum import Enum
 from pydantic import BaseModel
 
 
@@ -19,6 +19,18 @@ class SettingsUpdate(BaseModel):
     rate: float
 
 
+class ColumnDataType(str, Enum):
+    STRING = 'string'
+    INTEGER = 'int'
+    FLOAT = 'float'
+    BOOLEAN = 'boolean'
+    IMAGE = 'image'
+    RUB = 'ruble'
+    USD = 'dollar'
+    PERCENT = 'percent'
+    URL = 'url'
+
+
 class BaseColumn(BaseModel):
     index: int
     width: float = 0
@@ -26,13 +38,19 @@ class BaseColumn(BaseModel):
 
 
 class ColumnUpdate(BaseColumn):
-    id: int
+    key: str
 
 
 class ColumnOut(ColumnUpdate):
     name: str
-    key: str
-    data_type: str
-    editable: bool = True
+    data_type: ColumnDataType
+    editable: bool
+    tooltip: str = ''
+    pinned: bool = False
+
+
+class ColumnCreate(ColumnOut):
+    pass
+
 
 
