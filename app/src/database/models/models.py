@@ -120,7 +120,7 @@ class ColumnInfo(Base):
     key = Column(String)
     data_type = Column(String)
     index = Column(Integer)
-    width = Column(Float, default=10)
+    width = Column(Float, default=0)
     editable = Column(Float, default=True)
     is_visible = Column(Float, default=True)
 

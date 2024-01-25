@@ -21,8 +21,7 @@ class SettingsUpdate(BaseModel):
 
 class BaseColumn(BaseModel):
     index: int
-    width: float = 10
-    editable: bool = True
+    width: float = 0
     is_visible: bool = True
 
 
@@ -34,4 +33,6 @@ class ColumnOut(ColumnUpdate):
     name: str
     key: str
     data_type: str
+    editable: bool = True
+
 
