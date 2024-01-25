@@ -14,6 +14,32 @@ class BaseModelFields(ABC):
     def reverse_fields(cls, *exclude):
         return {field.title: name for name, field in cls.model_fields.items() if name not in exclude}
 
+    @classmethod
+    def columns_info(cls, exclude: list[str]):
+        _fields = cls.schema()['properties']
+
+        for i in exclude:
+            if i in _fields.keys():
+                del _fields[i]
+
+        columns = []
+        for i, (name, field) in enumerate(_fields.items()):
+            if 'type' in field.keys():
+                column_type = field['type']
+            else:
+                column_type = field['anyOf'][0]['type']
+            columns.append(
+                {
+                    'name': field['title'],
+                    'key': name,
+                    'data_type': column_type,
+                    'index': i
+                }
+            )
+
+        return columns
+
+
 
 class OfferOut(BaseModel, BaseModelFields):
     # from yandex api

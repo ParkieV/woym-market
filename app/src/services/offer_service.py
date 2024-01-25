@@ -7,11 +7,11 @@ import src.services.offer_utils as utils
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market
 import pandas as pd
 from fastapi.encoders import jsonable_encoder
-from src.services.logs_service import update_logs
 import json
-from src.services.user_service import get_settings
 from src.api.factory import RepositoryFactory, MPTypes
 import numpy as np
+
+from src.services.settings_service import get_settings, update_logs
 
 yandex_repository = RepositoryFactory.get(MPTypes.YANDEX)
 
@@ -22,7 +22,7 @@ async def get_offers(filters: dict[str, Any] | None = None):
 
 
 async def change_offers(offers_data: list[OfferChange], user_id: int):
-    if len(offers_data) <= 0:
+    if not offers_data:
         return []
 
     settings = await get_settings(user_id)

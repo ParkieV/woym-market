@@ -8,6 +8,7 @@ from sqlalchemy import (
     Float,
 DateTime
 )
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
 
 from .base import Base
@@ -34,6 +35,8 @@ class Settings(Base):
     discount_purchase = Column(Float, default=20)
     rate = Column(Float, default=10)
 
+    columns = relationship('ColumnInfo', back_populates='settings', lazy='subquery')
+
 
 class Offer(Base):
     __tablename__ = 'offers'
@@ -59,7 +62,7 @@ class Offer(Base):
 
     photo = Column(String, nullable=True)
     remaining_stock = Column(Integer)
-    name_of_shop = Column(String)
+    name_of_shop = Column(String, index=True)
     market = Column(String)
     group_sellers_amount = Column(Integer)
     business_id = Column(Integer)
@@ -104,3 +107,21 @@ class Logs(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
 
     updated_at = Column(DateTime(timezone=True), nullable=True, default=None)
+
+
+class ColumnInfo(Base):
+    __tablename__ = 'columns'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    settings_id = Column(Integer, ForeignKey('settings.id', ondelete='CASCADE'))
+    settings = relationship("Settings", back_populates='columns')
+
+    name = Column(String)
+    key = Column(String)
+    data_type = Column(String)
+    index = Column(Integer)
+    width = Column(Float, default=10)
+    editable = Column(Float, default=True)
+    is_visible = Column(Float, default=True)
+
+

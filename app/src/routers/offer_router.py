@@ -1,11 +1,9 @@
-from fastapi import APIRouter, File, Depends
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, File, Depends, UploadFile, HTTPException, status
+from fastapi.responses import FileResponse, Response
 
 from src.services.auth_utils import get_current_user
-from src.schemas.logs_schemas import LogsOut
 from src.schemas.offer_schemas import OfferOut, OfferChange, OfferDelete, ImportType, ExportType, Market
 from src.services import offer_service as service
-from src.services import logs_service
 
 offer_router = APIRouter(
     prefix='/offers',
@@ -47,13 +45,17 @@ async def export_offers(market: Market = Market.YANDEX, export_type: ExportType 
 
 
 @offer_router.post('/xlsx')
-async def import_offers(data: bytes = File(), market: Market = Market.YANDEX, import_type: ImportType = ImportType.TABLE, name_of_shop: str | None = None, current_user=Depends(get_current_user)):
-    await service.import_data(data, market, import_type, name_of_shop, current_user.id)
+async def import_offers(data: UploadFile = File(), market: Market = Market.YANDEX, import_type: ImportType = ImportType.TABLE, name_of_shop: str | None = None, current_user=Depends(get_current_user)):
+    if not data.filename.endswith('.xlsx'):
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail='Incorrect data type. Allowed only *.xlsx')
+
+    content = await data.read()
+    await service.import_data(content, market, import_type, name_of_shop, current_user.id)
     return {'status': 'OK'}
 
 
-@offer_router.get('/logs', response_model=LogsOut)
-async def get_logs(current_user=Depends(get_current_user)):
-    return await logs_service.get_logs(current_user.id)
+
+
+
 
 
