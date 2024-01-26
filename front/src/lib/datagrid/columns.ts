@@ -1,5 +1,5 @@
 import { fetchAuthenticated } from "$lib/auth";
-import type { ColDef } from "ag-grid-community";
+import type { ColDef, GridApi } from "ag-grid-community";
 import { numberValueSetter, stringValueSetter } from "./util";
 
 export type Column = {
@@ -95,7 +95,7 @@ export async function getColumns(init: {
 function postfix(data_type: DataType): string {
     if (data_type == "percent") return "%";
     if (data_type == "dollar") return " $";
-    if (data_type == "ruble") return " P"; // TODO
+    if (data_type == "ruble") return " ₽";
     return "";
 }
 
@@ -111,4 +111,34 @@ function cellClass(editable: boolean, data_type: DataType): string[] {
     if (isNumeric(data_type)) classes.push("ag-right-aligned-cell");
     if (data_type == "image") classes.push("product-photo-cell");
     return classes;
+}
+
+export async function patchColumns(grid: GridApi) {
+    type PatchData = {
+        key: string;
+        is_visible: true;
+        width: number;
+        index: number;
+    };
+
+    let colDefs = grid.getColumnDefs();
+    if (!colDefs) return;
+    let patches: PatchData[] = colDefs.map((colDef: ColDef, index) => {
+        let column = grid.getColumns()!.find(x => x.getColDef().field == colDef.field)!;
+        return {
+            key: colDef.field!,
+            index,
+            is_visible: true,
+            width: column.getActualWidth()
+        };
+    });
+    console.log(patches);
+
+    await fetchAuthenticated("settings/columns", {
+        method: "PATCH",
+        body: JSON.stringify(patches),
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
 }

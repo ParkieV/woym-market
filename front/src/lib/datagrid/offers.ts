@@ -1,6 +1,6 @@
 import type { Offer } from "$lib/data/offers";
 import type { ColDef, GridOptions } from "ag-grid-community";
-import { getColumns } from "./columns";
+import { getColumns, patchColumns } from "./columns";
 
 export async function DataGridOptions(init: {
     onPhotoClicked: (src: string) => void;
@@ -17,12 +17,13 @@ export async function DataGridOptions(init: {
     return {
         columnDefs,
         suppressDragLeaveHidesColumns: true,
-        autoSizeStrategy: { type: "fitCellContents" },
         rowHeight: 75,
         onCellValueChanged: e => {
             if (init.onOfferChanged) init.onOfferChanged(e.data);
             e.api.redrawRows({ rowNodes: [e.node] });
         },
-        tooltipShowDelay: 500
+        tooltipShowDelay: 500,
+        onColumnResized: e => patchColumns(e.api),
+        onColumnMoved: e => patchColumns(e.api)
     };
 }
