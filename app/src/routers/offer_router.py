@@ -1,6 +1,6 @@
 from fastapi import APIRouter, File, Depends, UploadFile, HTTPException, status
 from fastapi.responses import FileResponse, Response
-
+from pathlib import PurePath
 from src.services.auth_utils import get_current_user
 from src.schemas.offer_schemas import OfferOut, OfferChange, OfferDelete, ImportType, ExportType, Market
 from src.services import offer_service as service
@@ -46,11 +46,8 @@ async def export_offers(market: Market = Market.YANDEX, export_type: ExportType 
 
 @offer_router.post('/xlsx')
 async def import_offers(data: UploadFile = File(), market: Market = Market.YANDEX, import_type: ImportType = ImportType.TABLE, name_of_shop: str | None = None, current_user=Depends(get_current_user)):
-    if not data.filename.endswith('.xlsx'):
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail='Incorrect data type. Allowed only *.xlsx')
-
     content = await data.read()
-    await service.import_data(content, market, import_type, name_of_shop, current_user.id)
+    await service.import_data(content, market, import_type, name_of_shop, current_user.id, PurePath(data.filename).suffix)
     return {'status': 'OK'}
 
 

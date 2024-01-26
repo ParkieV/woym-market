@@ -6,7 +6,7 @@ columns_info = [
     ColumnCreate(
         index=0,
         key='sku',
-        name='sku',
+        name='SKU',
         data_type=ColumnDataType.STRING,
         editable=False,
         pinned=True,
@@ -56,7 +56,7 @@ columns_info = [
     ColumnCreate(
         index=0,
         key='yandex_length',
-        name='Длинна с маркета',
+        name='Длина с маркета',
         data_type=ColumnDataType.FLOAT,
         editable=False,
     ),
@@ -135,7 +135,7 @@ columns_info = [
     ColumnCreate(
         index=0,
         key='total_price_coeff',
-        name='Коэфициент расчетной цены',
+        name='Коэффициент расчетной цены',
         data_type=ColumnDataType.FLOAT,
         editable=True,
     ),

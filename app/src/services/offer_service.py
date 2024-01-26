@@ -144,27 +144,28 @@ async def recalculate_values(settings):
 #
 #         await db.update_offers(session, json_data, mapping_columns=['name_of_shop'])
 
-
-async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None,
-                      user_id: int) -> None:
+async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None, user_id: int, file_extension: str = 'xlsx') -> None:
     settings = await get_settings(user_id)
+
+    if market == Market.ALL:
+        market = None
 
     match import_type:
         case ImportType.TABLE:
-            return await import_offers(data, settings, name_of_shop, market)
+            return await import_offers(data, settings, name_of_shop, market, file_extension)
 
         case ImportType.SIZES:
-            return await import_sizes(data, settings, name_of_shop, market)
+            return await import_sizes(data, settings, name_of_shop, market, file_extension)
 
         case ImportType.PRICES:
-            return await import_prices(data, settings, name_of_shop, market)
+            return await import_prices(data, settings, name_of_shop, market, file_extension)
 
         case _:
             raise NotImplemented(f'Import type "{import_type}" not implemented yet')
 
 
-async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None):
-    df = utils.bytes_to_data_frame(data)
+async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
 
     if name_of_shop:
@@ -187,8 +188,8 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
 
 
-async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None):
-    df = utils.bytes_to_data_frame(data)
+async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.drop(df.columns[[3, 4, 6, 7]], axis=1, inplace=True, errors='ignore')
     df.drop([i for i in range(8)], axis=0, inplace=True, errors='ignore')
     df.columns = ['sku', 'name', 'discount_price', 'price']
@@ -219,8 +220,8 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
     # await recalculate_values(settings)
 
 
-async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None):
-    df = utils.bytes_to_data_frame(data, 'Список товаров')
+async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+    df = utils.bytes_to_data_frame(data, 'Список товаров', file_extension)
     df.drop([0, 1], axis=0, inplace=True, errors='ignore')
     df: pd.DataFrame = df[df.columns[[2, 13, 14]]]
     df.columns = ['sku', 'self_weight', 'sizes']
@@ -250,6 +251,9 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
 
 
 async def export_data(market: Market, export_type: ExportType, name_of_shop: str | None):
+    if market == Market.ALL:
+        market = None
+
     match export_type:
         case ExportType.TABLE:
             return await export_offers(name_of_shop, market)

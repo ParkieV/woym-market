@@ -17,6 +17,8 @@ class SettingsOut(BaseModel):
 
 class SettingsUpdate(BaseModel):
     rate: float
+    discount: float = 20
+    discount_promotional: float = 0
 
 
 class ColumnDataType(str, Enum):
