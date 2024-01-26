@@ -8,6 +8,7 @@ from sqlalchemy import (
     Float,
 DateTime
 )
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
 
 from .base import Base
@@ -29,8 +30,12 @@ class Settings(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     user_id = Column(Integer, ForeignKey('users.id'))
-
+    discount = Column(Float, default=20)
+    discount_promotional = Column(Float, default=0)
+    discount_purchase = Column(Float, default=20)
     rate = Column(Float, default=10)
+
+    columns = relationship('ColumnInfo', back_populates='settings', lazy='subquery')
 
 
 class Offer(Base):
@@ -38,24 +43,32 @@ class Offer(Base):
     # from yandex api
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
 
-    sku = Column(String, unique=True, index=True) # same as id
+    sku = Column(String, index=True) # same as id
     name = Column(String)
-    weight = Column(Float)
-    length = Column(Float)
-    width = Column(Float)
-    height = Column(Float)
-    volume_yandex = Column(Float)
+
+    self_weight = Column(Float, default=0)
+    self_length = Column(Float, default=0)
+    self_width = Column(Float, default=0)
+    self_height = Column(Float, default=0)
+
+    yandex_weight = Column(Float)
+    yandex_length = Column(Float)
+    yandex_width = Column(Float)
+    yandex_height = Column(Float)
+
+    volume = Column(Float, default=0)
+    yandex_volume = Column(Float)
+    volume_difference = Column(Float, nullable=True, default=None)
+
     photo = Column(String, nullable=True)
     remaining_stock = Column(Integer)
-    minimum_group_price = Column(Float)
-    minimum_group_price_shop = Column(String, nullable=True)
-    name_of_shop = Column(String)
+    name_of_shop = Column(String, index=True)
+    market = Column(String)
     group_sellers_amount = Column(Integer)
     business_id = Column(Integer)
 
     # countable/editable values
     dollar_cost_price = Column(Float)
-    volume = Column(Float)
     cost_price = Column(Float)
     total_price_coeff = Column(Float)
     total_price_min_additional = Column(Float)
@@ -65,13 +78,21 @@ class Offer(Base):
     margin = Column(Float)
     fby = Column(Float)
 
+    attractive_price_threshold = Column(Float)
+    moderately_attractive_price_threshold = Column(Float)
+    best_place_wm = Column(String)
+    best_price_wm = Column(Float)
+    best_place_im = Column(String)
+    best_price_im = Column(Float)
+    minimum_group_price = Column(Float)
+
     current_price = Column(Float, nullable=True)
     target_price = Column(Float, nullable=True, default=None)
 
     # User additional fields
-    note_1 = Column(String, nullable=True)
-    note_2 = Column(String, nullable=True)
-    note_3 = Column(String, nullable=True)
+    note_1 = Column(String, default='')
+    note_2 = Column(String, default='')
+    note_3 = Column(String, default='')
 
     use_manual_min_price = Column(Boolean, default=True)
     auto_min_price = Column(Float)
@@ -86,3 +107,23 @@ class Logs(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
 
     updated_at = Column(DateTime(timezone=True), nullable=True, default=None)
+
+
+class ColumnInfo(Base):
+    __tablename__ = 'columns'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    settings_id = Column(Integer, ForeignKey('settings.id', ondelete='CASCADE'))
+    settings = relationship("Settings", back_populates='columns')
+
+    name = Column(String)
+    key = Column(String, unique=True, index=True)
+    data_type = Column(String)
+    index = Column(Integer)
+    width = Column(Float, default=0)
+    editable = Column(Boolean)
+    is_visible = Column(Boolean, default=True)
+    pinned = Column(Boolean, default=False)
+    tooltip = Column(String, default='')
+
+

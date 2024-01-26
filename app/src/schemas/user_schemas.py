@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class UserCreate(BaseModel):
@@ -27,11 +27,7 @@ class TokenData(BaseModel):
     id: Optional[str] = None
 
 
-class SettingsOut(BaseModel):
-    id: int
-    user_id: int
-    rate: float
 
 
-class SettingsUpdate(BaseModel):
-    rate: float
+
+

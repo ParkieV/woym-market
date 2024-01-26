@@ -62,24 +62,6 @@ async def get_user_by_login(login: str):
         return user
 
 
-async def create_user_settings(session: AsyncSession, user_id: int) -> Settings:
-    settings_db = Settings(user_id=user_id)
-    session.add(settings_db)
-    await session.commit()
-    await session.refresh(settings_db)
-    return settings_db
-
-
-async def get_user_settings(session: AsyncSession, user_id: int) -> Settings | None:
-    query = select(Settings).where(Settings.user_id == user_id)
-    res = await session.execute(query)
-    return res.scalar_one_or_none()
-
-
-async def update_user_settings(session: AsyncSession, user_id: int, settings_update: schema.SettingsUpdate):
-    query = update(Settings).where(Settings.user_id == user_id).values(**dict(settings_update))
-    await session.execute(query)
-    await session.commit()
 
 
 # async def update_user(id_user: int, new_data: NewUserData):

@@ -3,11 +3,15 @@ from sqlalchemy import select, update, delete
 from .models.models import Offer
 from ..schemas.offer_schemas import OfferChange
 import json
-from typing import Iterable
+from typing import Iterable, Any
 
 
-async def get_offers(session: AsyncSession) -> list[Offer]:
+async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None) -> list[Offer]:
     query = select(Offer)
+
+    if filters:
+        query = query.filter_by(**filters)
+
     offers = await session.execute(query)
     return offers.unique().scalars().all()
 
@@ -29,17 +33,51 @@ async def delete_offers(session: AsyncSession, offers_sku: Iterable[str]):
     return None
 
 
-async def change_offer(session: AsyncSession, offers_data: list[OfferChange]):
-    for offer_data in offers_data:
-        await session.execute(update(Offer).where(Offer.sku == offer_data.sku).values(**dict(offer_data)))
+# async def update_offers(session: AsyncSession, offers_data, find_with_shop_name: bool = True, endswith_sku: bool = False):
+#     for offer_data in offers_data:
+#         if 'id' in offer_data.keys():
+#             del offer_data['id']
+#
+#         if endswith_sku:
+#             sku_query = Offer.sku.endswith(offer_data['sku'])
+#         else:
+#             sku_query = Offer.sku == offer_data['sku']
+#
+#         del offer_data['sku']
+#
+#         if find_with_shop_name:
+#             await session.execute(update(Offer).where(sku_query & (Offer.name_of_shop == offer_data['name_of_shop'])).values(**offer_data))
+#         else:
+#             await session.execute(update(Offer).where(sku_query).values(**offer_data))
+#
+#     await session.commit()
 
-    await session.commit()
+async def update_offers(
+        session: AsyncSession,
+        data: list[dict],
+        mapping_columns: list[str] | None = None,
+        filters: dict[str, Any] | None = None,
+        endswith_sku: bool = False
+):
+    for offer in data:
+        if 'id' in offer.keys():
+            del offer['id']
 
+        query = update(Offer)
 
-async def update_offers(session: AsyncSession, offers_data):
-    for offer_data in offers_data:
-        del offer_data['id']
-        await session.execute(update(Offer).where(Offer.sku == offer_data['sku']).values(**offer_data))
+        if filters:
+            query = query.filter_by(**filters)
+
+        if mapping_columns:
+            query = query.filter_by(**{column: offer[column] for column in mapping_columns})
+
+        if endswith_sku:
+            query = query.where(Offer.sku.endswith(offer['sku']))
+            del offer['sku']
+        else:
+            query = query.where(Offer.sku == offer['sku'])
+
+        await session.execute(query.values(**offer))
 
     await session.commit()
 
@@ -50,3 +88,11 @@ async def get_offers_by_sku(session: AsyncSession, skus: list[str]):
     return offers_db.unique().scalars().all()
 
 
+async def get_offers_by_sku_and_shop_name(session: AsyncSession, data: list[tuple[str, str]]):
+    result = []
+    for offer in data:
+        query = select(Offer).where((Offer.sku == offer[0]) & (Offer.name_of_shop == offer[1]))
+        offers_db = await session.execute(query)
+        result.append(offers_db.unique().scalars().one())
+
+    return result

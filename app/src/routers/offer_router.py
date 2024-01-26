@@ -1,11 +1,9 @@
-from fastapi import APIRouter, File, Depends
-from fastapi.responses import FileResponse
-
+from fastapi import APIRouter, File, Depends, UploadFile, HTTPException, status
+from fastapi.responses import FileResponse, Response
+from pathlib import PurePath
 from src.services.auth_utils import get_current_user
-from src.schemas.logs_schemas import LogsOut
-from src.schemas.offer_schemas import OfferOut, OfferChange, OfferDelete
+from src.schemas.offer_schemas import OfferOut, OfferChange, OfferDelete, ImportType, ExportType, Market
 from src.services import offer_service as service
-from src.services import logs_service
 
 offer_router = APIRouter(
     prefix='/offers',
@@ -35,26 +33,26 @@ async def setup_offers_data():
     return {'status': 'OK'}
 
 
-@offer_router.get('/xlsx')
-async def export_offers():
-    path = await service.build_csv()
-    return FileResponse(path=path, filename='out.xlsx', media_type='multipart/form-data')
-
-
 @offer_router.post('/force-update', response_model=list[OfferOut])
 async def test_update(current_user=Depends(get_current_user)):
     return await service.update_offers(current_user.id)
 
 
+@offer_router.get('/xlsx')
+async def export_offers(market: Market = Market.YANDEX, export_type: ExportType = ExportType.TABLE, name_of_shop: str | None = None):
+    path = await service.export_data(market, export_type, name_of_shop)
+    return FileResponse(path=path, filename='out.xlsx', media_type='multipart/form-data')
+
+
 @offer_router.post('/xlsx')
-async def import_offers(data: bytes = File(), current_user=Depends(get_current_user)):
-    await service.import_offers_data(data, current_user.id)
-        # return {'status': 'ERROR', 'detail':'Файл поврежден или имеет неподдерживаемый формат'}
+async def import_offers(data: UploadFile = File(), market: Market = Market.YANDEX, import_type: ImportType = ImportType.TABLE, name_of_shop: str | None = None, current_user=Depends(get_current_user)):
+    content = await data.read()
+    await service.import_data(content, market, import_type, name_of_shop, current_user.id, PurePath(data.filename).suffix)
     return {'status': 'OK'}
 
 
-@offer_router.get('/logs', response_model=LogsOut)
-async def get_logs(current_user=Depends(get_current_user)):
-    return await logs_service.get_logs(current_user.id)
+
+
+
 
 
