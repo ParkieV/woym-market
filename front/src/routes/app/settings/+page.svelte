@@ -42,6 +42,8 @@
 </main>
 
 <style lang="scss">
+    @use "mixins" as *;
+
     main {
         flex: 1;
         display: flex;
@@ -78,12 +80,12 @@
         align-items: center;
         padding: 16px;
         gap: 16px;
+        background-color: #ebebeb;
         > button {
+            @include primary-button;
             padding: 0 16px;
             height: 40px;
             border: 0;
-            color: white;
-            border-radius: 4px;
             min-width: 100px;
         }
     }
