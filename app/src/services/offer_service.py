@@ -167,6 +167,11 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
 async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
+    df.fillna({
+        'note_1': '',
+        'note_2': '',
+        'note_3': '',
+    }, inplace=True)
 
     if name_of_shop:
         df = df[df['name_of_shop'] == name_of_shop]
