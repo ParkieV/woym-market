@@ -56,7 +56,7 @@
     <button class:selected={show_hidden} on:click={() => (show_hidden = !show_hidden)}>
         <img src="/eye-slash.svg" alt="Показать скрытые товары" />
     </button>
-    <div style="flex: 1;" />
+    <div class="spacer" />
     <Search placeholder="Поиск..." bind:value={search} />
 </menu>
 
@@ -65,7 +65,7 @@
     menu {
         display: flex;
         gap: 16px;
-        padding: 8px;
+        padding: 8px 12px;
     }
 
     button {
@@ -84,5 +84,10 @@
             height: 24px;
             width: 24px;
         }
+    }
+
+    .spacer {
+        margin-right: auto;
+        margin-left: -16px;
     }
 </style>

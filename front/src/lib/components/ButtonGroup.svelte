@@ -24,6 +24,9 @@
         overflow: hidden;
         > button {
             @include selectable-button;
+            &:not(:last-child) {
+                border-right: 1px solid #8ca1b4;
+            }
         }
     }
 </style>

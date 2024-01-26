@@ -124,15 +124,18 @@
     header {
         display: flex;
         flex-direction: column;
+        gap: 2px;
         .menu {
             display: flex;
+            background-color: #f1f0f0;
             > button {
                 background-color: transparent;
                 border: 0;
-                padding: 4px 20px;
+                padding: 4px 12px;
                 border-radius: 0;
+                font-size: 15px;
                 &:hover {
-                    background-color: #dddddd;
+                    background-color: #e2e2e2;
                 }
             }
         }
