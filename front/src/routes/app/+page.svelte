@@ -1,15 +1,14 @@
 <script lang="ts">
-    import Search from "$lib/Search.svelte";
-    import { fetchAuthenticated } from "$lib/auth";
-    import ImageModal from "./ImageModal.svelte";
     import Grid from "./Grid.svelte";
     import { getContext, onMount } from "svelte";
-    import { downloadFile, uploadFile } from "$lib/util";
     import { patchOfferList, OffersData, type Offer } from "$lib/data/offers";
     import { fetchLogs } from "$lib/data/settings";
     import type { ModalKind } from "./Modals.svelte";
     import { ChangeList } from "$lib/datagrid/changes";
     import Toolbar from "./Toolbar.svelte";
+    import ImageWindow from "$lib/windows/ImageWindow.svelte";
+    import ImportWindow from "$lib/windows/ImportWindow.svelte";
+    import ExportWindow from "$lib/windows/ExportWindow.svelte";
 
     let data = new OffersData();
     let changes = new ChangeList<Offer, "sku">();
@@ -29,30 +28,10 @@
     }
 
     let selected_image = "";
+    let import_open = false;
+    let export_open = false;
 
     let updated_at: Date | null = null;
-
-    async function exportXlsx() {
-        let blob = await (await fetchAuthenticated("offers/xlsx")).blob();
-        downloadFile(blob, "report.xlsx");
-    }
-
-    async function importXlsx() {
-        confirmChangesLoss(async () => {
-            let blob = await uploadFile();
-            let formData = new FormData();
-            formData.append("data", blob);
-            let responce = await fetchAuthenticated("offers/xlsx", {
-                method: "POST",
-                body: formData
-            });
-            if (!responce.ok) {
-                alert("Импорт не удался");
-            } else {
-                await refreshData();
-            }
-        });
-    }
 
     function cancelEdits() {
         confirmChangesLoss(async () => {
@@ -101,12 +80,14 @@
     let filter: (offer: Offer) => boolean = () => true;
 </script>
 
-<ImageModal bind:src={selected_image} />
+<ImageWindow bind:src={selected_image} />
+<ImportWindow bind:open={import_open} on:imported={refreshData} />
+<ExportWindow bind:open={export_open} />
 <main>
     <header>
         <menu class="menu">
-            <button on:click={exportXlsx}>Экспорт</button>
-            <button on:click={importXlsx}>Импорт</button>
+            <button on:click={() => (export_open = true)}>Экспорт</button>
+            <button on:click={() => (import_open = true)}>Импорт</button>
         </menu>
         <Toolbar
             on:filterChanged={e => {
