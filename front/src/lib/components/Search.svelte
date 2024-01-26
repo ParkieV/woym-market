@@ -11,7 +11,7 @@
         border: 1px solid #ccc;
         min-width: 300px;
         padding-left: 40px;
-        background: url("magnifying-glass.svg") no-repeat 10px center;
+        background: url("/magnifying-glass.svg") no-repeat 10px center;
         background-size: 20px 20px;
         outline: none;
     }
