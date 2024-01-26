@@ -1,24 +1,26 @@
 <script lang="ts">
     import { fetchAuthenticated } from "$lib/auth";
-    import Modal from "$lib/modal/Modal.svelte";
     import { downloadFile } from "$lib/util";
     import Window from "./Window.svelte";
 
     type Data = {
         market: "ozon" | "yandex" | "all";
         export_type: "table" | "matrix-offers" | "matrix-stocks";
-        name_of_shop: "CALMAR.SHOP" | "MASTERSKRAB";
+        name_of_shop?: "CALMAR.SHOP" | "MASTERSKRAB";
     };
 
     export let open: boolean;
     let data: Data = {
         market: "all",
-        export_type: "table",
-        name_of_shop: "CALMAR.SHOP"
+        export_type: "table"
     };
 
     const ok = async () => {
+        if (data.name_of_shop === undefined) {
+            delete data.name_of_shop;
+        }
         let url = "offers/xlsx?" + new URLSearchParams(data);
+        console.log(url);
         let blob = await (await fetchAuthenticated(url)).blob();
         downloadFile(blob, "report.xlsx");
         open = false;
@@ -47,6 +49,7 @@
         <label>
             <span>Магазин</span>
             <select bind:value={data.name_of_shop}>
+                <option value={undefined}>Все</option>
                 <option value="CALMAR.SHOP">CALMAR.SHOP</option>
                 <option value="MASTERSKRAB">MASTERSKRAB</option>
             </select>
