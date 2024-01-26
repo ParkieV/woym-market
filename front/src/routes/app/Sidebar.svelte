@@ -1,26 +1,30 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
+    import { goto } from "$app/navigation";
+    import { logout } from "$lib/auth";
     import { fade, slide } from "svelte/transition";
 
-    let dispatch = createEventDispatcher<{
-        settings: void;
-        exit: void;
-    }>();
-
-    let collapsed = false;
+    let collapsed = true;
 
     type Entry = "spacer" | { name: string; icon: string; onclick: () => void };
     const entries: Entry[] = [
+        { name: "Главная", icon: "/house.svg", onclick: () => goto("/app") },
         "spacer",
-        { name: "Настройки", icon: "gear.svg", onclick: () => dispatch("settings") },
-        { name: "Выход", icon: "sign-out.svg", onclick: () => dispatch("exit") }
+        { name: "Настройки", icon: "/gear.svg", onclick: () => goto("/app/settings") },
+        {
+            name: "Выход",
+            icon: "/sign-out.svg",
+            onclick: () => {
+                logout();
+                goto("/auth");
+            }
+        }
     ];
 </script>
 
 <nav class:collapsed>
     <header>
         <button on:click={() => (collapsed = !collapsed)}>
-            <img src="list.svg" alt="" />
+            <img src="/list.svg" alt="" />
         </button>
         {#if !collapsed}
             <h1 out:fade={{ delay: 500, duration: 0 }}>mp-auto-price</h1>

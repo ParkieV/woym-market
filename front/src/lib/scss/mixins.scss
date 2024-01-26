@@ -1,0 +1,50 @@
+@mixin button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 4px 12px;
+    border: 0;
+
+    color: black;
+    background-color: #e9e9ed;
+}
+
+@mixin primary-button {
+    @include button;
+
+    color: white;
+    background-color: #3b5897;
+    &:hover {
+        background-color: #2f4880;
+    }
+    border-radius: 4px;
+}
+
+@mixin secondary-button {
+    @include button;
+
+    color: black;
+    background-color: white;
+    &:hover {
+        background-color: #ececee
+    }
+    border-radius: 4px;
+}
+
+@mixin selectable-button {
+    @include button;
+
+    &.selected {
+        color: white;
+        background-color: #3b5897;
+    }
+
+    &:hover {
+        background-color: #e1e1e4;
+
+        &.selected {
+            background-color: #2f4880;
+        }
+    }
+}

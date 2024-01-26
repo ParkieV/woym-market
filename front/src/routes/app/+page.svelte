@@ -1,78 +1,37 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
-    import Search from "$lib/Search.svelte";
-    import { fetchAuthenticated, logout } from "$lib/auth";
-    import Sidebar from "./Sidebar.svelte";
-    import ImageModal from "./ImageModal.svelte";
-    import SettingsDialog from "./SettingsDialog.svelte";
-    import { patchOfferList, type Offer, fetchOfferList, fetchLogs } from "$lib";
     import Grid from "./Grid.svelte";
-    import { onMount } from "svelte";
-    import type { DialogData } from "$lib/ConfirmationDialog.svelte";
-    import ConfirmationDialog from "$lib/ConfirmationDialog.svelte";
-    import { num_word } from "$lib/util";
-    import OutdatedDataDialog from "./OutdatedDataDialog.svelte";
+    import { getContext, onMount } from "svelte";
+    import { patchOfferList, OffersData, type Offer } from "$lib/data/offers";
+    import { fetchLogs } from "$lib/data/settings";
+    import type { ModalKind } from "./Modals.svelte";
+    import { ChangeList } from "$lib/datagrid/changes";
+    import Toolbar from "./Toolbar.svelte";
+    import ImageWindow from "$lib/windows/ImageWindow.svelte";
+    import ImportWindow from "$lib/windows/ImportWindow.svelte";
+    import ExportWindow from "$lib/windows/ExportWindow.svelte";
 
-    let changed: Map<string, Offer> = new Map();
-    let data: "loading" | Offer[] = "loading";
+    let data = new OffersData();
+    let changes = new ChangeList<Offer, "sku">();
 
-    let confirmationDialog: DialogData | undefined = undefined;
+    const addModal = getContext<(modal: ModalKind) => void>("addModal");
+
     export function confirmChangesLoss(confirmed: () => void) {
-        if (changed.size !== 0) {
-            let word = num_word(changed.size, ["изменение", "изменения", "изменений"]);
-            let part = num_word(changed.size, [
-                "Оно будет потеряно",
-                "Они будут потеряны",
-                "Они будут потеряны"
-            ]);
-            confirmationDialog = {
-                header: "Изменения будут потеряны",
-                text: `Вы внесли ${changed.size} ${word}. ${part}, продолжить?`,
+        if (changes.hasChanges) {
+            addModal({
+                kind: "confirmChangesLoss",
+                changed: changes.count,
                 onConfirm: confirmed
-            };
+            });
         } else {
             confirmed();
         }
     }
 
-    let settings_open: boolean = false;
     let selected_image = "";
-    let search = "";
+    let import_open = false;
+    let export_open = false;
 
-    let updated_at: Date | null;
-    let is_outdated: boolean = false;
-
-    async function exportXlsx() {
-        let blob = await (await fetchAuthenticated("offers/xlsx")).blob();
-        let url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "report.xlsx";
-        link.click();
-    }
-
-    async function importXlsx() {
-        confirmChangesLoss(async () => {
-            const input = document.createElement("input");
-            input.type = "file";
-            input.onchange = async e => {
-                let target = e.target as HTMLInputElement;
-                let file = target.files![0];
-                let formData = new FormData();
-                formData.append("data", file);
-                let responce = await fetchAuthenticated("offers/xlsx", {
-                    method: "POST",
-                    body: formData
-                });
-                if (!responce.ok) {
-                    alert("Импорт не удался");
-                } else {
-                    await refreshData();
-                }
-            };
-            input.click();
-        });
-    }
+    let updated_at: Date | null = null;
 
     function cancelEdits() {
         confirmChangesLoss(async () => {
@@ -80,111 +39,104 @@
         });
     }
 
-    async function confirmEdits() {
-        confirmationDialog = {
-            header: "Сохранить изменения?",
-            text: `Данные обновятся на сервере`,
+    async function confirmSave() {
+        addModal({
+            kind: "confirmSave",
             onConfirm: async () => {
-                let data = Array.from(changed.values());
-                await patchOfferList(data);
+                await patchOfferList(data.offers.filter(x => changes.isChanged(x.sku)));
                 await refreshData();
             }
-        };
+        });
     }
 
     /** Refreshes data displayed in the grid. */
     async function refreshData() {
-        data = "loading";
-        changed.clear();
-        changed = changed;
-        data = await fetchOfferList();
+        changes.clear();
+        changes = changes;
+
+        await data.update();
+        data = data;
     }
 
     onMount(() => {
         refreshData();
         let fetchDate = async () => {
-            let settings = await fetchLogs();
-            let new_updated_at = settings.updated_at ? new Date(settings.updated_at) : null;
-            if (new_updated_at === null) {
-                return;
-            }
-            if (updated_at ? updated_at < new_updated_at : false) {
-                is_outdated = true;
+            let logs = await fetchLogs();
+            if (!logs.updated_at) return;
+            let new_updated_at = new Date(logs.updated_at);
+
+            if (updated_at === null) {
+                updated_at = new_updated_at;
+            } else if (updated_at < new_updated_at) {
+                updated_at = new_updated_at;
+                addModal({ kind: "dataUpdatedOnServer" });
                 await refreshData();
             }
-            updated_at = new_updated_at;
         };
         fetchDate();
         setInterval(fetchDate, 15 * 1000);
     });
+
+    let filter: (offer: Offer) => boolean = () => true;
 </script>
 
-<OutdatedDataDialog bind:open={is_outdated} />
-<ConfirmationDialog bind:data={confirmationDialog} />
-<ImageModal bind:src={selected_image} />
-<SettingsDialog bind:open={settings_open} on:confirm={() => refreshData()} />
-
-<div id="wrapper">
-    <Sidebar
-        on:settings={() => (settings_open = true)}
-        on:exit={() => {
-            logout();
-            goto("/auth");
-        }}
-    />
-    <main>
-        <menu class="toolbar">
-            <button on:click={exportXlsx}>Экспорт</button>
-            <button on:click={importXlsx}>Импорт</button>
-            <div style="flex: 1;" />
-            <Search placeholder="Поиск..." bind:value={search} />
+<ImageWindow bind:src={selected_image} />
+<ImportWindow bind:open={import_open} on:imported={refreshData} />
+<ExportWindow bind:open={export_open} />
+<main>
+    <header>
+        <menu class="menu">
+            <button on:click={() => (export_open = true)}>Экспорт</button>
+            <button on:click={() => (import_open = true)}>Импорт</button>
         </menu>
-        <Grid
-            bind:data
-            bind:changed
-            bind:search
-            on:photoClicked={e => (selected_image = e.detail)}
+        <Toolbar
+            on:filterChanged={e => {
+                filter = e.detail;
+            }}
         />
-        <menu class="bottombar">
-            <span
-                >{`Последнее обновление:\n${
-                    updated_at ? updated_at.toLocaleString("en-GB") : "N/A"
-                }`}</span
-            >
-            <div style:flex="1" />
-            <button class="cancel" on:click={cancelEdits} disabled={changed.size == 0}>
-                Отмена
-            </button>
-            <button class="confirm" on:click={confirmEdits} disabled={changed.size == 0}>
-                Сохранить изменения
-            </button>
-        </menu>
-    </main>
-</div>
+    </header>
+    <Grid bind:data bind:changes bind:filter on:photoClicked={e => (selected_image = e.detail)} />
+    <menu class="bottombar">
+        <span
+            >{`Последнее обновление:\n${
+                updated_at ? updated_at.toLocaleString("en-GB") : "N/A"
+            }`}</span
+        >
+        <div style:flex="1" />
+        <button class="cancel" on:click={cancelEdits} disabled={!changes.hasChanges}>
+            Отмена
+        </button>
+        <button class="confirm" on:click={confirmSave} disabled={!changes.hasChanges}>
+            Сохранить изменения
+        </button>
+    </menu>
+</main>
 
 <style lang="scss">
-    #wrapper {
-        display: flex;
-        align-items: stretch;
-        height: 100%;
+    @use "mixins" as *;
 
-        > main {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-        }
+    main {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
     }
 
-    .toolbar {
+    header {
         display: flex;
-        padding: 10px;
-
-        > button {
-            background-color: transparent;
-            border: none;
-            padding: 10px 20px;
-            &:hover {
-                background-color: #dddddd;
+        flex-direction: column;
+        gap: 2px;
+        .menu {
+            display: flex;
+            background-color: #f1f0f0;
+            > button {
+                background-color: transparent;
+                border: 0;
+                padding: 4px 12px;
+                border-radius: 0;
+                font-size: 15px;
+                &:hover {
+                    background-color: #e2e2e2;
+                }
             }
         }
     }
@@ -194,19 +146,25 @@
         align-items: center;
         padding: 16px;
         gap: 16px;
-        > button {
-            padding: 0 16px;
+        button {
+            padding-left: 16px;
+            padding-right: 16px;
             height: 40px;
-            border: 0;
-            color: white;
+            &.confirm {
+                @include primary-button;
+            }
+            &.cancel {
+                @include secondary-button;
+            }
+            &:disabled,
+            &:disabled:hover {
+                color: white;
+                background-color: #747474;
+            }
         }
         > span {
             font-size: 16px;
             white-space: pre-wrap;
         }
-    }
-
-    button {
-        border-radius: 4px;
     }
 </style>

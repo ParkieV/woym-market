@@ -1,36 +1,38 @@
 <script lang="ts">
-    import type { Offer } from "$lib";
+    import type { Offer, OffersData } from "$lib/data/offers";
+    import { ChangeList } from "$lib/datagrid/changes";
     import { DataGridOptions } from "$lib/datagrid/offers";
     import { createGrid, type GridApi } from "ag-grid-community";
     import { createEventDispatcher, onMount } from "svelte";
 
-    export let data: "loading" | Offer[];
-    export let changed: Map<string, Offer> = new Map();
+    export let data: OffersData;
+    export let changes: ChangeList<Offer, "sku">;
 
     let grid: GridApi;
-    $: if (grid && data == "loading") {
+    $: if (grid && data.offers.length != 0) {
+        grid.setGridOption("rowData", data.offers);
+    } else if (grid) {
         grid.showLoadingOverlay();
-    } else if (grid && typeof data == "object") {
-        grid.setGridOption("rowData", data);
     }
 
-    export let search: string;
+    export let filter: (offer: Offer) => boolean;
     $: if (grid) {
-        search;
+        filter;
+        grid.setGridOption("doesExternalFilterPass", e => filter(e.data!));
+        grid.setGridOption("isExternalFilterPresent", () => true);
         grid.onFilterChanged();
     }
 
     let dispatch = createEventDispatcher<{ photoClicked: string }>();
-    onMount(() => {
+    onMount(async () => {
         const gridElement = document.querySelector("#grid")! as HTMLElement;
-        const options = DataGridOptions({
-            search: () => search,
+        const options = await DataGridOptions({
             onPhotoClicked: src => dispatch("photoClicked", src),
             onOfferChanged: offer => {
-                changed.set(offer.sku, offer);
-                changed = changed;
+                changes.add(offer.sku);
+                changes = changes;
             },
-            isOfferChanged: sku => changed.has(sku)
+            isOfferChanged: sku => changes.isChanged(sku)
         });
         grid = createGrid(gridElement, options);
     });

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
-    import Input from "$lib/Input.svelte";
+    import Input from "$lib/components/Input.svelte";
     import { login as login_request } from "$lib/auth";
 
     let login: string;
