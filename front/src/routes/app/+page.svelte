@@ -132,6 +132,8 @@
 </main>
 
 <style lang="scss">
+    @use "mixins" as *;
+
     main {
         display: flex;
         flex-direction: column;
@@ -160,12 +162,21 @@
         align-items: center;
         padding: 16px;
         gap: 16px;
-        > button {
-            padding: 0 16px;
+        button {
+            padding-left: 16px;
+            padding-right: 16px;
             height: 40px;
-            border: 0;
-            color: white;
-            border-radius: 4px;
+            &.confirm {
+                @include primary-button;
+            }
+            &.cancel {
+                @include secondary-button;
+            }
+            &:disabled,
+            &:disabled:hover {
+                color: white;
+                background-color: #747474;
+            }
         }
         > span {
             font-size: 16px;

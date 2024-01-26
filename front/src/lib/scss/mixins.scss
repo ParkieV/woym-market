@@ -1,4 +1,4 @@
-@mixin selectable-button {
+@mixin button {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -8,6 +8,32 @@
 
     color: black;
     background-color: #e9e9ed;
+}
+
+@mixin primary-button {
+    @include button;
+
+    color: white;
+    background-color: #3b5897;
+    &:hover {
+        background-color: #2f4880;
+    }
+    border-radius: 4px;
+}
+
+@mixin secondary-button {
+    @include button;
+
+    color: black;
+    background-color: white;
+    &:hover {
+        background-color: #ececee
+    }
+    border-radius: 4px;
+}
+
+@mixin selectable-button {
+    @include button;
 
     &.selected {
         color: white;
