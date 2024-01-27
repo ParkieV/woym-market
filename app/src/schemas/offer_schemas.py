@@ -74,6 +74,8 @@ class OfferOut(BaseModel, BaseModelFields):
 
     auto_price_control: bool = Field(False, title='Авто контроль цен')
 
+    hidden: bool = Field(False, title='Скрыт')
+
     class Config:
         orm_mode = True
 
@@ -93,6 +95,8 @@ class OfferChange(BaseModel):
     auto_min_price: float = 100 # в процентах
     manual_min_price: float | None = None
     auto_price_control: bool = False # ручное управление ценами
+
+    hidden: bool = False
 
 
 class OfferDelete(BaseModel):

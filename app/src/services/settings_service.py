@@ -305,6 +305,13 @@ columns_info = [
         data_type=ColumnDataType.BOOLEAN,
         editable=True,
     ),
+    ColumnCreate(
+        index=0,
+        key='hidden',
+        name='Скрыт',
+        data_type=ColumnDataType.BOOLEAN,
+        editable=True,
+    )
 ]
 
 for i, column in enumerate(columns_info):

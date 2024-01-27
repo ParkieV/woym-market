@@ -15,10 +15,8 @@ from ..params.confing import config
 from .models.base import Base
 
 
-url = f'postgresql+asyncpg://{config.dbuser}:{config.dbpassword}@{config.dbhost}:{config.dbport}/{config.dbname}'
-
 engine = create_async_engine(
-    url, 
+    config.db_url,
     future=True,
     echo=False,
     pool_pre_ping=True

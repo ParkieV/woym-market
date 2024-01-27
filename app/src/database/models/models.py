@@ -100,6 +100,8 @@ class Offer(Base):
 
     auto_price_control = Column(Boolean, default=False)
 
+    hidden = Column(Boolean, default=False)
+
 
 class Logs(Base):
     __tablename__ = 'logs'
@@ -120,7 +122,7 @@ class ColumnInfo(Base):
     key = Column(String, unique=True, index=True)
     data_type = Column(String)
     index = Column(Integer)
-    width = Column(Float, default=0)
+    width = Column(Float, default=100)
     editable = Column(Boolean)
     is_visible = Column(Boolean, default=True)
     pinned = Column(Boolean, default=False)

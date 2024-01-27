@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import Field
 
 
 class Config(BaseSettings):
@@ -11,5 +12,9 @@ class Config(BaseSettings):
     schedule_update: bool
     yandex_token: str
 
+    @property
+    def db_url(self) -> str:
+        return f'postgresql+asyncpg://{self.dbuser}:{self.dbpassword}@{self.dbhost}:{self.dbport}/{self.dbname}'
 
-config = Config(_env_file='.env', _env_file_encoding='utf-8')
+
+config = Config(_env_file='../.env', _env_file_encoding='utf-8')
