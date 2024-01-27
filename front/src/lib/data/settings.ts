@@ -4,9 +4,9 @@ export type Settings = {
     /** Exchange rate (rubles per dollar). */
     rate: number;
     /** Discount for common items in percent. */
-    discount: number;
-    /** Discount for promotional items in percent. */
-    discount_promotional: number;
+    discount_purchase: number;
+    /** Fee for sale through FBY in percent. */
+    fby_sales_commission: number;
 };
 
 export type Logs = {

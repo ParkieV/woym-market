@@ -23,15 +23,15 @@
         {#if settings}
             <label>
                 <span>Текущий курс</span>
-                <input type="number" min="0" max="99" bind:value={settings.rate} />
+                <input type="number" min="0" bind:value={settings.rate} />
             </label>
             <label>
                 <span>Скидка на товары (%)</span>
-                <input type="number" min="0" max="99" bind:value={settings.discount} />
+                <input type="number" min="0" max="99" bind:value={settings.discount_purchase} />
             </label>
             <label>
-                <span>Скидка на акционные товары (%)</span>
-                <input type="number" min="0" max="99" bind:value={settings.discount_promotional} />
+                <span>Комиссия за продажу в FBY (%)</span>
+                <input type="number" min="0" max="99" bind:value={settings.fby_sales_commission} />
             </label>
         {/if}
     </div>
