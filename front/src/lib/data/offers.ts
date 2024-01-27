@@ -87,6 +87,7 @@ export type Offer = {
     auto_price_control: boolean;
     /** If set to true, manual min price (manual_min_price) will be used. */
     use_manual_min_price: boolean;
+    hidden: boolean;
 };
 
 type OfferPatch = { sku: string } & Partial<Offer>;
