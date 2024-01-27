@@ -163,15 +163,15 @@ class YandexMarketAPI:
                     'offers': data
                 }
 
-                if not len(body['offers']):
+                if not body['offers']:
                     continue
 
-                # response = self.session.post(
-                #     f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
-                #     headers=self.auth_headers,
-                #     json=body
-                # )
-                # self.check_response(response)
+                response = self.session.post(
+                    f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
+                    headers=self.auth_headers,
+                    json=body
+                )
+                self.check_response(response)
 
     def _download_report(self, url_path: str) -> pd.DataFrame:
         output = BytesIO()

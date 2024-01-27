@@ -5,7 +5,7 @@ from io import BytesIO
 from fastapi import HTTPException, status
 
 
-def count_fby(data: pd.DataFrame):
+def count_fby(data: pd.DataFrame, settings):
     # 19% - коммисия за продажу (дача, сад и огород, содовый инвентарь)
     # 1% - перевод денежных средств магазину
     # если dimensions_sum < 150 и вес < 25 кг, то 3% (20 <= x <= 60), иначе 350 - доставка внутри округа
@@ -18,14 +18,14 @@ def count_fby(data: pd.DataFrame):
         350 * 2
     )
 
-    data['fby'] = data['current_price'] * 0.2 + delivery_and_warehouse_processing_price
+    data['fby'] = data['current_price'] * (settings.fby_sales_commission / 100) + delivery_and_warehouse_processing_price + data['current_price'] * 0.01
     return data['fby']
 
 
-def calculate_offers_values(data: pd.DataFrame, course: float) -> pd.DataFrame:
-    data['fby'] = count_fby(data)
+def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
+    data['fby'] = count_fby(data, settings)
     data['yandex_volume'] = data['yandex_length'] * data['yandex_width'] * data['yandex_height'] / 1000
-    data['cost_price'] = data['dollar_cost_price'] * course
+    data['cost_price'] = data['dollar_cost_price'] * settings.rate
     data['total_price'] = np.where(data['cost_price'] > data['total_price_min_additional'],
                                    data['cost_price'] * data['total_price_coeff'],
                                    data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional'])
@@ -77,9 +77,10 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def build_offers_data(data: pd.DataFrame, course: float = 5, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False):
+def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False):
     if setup_mode:
         data['dollar_cost_price'] = 0  # закупка
+
     data['total_price_coeff'] = total_price_coeff
     data['total_price_min_additional'] = total_price_min_additional
 
@@ -90,13 +91,13 @@ def build_offers_data(data: pd.DataFrame, course: float = 5, total_price_coeff: 
     data['use_manual_min_price'] = False
     data['auto_price_control'] = True
 
-    data = calculate_offers_values(data, course)
+    data = calculate_offers_values(data, settings)
     data['auto_price_control'] = False
 
     return json.loads(data.to_json(orient='records'))
 
 
-def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, course: float):
+def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, settings):
     updated_offers: pd.DataFrame = data.copy()
 
     updated_offers.sort_values(['sku', 'name_of_shop'], inplace=True)
@@ -108,7 +109,7 @@ def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, course: float)
     updated_offers.update(changes)
     updated_offers.drop('id', axis=1, errors='ignore')
 
-    updated_offers = calculate_offers_values(updated_offers, course)
+    updated_offers = calculate_offers_values(updated_offers, settings)
 
     return json.loads(updated_offers.to_json(orient='records'))
 

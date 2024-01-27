@@ -33,15 +33,16 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
         offers_df = pd.DataFrame(jsonable_encoder(offers))
         changes = pd.DataFrame(jsonable_encoder(offers_data))
 
-        changed_offers = utils.update_offers_data(offers_df, changes, settings.rate)
+        changed_offers = utils.update_offers_data(offers_df, changes, settings)
         await db.update_offers(session, changed_offers, mapping_columns=['name_of_shop'])
         return await db.get_offers_by_sku_and_shop_name(session, [(i.sku, i.name_of_shop,) for i in offers_data])
 
 
-async def setup_offers_data(course: float = 15):
+async def setup_offers_data(user_id: int):
+    settings = await get_settings(user_id)
     yandex_offers = await yandex_repository.get_offers()
     yandex_offers_df = pd.DataFrame(jsonable_encoder(yandex_offers))
-    data = utils.build_offers_data(yandex_offers_df, setup_mode=True, course=course)
+    data = utils.build_offers_data(yandex_offers_df, setup_mode=True, settings=settings)
 
     async with async_session() as session:
         offers_db = await db.create_offers(session, data)
@@ -65,11 +66,11 @@ async def update_offers(user_id: int):
 
     to_create_skus = yandex_offers_skus - db_offers_skus
     temp1 = yandex_offers_df[yandex_offers_df['sku'].isin(to_create_skus)]
-    temp = utils.build_offers_data(temp1, settings.rate, setup_mode=True)
+    temp = utils.build_offers_data(temp1, settings, setup_mode=True)
     to_create_rows = pd.DataFrame(temp)
     offers_df = pd.concat([offers_df, to_create_rows], ignore_index=True)
 
-    json_data = utils.update_offers_data(offers_df, yandex_offers_df, settings.rate)
+    json_data = utils.update_offers_data(offers_df, yandex_offers_df, settings)
 
     async with async_session() as session:
         await db.delete_offers(session, to_delete_skus)
@@ -112,7 +113,7 @@ async def build_csv():
 async def recalculate_values(settings):
     offers = jsonable_encoder(await get_offers())
     df = pd.DataFrame(offers)
-    df = utils.calculate_offers_values(df, settings.rate)
+    df = utils.calculate_offers_values(df, settings)
     df.drop('id', axis=1, inplace=True)
 
     changes = df.to_dict('records')
@@ -187,7 +188,7 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
     df = df[df['sku'].isin(offers_df['sku'])]
     offers_df = offers_df[offers_df['sku'].isin(df['sku'])]
 
-    changes = utils.update_offers_data(offers_df, df, settings.rate)
+    changes = utils.update_offers_data(offers_df, df, settings)
 
     async with async_session() as session:
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
