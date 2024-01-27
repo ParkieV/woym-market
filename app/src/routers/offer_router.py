@@ -27,9 +27,9 @@ async def delete_offers(offers: list[OfferDelete]):
     return {'status': 'OK'}
 
 
-@offer_router.post('/setup', dependencies=[Depends(get_current_user)])
-async def setup_offers_data():
-    await service.setup_offers_data()
+@offer_router.post('/setup')
+async def setup_offers_data(current_user=Depends(get_current_user)):
+    await service.setup_offers_data(current_user.id)
     return {'status': 'OK'}
 
 

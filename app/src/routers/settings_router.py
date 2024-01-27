@@ -16,7 +16,8 @@ async def get_settings(current_user=Depends(get_current_user)):
 
 @settings_router.patch('')
 async def update_settings(data: SettingsUpdate, current_user=Depends(get_current_user)):
-    return await service.update_settings(current_user.id, data)
+    await service.update_settings(current_user.id, data)
+    return {'status': 'OK'}
 
 
 @settings_router.get('/logs', response_model=LogsOut)
@@ -32,5 +33,6 @@ async def get_columns(current_user=Depends(get_current_user)):
 
 @settings_router.patch('/columns')
 async def update_columns(data: list[ColumnUpdate], current_user=Depends(get_current_user)):
-    return await service.update_columns(current_user.id, data)
+    await service.update_columns(current_user.id, data)
+    return {'status': 'OK'}
 

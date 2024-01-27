@@ -30,9 +30,8 @@ class Settings(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     user_id = Column(Integer, ForeignKey('users.id'))
-    discount = Column(Float, default=20)
-    discount_promotional = Column(Float, default=0)
     discount_purchase = Column(Float, default=20)
+    fby_sales_commission = Column(Float, default=19)
     rate = Column(Float, default=10)
 
     columns = relationship('ColumnInfo', back_populates='settings', lazy='subquery')

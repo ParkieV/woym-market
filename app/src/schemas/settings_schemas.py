@@ -11,14 +11,14 @@ class SettingsOut(BaseModel):
     id: int
     user_id: int
     rate: float
-    discount: float = 20
-    discount_promotional: float = 0
+    discount_purchase: float
+    fby_sales_commission: float
 
 
 class SettingsUpdate(BaseModel):
     rate: float
-    discount: float = 20
-    discount_promotional: float = 0
+    discount_purchase: float
+    fby_sales_commission: float = 19
 
 
 class ColumnDataType(str, Enum):

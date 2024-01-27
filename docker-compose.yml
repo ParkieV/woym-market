@@ -11,8 +11,8 @@ services:
       dockerfile: app.dockerfile
     depends_on:
       - db
-    expose:
-      - 8000
+    ports:
+      - 8000:8000
 
   frontend:
     container_name: frontend
