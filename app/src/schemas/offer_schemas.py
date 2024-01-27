@@ -20,18 +20,18 @@ class OfferOut(BaseModel, BaseModelFields):
     sku: str = Field(title='sku')
     name: str = Field(title='Название')
 
-    self_weight: float = Field(title='Вес')
-    self_length: float = Field(title='Длина')
-    self_width: float = Field(title='Ширина')
-    self_height: float = Field(title='Высота')
+    self_weight: float | None = Field(title='Вес')
+    self_length: float | None = Field(title='Длина')
+    self_width: float | None = Field(title='Ширина')
+    self_height: float | None = Field(title='Высота')
 
-    yandex_weight: float = Field(title='Вес с маркета', default=0)
-    yandex_length: float = Field(title='Длинна с маркета', default=0)
-    yandex_width: float = Field(title='Ширина с маркета', default=0)
-    yandex_height: float = Field(title='Высота с маркета', default=0)
+    yandex_weight: float | None = Field(title='Вес с маркета', default=0)
+    yandex_length: float | None = Field(title='Длинна с маркета', default=0)
+    yandex_width: float | None = Field(title='Ширина с маркета', default=0)
+    yandex_height: float | None = Field(title='Высота с маркета', default=0)
 
-    volume: float = Field(title='Объём (Длинна * ширина * высота / 1000)')
-    yandex_volume: float = Field(title='Объём с яндекса')
+    volume: float | None = Field(title='Объём (Длинна * ширина * высота / 1000)')
+    yandex_volume: float | None = Field(title='Объём с яндекса')
     volume_difference: float | None = Field(title='Разница объемов', default=None)
 
     photo: str | None = Field(title='Фото')
@@ -42,11 +42,11 @@ class OfferOut(BaseModel, BaseModelFields):
     business_id: int = Field(title='id бизнесса')
 
     # countable/editable values
-    dollar_cost_price: float = Field(title='Закупка у. е.', default=0)
-    total_price_coeff: float = Field(title='Коэфициент расчетной цены')
-    cost_price: float = Field(title='Себестоимость (Закупка у. е. * курс)')
+    dollar_cost_price: float | None = Field(title='Закупка у. е.', default=0)
+    total_price_coeff: float  = Field(title='Коэфициент расчетной цены')
+    cost_price: float | None = Field(title='Себестоимость (Закупка у. е. * курс)')
     total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену')
-    total_price: float = Field(title='Расчетная цена (Закупка * коэф. ?+ мин. наценка)')
+    total_price: float | None = Field(title='Расчетная цена (Закупка * коэф. ?+ мин. наценка)')
     discount_base_price: float | None = Field(title='Цена до скидки (Текущая цена + 20%)')
     profit: float | None = Field(title='Прибыль (Текущая цена - закупка - FBY)')
     margin: float | None = Field(title='Окупаемость (Прибыль / закупка * 100)')
@@ -58,7 +58,7 @@ class OfferOut(BaseModel, BaseModelFields):
     best_price_wm: float | None = Field(title='Цена площадки (без учета Маркета)')
     best_place_im: str | None = Field(title='Площадка с лучшей ценой (на Маркете)')
     best_price_im: float | None = Field(title='Цена площадки (на Маркете)')
-    minimum_group_price: float = Field(title='Минимальная цена в группе')
+    minimum_group_price: float | None = Field(title='Минимальная цена в группе')
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')

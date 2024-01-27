@@ -122,29 +122,6 @@ async def recalculate_values(settings):
         await db.update_offers(session, changes, mapping_columns=['sku', 'name_of_shop'])
 
 
-
-# async def import_offers_data(data: bytes, user_id: int):
-#     async with async_session() as session:
-#         settings = await get_settings(user_id)
-#         changes = utils.bytes_to_data_frame(data)
-#         columns = list(OfferOut.fields().keys())
-#         columns.remove('business_id')
-#
-#         changes.rename(columns=OfferOut.reverse_fields(), inplace=True)
-#
-#         db_offers = jsonable_encoder(await get_offers())
-#         offers_df = pd.DataFrame(db_offers)
-#
-#         columns_to_change = list(set(changes.columns) & set(offers_df.columns))
-#
-#         changes = changes[columns_to_change]
-#         changes = changes[changes['sku'].isin(offers_df['sku'])]
-#         offers_df = offers_df[offers_df['sku'].isin(changes['sku'])]
-#
-#         json_data = utils.update_offers_data(offers_df, changes, settings.rate)
-#
-#         await db.update_offers(session, json_data, mapping_columns=['name_of_shop'])
-
 async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None, user_id: int, file_extension: str = 'xlsx') -> None:
     settings = await get_settings(user_id)
 
@@ -234,6 +211,8 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
     df[['self_length', 'self_width', 'self_height']] = df['sizes'].str.split('/', expand=True)
     df[['self_length', 'self_width', 'self_height', 'self_weight']] = df[
         ['self_length', 'self_width', 'self_height', 'self_weight']].astype(float)
+    df['volume'] = df['self_length'] * df['self_width'] * df['self_height'] / 1000
+
     df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
     df.fillna(0, inplace=True)
     df.drop('sizes', axis=1, inplace=True)

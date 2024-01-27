@@ -1,6 +1,7 @@
 import asyncio
 import uvicorn
 from fastapi import FastAPI
+from fastapi.responses import ORJSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
@@ -12,7 +13,7 @@ from src.services.offer_service import update_offers
 from src.params.confing import config
 
 
-app: FastAPI = FastAPI()
+app: FastAPI = FastAPI(default_response_class=ORJSONResponse)
 
 
 async def scheduler():

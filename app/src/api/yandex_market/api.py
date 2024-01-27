@@ -9,6 +9,7 @@ from enum import Enum
 from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS
 import pandas as pd
 from collections import defaultdict
+import numpy as np
 
 
 class StocksResponseType(Enum):
@@ -121,12 +122,12 @@ class YandexMarketAPI:
                 offer_data = YandexOfferInfoPartial(
                     sku=offer['offerId'],
                     name=offer['name'],
-                    yandex_weight=offer['weightDimensions']['weight'] if 'weightDimensions' in offer else 0,
-                    yandex_length=offer['weightDimensions']['length'] if 'weightDimensions' in offer else 0,
-                    yandex_width=offer['weightDimensions']['width'] if 'weightDimensions' in offer else 0,
-                    yandex_height=offer['weightDimensions']['height'] if 'weightDimensions' in offer else 0,
+                    yandex_weight=offer['weightDimensions']['weight'] if 'weightDimensions' in offer else None,
+                    yandex_length=offer['weightDimensions']['length'] if 'weightDimensions' in offer else None,
+                    yandex_width=offer['weightDimensions']['width'] if 'weightDimensions' in offer else None,
+                    yandex_height=offer['weightDimensions']['height'] if 'weightDimensions' in offer else None,
                     yandex_volume=(offer['weightDimensions']['length'] * offer['weightDimensions']['width'] *
-                                   offer['weightDimensions']['height']) / 5000 if 'weightDimensions' in offer else 0,
+                                   offer['weightDimensions']['height']) / 1000 if 'weightDimensions' in offer else None,
                     photo=offer['pictures'][0] if len(offer['pictures']) > 0 else None,
                     current_price=offer['basicPrice']['value'] if 'basicPrice' in offer else None,
                     business_id=business_id
@@ -202,7 +203,7 @@ class YandexMarketAPI:
                 new_df[['sku', 'attractive_price_threshold', 'moderately_attractive_price_threshold',
                         'minimum_group_price', 'best_place_wm', 'best_price_wm', 'best_place_im',
                         'best_price_im']] = df.iloc[:, [0, 5, 6, 10, 11, 12, 13, 14]]
-                new_df.replace({'–': 0}, inplace=True)
+                new_df.replace({'–': np.nan}, inplace=True)
 
                 result = new_df.to_dict('records')
                 result = {

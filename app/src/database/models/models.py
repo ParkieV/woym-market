@@ -6,7 +6,7 @@ from sqlalchemy import (
     Boolean,
     TIMESTAMP,
     Float,
-DateTime
+    DateTime
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
@@ -42,21 +42,21 @@ class Offer(Base):
     # from yandex api
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
 
-    sku = Column(String, index=True) # same as id
-    name = Column(String)
+    sku = Column(String, index=True, nullable=False) # same as id
+    name = Column(String, nullable=False)
 
-    self_weight = Column(Float, default=0)
-    self_length = Column(Float, default=0)
-    self_width = Column(Float, default=0)
-    self_height = Column(Float, default=0)
+    self_weight = Column(Float, default=None, nullable=True)
+    self_length = Column(Float, default=None, nullable=True)
+    self_width = Column(Float, default=None, nullable=True)
+    self_height = Column(Float, default=None, nullable=True)
 
-    yandex_weight = Column(Float)
-    yandex_length = Column(Float)
-    yandex_width = Column(Float)
-    yandex_height = Column(Float)
+    yandex_weight = Column(Float, nullable=True)
+    yandex_length = Column(Float, nullable=True)
+    yandex_width = Column(Float, nullable=True)
+    yandex_height = Column(Float, nullable=True)
 
-    volume = Column(Float, default=0)
-    yandex_volume = Column(Float)
+    volume = Column(Float, default=None, nullable=True)
+    yandex_volume = Column(Float, nullable=True)
     volume_difference = Column(Float, nullable=True, default=None)
 
     photo = Column(String, nullable=True)
@@ -67,39 +67,38 @@ class Offer(Base):
     business_id = Column(Integer)
 
     # countable/editable values
-    dollar_cost_price = Column(Float)
-    cost_price = Column(Float)
+    dollar_cost_price = Column(Float, nullable=True)
+    cost_price = Column(Float, nullable=True)
     total_price_coeff = Column(Float)
     total_price_min_additional = Column(Float)
-    total_price = Column(Float)
-    discount_base_price = Column(Float)
-    profit = Column(Float)
-    margin = Column(Float)
-    fby = Column(Float)
+    total_price = Column(Float, nullable=True)
+    discount_base_price = Column(Float, nullable=True)
+    profit = Column(Float, nullable=True)
+    margin = Column(Float, nullable=True)
+    fby = Column(Float, nullable=True)
 
-    attractive_price_threshold = Column(Float)
-    moderately_attractive_price_threshold = Column(Float)
-    best_place_wm = Column(String)
-    best_price_wm = Column(Float)
-    best_place_im = Column(String)
-    best_price_im = Column(Float)
-    minimum_group_price = Column(Float)
+    attractive_price_threshold = Column(Float, nullable=True)
+    moderately_attractive_price_threshold = Column(Float, nullable=True)
+    best_place_wm = Column(String, nullable=True)
+    best_price_wm = Column(Float, nullable=True)
+    best_place_im = Column(String, nullable=True)
+    best_price_im = Column(Float, nullable=True)
+    minimum_group_price = Column(Float, nullable=True)
 
     current_price = Column(Float, nullable=True)
     target_price = Column(Float, nullable=True, default=None)
 
     # User additional fields
-    note_1 = Column(String, default='')
-    note_2 = Column(String, default='')
-    note_3 = Column(String, default='')
+    note_1 = Column(String, default='', nullable=False)
+    note_2 = Column(String, default='', nullable=False)
+    note_3 = Column(String, default='', nullable=False)
 
-    use_manual_min_price = Column(Boolean, default=True)
-    auto_min_price = Column(Float)
-    manual_min_price = Column(Float, nullable=True, default=None)
+    use_manual_min_price = Column(Boolean, default=True, nullable=False)
+    auto_min_price = Column(Float, nullable=False)
+    manual_min_price = Column(Float, default=None, nullable=True)
+    auto_price_control = Column(Boolean, default=False, nullable=False)
 
-    auto_price_control = Column(Boolean, default=False)
-
-    hidden = Column(Boolean, default=False)
+    hidden = Column(Boolean, default=False, nullable=False)
 
 
 class Logs(Base):

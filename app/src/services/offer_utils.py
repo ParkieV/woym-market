@@ -25,6 +25,8 @@ def count_fby(data: pd.DataFrame, settings):
 def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
     data['fby'] = count_fby(data, settings)
     data['yandex_volume'] = data['yandex_length'] * data['yandex_width'] * data['yandex_height'] / 1000
+    data['volume'] = data['self_length'] * data['self_width'] * data['self_height'] / 1000
+    data['volume_difference'] = data['yandex_volume'] / data['volume']
     data['cost_price'] = data['dollar_cost_price'] * settings.rate
     data['total_price'] = np.where(data['cost_price'] > data['total_price_min_additional'],
                                    data['cost_price'] * data['total_price_coeff'],
@@ -80,6 +82,7 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
 def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False):
     if setup_mode:
         data['dollar_cost_price'] = 0  # закупка
+        data[['self_weight', 'self_length', 'self_width', 'self_height']] = np.nan
 
     data['total_price_coeff'] = total_price_coeff
     data['total_price_min_additional'] = total_price_min_additional
@@ -110,8 +113,10 @@ def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, settings):
     updated_offers.drop('id', axis=1, errors='ignore')
 
     updated_offers = calculate_offers_values(updated_offers, settings)
+    updated_offers[['note_1', 'note_2', 'note_3']].fillna('', inplace=True)
+    updated_offers['hidden'].fillna(False, inplace=True)
 
-    return json.loads(updated_offers.to_json(orient='records'))
+    return updated_offers.to_dict('records')
 
 
 def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0, file_extension: str = 'xlsx') -> pd.DataFrame:

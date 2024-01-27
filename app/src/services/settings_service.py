@@ -190,7 +190,7 @@ columns_info = [
         index=0,
         key='fby',
         name='Цена за FBY',
-        data_type=ColumnDataType.PERCENT,
+        data_type=ColumnDataType.FLOAT,
         editable=False,
     ),
     ColumnCreate(
