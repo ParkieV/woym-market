@@ -19,6 +19,9 @@
     const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"] as const;
 
     function filter(offer: Offer): boolean {
+        if (offer.hidden && !show_hidden) {
+            return false;
+        }
         for (const option of shops) {
             if (option.name == offer.name_of_shop && !option.selected) {
                 return false;
@@ -46,6 +49,7 @@
         search;
         shops;
         markets;
+        show_hidden;
         dispatch("filterChanged", filter);
     }
 </script>
