@@ -198,14 +198,14 @@ columns_info = [
         key='attractive_price_threshold',
         name='Порог для привлекательной цены',
         data_type=ColumnDataType.FLOAT,
-        editable=True,
+        editable=False,
     ),
     ColumnCreate(
         index=0,
         key='moderately_attractive_price_threshold',
         name='Порог для умеренно привлекательной цены',
         data_type=ColumnDataType.FLOAT,
-        editable=True,
+        editable=False,
     ),
     ColumnCreate(
         index=0,
@@ -288,7 +288,7 @@ columns_info = [
         index=0,
         key='auto_min_price',
         name='Авто мин. цена %',
-        data_type=ColumnDataType.FLOAT,
+        data_type=ColumnDataType.PERCENT,
         editable=True,
     ),
     ColumnCreate(

@@ -5,7 +5,8 @@ from io import BytesIO
 from fastapi import HTTPException, status
 
 
-def count_fby(data: pd.DataFrame, settings):
+def count_fby(data: pd.DataFrame, settings) -> pd.Series:
+    data = data.copy()
     # 19% - коммисия за продажу (дача, сад и огород, содовый инвентарь)
     # 1% - перевод денежных средств магазину
     # если dimensions_sum < 150 и вес < 25 кг, то 3% (20 <= x <= 60), иначе 350 - доставка внутри округа
@@ -23,6 +24,8 @@ def count_fby(data: pd.DataFrame, settings):
 
 
 def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
+    data = data.copy()
+
     data['fby'] = count_fby(data, settings)
     data['yandex_volume'] = data['yandex_length'] * data['yandex_width'] * data['yandex_height'] / 1000
     data['volume'] = data['self_length'] * data['self_width'] * data['self_height'] / 1000
@@ -79,9 +82,11 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False):
+def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False) -> pd.DataFrame:
+    data = data.copy()
+
     if setup_mode:
-        data['dollar_cost_price'] = 0  # закупка
+        data['dollar_cost_price'] = np.nan  # закупка
         data[['self_weight', 'self_length', 'self_width', 'self_height']] = np.nan
 
     data['total_price_coeff'] = total_price_coeff
@@ -89,7 +94,7 @@ def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2
 
     data['auto_min_price'] = 100
     data['manual_min_price'] = 100
-    data['target_price'] = None
+    data['target_price'] = np.nan
 
     data['use_manual_min_price'] = False
     data['auto_price_control'] = True
@@ -97,10 +102,10 @@ def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2
     data = calculate_offers_values(data, settings)
     data['auto_price_control'] = False
 
-    return json.loads(data.to_json(orient='records'))
+    return data
 
 
-def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, settings):
+def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, settings) -> pd.DataFrame:
     updated_offers: pd.DataFrame = data.copy()
 
     updated_offers.sort_values(['sku', 'name_of_shop'], inplace=True)
@@ -116,7 +121,7 @@ def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, settings):
     updated_offers[['note_1', 'note_2', 'note_3']].fillna('', inplace=True)
     updated_offers['hidden'].fillna(False, inplace=True)
 
-    return updated_offers.to_dict('records')
+    return updated_offers
 
 
 def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0, file_extension: str = 'xlsx') -> pd.DataFrame:

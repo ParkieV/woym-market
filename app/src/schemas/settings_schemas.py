@@ -35,7 +35,7 @@ class ColumnDataType(str, Enum):
 
 class BaseColumn(BaseModel):
     index: int
-    width: float = 100
+    width: float = 120
     is_visible: bool = True
 
 

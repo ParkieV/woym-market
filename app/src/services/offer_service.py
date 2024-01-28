@@ -6,32 +6,29 @@ from src.database import offer_db as db
 import src.services.offer_utils as utils
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market
 import pandas as pd
-from fastapi.encoders import jsonable_encoder
-import json
 from src.api.factory import RepositoryFactory, MPTypes
 import numpy as np
-
 from src.services.settings_service import get_settings, update_logs
 
 yandex_repository = RepositoryFactory.get(MPTypes.YANDEX)
 
 
-async def get_offers(filters: dict[str, Any] | None = None):
+async def get_offers(filters: dict[str, Any] | None = None) -> list[OfferOut]:
     async with async_session() as session:
         return await db.get_offers(session, filters)
 
 
 async def change_offers(offers_data: list[OfferChange], user_id: int):
     if not offers_data:
-        return []
+        return offers_data
 
     settings = await get_settings(user_id)
 
     async with async_session() as session:
         offers = await db.get_offers_by_sku_and_shop_name(session, [(i.sku, i.name_of_shop,) for i in offers_data])
 
-        offers_df = pd.DataFrame(jsonable_encoder(offers))
-        changes = pd.DataFrame(jsonable_encoder(offers_data))
+        offers_df = pd.DataFrame([offer.model_dump() for offer in offers])
+        changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
 
         changed_offers = utils.update_offers_data(offers_df, changes, settings)
         await db.update_offers(session, changed_offers, mapping_columns=['name_of_shop'])
@@ -41,7 +38,7 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
 async def setup_offers_data(user_id: int):
     settings = await get_settings(user_id)
     yandex_offers = await yandex_repository.get_offers()
-    yandex_offers_df = pd.DataFrame(jsonable_encoder(yandex_offers))
+    yandex_offers_df = pd.DataFrame(yandex_offers)
     data = utils.build_offers_data(yandex_offers_df, setup_mode=True, settings=settings)
 
     async with async_session() as session:
@@ -52,10 +49,10 @@ async def setup_offers_data(user_id: int):
 async def update_offers(user_id: int):
     settings = await get_settings(user_id)
 
-    db_offers = jsonable_encoder(await get_offers())
-    yandex_offers = jsonable_encoder(await yandex_repository.get_offers())
+    db_offers = await get_offers()
+    yandex_offers = await yandex_repository.get_offers()
 
-    offers_df = pd.DataFrame(db_offers)
+    offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
     yandex_offers_df = pd.DataFrame(yandex_offers)
 
     db_offers_skus = set(offers_df['sku'])
@@ -70,17 +67,17 @@ async def update_offers(user_id: int):
     to_create_rows = pd.DataFrame(temp)
     offers_df = pd.concat([offers_df, to_create_rows], ignore_index=True)
 
-    json_data = utils.update_offers_data(offers_df, yandex_offers_df, settings)
+    updated_offers = utils.update_offers_data(offers_df, yandex_offers_df, settings)
 
     async with async_session() as session:
         await db.delete_offers(session, to_delete_skus)
-        await db.create_offers(session, to_create_rows.to_dict('records'))
-        await db.update_offers(session, json_data, mapping_columns=['name_of_shop'])
+        await db.create_offers(session, to_create_rows)
+        await db.update_offers(session, updated_offers, mapping_columns=['name_of_shop'])
 
     await update_yandex_offers_price()
     await update_logs(user_id, {'updated_at': datetime.now()})
 
-    return json_data
+    return updated_offers.to_dict('records')
 
 
 async def delete_offers(offers: list[OfferDelete]):
@@ -90,36 +87,22 @@ async def delete_offers(offers: list[OfferDelete]):
 
 async def update_yandex_offers_price():
     async with async_session() as session:
-        offers_db = jsonable_encoder(await db.get_offers(session))
-        offers_df = pd.DataFrame(offers_db)
+        offers_db = await db.get_offers(session)
+        offers_df = pd.DataFrame([offer.model_dump() for offer in offers_db])
         offers_df = utils.calculate_price(offers_df)
-        json_data = json.loads(offers_df.to_json(orient='records'))
+        json_data = offers_df.to_dict('records')
         await yandex_repository.change_prices(json_data)
         await db.update_offers(session, json_data, mapping_columns=['name_of_shop'])
 
 
-async def build_csv():
-    offers = jsonable_encoder(await get_offers())
-    df = pd.DataFrame(offers)
-    df.drop(['id', 'minimum_group_price_shop'], inplace=True, axis=1, errors='ignore')
-    df = df[OfferOut.fields().keys()]
-
-    df.drop(['business_id'], axis=1, inplace=True)
-    df.rename(columns=OfferOut.fields(), inplace=True)
-    df.to_excel('data/out.xlsx', index=False)
-    return 'data/out.xlsx'
-
-
 async def recalculate_values(settings):
-    offers = jsonable_encoder(await get_offers())
-    df = pd.DataFrame(offers)
+    offers = await get_offers()
+    df = pd.DataFrame([offer.model_dump() for offer in offers])
     df = utils.calculate_offers_values(df, settings)
-    df.drop('id', axis=1, inplace=True)
-
-    changes = df.to_dict('records')
+    df.drop('id', axis=1, inplace=True, errors='ignore')
 
     async with async_session() as session:
-        await db.update_offers(session, changes, mapping_columns=['sku', 'name_of_shop'])
+        await db.update_offers(session, df, mapping_columns=['sku', 'name_of_shop'])
 
 
 async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None, user_id: int, file_extension: str = 'xlsx') -> None:
@@ -157,8 +140,8 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
     if market:
         df = df[df['market'] == market]
 
-    db_offers = jsonable_encoder(await get_offers())
-    offers_df = pd.DataFrame(db_offers)
+    db_offers = await get_offers()
+    offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
     columns_to_change = list(set(df.columns) & set(offers_df.columns))
     df = df[columns_to_change]
@@ -195,12 +178,10 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
         df['market'] = market
         mapping_columns.append('market')
 
-    changes = df.to_dict('records')
-
     async with async_session() as session:
-        await db.update_offers(session, changes, mapping_columns=mapping_columns, endswith_sku=True)
+        await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
 
-    # await recalculate_values(settings)
+    await recalculate_values(settings)
 
 
 async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
@@ -227,12 +208,10 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
         df['market'] = market
         mapping_columns.append('market')
 
-    changes = df.to_dict('records')
-
     async with async_session() as session:
-        await db.update_offers(session, changes, mapping_columns=mapping_columns, endswith_sku=True)
+        await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
 
-    # await recalculate_values(settings)
+    await recalculate_values(settings)
 
 
 async def export_data(market: Market, export_type: ExportType, name_of_shop: str | None):
@@ -256,9 +235,9 @@ async def export_offers(name_of_shop: str | None = None, market: str | None = No
     if market:
         filters['market'] = market
 
-    offers = jsonable_encoder(await get_offers(filters))
+    offers = await get_offers(filters)
 
-    df = pd.DataFrame(offers, columns=OfferOut.fields().keys())
+    df = pd.DataFrame([offer.model_dump() for offer in offers], columns=OfferOut.fields().keys())
     df.drop(['id', 'business_id', 'group_sellers_amount'], axis=1, inplace=True, errors='ignore')
 
     df.rename(columns=OfferOut.fields(), inplace=True)
