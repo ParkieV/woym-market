@@ -101,6 +101,7 @@ def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2
 
     data = calculate_offers_values(data, settings)
     data['auto_price_control'] = False
+    data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im']].astype(str)
 
     return data
 

@@ -1,6 +1,6 @@
 from src.database import settings_db as db
 from src.database.db import async_session
-from src.schemas.settings_schemas import SettingsUpdate, ColumnUpdate, ColumnDataType, ColumnCreate
+from src.schemas.settings_schemas import SettingsUpdate, ColumnUpdate, ColumnDataType, ColumnCreate, ColumnFullUpdate
 
 columns_info = [
     ColumnCreate(
@@ -23,28 +23,28 @@ columns_info = [
         key='self_weight',
         name='Вес',
         data_type=ColumnDataType.FLOAT,
-        editable=True,
+        editable=False,
     ),
     ColumnCreate(
         index=0,
         key='self_length',
         name='Длина',
         data_type=ColumnDataType.FLOAT,
-        editable=True,
+        editable=False,
     ),
     ColumnCreate(
         index=0,
         key='self_width',
         name='Ширина',
         data_type=ColumnDataType.FLOAT,
-        editable=True,
+        editable=False,
     ),
     ColumnCreate(
         index=0,
         key='self_height',
         name='Высота',
         data_type=ColumnDataType.FLOAT,
-        editable=True,
+        editable=False,
     ),
     ColumnCreate(
         index=0,
@@ -350,7 +350,7 @@ async def update_settings(user_id: int, data: SettingsUpdate):
         return await db.update_user_settings(session, user_id, data)
 
 
-async def update_columns(user_id: int, data: list[ColumnUpdate]):
+async def update_columns(user_id: int, data: list[ColumnUpdate | ColumnFullUpdate]):
     async with async_session() as session:
         settings = await db.get_user_settings(session, user_id)
 

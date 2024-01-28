@@ -21,21 +21,10 @@ async def change_offer_fields(offers_data: list[OfferChange], current_user=Depen
     return await service.change_offers(offers_data, current_user.id)
 
 
-@offer_router.delete('', dependencies=[Depends(get_current_user)])
-async def delete_offers(offers: list[OfferDelete]):
-    await service.delete_offers(offers)
-    return {'status': 'OK'}
-
-
 @offer_router.post('/setup')
 async def setup_offers_data(current_user=Depends(get_current_user)):
     await service.setup_offers_data(current_user.id)
     return {'status': 'OK'}
-
-
-@offer_router.post('/force-update', response_model=list[OfferOut])
-async def test_update(current_user=Depends(get_current_user)):
-    return await service.update_offers(current_user.id)
 
 
 @offer_router.get('/xlsx')

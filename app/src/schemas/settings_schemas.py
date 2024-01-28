@@ -55,4 +55,8 @@ class ColumnCreate(ColumnOut):
     pass
 
 
+class ColumnFullUpdate(ColumnOut):
+    pass
+
+
 

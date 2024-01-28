@@ -204,7 +204,7 @@ class YandexMarketAPI:
                         'minimum_group_price', 'best_place_wm', 'best_price_wm', 'best_place_im',
                         'best_price_im']] = df.iloc[:, [0, 5, 6, 10, 11, 12, 13, 14]]
                 new_df.replace({'–': np.nan}, inplace=True)
-                new_df[['best_place_wm', 'best_place_im']].astype(str)
+                new_df[['best_place_wm', 'best_place_im']] = new_df[['best_place_wm', 'best_place_im']].fillna('')
 
                 result = new_df.to_dict('records')
                 result = {
@@ -224,4 +224,4 @@ class YandexMarketAPI:
             elif data['result']['status'] == 'FAILED':
                 self._raise_error(response.reason, response.status_code)
 
-            await asyncio.sleep(10)
+            await asyncio.sleep(5)
