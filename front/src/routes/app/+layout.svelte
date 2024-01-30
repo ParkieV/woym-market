@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { ModalKind } from "./Modals.svelte";
     import Modals from "./Modals.svelte";
-    import Sidebar from "./Sidebar.svelte";
+    import Sidebar from "$lib/components/sidebar/Sidebar.svelte";
     import { setContext } from "svelte";
 
     let modals: ModalKind[] = [];
