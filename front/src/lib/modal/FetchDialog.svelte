@@ -7,7 +7,6 @@
     export let open: boolean = true;
     export let header: string;
     export let errorHeader: string;
-    export let errorText: string;
     export let promise: Promise<Response>;
 
     let dispatch = createEventDispatcher<{ close: void }>();
@@ -19,30 +18,32 @@
     };
 
     onMount(() => {
-        promise.then(response => {
+        promise.then(async response => {
             if (response.ok) {
                 close();
             } else {
-                state = "reject";
+                let body = await response.json();
+                state = { kind: "reject", detail: body.detail };
             }
         });
         promise.catch(() => {
-            state = "reject";
+            state = { kind: "reject", detail: "Не удалось достичь сервера." };
         });
     });
 
-    let state: "waiting" | "reject" = "waiting";
+    let state: State = { kind: "waiting" };
+    type State = { kind: "waiting" } | { kind: "reject"; detail: string };
 </script>
 
 <Modal {open}>
-    <div class="content" class:waiting={state == "waiting"}>
-        {#if state == "reject"}
+    <div class="content" class:waiting={state.kind == "waiting"}>
+        {#if state.kind == "reject"}
             <h1>{errorHeader}</h1>
-            <span>{errorText}</span>
+            <span>{state.detail}</span>
             <footer>
                 <button on:click={close}>Ок</button>
             </footer>
-        {:else if state == "waiting"}
+        {:else if state.kind == "waiting"}
             <h1>{header}</h1>
             <Loader size={"24px"} />
         {/if}

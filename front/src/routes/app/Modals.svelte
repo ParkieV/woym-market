@@ -8,7 +8,6 @@
               promise: Promise<any>;
               header: string;
               errorHeader: string;
-              errorText: string;
           };
 </script>
 
@@ -55,7 +54,7 @@
             on:close={close}
         />
     {:else if modal.kind == "await"}
-        {@const { header, promise, errorHeader, errorText } = modal}
-        <FetchDialog {header} {promise} {errorHeader} {errorText} on:close={close} />
+        {@const { header, promise, errorHeader } = modal}
+        <FetchDialog {header} {promise} {errorHeader} on:close={close} />
     {/if}
 {/if}
