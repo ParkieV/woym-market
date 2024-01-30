@@ -38,7 +38,7 @@ def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
     data = calculate_price(data)
 
     data['profit'] = data['current_price'] - data['fby'] - data['cost_price']
-    data['margin'] = data['cost_price'] * 100 / data['profit']
+    data['margin'] = data['profit'] / data['cost_price'] * 100
     data['discount_base_price'] = data['current_price'] * 1.2
 
     return data
@@ -76,8 +76,8 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     # прибовляем 5% если магазин с лучшей ценой это текущий магазин
     df['target_price'] = np.where(
         (df['best_place_im'] == df['name_of_shop']) & (df['best_price_im'] == df['target_price']),
-        df['target_price'] * 1.05,
-        df['target_price']
+        round(df['target_price'] * 1.05, 2),
+        round(df['target_price'], 2)
     )
     return df
 

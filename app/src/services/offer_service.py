@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Any
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.database.db import async_session
 from src.database import offer_db as db
 import src.services.offer_utils as utils
@@ -49,60 +49,57 @@ async def setup_offers_data(user_id: int):
 async def update_offers(user_id: int):
     settings = await get_settings(user_id)
 
-    db_offers = await get_offers()
+    mapping_fields = ['sku', 'name_of_shop', 'market']
+
     yandex_offers = await yandex_repository.get_offers()
+    db_offers = await get_offers()
 
     offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
     yandex_offers_df = pd.DataFrame(yandex_offers)
 
-    db_offers_skus = set(offers_df['sku'])
-    yandex_offers_skus = set(yandex_offers_df['sku'])
+    offers_db_identifiers = set([tuple(i.values()) for i in offers_df[mapping_fields].to_dict('records')])
+    yandex_offers_identifiers = set([tuple(i.values()) for i in yandex_offers_df[mapping_fields].to_dict('records')])
 
-    to_delete_skus = db_offers_skus - yandex_offers_skus
-    offers_df = offers_df[~offers_df['sku'].isin(to_delete_skus)]
+    to_update = offers_db_identifiers & yandex_offers_identifiers
+    to_create = yandex_offers_identifiers - offers_db_identifiers
+    to_delete = offers_db_identifiers - yandex_offers_identifiers
 
-    to_create_skus = yandex_offers_skus - db_offers_skus
-    temp1 = yandex_offers_df[yandex_offers_df['sku'].isin(to_create_skus)]
-    temp = utils.build_offers_data(temp1, settings, setup_mode=True)
-    to_create_rows = pd.DataFrame(temp)
-    offers_df = pd.concat([offers_df, to_create_rows], ignore_index=True)
-
-    updated_offers = utils.update_offers_data(offers_df, yandex_offers_df, settings)
+    to_update_df = pd.merge(yandex_offers_df, pd.DataFrame(to_update, columns=mapping_fields), how='inner')
+    to_create_df = pd.merge(yandex_offers_df, pd.DataFrame(to_create, columns=mapping_fields), how='inner')
+    to_create_df = utils.build_offers_data(to_create_df, settings, setup_mode=True)
+    to_delete_df = pd.DataFrame(to_delete, columns=mapping_fields)
 
     async with async_session() as session:
-        await db.delete_offers(session, to_delete_skus)
-        await db.create_offers(session, to_create_rows)
-        await db.update_offers(session, updated_offers, mapping_columns=['name_of_shop'])
+        await db.create_offers(session, to_create_df)
+        await db.update_offers(session, to_update_df, mapping_columns=['name_of_shop', 'market'])
+        await db.delete_offers(session, to_delete_df)
+        await recalculate_values(session, settings)
+        await update_yandex_offers_price(session)
+        await recalculate_values(session, settings)
 
-    await update_yandex_offers_price()
     await update_logs(user_id, {'updated_at': datetime.now()})
-
-    return updated_offers.to_dict('records')
 
 
 async def delete_offers(offers: list[OfferDelete]):
     async with async_session() as session:
-        return await db.delete_offers(session, [i.sku for i in offers])
+        return await db.delete_offers(session, [offer.model_dump() for offer in offers])
 
 
-async def update_yandex_offers_price():
-    async with async_session() as session:
-        offers_db = await db.get_offers(session)
-        offers_df = pd.DataFrame([offer.model_dump() for offer in offers_db])
-        offers_df = utils.calculate_price(offers_df)
-        json_data = offers_df.to_dict('records')
-        await yandex_repository.change_prices(json_data)
-        await db.update_offers(session, json_data, mapping_columns=['name_of_shop'])
+async def update_yandex_offers_price(session: AsyncSession):
+    offers_db = await db.get_offers(session)
+    offers_df = pd.DataFrame([offer.model_dump() for offer in offers_db])
+    data = offers_df.to_dict('records')
+    await yandex_repository.change_prices(data)
+    await db.update_offers(session, data, mapping_columns=['name_of_shop'])
 
 
-async def recalculate_values(settings):
+async def recalculate_values(session: AsyncSession, settings):
     offers = await get_offers()
     df = pd.DataFrame([offer.model_dump() for offer in offers])
     df = utils.calculate_offers_values(df, settings)
     df.drop('id', axis=1, inplace=True, errors='ignore')
 
-    async with async_session() as session:
-        await db.update_offers(session, df, mapping_columns=['sku', 'name_of_shop'])
+    await db.update_offers(session, df, mapping_columns=['sku', 'name_of_shop'])
 
 
 async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None, user_id: int, file_extension: str = 'xlsx') -> None:
@@ -180,8 +177,7 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
 
     async with async_session() as session:
         await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
-
-    await recalculate_values(settings)
+        await recalculate_values(session, settings)
 
 
 async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
@@ -210,8 +206,7 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
 
     async with async_session() as session:
         await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
-
-    await recalculate_values(settings)
+        await recalculate_values(session, settings)
 
 
 async def export_data(market: Market, export_type: ExportType, name_of_shop: str | None):

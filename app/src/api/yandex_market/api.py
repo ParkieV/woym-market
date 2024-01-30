@@ -56,14 +56,16 @@ class YandexMarketAPI:
 
         return result
 
-    def check_response(self, response: Response, raise_error: bool = True):
+    def check_response(self, response: Response, raise_error: bool = True, body: Any = None):
         if response.status_code != 200:
             if raise_error:
-                self._raise_error(response.reason, response.status_code)
+                self._raise_error(response.json(), response.status_code, body)
+            else:
+                print(response.reason, response.status_code, response.json(), body)
 
-    def _raise_error(self, detail: str, status_code: int = 500):
+    def _raise_error(self, detail: str, status_code: int = 500, body: Any = None):
         # TODO write logs
-        raise HTTPException(status_code, detail)
+        raise HTTPException(status_code, detail, body)
 
     def get_campaigns(self) -> [CampaignInfo]:
         response = self.session.get('https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
@@ -154,12 +156,12 @@ class YandexMarketAPI:
                 data = [{
                     'offerId': offer['sku'],
                     'price': {
-                        'value': offer['target_price'],
+                        'value': round(offer['target_price'], 2),
                         'currencyId': "RUR"
                     }
                 }
                     for offer in _offers[i:i + chunk_size] if
-                    offer['target_price'] is not None and offer['auto_price_control']]
+                    (offer['target_price'] is not None and not np.isnan(offer['target_price'])) and offer['auto_price_control']]
                 body = {
                     'offers': data
                 }
@@ -172,7 +174,7 @@ class YandexMarketAPI:
                     headers=self.auth_headers,
                     json=body
                 )
-                self.check_response(response)
+                self.check_response(response, body=body, raise_error=False)
 
     def _download_report(self, url_path: str) -> pd.DataFrame:
         output = BytesIO()

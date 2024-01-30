@@ -25,9 +25,14 @@ async def create_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) 
     await session.commit()
 
 
-async def delete_offers(session: AsyncSession, offers_sku: Iterable[str]) -> None:
-    query = delete(Offer).where(Offer.sku.in_(offers_sku))
-    await session.execute(query)
+async def delete_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) -> None:
+    if isinstance(data, pd.DataFrame):
+        data = data.to_dict('records')
+
+    for offer in data:
+        query = delete(Offer).filter_by(**offer)
+        await session.execute(query)
+
     await session.commit()
 
 

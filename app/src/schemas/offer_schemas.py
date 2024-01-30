@@ -101,6 +101,8 @@ class OfferChange(BaseModel):
 
 class OfferDelete(BaseModel):
     sku: str
+    name_of_shop: str
+    market: str
 
 
 class Market(str, Enum):

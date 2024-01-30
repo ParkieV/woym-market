@@ -16,13 +16,16 @@ async def delete_offers(offers: list[OfferDelete]):
     return {'status': 'OK'}
 
 
-@debug_router.post('/offers/force-update', response_model=list[OfferOut])
-async def test_update(current_user=Depends(get_current_user)):
-    return await offer_service.update_offers(current_user.id)
+@debug_router.post('/offers/force-update')
+async def force_update(current_user=Depends(get_current_user)):
+    await offer_service.update_offers(current_user.id)
+    return {'status': 'OK'}
 
 
 @debug_router.put('/columns')
 async def full_update_columns(data: list[ColumnFullUpdate], current_user=Depends(get_current_user)):
     await settings_service.update_columns(current_user.id, data)
     return {'status': 'OK'}
+
+
 
