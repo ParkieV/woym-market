@@ -1,15 +1,22 @@
 <script lang="ts">
     import { fetchUserInfo, patchUserInfo, type Settings } from "$lib/data/settings";
-    import { onMount } from "svelte";
+    import { getContext, onMount } from "svelte";
+    import type { ModalKind } from "../Modals.svelte";
+
+    const addModal = getContext<(modal: ModalKind) => void>("addModal");
 
     let settings: Settings | undefined = undefined;
 
     async function ok() {
-        try {
-            if (settings) await patchUserInfo(settings);
-        } catch {
-            alert("Произошла ошибка при обновлении настроек.");
-        }
+        if (!settings) return;
+        let promise = patchUserInfo(settings);
+        addModal({
+            kind: "await",
+            promise,
+            header: "Сохранение изменений",
+            errorHeader: "Ошибка!",
+            errorText: "Произошла ошибка при обновлении настроек."
+        });
     }
 
     onMount(async () => {

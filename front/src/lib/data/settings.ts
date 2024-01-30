@@ -13,7 +13,7 @@ export type Logs = {
     updated_at: string | null;
 };
 
-export async function patchUserInfo(val: Settings): Promise<void> {
+export async function patchUserInfo(val: Settings): Promise<Response> {
     let init: RequestInit = {
         method: "PATCH",
         body: JSON.stringify(val),
@@ -21,7 +21,7 @@ export async function patchUserInfo(val: Settings): Promise<void> {
             "Content-Type": "application/json"
         }
     };
-    await fetchAuthenticated("settings", init);
+    return fetchAuthenticated("settings", init);
 }
 
 export async function fetchUserInfo(): Promise<Settings> {
