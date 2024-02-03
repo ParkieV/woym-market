@@ -3,6 +3,35 @@ from abc import ABC
 from enum import Enum
 
 
+class BasePricingScheme(BaseModel):
+    name: str
+    use_total_price: bool = False
+    use_attractive_price_threshold: bool = False
+    use_moderately_attractive_price_threshold: bool = False
+    use_your_price_for_buyers: bool = False
+    use_best_price_wm: bool = False
+    use_best_price_im: bool = False
+    use_minimum_group_price: bool = False
+    n: float = 1
+    m: float = 0
+
+    @staticmethod
+    def active_fields(dump: dict):
+        return [k.replace('use_', '', 1) for k, v in dump.items() if k.startswith('use_') and v == True]
+
+
+class PricingSchemeCreate(BasePricingScheme):
+    pass
+
+
+class PricingSchemeOut(BasePricingScheme):
+    id: int
+
+
+class PricingSchemeChange(PricingSchemeOut):
+    pass
+
+
 class BaseModelFields(ABC):
     skip_fields = []
 
@@ -43,7 +72,7 @@ class OfferOut(BaseModel, BaseModelFields):
 
     # countable/editable values
     dollar_cost_price: float | None = Field(title='Закупка у. е.', default=0)
-    total_price_coeff: float  = Field(title='Коэфициент расчетной цены')
+    total_price_coeff: float = Field(title='Коэфициент расчетной цены')
     cost_price: float | None = Field(title='Себестоимость (Закупка у. е. * курс)')
     total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену')
     total_price: float | None = Field(title='Расчетная цена (Закупка * коэф. ?+ мин. наценка)')
@@ -58,6 +87,7 @@ class OfferOut(BaseModel, BaseModelFields):
     best_price_wm: float | None = Field(title='Цена площадки (без учета Маркета)')
     best_place_im: str | None = Field(title='Площадка с лучшей ценой (на Маркете)')
     best_price_im: float | None = Field(title='Цена площадки (на Маркете)')
+    your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
     minimum_group_price: float | None = Field(title='Минимальная цена в группе')
 
     current_price: float | None = Field(title='Текущая цена')
@@ -68,13 +98,17 @@ class OfferOut(BaseModel, BaseModelFields):
     note_2: str = Field('', title='Примечание 2')
     note_3: str = Field('', title='Примечание 3')
 
-    use_manual_min_price: bool = Field(True, title='Использовать ручную мин. цену') # использовать ли автоматический расчет нижней планки цены
-    auto_min_price: float = Field(title='Авто мин. цена %') # в процентах
+    use_manual_min_price: bool = Field(True,
+                                       title='Использовать ручную мин. цену')  # использовать ли автоматический расчет нижней планки цены
+    auto_min_price: float = Field(title='Авто мин. цена %')  # в процентах
     manual_min_price: float | None = Field(None, title='Ручная мин. цена')
 
     auto_price_control: bool = Field(False, title='Авто контроль цен')
 
     hidden: bool = Field(False, title='Скрыт')
+
+    pricing_scheme: PricingSchemeOut | None = None
+    pricing_scheme_id: int | None
 
     class Config:
         orm_mode = True
@@ -83,7 +117,13 @@ class OfferOut(BaseModel, BaseModelFields):
 class OfferChange(BaseModel):
     sku: str
     name_of_shop: str
-    dollar_cost_price: float
+
+    self_weight: float | None
+    self_length: float | None
+    self_width: float | None
+    self_height: float | None
+
+    dollar_cost_price: float | None
     total_price_min_additional: float = 200
     total_price_coeff: float = 2.4
 
@@ -91,10 +131,11 @@ class OfferChange(BaseModel):
     note_2: str = ''
     note_3: str = ''
 
-    use_manual_min_price: bool = True # использовать ли автоматический расчет нижней планки цены
-    auto_min_price: float = 100 # в процентах
+    use_manual_min_price: bool = True  # использовать ли автоматический расчет нижней планки цены
+    auto_min_price: float = 100  # в процентах
     manual_min_price: float | None = None
-    auto_price_control: bool = False # ручное управление ценами
+    auto_price_control: bool = False  # ручное управление ценами
+    pricing_scheme_id: int | None
 
     hidden: bool = False
 
@@ -122,7 +163,3 @@ class ExportType(str, Enum):
     TABLE = 'table'
     MATRIX_STOCKS = 'matrix-stocks'
     MATRIX_OFFERS = 'matrix-offers'
-
-
-
-

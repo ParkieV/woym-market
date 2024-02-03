@@ -1,8 +1,8 @@
 import pandas as pd
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
-from src.schemas.offer_schemas import OfferOut
-from .models.models import Offer
+from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate
+from .models.models import Offer, PricingScheme
 from typing import Iterable, Any
 
 
@@ -41,7 +41,7 @@ async def update_offers(
         data: list[dict] | pd.DataFrame,
         mapping_columns: list[str] | None = None,
         filters: dict[str, Any] | None = None,
-        endswith_sku: bool = False
+        endswith_sku: bool = False,
 ) -> None:
     if isinstance(data, pd.DataFrame):
         data = data.to_dict('records')
@@ -83,3 +83,52 @@ async def get_offers_by_sku_and_shop_name(session: AsyncSession, data: list[tupl
         result.append(offers_db.unique().scalars().one())
 
     return [OfferOut.model_validate(offer, from_attributes=True) for offer in result]
+
+
+async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.DataFrame):
+    if isinstance(data, pd.DataFrame):
+        data = data.to_dict('records')
+
+    result = []
+    for offer_data in data:
+        query = select(Offer).filter_by(**offer_data)
+        query_result = await session.execute(query)
+        result.append(OfferOut.model_validate(query_result.scalar_one(), from_attributes=True))
+
+    return result
+
+
+async def create_pricing_scheme(session: AsyncSession, data: PricingSchemeCreate | dict) -> PricingSchemeOut:
+    if isinstance(data, PricingSchemeCreate):
+        data = data.model_dump()
+
+    scheme_db = PricingScheme(**data)
+    session.add(scheme_db)
+    await session.commit()
+    await session.refresh(scheme_db)
+
+    return PricingSchemeOut.model_validate(scheme_db, from_attributes=True)
+
+
+async def delete_pricing_scheme(session: AsyncSession, data: list[int]):
+    query = delete(PricingScheme).where(PricingScheme.id.in_(data))
+    await session.execute(query)
+    await session.commit()
+
+
+async def get_pricing_schemes(session: AsyncSession) -> list[PricingSchemeOut]:
+    query = select(PricingScheme)
+    scheme_db = await session.execute(query)
+
+    return [PricingSchemeOut.model_validate(scheme, from_attributes=True) for scheme in
+            scheme_db.unique().scalars().all()]
+
+
+async def change_pricing_scheme(session: AsyncSession, data: PricingSchemeChange | dict):
+    if isinstance(data, PricingSchemeChange):
+        data = data.model_dump()
+
+    query = update(PricingScheme).where(PricingScheme.id == data['id']).values(**data)
+    await session.execute(query)
+    await session.commit()
+

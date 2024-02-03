@@ -50,34 +50,42 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     # не меняем цену
     # sub_data_1 = data[data['auto_price_control'] == False]
     # sub_data_1.loc[:, 'target_price'] = sub_data_1['target_price']
+    data['scheme_result'] = data.apply(lambda row: sum(row[i] for i in row['sum_fields']), axis=1) / data['n']
+    data['scheme_result'] = data['scheme_result'] + data['scheme_result'] * data['n'] / 100
 
+    data['min_level'] = np.where(
+        ( (data['scheme_result'] < data['best_price_im']) | (np.isnan(data['scheme_result'])) ),
+        data['best_price_im'],
+        data['scheme_result']
+    )
 
     # используем ручную мин планку
     sub_data_2 = data[data['use_manual_min_price'] == True]
     sub_data_2.loc[:, 'target_price'] = np.where(
         sub_data_2['current_price'] >= sub_data_2['best_price_im'],
-        sub_data_2[['best_price_im', 'manual_min_price']].max(axis=1),
-        sub_data_2[['total_price', 'best_price_im']].min(axis=1)
+        sub_data_2[['min_level', 'manual_min_price']].max(axis=1),
+        sub_data_2[['total_price', 'min_level']].min(axis=1)
     )
-
+    # total_price = верхняя планка
     #  используем автоматическую мин планку
     sub_data_3 = data[data['use_manual_min_price'] == False]
     sub_data_3['temp_auto_min_price'] = sub_data_3['total_price'] * sub_data_3['auto_min_price'] / 100
     sub_data_3.loc[:, 'target_price'] = np.where(
         sub_data_3['current_price'] >= sub_data_3['best_price_im'],
-        sub_data_3[['best_price_im', 'temp_auto_min_price']].max(axis=1),
-        sub_data_3[['total_price', 'best_price_im']].min(axis=1)
+        sub_data_3[['min_level', 'temp_auto_min_price']].max(axis=1),
+        sub_data_3[['total_price', 'min_level']].min(axis=1)
     )
     sub_data_3.drop('temp_auto_min_price', axis=1, inplace=True)
 
     df = pd.concat([sub_data_2, sub_data_3])
     df.reset_index(drop=True, inplace=True)
+    df.drop(['scheme_result', 'min_level'], axis=1, inplace=True)
 
     # прибовляем 5% если магазин с лучшей ценой это текущий магазин
     df['target_price'] = np.where(
-        (df['best_place_im'] == df['name_of_shop']) & (df['best_price_im'] == df['target_price']),
-        round(df['target_price'] * 1.05, 2),
-        round(df['target_price'], 2)
+        (df['best_place_im'] == df['name_of_shop']) & (round(df['best_price_im']) == round(df['target_price'])),
+        round(df['target_price'] * 1.05),
+        round(df['target_price'])
     )
     return df
 
@@ -85,9 +93,14 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
 def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False) -> pd.DataFrame:
     data = data.copy()
 
+    if data.empty:
+        return data
+
     if setup_mode:
         data['dollar_cost_price'] = np.nan  # закупка
         data[['self_weight', 'self_length', 'self_width', 'self_height']] = np.nan
+        data[['n', 'm']] = np.nan
+        data['sum_fields'] = []
 
     data['total_price_coeff'] = total_price_coeff
     data['total_price_min_additional'] = total_price_min_additional
@@ -102,6 +115,7 @@ def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2
     data = calculate_offers_values(data, settings)
     data['auto_price_control'] = False
     data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im']].astype(str)
+    data.drop(['n', 'm', 'sum_fields'], inplace=True, axis=1)
 
     return data
 

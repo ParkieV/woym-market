@@ -5,7 +5,7 @@ from fastapi.responses import ORJSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
-from src.routers.offer_router import offer_router
+from src.routers.offer_router import data_router
 from src.routers.debug_router import debug_router
 from src.routers.settings_router import settings_router
 from src.database.db import db_create
@@ -54,7 +54,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(settings_router)
-app.include_router(offer_router)
+app.include_router(data_router)
 app.include_router(debug_router)
 
 

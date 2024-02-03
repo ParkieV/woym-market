@@ -28,6 +28,8 @@ class YandexOfferInfo(YandexOfferInfoPartial):
     best_place_im: str | None
     best_price_im: float | None
     minimum_group_price: float | None
+    your_price_for_buyers: float | None
+
     market: str = 'yandex'
 
 

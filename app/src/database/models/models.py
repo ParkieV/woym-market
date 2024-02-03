@@ -83,6 +83,7 @@ class Offer(Base):
     best_price_wm = Column(Float, nullable=True)
     best_place_im = Column(String, nullable=True)
     best_price_im = Column(Float, nullable=True)
+    your_price_for_buyers = Column(Float, nullable=True)
     minimum_group_price = Column(Float, nullable=True)
 
     current_price = Column(Float, nullable=True)
@@ -99,6 +100,9 @@ class Offer(Base):
     auto_price_control = Column(Boolean, default=False, nullable=False)
 
     hidden = Column(Boolean, default=False, nullable=False)
+
+    pricing_scheme_id = Column(Integer, ForeignKey('pricing_schemes.id'), nullable=True, default=None)
+    pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
 
 
 class Logs(Base):
@@ -126,4 +130,23 @@ class ColumnInfo(Base):
     pinned = Column(Boolean, default=False)
     tooltip = Column(String, default='')
 
+
+class PricingScheme(Base):
+    __tablename__ = 'pricing_schemes'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    name = Column(String, nullable=False)
+
+    use_total_price = Column(Boolean, default=False, nullable=False)
+    use_attractive_price_threshold = Column(Boolean, default=False, nullable=False)
+    use_moderately_attractive_price_threshold = Column(Boolean, default=False, nullable=False)
+    use_your_price_for_buyers = Column(Boolean, default=False, nullable=False)
+    use_best_price_wm = Column(Boolean, default=False, nullable=False)
+    use_best_price_im = Column(Boolean, default=False, nullable=False)
+    use_minimum_group_price = Column(Boolean, default=False, nullable=False)
+
+    n = Column(Float, default=1, nullable=False)
+    m = Column(Float, default=0, nullable=False)
+
+    offers = relationship(Offer, back_populates='pricing_scheme')
 

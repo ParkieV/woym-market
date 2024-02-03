@@ -48,6 +48,7 @@ class YandexMarketAPI:
                     best_place_im=report_line.get('best_place_im', ''),
                     best_price_im=report_line.get('best_price_im', 0),
                     minimum_group_price=report_line.get('minimum_group_price', 0),
+                    your_price_for_buyers=report_line.get('your_price_for_buyers', 0),
                     group_sellers_amount=0,
                     remaining_stock=stocks.get(offer.sku, 0),
                     name_of_shop=campaign.business.name,
@@ -203,8 +204,8 @@ class YandexMarketAPI:
                 df.drop([0, 1, 2, 3], inplace=True)
                 new_df = pd.DataFrame()
                 new_df[['sku', 'attractive_price_threshold', 'moderately_attractive_price_threshold',
-                        'minimum_group_price', 'best_place_wm', 'best_price_wm', 'best_place_im',
-                        'best_price_im']] = df.iloc[:, [0, 5, 6, 10, 11, 12, 13, 14]]
+                        'your_price_for_buyers', 'minimum_group_price', 'best_place_wm', 'best_price_wm', 'best_place_im',
+                        'best_price_im']] = df.iloc[:, [0, 6, 7, 8, 11, 12, 13, 14, 15]]
                 new_df.replace({'–': np.nan}, inplace=True)
                 new_df[['best_place_wm', 'best_place_im']] = new_df[['best_place_wm', 'best_place_im']].fillna('')
 
@@ -218,6 +219,7 @@ class YandexMarketAPI:
                         'best_price_wm': i['best_price_wm'],
                         'best_place_im': str(i['best_place_im']).replace(' • FBY', '').replace(' • FBS', ''),
                         'best_price_im': i['best_price_im'],
+                        'your_price_for_buyers': i['your_price_for_buyers']
                     }
                     for i in result
                 }
