@@ -1,9 +1,21 @@
+import numpy as np
 import pandas as pd
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate
 from .models.models import Offer, PricingScheme
 from typing import Iterable, Any
+
+
+def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
+    '''Converts data to a valid sqlalchemy entry. If data is not a DataFrame, returns data'''
+    if not isinstance(data, pd.DataFrame):
+        return data
+
+    data = data.copy()
+    data = data.replace(np.nan, None)
+    data = data.to_dict('records')
+    return data
 
 
 async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None) -> list[OfferOut]:
@@ -17,8 +29,7 @@ async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = Non
 
 
 async def create_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) -> None:
-    if isinstance(data, pd.DataFrame):
-        data = data.to_dict('records')
+    data = _dataframe_to_valid_dict(data)
 
     offers_db = [Offer(**offer_data) for offer_data in data]
     session.add_all(offers_db)
@@ -26,8 +37,7 @@ async def create_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) 
 
 
 async def delete_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) -> None:
-    if isinstance(data, pd.DataFrame):
-        data = data.to_dict('records')
+    data = _dataframe_to_valid_dict(data)
 
     for offer in data:
         query = delete(Offer).filter_by(**offer)
@@ -43,8 +53,7 @@ async def update_offers(
         filters: dict[str, Any] | None = None,
         endswith_sku: bool = False,
 ) -> None:
-    if isinstance(data, pd.DataFrame):
-        data = data.to_dict('records')
+    data = _dataframe_to_valid_dict(data)
 
     for offer in data:
         if 'id' in offer.keys():
@@ -75,19 +84,8 @@ async def get_offers_by_sku(session: AsyncSession, skus: list[str]) -> list[Offe
     return [OfferOut.model_validate(offer, from_attributes=True) for offer in offers_db.unique().scalars().all()]
 
 
-async def get_offers_by_sku_and_shop_name(session: AsyncSession, data: list[tuple[str, str]]):
-    result = []
-    for offer in data:
-        query = select(Offer).where((Offer.sku == offer[0]) & (Offer.name_of_shop == offer[1]))
-        offers_db = await session.execute(query)
-        result.append(offers_db.unique().scalars().one())
-
-    return [OfferOut.model_validate(offer, from_attributes=True) for offer in result]
-
-
 async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.DataFrame):
-    if isinstance(data, pd.DataFrame):
-        data = data.to_dict('records')
+    data = _dataframe_to_valid_dict(data)
 
     result = []
     for offer_data in data:
@@ -125,7 +123,7 @@ async def get_pricing_schemes(session: AsyncSession) -> list[PricingSchemeOut]:
 
 
 async def change_pricing_scheme(session: AsyncSession, data: PricingSchemeChange | dict):
-    if isinstance(data, PricingSchemeChange):
+    if isinstance(data, PricingSchemeCreate):
         data = data.model_dump()
 
     query = update(PricingScheme).where(PricingScheme.id == data['id']).values(**data)

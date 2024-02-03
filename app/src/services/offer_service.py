@@ -25,20 +25,11 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
     settings = await get_settings(user_id)
 
     async with async_session() as session:
-
-        # offers = await db.get_offers_by_sku_and_shop_name(session, [(i.sku, i.name_of_shop,) for i in offers_data])
-        #
-        # offers_df = pd.DataFrame([offer.model_dump() for offer in offers])
-        # changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
-        #
-        # changed_offers = utils.update_offers_data(offers_df, changes, settings)
-        # await db.update_offers(session, changed_offers, mapping_columns=['name_of_shop'])
-        # return await db.get_offers_by_sku_and_shop_name(session, [(i.sku, i.name_of_shop,) for i in offers_data])
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
 
-        await db.update_offers(session, changes, mapping_columns=['name_of_shop'])
-        await recalculate_values(session, settings, which=changes[['sku', 'name_of_shop']])
-        return await db.get_offers_by(session, changes[['sku', 'name_of_shop']])
+        await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'])
+        await recalculate_values(session, settings, which=changes[['sku', 'name_of_shop', 'market']])
+        return await db.get_offers_by(session, changes[['sku', 'name_of_shop', 'market']])
 
 
 async def setup_offers_data(user_id: int):
@@ -122,7 +113,6 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
     df = pd.DataFrame(data)
     df = utils.calculate_offers_values(df, settings)
     df.drop(['id', 'sum_fields', 'n', 'm'], axis=1, inplace=True, errors='ignore')
-    df['pricing_scheme_id'] = df['pricing_scheme_id'].replace(np.nan, None)
 
     await db.update_offers(session, df, mapping_columns=['sku', 'name_of_shop'])
 
@@ -162,18 +152,12 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
     if market:
         df = df[df['market'] == market]
 
-    db_offers = await get_offers()
-    offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
-
-    columns_to_change = list(set(df.columns) & set(offers_df.columns))
+    columns_to_change = list(set(df.columns) & set(OfferOut.fields().keys()))
     df = df[columns_to_change]
-    df = df[df['sku'].isin(offers_df['sku'])]
-    offers_df = offers_df[offers_df['sku'].isin(df['sku'])]
-
-    changes = utils.update_offers_data(offers_df, df, settings)
 
     async with async_session() as session:
-        await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
+        await db.update_offers(session, df, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
+        await recalculate_values(session, settings, df[['sku', 'name_of_shop', 'market']])
 
 
 async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
@@ -258,8 +242,6 @@ async def export_offers(name_of_shop: str | None = None, market: str | None = No
     offers = await get_offers(filters)
 
     df = pd.DataFrame([offer.model_dump() for offer in offers], columns=OfferOut.fields().keys())
-    df.drop(['id', 'business_id', 'group_sellers_amount'], axis=1, inplace=True, errors='ignore')
-
     df.rename(columns=OfferOut.fields(), inplace=True)
     df.to_excel('data/out.xlsx', index=False)
     return 'data/out.xlsx'

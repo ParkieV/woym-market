@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import json
 from io import BytesIO
 from fastapi import HTTPException, status
 
@@ -100,7 +99,7 @@ def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2
         data['dollar_cost_price'] = np.nan  # закупка
         data[['self_weight', 'self_length', 'self_width', 'self_height']] = np.nan
         data[['n', 'm']] = np.nan
-        data['sum_fields'] = []
+        data['sum_fields'] = data.apply(lambda x: [], axis=1)
 
     data['total_price_coeff'] = total_price_coeff
     data['total_price_min_additional'] = total_price_min_additional

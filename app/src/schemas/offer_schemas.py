@@ -33,15 +33,21 @@ class PricingSchemeChange(PricingSchemeOut):
 
 
 class BaseModelFields(ABC):
-    skip_fields = []
+    _skip_fields = [
+        'group_sellers_amount',
+        'pricing_scheme',
+        'pricing_scheme_id',
+        'business_id',
+
+    ]
 
     @classmethod
     def fields(cls, *exclude):
-        return {name: field.title for name, field in cls.model_fields.items() if name not in exclude}
+        return {name: field.title for name, field in cls.model_fields.items() if name not in cls._skip_fields}
 
     @classmethod
     def reverse_fields(cls, *exclude):
-        return {field.title: name for name, field in cls.model_fields.items() if name not in exclude}
+        return {field.title: name for name, field in cls.model_fields.items() if name not in cls._skip_fields}
 
 
 class OfferOut(BaseModel, BaseModelFields):
@@ -117,6 +123,7 @@ class OfferOut(BaseModel, BaseModelFields):
 class OfferChange(BaseModel):
     sku: str
     name_of_shop: str
+    market: str
 
     self_weight: float | None
     self_length: float | None
