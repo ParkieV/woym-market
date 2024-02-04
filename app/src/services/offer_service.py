@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database.db import async_session
 from src.database import offer_db as db
 import src.services.offer_utils as utils
-from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate
+from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate, OfferOutWithPriceScheme
 import pandas as pd
 from src.api.factory import RepositoryFactory, MPTypes
 import numpy as np
@@ -34,13 +34,15 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
 
 async def setup_offers_data(user_id: int):
     settings = await get_settings(user_id)
-    base_pricing_scheme = await create_pricing_scheme(PricingSchemeCreate(name="L1"))
+
     yandex_offers = await yandex_repository.get_offers()
     yandex_offers_df = pd.DataFrame(yandex_offers)
     data = utils.build_offers_data(yandex_offers_df, setup_mode=True, settings=settings)
-    data['pricing_scheme_id'] = base_pricing_scheme.id
 
     async with async_session() as session:
+        for i in range(5):
+            await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L{i+1}'))
+
         offers_db = await db.create_offers(session, data)
         return offers_db
 
@@ -94,9 +96,9 @@ async def update_yandex_offers_price(session: AsyncSession):
 
 async def recalculate_values(session: AsyncSession, settings, which=None):
     if which is None:
-        offers = await db.get_offers(session)
+        offers = await db.get_offers(session, model_schema=OfferOutWithPriceScheme)
     else:
-        offers = await db.get_offers_by(session, which)
+        offers = await db.get_offers_by(session, which, model_schema=OfferOutWithPriceScheme)
 
     data = [offer.model_dump() for offer in offers]
     for offer in data:

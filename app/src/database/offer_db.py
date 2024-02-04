@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate
 from .models.models import Offer, PricingScheme
-from typing import Iterable, Any
+from typing import Iterable, Any, Type
 
 
 def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
@@ -18,14 +19,14 @@ def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
     return data
 
 
-async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None) -> list[OfferOut]:
+async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None, model_schema: Type[BaseModel] = OfferOut) -> list[OfferOut]:
     query = select(Offer)
 
     if filters:
         query = query.filter_by(**filters)
 
     offers = await session.execute(query)
-    return [OfferOut.model_validate(offer, from_attributes=True) for offer in offers.unique().scalars().all()]
+    return [model_schema.model_validate(offer, from_attributes=True) for offer in offers.unique().scalars().all()]
 
 
 async def create_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) -> None:
@@ -84,14 +85,14 @@ async def get_offers_by_sku(session: AsyncSession, skus: list[str]) -> list[Offe
     return [OfferOut.model_validate(offer, from_attributes=True) for offer in offers_db.unique().scalars().all()]
 
 
-async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.DataFrame):
+async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.DataFrame, model_schema: Type[BaseModel] = OfferOut):
     data = _dataframe_to_valid_dict(data)
 
     result = []
     for offer_data in data:
         query = select(Offer).filter_by(**offer_data)
         query_result = await session.execute(query)
-        result.append(OfferOut.model_validate(query_result.scalar_one(), from_attributes=True))
+        result.append(model_schema.model_validate(query_result.scalar_one(), from_attributes=True))
 
     return result
 
@@ -123,7 +124,7 @@ async def get_pricing_schemes(session: AsyncSession) -> list[PricingSchemeOut]:
 
 
 async def change_pricing_scheme(session: AsyncSession, data: PricingSchemeChange | dict):
-    if isinstance(data, PricingSchemeCreate):
+    if isinstance(data, PricingSchemeChange):
         data = data.model_dump()
 
     query = update(PricingScheme).where(PricingScheme.id == data['id']).values(**data)

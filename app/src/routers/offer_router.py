@@ -11,7 +11,7 @@ data_router = APIRouter(
 )
 
 
-@data_router.get('/offers', response_model=list[OfferOut])
+@data_router.get('/offers', response_model=list[OfferOut], dependencies=[Depends(get_current_user)])
 async def get_offers():
     return await service.get_offers()
 
@@ -36,22 +36,22 @@ async def get_self_stocks(current_user=Depends(get_current_user)):
     pass
 
 
-@data_router.patch('/self-stocks')
+@data_router.patch('/self-stocks', dependencies=[Depends(get_current_user)])
 async def change_self_stocks(current_user=Depends(get_current_user)):
     pass
 
 
-@data_router.get('/pricing-schemes', response_model=list[PricingSchemeOut])
+@data_router.get('/pricing-schemes', response_model=list[PricingSchemeOut], dependencies=[Depends(get_current_user)])
 async def get_pricing_schemes():
     return await service.get_pricing_schemes()
 
 
-@data_router.post('/pricing-schemes', response_model=PricingSchemeOut)
-async def create_pricing_scheme(data: PricingSchemeCreate):
-    return await service.create_pricing_scheme(data)
+# @data_router.post('/pricing-schemes', response_model=PricingSchemeOut)
+# async def create_pricing_scheme(data: PricingSchemeCreate):
+#     return await service.create_pricing_scheme(data)
 
 
-@data_router.patch('/pricing-schemes')
+@data_router.patch('/pricing-schemes', dependencies=[Depends(get_current_user)])
 async def change_pricing_schemes(data: PricingSchemeChange):
     await service.change_pricing_scheme(data)
     return {'status': 'OK'}
@@ -63,7 +63,7 @@ async def setup_offers_data(current_user=Depends(get_current_user)):
     return {'status': 'OK'}
 
 
-@data_router.get('/export')
+@data_router.get('/export', dependencies=[Depends(get_current_user)])
 async def export_offers(market: Market = Market.YANDEX, export_type: ExportType = ExportType.TABLE, name_of_shop: str | None = None):
     path = await service.export_data(market, export_type, name_of_shop)
     return FileResponse(path=path, filename='out.xlsx', media_type='multipart/form-data')

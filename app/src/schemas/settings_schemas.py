@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel
+from pydantic import BaseModel, json, Json
 
 
 class LogsOut(BaseModel):
@@ -31,6 +31,7 @@ class ColumnDataType(str, Enum):
     USD = 'dollar'
     PERCENT = 'percent'
     URL = 'url'
+    COMBOBOX = 'combobox'
 
 
 class BaseColumn(BaseModel):
@@ -49,6 +50,7 @@ class ColumnOut(ColumnUpdate):
     editable: bool
     tooltip: str = ''
     pinned: bool = False
+    options: Json | list[dict] | None = None
 
 
 class ColumnCreate(ColumnOut):

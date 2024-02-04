@@ -1,3 +1,5 @@
+import json
+
 from src.database import settings_db as db
 from src.database.db import async_session
 from src.schemas.settings_schemas import SettingsUpdate, ColumnUpdate, ColumnDataType, ColumnCreate, ColumnFullUpdate
@@ -311,6 +313,20 @@ columns_info = [
         name='Скрыт',
         data_type=ColumnDataType.BOOLEAN,
         editable=True,
+    ),
+    ColumnCreate(
+        index=0,
+        key='pricing_scheme_id',
+        name='Схема ценообразования',
+        data_type=ColumnDataType.COMBOBOX,
+        editable=True,
+        options=json.dumps([
+            {'name': 'L1', 'value': '1'},
+            {'name': 'L2', 'value': '2'},
+            {'name': 'L3', 'value': '3'},
+            {'name': 'L4', 'value': '4'},
+            {'name': 'L5', 'value': '5'},
+        ])
     )
 ]
 

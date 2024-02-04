@@ -42,11 +42,11 @@ class BaseModelFields(ABC):
     ]
 
     @classmethod
-    def fields(cls, *exclude):
+    def fields(cls):
         return {name: field.title for name, field in cls.model_fields.items() if name not in cls._skip_fields}
 
     @classmethod
-    def reverse_fields(cls, *exclude):
+    def reverse_fields(cls):
         return {field.title: name for name, field in cls.model_fields.items() if name not in cls._skip_fields}
 
 
@@ -113,11 +113,14 @@ class OfferOut(BaseModel, BaseModelFields):
 
     hidden: bool = Field(False, title='Скрыт')
 
-    pricing_scheme: PricingSchemeOut | None = None
     pricing_scheme_id: int | None
 
     class Config:
         orm_mode = True
+
+
+class OfferOutWithPriceScheme(OfferOut, BaseModelFields):
+    pricing_scheme: PricingSchemeOut | None = None
 
 
 class OfferChange(BaseModel):

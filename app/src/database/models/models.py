@@ -1,13 +1,14 @@
 from sqlalchemy import (
     Column,
     ForeignKey,
-    Integer, 
+    Integer,
     String,
     Boolean,
     TIMESTAMP,
     Float,
-    DateTime
+    DateTime, JSON,
 )
+from sqlalchemy_utils import JSONType
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
 
@@ -122,6 +123,7 @@ class ColumnInfo(Base):
 
     name = Column(String)
     key = Column(String, unique=True, index=True)
+    edit_key = Column(String, nullable=True, default=None)
     data_type = Column(String)
     index = Column(Integer)
     width = Column(Float, default=100)
@@ -129,6 +131,7 @@ class ColumnInfo(Base):
     is_visible = Column(Boolean, default=True)
     pinned = Column(Boolean, default=False)
     tooltip = Column(String, default='')
+    choice = Column(JSON, nullable=True, default=None)
 
 
 class PricingScheme(Base):
