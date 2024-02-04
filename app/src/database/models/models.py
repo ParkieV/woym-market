@@ -8,7 +8,6 @@ from sqlalchemy import (
     Float,
     DateTime, JSON,
 )
-from sqlalchemy_utils import JSONType
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
 
@@ -131,7 +130,7 @@ class ColumnInfo(Base):
     is_visible = Column(Boolean, default=True)
     pinned = Column(Boolean, default=False)
     tooltip = Column(String, default='')
-    choice = Column(JSON, nullable=True, default=None)
+    options = Column(JSON, nullable=True, default=None)
 
 
 class PricingScheme(Base):

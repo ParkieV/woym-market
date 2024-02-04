@@ -321,11 +321,12 @@ columns_info = [
         data_type=ColumnDataType.COMBOBOX,
         editable=True,
         options=json.dumps([
-            {'name': 'L1', 'value': '1'},
-            {'name': 'L2', 'value': '2'},
-            {'name': 'L3', 'value': '3'},
-            {'name': 'L4', 'value': '4'},
-            {'name': 'L5', 'value': '5'},
+            {'name': 'L0', 'value': None},
+            {'name': 'L1', 'value': 1},
+            {'name': 'L2', 'value': 2},
+            {'name': 'L3', 'value': 3},
+            {'name': 'L4', 'value': 4},
+            {'name': 'L5', 'value': 5},
         ])
     )
 ]
