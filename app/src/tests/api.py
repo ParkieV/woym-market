@@ -1,5 +1,3 @@
-import pytest
-from collections import Counter
 from src.api.yandex_market.api import YandexMarketAPI
 from src.services.stocks_response_handlers import WAREHOUSES, OFFERS, OFFERS_DETAIL
 
