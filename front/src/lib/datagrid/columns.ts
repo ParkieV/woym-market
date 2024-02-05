@@ -2,12 +2,15 @@ import { fetchAuthenticated } from "$lib/auth";
 import type { ColDef, GridApi } from "ag-grid-community";
 import { numberValueSetter, stringValueSetter } from "./util";
 
-export type Column = {
+export type Column =
+    | ({ data_type: "string" | "image" | "boolean" | NumberDataType } & ColumnData)
+    | ({ data_type: "combobox"; options: { value: any; name: string }[] } & ColumnData);
+
+type ColumnData = {
     id: number;
     name: string;
     tooltip: string;
     key: string;
-    data_type: DataType;
     index: number;
     width: number;
     is_visible: boolean;
@@ -15,11 +18,10 @@ export type Column = {
     pinned: boolean;
 };
 
-type DataType = "string" | "image" | "boolean" | NumberDataType;
 type NumberDataType = (typeof numberDataTypes)[number];
 
 const numberDataTypes = ["float", "int", "dollar", "ruble", "percent"] as const;
-function isNumeric(data_type: DataType): data_type is NumberDataType {
+function isNumeric(data_type: string): data_type is NumberDataType {
     return numberDataTypes.includes(data_type as any);
 }
 
@@ -40,7 +42,17 @@ export async function getColumns(init: {
             headerTooltip: col.tooltip
         };
 
-        if (isNumeric(col.data_type)) {
+        if (col.data_type == "combobox") {
+            colDef = {
+                ...colDef,
+                cellEditor: "agSelectCellEditor",
+                cellEditorParams: { values: col.options.map(x => x.value) },
+                valueFormatter: ({ value }) => {
+                    let name = col.options.find(x => x.value === value)?.name;
+                    return name ? name : "N/A";
+                }
+            };
+        } else if (isNumeric(col.data_type)) {
             let _precision = precision(col.data_type);
             let _postfix = postfix(col.data_type);
             colDef = {
@@ -92,7 +104,7 @@ export async function getColumns(init: {
 }
 
 /** Determines which postfix to use when displaying formatted value of the cell. */
-function postfix(data_type: DataType): string {
+function postfix(data_type: string): string {
     if (data_type == "percent") return "%";
     if (data_type == "dollar") return " $";
     if (data_type == "ruble") return " ₽";
@@ -105,7 +117,7 @@ function precision(data_type: NumberDataType): number {
     return 2;
 }
 
-function cellClass(editable: boolean, data_type: DataType): string[] {
+function cellClass(editable: boolean, data_type: string): string[] {
     let classes = [];
     if (editable) classes.push("editable");
     if (isNumeric(data_type)) classes.push("ag-right-aligned-cell");
@@ -132,7 +144,6 @@ export async function patchColumns(grid: GridApi) {
             width: column.getActualWidth()
         };
     });
-    console.log(patches);
 
     await fetchAuthenticated("settings/columns", {
         method: "PATCH",
