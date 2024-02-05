@@ -7,7 +7,7 @@
     export let open: boolean = true;
     export let header: string;
     export let errorHeader: string;
-    export let promise: Promise<Response>;
+    export let promise: Promise<Response | Response[]>;
 
     let dispatch = createEventDispatcher<{ close: void }>();
 

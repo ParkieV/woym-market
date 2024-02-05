@@ -16,6 +16,7 @@
     <Link text="Остатки" icon="/package.svg" path="/app/storage" />
     <Link text="Яндекс" icon="/yandex.svg" path="/app/storage/yandex" />
     <Spacer />
+    <Link text="Шаблоны цен" icon="/math.svg" path="/app/templates" />
     <Link text="Настройки" icon="/gear.svg" path="/app/settings" />
     <Link text="Выход" icon="/sign-out.svg" path="/auth" on:click={logout} />
 </nav>
