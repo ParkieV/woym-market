@@ -19,12 +19,21 @@
 
     onMount(() => {
         promise.then(async response => {
-            if (response.ok) {
-                close();
+            let _response;
+            if (!Array.isArray(response)) {
+                _response = [response];
             } else {
-                let body = await response.json();
-                state = { kind: "reject", detail: body.detail };
+                _response = response;
             }
+
+            for (const response of _response) {
+                if (!response.ok) {
+                    let body = await response.json();
+                    state = { kind: "reject", detail: body.detail };
+                    return;
+                }
+            }
+            close();
         });
         promise.catch(() => {
             state = { kind: "reject", detail: "Не удалось достичь сервера." };
