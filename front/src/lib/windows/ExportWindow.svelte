@@ -23,7 +23,7 @@
         if (data.name_of_shop === undefined) {
             delete data.name_of_shop;
         }
-        let url = "offers/xlsx?" + new URLSearchParams(data);
+        let url = "data/export?" + new URLSearchParams(data);
 
         let promise = fetchAuthenticated(url);
         open = false;

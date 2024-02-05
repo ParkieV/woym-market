@@ -93,7 +93,7 @@ export type Offer = {
 type OfferPatch = { sku: string } & Partial<Offer>;
 
 export async function fetchOfferList(): Promise<Offer[]> {
-    let offers = await (await fetch(BaseUrl + "offers")).json();
+    let offers = await (await fetchAuthenticated("data/offers")).json();
     return offers;
 }
 
@@ -105,7 +105,7 @@ export async function patchOfferList(changed: Offer[]): Promise<void> {
         offer.note_3 = offer.note_3 ? offer.note_3 : "";
     }
 
-    await fetchAuthenticated("offers", {
+    await fetchAuthenticated("data/offers", {
         method: "PATCH",
         body: JSON.stringify(changed),
         headers: {

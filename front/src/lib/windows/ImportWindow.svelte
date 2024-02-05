@@ -26,7 +26,7 @@
         let blob = await uploadFile();
         let formData = new FormData();
         formData.append("data", blob);
-        let url = "offers/xlsx?" + new URLSearchParams(data);
+        let url = "data/import?" + new URLSearchParams(data);
 
         let promise = fetchAuthenticated(url, {
             method: "POST",
