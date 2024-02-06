@@ -2,10 +2,17 @@
     export type ModalKind =
         | { kind: "confirmChangesLoss"; changed: number; onConfirm: () => void }
         | { kind: "confirmSave"; onConfirm: () => void }
-        | { kind: "dataUpdatedOnServer" };
+        | { kind: "dataUpdatedOnServer" }
+        | {
+              kind: "await";
+              promise: Promise<any>;
+              header: string;
+              errorHeader: string;
+          };
 </script>
 
 <script lang="ts">
+    import FetchDialog from "$lib/modal/FetchDialog.svelte";
     import ConfirmationDialog from "$lib/modal/ConfirmationDialog.svelte";
     import NotificationDialog from "$lib/modal/NotificationDialog.svelte";
     import { num_word } from "$lib/util";
@@ -46,5 +53,8 @@
             text="Данные в таблице были обновлены"
             on:close={close}
         />
+    {:else if modal.kind == "await"}
+        {@const { header, promise, errorHeader } = modal}
+        <FetchDialog {header} {promise} {errorHeader} on:close={close} />
     {/if}
 {/if}
