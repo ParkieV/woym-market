@@ -239,6 +239,12 @@ columns_info = [
     ),
     ColumnCreate(
         index=0,
+        key='your_price_for_buyers',
+        data_type=ColumnDataType.FLOAT,
+        editable=False
+    ),
+    ColumnCreate(
+        index=0,
         key='minimum_group_price',
         name='Минимальная цена в группе',
         data_type=ColumnDataType.FLOAT,

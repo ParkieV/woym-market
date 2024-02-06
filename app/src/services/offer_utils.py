@@ -80,10 +80,12 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     df.drop(['scheme_result', 'min_level'], axis=1, inplace=True)
 
     # прибовляем 5% если магазин с лучшей ценой это текущий магазин
+    df[['target_price', 'best_price_im']] = df[['target_price', 'best_price_im']].astype(float)
+
     df['target_price'] = np.where(
-        (df['best_place_im'] == df['name_of_shop']) & (np.round(df['best_price_im']) == np.round(df['target_price'])),
-        np.round(df['target_price'] * 1.05),
-        np.round(df['target_price'])
+        (df['best_place_im'] == df['name_of_shop']) & (df['best_price_im'].round() == df['target_price'].round()),
+        (df['target_price'] * 1.05).round(),
+        df['target_price'].round()
     )
     return df
 
