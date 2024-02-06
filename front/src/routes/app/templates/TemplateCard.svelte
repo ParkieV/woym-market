@@ -9,8 +9,8 @@
         use_attractive_price_threshold: "Порог привлекательной цены",
         use_moderately_attractive_price_threshold: "Порог умеренно привлекательной цены",
         use_your_price_for_buyers: "Своя цена для покупателей",
-        use_best_price_wm: "Лучшая цена (не маркет)",
-        use_best_price_im: "Лучшая цена (маркет)",
+        use_best_price_wm: "Цена площадки (без учета Маркета)",
+        use_best_price_im: "Цена площадки (на Маркете)",
         use_minimum_group_price: "Минимальная цена в группе"
     } as const;
     const ToggleFields = Object.keys(ToggleFieldNames) as (keyof typeof ToggleFieldNames)[];
@@ -37,11 +37,32 @@
     <ul class="numbers">
         <label>
             <span>Делитель</span>
-            <input type="number" bind:value={template.n} on:input={() => dispatch("changed")} />
+            <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                bind:value={template.n}
+                on:input={() => dispatch("changed")}
+                on:focusout={() => {
+                    if (template.n <= 0) {
+                        template.n = 1;
+                    }
+                }}
+            />
         </label>
         <label>
-            <span>Множитель</span>
-            <input type="number" bind:value={template.m} on:input={() => dispatch("changed")} />
+            <span>Множитель (%)</span>
+            <input
+                type="number"
+                step="0.01"
+                bind:value={template.m}
+                on:input={() => dispatch("changed")}
+                on:focusout={() => {
+                    if (template.m === null) {
+                        template.m = 0;
+                    }
+                }}
+            />
         </label>
     </ul>
 </li>
