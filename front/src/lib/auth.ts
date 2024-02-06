@@ -1,3 +1,4 @@
+import { PUBLIC_ALLOW_NON_HTTPS } from "$env/static/public";
 import { BaseUrl } from "$lib";
 import Cookies from "js-cookie";
 
@@ -28,7 +29,7 @@ export async function login(name: string, password: string): Promise<boolean> {
     Cookies.set("mpToken", token, {
         sameSite: "Lax",
         expires: 60 * 60 * 24 * 30,
-        secure: true
+        secure: !(PUBLIC_ALLOW_NON_HTTPS === "1")
     });
 
     return true;

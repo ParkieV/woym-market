@@ -6,16 +6,15 @@
     let login: string;
     let password: string;
 
-    async function onclick()
-    {
-        if (await login_request(login, password))
-        {
-            goto("/app");
-        }
-        else
-        {
-            alert("Не удалось войти в аккаунт");
-        }
+    async function onclick() {
+        let login_result = login_request(login, password);
+        login_result.then(success => {
+            if (success) goto("/app");
+            else alert("Не удалось войти в аккаунт.");
+        });
+        login_result.catch(() => {
+            alert("Не удалось достичь сервера.");
+        });
     }
 </script>
 
