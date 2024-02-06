@@ -6,11 +6,12 @@ from src.database import offer_db as db
 import src.services.offer_utils as utils
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate, OfferOutWithPriceScheme
 import pandas as pd
-from src.api.factory import RepositoryFactory, MPTypes
+from src.api.factory import MPTypes, APIFactory
 import numpy as np
 from src.services.settings_service import get_settings, update_logs
+from src.params.confing import config
 
-yandex_repository = RepositoryFactory.get(MPTypes.YANDEX)
+yandex_repository = APIFactory.get(MPTypes.YANDEX, token=config.yandex_token)
 
 
 async def get_offers(filters: dict[str, Any] | None = None) -> list[OfferOut]:
@@ -35,13 +36,15 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
 async def setup_offers_data(user_id: int):
     settings = await get_settings(user_id)
 
-    yandex_offers = await yandex_repository.get_offers()
+    yandex_offers = await yandex_repository.get_offers_list()
     yandex_offers_df = pd.DataFrame(yandex_offers)
-    data = utils.build_offers_data(yandex_offers_df, setup_mode=True, settings=settings)
-
     async with async_session() as session:
+        await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L0', use_best_price_im=True))
+
         for i in range(5):
             await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L{i+1}'))
+
+        data = utils.build_offers_data(yandex_offers_df, setup_mode=True, settings=settings)
 
         offers_db = await db.create_offers(session, data)
         return offers_db
@@ -55,7 +58,7 @@ async def update_offers(user_id: int):
 
     mapping_fields = ['sku', 'name_of_shop', 'market']
 
-    yandex_offers = await yandex_repository.get_offers()
+    yandex_offers = await yandex_repository.get_offers_list()
     db_offers = await get_offers()
 
     offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
@@ -102,14 +105,9 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
 
     data = [offer.model_dump() for offer in offers]
     for offer in data:
-        if offer.get('pricing_scheme'):
-            offer['n'] = offer['pricing_scheme']['n']
-            offer['m'] = offer['pricing_scheme']['m']
-            offer['sum_fields'] = PricingSchemeOut.active_fields(offer['pricing_scheme'])
-        else:
-            offer['n'], offer['m'] = np.nan, np.nan
-            offer['sum_fields'] = []
-
+        offer['n'] = offer['pricing_scheme']['n']
+        offer['m'] = offer['pricing_scheme']['m']
+        offer['sum_fields'] = PricingSchemeOut.active_fields(offer['pricing_scheme'])
         del offer['pricing_scheme']
 
     df = pd.DataFrame(data)

@@ -113,7 +113,7 @@ class OfferOut(BaseModel, BaseModelFields):
 
     hidden: bool = Field(False, title='Скрыт')
 
-    pricing_scheme_id: int | None
+    pricing_scheme_id: int
 
     class Config:
         orm_mode = True
@@ -145,7 +145,7 @@ class OfferChange(BaseModel):
     auto_min_price: float = 100  # в процентах
     manual_min_price: float | None = None
     auto_price_control: bool = False  # ручное управление ценами
-    pricing_scheme_id: int | None
+    pricing_scheme_id: int
 
     hidden: bool = False
 

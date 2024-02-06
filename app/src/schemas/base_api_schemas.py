@@ -1,0 +1,46 @@
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class APIOffer:
+    sku: str
+    name: str
+    name_of_shop: str
+
+    yandex_weight: float | None = None
+    yandex_length: float | None = None
+    yandex_width: float | None = None
+    yandex_height: float | None = None
+    yandex_volume: float | None = None
+    photo: str | None = None
+    current_price: float | None = None
+    business_id: int | None = None
+    remaining_stock: int | None = None
+    group_sellers_amount: int | None = None
+
+    attractive_price_threshold: float | None = None
+    moderately_attractive_price_threshold: float | None = None
+    best_place_wm: str | None = None
+    best_price_wm: float | None = None
+    best_place_im: str | None = None
+    best_price_im: float | None = None
+    minimum_group_price: float | None = None
+    your_price_for_buyers: float | None = None
+
+    market: str = 'yandex'
+
+
+@dataclass
+class APIWarehouseOffer:
+    sku: str
+    name_of_shop: str
+    in_stock: int = 0
+
+
+@dataclass
+class APIWarehouse:
+    warehouse_id: int
+    market: str
+    offers: list[APIWarehouseOffer]
+
+

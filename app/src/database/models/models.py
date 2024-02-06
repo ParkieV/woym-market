@@ -101,7 +101,7 @@ class Offer(Base):
 
     hidden = Column(Boolean, default=False, nullable=False)
 
-    pricing_scheme_id = Column(Integer, ForeignKey('pricing_schemes.id'), nullable=True, default=None)
+    pricing_scheme_id = Column(Integer, ForeignKey('pricing_schemes.id', ondelete='RESTRICT'), nullable=False)
     pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
 
 
@@ -153,22 +153,22 @@ class PricingScheme(Base):
     offers = relationship(Offer, back_populates='pricing_scheme')
 
 
-class Warehouse(Base):
-    __tablename__ = 'warehouses'
-
-    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
-
-    name = Column(String)
-    warehouse_id = Column(Integer)
-    market = Column(String)
-
-
-class OfferStock(Base):
-    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
-
-    offer_id = Column(Integer, ForeignKey('offers.id', ondelete='CASCADE'))
-    warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='CASCADE'))
-    in_stock = Column(Integer, default=0)
-    min_stock = Column(Integer, default=0)
-    for_delivery = Column(Integer, default=0)
+# class Warehouse(Base):
+#     __tablename__ = 'warehouses'
+#
+#     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+#
+#     name = Column(String)
+#     warehouse_id = Column(Integer)
+#     market = Column(String)
+#
+#
+# class OfferStock(Base):
+#     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+#
+#     offer_id = Column(Integer, ForeignKey('offers.id', ondelete='CASCADE'))
+#     warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='CASCADE'))
+#     in_stock = Column(Integer, default=0)
+#     min_stock = Column(Integer, default=0)
+#     for_delivery = Column(Integer, default=0)
 

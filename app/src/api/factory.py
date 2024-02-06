@@ -1,28 +1,31 @@
 from enum import Enum
-from typing import Hashable, Callable
-from .yandex_market.repository import YandexMarketRepository
+from typing import Type
+from .base_api import BaseAPI
 from .yandex_market.api import YandexMarketAPI
-from src.params.confing import config
-from .repositories import BaseRepository
 
 
 class MPTypes(str, Enum):
     OZON = 'ozon'
-    YANDEX = 'yndx'
+    YANDEX = 'yandex'
 
 
-class RepositoryFactory:
-    __classes: dict[Hashable, BaseRepository] = {
-        MPTypes.YANDEX: YandexMarketRepository(
-            YandexMarketAPI(config.yandex_token)
-        )
+class APIFactory:
+    __api_types: dict[MPTypes, Type[BaseAPI]] = {
+        MPTypes.YANDEX: YandexMarketAPI
     }
 
     @classmethod
-    def get(cls, rep_type: MPTypes) -> BaseRepository:
-        instance = cls.__classes.get(rep_type, None)
-        if instance is None:
-            raise KeyError(f'"{MPTypes}" Repository not in registry')
+    def get(cls, api_type: MPTypes, **kwargs) -> BaseAPI:
+        api_class = cls.__api_types.get(api_type, None)
 
-        return instance
+        if api_class is None:
+            raise ValueError(f'API class "{api_type}" not found in registered')
+
+        try:
+            api_instance = api_class(**kwargs)
+        except TypeError:
+            raise ValueError(f'Not enough arguments to inizialize "{api_type}"')
+
+        return api_instance
+
 

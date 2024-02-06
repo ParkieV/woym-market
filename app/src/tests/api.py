@@ -1,3 +1,5 @@
+import pytest
+
 from src.api.yandex_market.api import YandexMarketAPI
 from src.services.stocks_response_handlers import WAREHOUSES, OFFERS, OFFERS_DETAIL
 
@@ -7,18 +9,24 @@ campaigns = api.get_campaigns()
 pytest_plugins = ('pytest_asyncio',)
 
 
-def test_stocks():
-    assert len(campaigns) != 0
+# def test_stocks():
+#     assert len(campaigns) != 0
+#
+#     for campaign in campaigns:
+#         stocks1 = api._get_offers_stocks(campaign.id, WAREHOUSES)
+#         assert bool(len(stocks1))
+#
+#         stocks2 = api._get_offers_stocks(campaign.id, OFFERS)
+#         assert bool(len(stocks2))
+#
+#         stock3 = api._get_offers_stocks(campaign.id, OFFERS_DETAIL)
+#         assert len(stock3)
 
-    for campaign in campaigns:
-        stocks1 = api.get_stocks(campaign.id, WAREHOUSES)
-        assert bool(len(stocks1))
+@pytest.mark.asyncio
+async def test_get_warehouses_info():
+    warehouses = await api.get_stocks()
+    assert len(warehouses)
 
-        stocks2 = api.get_stocks(campaign.id, OFFERS)
-        assert bool(len(stocks2))
-
-        stock3 = api.get_stocks(campaign.id, OFFERS_DETAIL)
-        assert len(stock3)
 #
 #
 # def test_get_campaign_offers():

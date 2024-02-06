@@ -4,58 +4,58 @@ import asyncio
 from typing import Any
 from fastapi import HTTPException
 from requests import Session, Response
-from src.schemas.yandex_api_schemas import CampaignInfo, BusinessInfo, YandexOfferInfo, YandexOfferInfoPartial
-from enum import Enum
-from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS
+from src.schemas.yandex_api_schemas import CampaignInfo, BusinessInfo
+from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS, OFFERS_DETAIL, WAREHOUSES
 import pandas as pd
 from collections import defaultdict
 import numpy as np
+from src.api.base_api import BaseAPI
+from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse
 
 
-class StocksResponseType(Enum):
-    OFFERS = 1
-    WAREHOUSES = 2
-    OFFERS_DETAIL = 3
+class YandexMarketAPI(BaseAPI):
+    def check_auth_data(self, token: str):
+        pass
 
-
-class YandexMarketAPI:
     def __init__(self, token: str):
+        self.check_auth_data(token)
+
         self.session = Session()
         self.token = token
         self.auth_headers = {
             'Authorization': f'Bearer {token}'
         }
 
-    async def get_offers(self) -> [YandexOfferInfo]:
+    async def get_offers_list(self) -> list[APIOffer]:
         result = []
 
         campaigns = self.get_campaigns()
 
         for campaign in campaigns:
-            stocks = self.get_stocks(campaign.id, OFFERS)
+            stocks = self._get_offers_stocks(campaign.id, OFFERS)
             price_report = await self._get_market_prices_report(campaign.business.id)
             base_offers = self._get_campaign_offers(campaign.business.id)
 
             for offer in base_offers:
-                report_line = price_report.get(offer.sku, {})
+                report_line = price_report.get(offer['sku'], {})
 
-                extended_offer = YandexOfferInfo(
-                    **asdict(offer),
-                    attractive_price_threshold=report_line.get('attractive_price_threshold', 0),
-                    moderately_attractive_price_threshold=report_line.get('moderately_attractive_price_threshold', 0),
-                    best_place_wm=report_line.get('best_place_wm', ''),
-                    best_price_wm=report_line.get('best_price_wm', 0),
-                    best_place_im=report_line.get('best_place_im', ''),
-                    best_price_im=report_line.get('best_price_im', 0),
-                    minimum_group_price=report_line.get('minimum_group_price', 0),
-                    your_price_for_buyers=report_line.get('your_price_for_buyers', 0),
-                    group_sellers_amount=0,
-                    remaining_stock=stocks.get(offer.sku, 0),
-                    name_of_shop=campaign.business.name,
-                )
+                extended_offer = {
+                    'attractive_price_threshold': report_line.get('attractive_price_threshold', 0),
+                    'moderately_attractive_price_threshold': report_line.get('moderately_attractive_price_threshold', 0),
+                    'best_place_wm': report_line.get('best_place_wm', ''),
+                    'best_price_wm': report_line.get('best_price_wm', 0),
+                    'best_place_im': report_line.get('best_place_im', ''),
+                    'best_price_im': report_line.get('best_price_im', 0),
+                    'minimum_group_price': report_line.get('minimum_group_price', 0),
+                    'your_price_for_buyers': report_line.get('your_price_for_buyers', 0),
+                    'group_sellers_amount': 0,
+                    'remaining_stock': stocks.get(offer['sku'], 0),
+                    'name_of_shop': campaign.business.name,
+                }
+                extended_offer.update(offer)
                 result.append(extended_offer)
 
-        return result
+        return [APIOffer(**offer) for offer in result]
 
     def check_response(self, response: Response, raise_error: bool = True, body: Any = None):
         if response.status_code != 200:
@@ -89,7 +89,7 @@ class YandexMarketAPI:
             for campaign in data['campaigns']
         ]
 
-    def get_stocks(self, campaign_id: int, handler: StocksResponseHandler = OFFERS) -> defaultdict[str, Any]:
+    def _get_offers_stocks(self, campaign_id: int, handler: StocksResponseHandler = OFFERS):
         warehouses = []
         page_token = ''
         while True:
@@ -108,7 +108,7 @@ class YandexMarketAPI:
         result = handler(warehouses)
         return result
 
-    def _get_campaign_offers(self, business_id: int) -> [YandexOfferInfoPartial]:
+    def _get_campaign_offers(self, business_id: int) -> list[dict]:
         results = []
         page_token = ''
         while True:
@@ -122,19 +122,19 @@ class YandexMarketAPI:
 
             for offer in data['result']['offerMappings']:
                 offer = offer['offer']
-                offer_data = YandexOfferInfoPartial(
-                    sku=offer['offerId'],
-                    name=offer['name'],
-                    yandex_weight=offer['weightDimensions']['weight'] if 'weightDimensions' in offer else None,
-                    yandex_length=offer['weightDimensions']['length'] if 'weightDimensions' in offer else None,
-                    yandex_width=offer['weightDimensions']['width'] if 'weightDimensions' in offer else None,
-                    yandex_height=offer['weightDimensions']['height'] if 'weightDimensions' in offer else None,
-                    yandex_volume=(offer['weightDimensions']['length'] * offer['weightDimensions']['width'] *
+                offer_data = {
+                    'sku': offer['offerId'],
+                    'name': offer['name'],
+                    'yandex_weight': offer['weightDimensions']['weight'] if 'weightDimensions' in offer else None,
+                    'yandex_length': offer['weightDimensions']['length'] if 'weightDimensions' in offer else None,
+                    'yandex_width': offer['weightDimensions']['width'] if 'weightDimensions' in offer else None,
+                    'yandex_height': offer['weightDimensions']['height'] if 'weightDimensions' in offer else None,
+                    'yandex_volume': (offer['weightDimensions']['length'] * offer['weightDimensions']['width'] *
                                    offer['weightDimensions']['height']) / 1000 if 'weightDimensions' in offer else None,
-                    photo=offer['pictures'][0] if len(offer['pictures']) > 0 else None,
-                    current_price=offer['basicPrice']['value'] if 'basicPrice' in offer else None,
-                    business_id=business_id
-                )
+                    'photo': offer['pictures'][0] if len(offer['pictures']) > 0 else None,
+                    'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,
+                    'business_id': business_id
+                }
                 results.append(offer_data)
 
             page_token = data['result']['paging'].get('nextPageToken', None)
@@ -144,7 +144,7 @@ class YandexMarketAPI:
 
         return results
 
-    def change_offers_price(self, offers: pd.DataFrame | list[dict]) -> None:
+    async def change_prices(self, offers: pd.DataFrame | list[dict]) -> None:
         if isinstance(offers, pd.DataFrame):
             offers = offers.to_dict('records')
 
@@ -184,19 +184,15 @@ class YandexMarketAPI:
         return pd.read_excel(output, engine='openpyxl')
 
     async def _get_market_prices_report(self, business_id: int) -> dict[str, dict[str, Any]]:
-        response = self.session.post('https://api.partner.market.yandex.ru/reports/prices/generate',
-                                     json={'businessId': business_id}, headers=self.auth_headers)
+        response = self.session.post('https://api.partner.market.yandex.ru/reports/prices/generate', json={'businessId': business_id}, headers=self.auth_headers)
 
-        if response.status_code != 200:
-            self._raise_error(response.reason, response.status_code)
+        self.check_response(response)
 
         data = response.json()
         report_id = data['result']['reportId']
 
         while True:
-            response = self.session.get(f'https://api.partner.market.yandex.ru/reports/info/{report_id}',
-                                        headers=self.auth_headers)
-
+            response = self.session.get(f'https://api.partner.market.yandex.ru/reports/info/{report_id}', headers=self.auth_headers)
             data = response.json()
 
             if data['result']['status'] == 'DONE':
@@ -229,3 +225,50 @@ class YandexMarketAPI:
                 self._raise_error(response.reason, response.status_code)
 
             await asyncio.sleep(5)
+
+    async def get_stocks(self) -> list[APIWarehouse]:
+        result = []
+
+        campaigns = self.get_campaigns()
+        warehouses = self._get_warehouses_info()
+
+        for campaign in campaigns:
+            offers_stocks = self._get_offers_stocks(campaign.id, WAREHOUSES)
+
+            for warehouse_id in warehouses.keys():
+
+                offers = [
+                    APIWarehouseOffer(
+                        sku=offer['offerId'],
+                        name_of_shop=campaign.business.name,
+                        in_stock=sum([i['count'] for i in offer['stocks'] if i['type'] == 'AVAILABLE'])
+                    )
+                    for offer in offers_stocks[warehouse_id]
+                ]
+
+                warehouse = APIWarehouse(
+                    warehouse_id=warehouse_id,
+                    market='yandex',
+                    offers=offers
+                )
+                result.append(warehouse)
+
+        return result
+
+    def _get_warehouses_info(self) -> dict[int, dict[str, Any]]:
+        response = self.session.get(f'https://api.partner.market.yandex.ru/warehouses', headers=self.auth_headers)
+        self.check_response(response, raise_error=True)
+
+        data = response.json()
+
+        result = dict()
+        for warehouse in data['result']['warehouses']:
+            result[warehouse['id']] = {
+                'name': warehouse['name']
+            }
+
+        return result
+
+
+
+

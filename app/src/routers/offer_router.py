@@ -2,7 +2,7 @@ from fastapi import APIRouter, File, Depends, UploadFile
 from fastapi.responses import FileResponse
 from pathlib import PurePath
 from src.services.auth_utils import get_current_user
-from src.schemas.offer_schemas import OfferOut, OfferChange, ImportType, ExportType, Market, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate
+from src.schemas.offer_schemas import OfferOut, OfferChange, ImportType, ExportType, Market, PricingSchemeOut, PricingSchemeChange
 from src.services import offer_service as service
 
 data_router = APIRouter(
@@ -19,26 +19,6 @@ async def get_offers():
 @data_router.patch('/offers', response_model=list[OfferOut])
 async def change_offer_fields(offers_data: list[OfferChange], current_user=Depends(get_current_user)):
     return await service.change_offers(offers_data, current_user.id)
-
-
-@data_router.get('/warehouses')
-async def get_warehouses(current_user=Depends(get_current_user)):
-    pass
-
-
-@data_router.patch('/warehouses')
-async def change_warehouses(current_user=Depends(get_current_user)):
-    pass
-
-
-@data_router.get('/self-stocks')
-async def get_self_stocks(current_user=Depends(get_current_user)):
-    pass
-
-
-@data_router.patch('/self-stocks', dependencies=[Depends(get_current_user)])
-async def change_self_stocks(current_user=Depends(get_current_user)):
-    pass
 
 
 @data_router.get('/pricing-schemes', response_model=list[PricingSchemeOut], dependencies=[Depends(get_current_user)])

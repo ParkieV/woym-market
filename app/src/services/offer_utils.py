@@ -47,10 +47,9 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     data = data.copy()
 
     # не меняем цену
-    # sub_data_1 = data[data['auto_price_control'] == False]
-    # sub_data_1.loc[:, 'target_price'] = sub_data_1['target_price']
+
     data['scheme_result'] = data.apply(lambda row: sum(row[i] for i in row['sum_fields']), axis=1) / data['n']
-    data['scheme_result'] = data['scheme_result'] + data['scheme_result'] * data['n'] / 100
+    data['scheme_result'] = data['scheme_result'] + data['scheme_result'] * data['m'] / 100
 
     data['min_level'] = np.where(
         ( (data['scheme_result'] < data['best_price_im']) | (np.isnan(data['scheme_result'])) ),
@@ -89,7 +88,7 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False) -> pd.DataFrame:
+def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False, default_price_scheme_id: int = 1) -> pd.DataFrame:
     data = data.copy()
 
     if data.empty:
@@ -100,6 +99,7 @@ def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2
         data[['self_weight', 'self_length', 'self_width', 'self_height']] = np.nan
         data[['n', 'm']] = np.nan
         data['sum_fields'] = data.apply(lambda x: [], axis=1)
+        data['pricing_scheme_id'] = default_price_scheme_id
 
     data['total_price_coeff'] = total_price_coeff
     data['total_price_min_additional'] = total_price_min_additional
