@@ -6,11 +6,18 @@
     export let header: string;
     export let text: string;
 
-    let dispatch = createEventDispatcher<{ close: void }>();
+    let dispatch = createEventDispatcher<{ close: void; cancel: void; confirm: void }>();
 
     const onConfirm = () => {
         if (!open) return;
         open = false;
+        dispatch("confirm");
+        dispatch("close");
+    };
+    const onCancel = () => {
+        if (!open) return;
+        open = false;
+        dispatch("cancel");
         dispatch("close");
     };
 </script>
@@ -20,18 +27,20 @@
         <h1>{header}</h1>
         <span>{text}</span>
         <footer>
+            <button class="cancel" on:click={onCancel}>Отмена</button>
             <button class="confirm" on:click={onConfirm}>Ок</button>
         </footer>
     </div>
 </Modal>
 
 <style lang="scss">
+    @use "mixins.scss" as *;
     div {
         display: flex;
         flex-direction: column;
         gap: 8px;
-        width: 400px;
-        padding: 12px;
+        width: 460px;
+        padding: 20px 30px;
         gap: 8px;
 
         > span {
@@ -43,11 +52,14 @@
             gap: 8px;
             margin-top: 8px;
             > button {
-                width: 80px;
-                height: 40px;
-                border-radius: 8px;
-                border: 0;
-                color: white;
+                &.cancel {
+                    @include secondary-button;
+                    width: 80px;
+                }
+                &.confirm {
+                    @include primary-button;
+                    width: 80px;
+                }
             }
         }
     }

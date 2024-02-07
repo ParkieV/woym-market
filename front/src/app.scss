@@ -38,7 +38,7 @@ button {
 
     &.changed {
         text-decoration: underline;
-        background-color: #e7b93c;
+        background-color: hsl(51, 100%, 72%);
     }
 }
 
@@ -64,14 +64,6 @@ button {
     .editable {
         background-color: hsl(180, 26%, 91%);
     }
-}
-
-.cancel {
-    background-color: #e74c3c;
-}
-
-.confirm {
-    background-color: #27ae60;
 }
 
 button:disabled {

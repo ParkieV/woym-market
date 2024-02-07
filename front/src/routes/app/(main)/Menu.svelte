@@ -1,0 +1,34 @@
+<script lang="ts">
+    import ExportWindow from "$lib/components/windows/ExportWindow.svelte";
+    import ImportWindow from "$lib/components/windows/ImportWindow.svelte";
+    import { createEventDispatcher } from "svelte";
+
+    let import_open = false;
+    let export_open = false;
+
+    let dispatch = createEventDispatcher<{ import: void }>();
+</script>
+
+<ImportWindow bind:open={import_open} on:import={() => dispatch("import")} />
+<ExportWindow bind:open={export_open} />
+<menu>
+    <button on:click={() => (export_open = true)}>Экспорт</button>
+    <button on:click={() => (import_open = true)}>Импорт</button>
+</menu>
+
+<style lang="scss">
+    menu {
+        display: flex;
+        background-color: #f1f0f0;
+        > button {
+            background-color: transparent;
+            border: 0;
+            padding: 4px 12px;
+            border-radius: 0;
+            font-size: 15px;
+            &:hover {
+                background-color: #e2e2e2;
+            }
+        }
+    }
+</style>

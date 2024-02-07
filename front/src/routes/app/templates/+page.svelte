@@ -7,9 +7,9 @@
         use_attractive_price_threshold: boolean;
         use_moderately_attractive_price_threshold: boolean;
         use_your_price_for_buyers: boolean;
-        use_best_price_wm: boolean;
-        use_best_price_im: boolean;
-        use_minimum_group_price: boolean;
+        use_min_price_in_market: boolean;
+        use_min_price_without_market: boolean;
+        use_min_general_markets_price: boolean;
 
         /** Number that the resulting price will be divided by. */
         n: number;
@@ -21,14 +21,16 @@
 <script lang="ts">
     import { fetchAuthenticated } from "$lib/auth";
     import { getContext, onMount } from "svelte";
-    import type { ModalKind } from "../Modals.svelte";
+    import type { ModalKind } from "$lib/components/modal/Modals.svelte";
     import TemplateCard from "./TemplateCard.svelte";
 
     let templates: Template[] = [];
 
     const addModal = getContext<(modal: ModalKind) => void>("addModal");
     onMount(async () => {
-        let _templates: Template[] = await (await fetchAuthenticated("data/pricing-schemes")).json();
+        let _templates: Template[] = await (
+            await fetchAuthenticated("data/pricing-schemes")
+        ).json();
         _templates.sort((a, b) => a.id - b.id);
         templates = _templates;
     });
@@ -69,7 +71,7 @@
         </ul>
     </div>
     <footer>
-        <button class="confirm" on:click={update}>Сохранить изменения</button>
+        <button on:click={update}>Сохранить</button>
     </footer>
 </main>
 
@@ -99,6 +101,7 @@
                 display: flex;
                 flex-wrap: wrap;
                 justify-content: center;
+                align-content: start;
                 align-items: start;
                 gap: 20px;
                 padding: 30px 0;
@@ -111,14 +114,10 @@
             margin: 0 -20px -20px -20px;
             padding: 16px;
             gap: 16px;
-            background-color: white;
+            background-color: #ebebeb;
             button {
-                padding-left: 16px;
-                padding-right: 16px;
+                @include primary-button;
                 height: 40px;
-                &.confirm {
-                    @include primary-button;
-                }
             }
         }
     }

@@ -1,16 +1,13 @@
 <script lang="ts">
-    import Grid from "./Grid.svelte";
+    import Grid from "$lib/components/datagrid/Grid.svelte";
     import { getContext, onMount } from "svelte";
-    import { patchOfferList, OffersData, type Offer } from "$lib/data/offers";
+    import { patchOfferList, type Offer, fetchOfferList } from "$lib/data/offers";
     import { fetchLogs } from "$lib/data/settings";
-    import type { ModalKind } from "./Modals.svelte";
-    import { ChangeList } from "$lib/datagrid/changes";
+    import type { ModalKind } from "$lib/components/modal/Modals.svelte";
+    import { ChangeList } from "$lib/components/datagrid/changes";
     import Toolbar from "./Toolbar.svelte";
-    import ImageWindow from "$lib/windows/ImageWindow.svelte";
-    import ImportWindow from "$lib/windows/ImportWindow.svelte";
-    import ExportWindow from "$lib/windows/ExportWindow.svelte";
 
-    let data = new OffersData();
+    let data: Offer[] = [];
     let changes = new ChangeList<Offer, "sku">();
 
     const addModal = getContext<(modal: ModalKind) => void>("addModal");
@@ -27,10 +24,6 @@
         }
     }
 
-    let selected_image = "";
-    let import_open = false;
-    let export_open = false;
-
     let updated_at: Date | null = null;
 
     function cancelEdits() {
@@ -43,7 +36,7 @@
         addModal({
             kind: "confirmSave",
             onConfirm: async () => {
-                await patchOfferList(data.offers.filter(x => changes.isChanged(x.sku)));
+                await patchOfferList(data.filter(x => changes.isChanged(x.sku)));
                 await refreshData();
             }
         });
@@ -53,9 +46,7 @@
     async function refreshData() {
         changes.clear();
         changes = changes;
-
-        await data.update();
-        data = data;
+        data = await fetchOfferList();
     }
 
     onMount(() => {
@@ -80,22 +71,13 @@
     let filter: (offer: Offer) => boolean = () => true;
 </script>
 
-<ImageWindow bind:src={selected_image} />
-<ImportWindow bind:open={import_open} on:imported={refreshData} />
-<ExportWindow bind:open={export_open} />
 <main>
-    <header>
-        <menu class="menu">
-            <button on:click={() => (export_open = true)}>Экспорт</button>
-            <button on:click={() => (import_open = true)}>Импорт</button>
-        </menu>
-        <Toolbar
-            on:filterChanged={e => {
-                filter = e.detail;
-            }}
-        />
-    </header>
-    <Grid bind:data bind:changes bind:filter on:photoClicked={e => (selected_image = e.detail)} />
+    <Toolbar
+        on:filterChanged={e => {
+            filter = e.detail;
+        }}
+    />
+    <Grid key="sku" bind:data bind:changes bind:filter />
     <menu class="bottombar">
         <span
             >{`Последнее обновление:\n${
@@ -121,26 +103,6 @@
         flex: 1;
     }
 
-    header {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        .menu {
-            display: flex;
-            background-color: #f1f0f0;
-            > button {
-                background-color: transparent;
-                border: 0;
-                padding: 4px 12px;
-                border-radius: 0;
-                font-size: 15px;
-                &:hover {
-                    background-color: #e2e2e2;
-                }
-            }
-        }
-    }
-
     .bottombar {
         display: flex;
         align-items: center;
@@ -149,12 +111,13 @@
         button {
             padding-left: 16px;
             padding-right: 16px;
-            height: 40px;
             &.confirm {
                 @include primary-button;
+                height: 40px;
             }
             &.cancel {
                 @include secondary-button;
+                height: 40px;
             }
             &:disabled,
             &:disabled:hover {
