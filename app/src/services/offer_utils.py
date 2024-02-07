@@ -54,8 +54,8 @@ async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     # data['scheme_result'] = data['scheme_result'] + data['scheme_result'] * data['m'] / 100
     #
     # data['min_level'] = np.where(
-    #     ( (data['scheme_result'] < data['best_price_im']) | (np.isnan(data['scheme_result'])) ),
-    #     data['best_price_im'],
+    #     ( (data['scheme_result'] < data['min_price_in_market']) | (np.isnan(data['scheme_result'])) ),
+    #     data['min_price_in_market'],
     #     data['scheme_result']
     # )
     data['min_level'] = 0
@@ -73,15 +73,15 @@ async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
             )
 
     data['min_level'] = np.where(
-        (data['min_level'] < data['best_price_im']) | (np.isnan(data['min_level'])),
-        data['best_price_im'],
+        (data['min_level'] < data['min_price_in_market']) | (np.isnan(data['min_level'])),
+        data['min_price_in_market'],
         data['min_level']
     )
 
     # используем ручную мин планку
     sub_data_2 = data[data['use_manual_min_price'] == True]
     sub_data_2.loc[:, 'target_price'] = np.where(
-        sub_data_2['current_price'] >= sub_data_2['best_price_im'],
+        sub_data_2['current_price'] >= sub_data_2['min_price_in_market'],
         sub_data_2[['min_level', 'manual_min_price']].max(axis=1),
         sub_data_2[['total_price', 'min_level']].min(axis=1)
     )
@@ -90,7 +90,7 @@ async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     sub_data_3 = data[data['use_manual_min_price'] == False]
     sub_data_3['temp_auto_min_price'] = sub_data_3['total_price'] * sub_data_3['auto_min_price'] / 100
     sub_data_3.loc[:, 'target_price'] = np.where(
-        sub_data_3['current_price'] >= sub_data_3['best_price_im'],
+        sub_data_3['current_price'] >= sub_data_3['min_price_in_market'],
         sub_data_3[['min_level', 'temp_auto_min_price']].max(axis=1),
         sub_data_3[['total_price', 'min_level']].min(axis=1)
     )
@@ -101,10 +101,10 @@ async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     df.drop('min_level', axis=1, inplace=True)
 
     # прибовляем 5% если магазин с лучшей ценой это текущий магазин
-    df[['target_price', 'best_price_im']] = df[['target_price', 'best_price_im']].astype(float)
+    df[['target_price', 'min_price_in_market']] = df[['target_price', 'min_price_in_market']].astype(float)
 
     df['target_price'] = np.where(
-        (df['best_place_im'] == df['name_of_shop']) & (df['best_price_im'].round() == df['target_price'].round()),
+        (df['best_place_im'] == df['name_of_shop']) & (df['min_price_in_market'].round() == df['target_price'].round()),
         (df['target_price'] * 1.05).round(),
         df['target_price'].round()
     )

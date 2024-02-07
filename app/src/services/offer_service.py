@@ -39,7 +39,7 @@ async def setup_offers_data(user_id: int):
     yandex_offers = await yandex_repository.get_offers_list()
     yandex_offers_df = pd.DataFrame(yandex_offers)
     async with async_session() as session:
-        await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L0', use_best_price_im=True))
+        await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L0', use_min_price_in_market=True))
 
         for i in range(5):
             await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L{i+1}'))

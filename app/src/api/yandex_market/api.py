@@ -43,10 +43,10 @@ class YandexMarketAPI(BaseAPI):
                     'attractive_price_threshold': report_line.get('attractive_price_threshold', 0),
                     'moderately_attractive_price_threshold': report_line.get('moderately_attractive_price_threshold', 0),
                     'best_place_wm': report_line.get('best_place_wm', ''),
-                    'best_price_wm': report_line.get('best_price_wm', 0),
+                    'min_price_without_market': report_line.get('min_price_without_market', 0),
                     'best_place_im': report_line.get('best_place_im', ''),
-                    'best_price_im': report_line.get('best_price_im', 0),
-                    'minimum_group_price': report_line.get('minimum_group_price', 0),
+                    'min_price_in_market': report_line.get('min_price_in_market', 0),
+                    'min_general_markets_price': report_line.get('min_general_markets_price', 0),
                     'your_price_for_buyers': report_line.get('your_price_for_buyers', 0),
                     'group_sellers_amount': 0,
                     'remaining_stock': stocks.get(offer['sku'], 0),
@@ -200,8 +200,8 @@ class YandexMarketAPI(BaseAPI):
                 df.drop([0, 1, 2, 3], inplace=True)
                 new_df = pd.DataFrame()
                 new_df[['sku', 'attractive_price_threshold', 'moderately_attractive_price_threshold',
-                        'your_price_for_buyers', 'minimum_group_price', 'best_place_wm', 'best_price_wm', 'best_place_im',
-                        'best_price_im']] = df.iloc[:, [0, 6, 7, 8, 11, 12, 13, 14, 15]]
+                        'your_price_for_buyers', 'min_general_markets_price', 'best_place_wm', 'min_price_without_market', 'best_place_im',
+                        'min_price_in_market']] = df.iloc[:, [0, 6, 7, 8, 11, 12, 13, 14, 15]]
                 new_df.replace({'–': np.nan}, inplace=True)
                 new_df[['best_place_wm', 'best_place_im']] = new_df[['best_place_wm', 'best_place_im']].fillna('')
 
@@ -210,11 +210,11 @@ class YandexMarketAPI(BaseAPI):
                     i['sku']: {
                         'attractive_price_threshold': i['attractive_price_threshold'],
                         'moderately_attractive_price_threshold': i['moderately_attractive_price_threshold'],
-                        'minimum_group_price': i['minimum_group_price'],
+                        'min_general_markets_price': i['min_general_markets_price'],
                         'best_place_wm': i['best_place_wm'],
-                        'best_price_wm': i['best_price_wm'],
+                        'min_price_without_market': i['min_price_without_market'],
                         'best_place_im': str(i['best_place_im']).replace(' • FBY', '').replace(' • FBS', ''),
-                        'best_price_im': i['best_price_im'],
+                        'min_price_in_market': i['min_price_in_market'],
                         'your_price_for_buyers': i['your_price_for_buyers']
                     }
                     for i in result

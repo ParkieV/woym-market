@@ -9,9 +9,9 @@ class BasePricingScheme(BaseModel):
     use_attractive_price_threshold: bool = False
     use_moderately_attractive_price_threshold: bool = False
     use_your_price_for_buyers: bool = False
-    use_best_price_wm: bool = False
-    use_best_price_im: bool = False
-    use_minimum_group_price: bool = False
+    use_min_price_without_market: bool = False
+    use_min_price_in_market: bool = False
+    use_min_general_markets_price: bool = False
     n: float = 1
     m: float = 0
 
@@ -90,11 +90,11 @@ class OfferOut(BaseModel, BaseModelFields):
     attractive_price_threshold: float | None = Field(title='Порог для привлекательной цены')
     moderately_attractive_price_threshold: float | None = Field(title='Порог для умеренно привлекательной цены')
     best_place_wm: str | None = Field(title='Площадка с лучшей ценой (без учета Маркета)')
-    best_price_wm: float | None = Field(title='Цена площадки (без учета Маркета)')
+    min_price_without_market: float | None = Field(title='Цена площадки (без учета Маркета)')
     best_place_im: str | None = Field(title='Площадка с лучшей ценой (на Маркете)')
-    best_price_im: float | None = Field(title='Цена площадки (на Маркете)')
+    min_price_in_market: float | None = Field(title='Цена площадки (на Маркете)')
     your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
-    minimum_group_price: float | None = Field(title='Минимальная цена в группе')
+    min_general_markets_price: float | None = Field(title='Минимальная цена на рынке')
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')

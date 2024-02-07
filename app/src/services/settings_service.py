@@ -218,7 +218,7 @@ columns_info = [
     ),
     ColumnCreate(
         index=0,
-        key='best_price_wm',
+        key='min_price_without_market',
         name='Цена площадки (без учета Маркета)',
         data_type=ColumnDataType.FLOAT,
         editable=False,
@@ -232,7 +232,7 @@ columns_info = [
     ),
     ColumnCreate(
         index=0,
-        key='best_price_im',
+        key='min_price_in_market',
         name='Цена площадки (на Маркете)',
         data_type=ColumnDataType.FLOAT,
         editable=False,
@@ -246,7 +246,7 @@ columns_info = [
     ),
     ColumnCreate(
         index=0,
-        key='minimum_group_price',
+        key='min_general_markets_price',
         name='Минимальная цена в группе',
         data_type=ColumnDataType.FLOAT,
         editable=False,
