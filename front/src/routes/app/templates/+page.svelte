@@ -21,14 +21,16 @@
 <script lang="ts">
     import { fetchAuthenticated } from "$lib/auth";
     import { getContext, onMount } from "svelte";
-    import type { ModalKind } from "../Modals.svelte";
+    import type { ModalKind } from "$lib/components/modal/Modals.svelte";
     import TemplateCard from "./TemplateCard.svelte";
 
     let templates: Template[] = [];
 
     const addModal = getContext<(modal: ModalKind) => void>("addModal");
     onMount(async () => {
-        let _templates: Template[] = await (await fetchAuthenticated("data/pricing-schemes")).json();
+        let _templates: Template[] = await (
+            await fetchAuthenticated("data/pricing-schemes")
+        ).json();
         _templates.sort((a, b) => a.id - b.id);
         templates = _templates;
     });

@@ -3,7 +3,7 @@
     import { uploadFile } from "$lib/util";
     import { createEventDispatcher, getContext } from "svelte";
     import Window from "./Window.svelte";
-    import type { ModalKind } from "../../routes/app/Modals.svelte";
+    import type { ModalKind } from "$lib/components/modal/Modals.svelte";
 
     type Data = {
         market: "ozon" | "yandex" | "all";
@@ -42,11 +42,11 @@
         open = false;
 
         promise.then(() => {
-            dispatch("imported");
+            dispatch("import");
         });
     };
 
-    let dispatch = createEventDispatcher<{ imported: void }>();
+    let dispatch = createEventDispatcher<{ import: void }>();
 </script>
 
 <Window bind:open>

@@ -12,9 +12,9 @@
 </script>
 
 <script lang="ts">
-    import FetchDialog from "$lib/modal/FetchDialog.svelte";
-    import ConfirmationDialog from "$lib/modal/ConfirmationDialog.svelte";
-    import NotificationDialog from "$lib/modal/NotificationDialog.svelte";
+    import FetchDialog from "$lib/components/modal/FetchDialog.svelte";
+    import ConfirmationDialog from "$lib/components/modal/ConfirmationDialog.svelte";
+    import NotificationDialog from "$lib/components/modal/NotificationDialog.svelte";
     import { num_word } from "$lib/util";
 
     export let modals: ModalKind[];

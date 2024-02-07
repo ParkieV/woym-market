@@ -1,7 +1,7 @@
 <script lang="ts">
     import { fetchUserInfo, patchUserInfo, type Settings } from "$lib/data/settings";
     import { getContext, onMount } from "svelte";
-    import type { ModalKind } from "../Modals.svelte";
+    import type { ModalKind } from "$lib/components/modal/Modals.svelte";
 
     const addModal = getContext<(modal: ModalKind) => void>("addModal");
 
