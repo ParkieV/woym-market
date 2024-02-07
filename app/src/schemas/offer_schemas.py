@@ -94,7 +94,7 @@ class OfferOut(BaseModel, BaseModelFields):
     best_place_im: str | None = Field(title='Площадка с лучшей ценой (на Маркете)')
     min_price_in_market: float | None = Field(title='Цена площадки (на Маркете)')
     your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
-    min_general_markets_price: float | None = Field(title='Минимальная цена на рынке')
+    min_general_markets_price: float | None = Field(title='Лучшая цена среди всех площадок')
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')

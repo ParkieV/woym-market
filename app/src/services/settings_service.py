@@ -212,34 +212,34 @@ columns_info = [
     ColumnCreate(
         index=0,
         key='best_place_wm',
-        name='Площадка с лучшей ценой (без учета Маркета)',
+        name='Площадка с лучшей ценой (без учета я.маркета)',
         data_type=ColumnDataType.STRING,
         editable=False,
     ),
     ColumnCreate(
         index=0,
         key='min_price_without_market',
-        name='Цена площадки (без учета Маркета)',
+        name='Лучшая цена без учета я.маркета в группе',
         data_type=ColumnDataType.FLOAT,
         editable=False,
     ),
     ColumnCreate(
         index=0,
         key='best_place_im',
-        name='Площадка с лучшей ценой (на Маркете)',
+        name='Площадка с лучшей ценой (на я.маркете)',
         data_type=ColumnDataType.STRING,
         editable=False,
     ),
     ColumnCreate(
         index=0,
         key='min_price_in_market',
-        name='Цена площадки (на Маркете)',
+        name='Лучшая цена на я.маркете в группе',
         data_type=ColumnDataType.FLOAT,
         editable=False,
     ),
     ColumnCreate(
         index=0,
-        name='Цена для покупателя',
+        name='Ваша цена для покупателей',
         key='your_price_for_buyers',
         data_type=ColumnDataType.FLOAT,
         editable=False
@@ -247,7 +247,7 @@ columns_info = [
     ColumnCreate(
         index=0,
         key='min_general_markets_price',
-        name='Минимальная цена в группе',
+        name='Лучшая цена среди всех площадок',
         data_type=ColumnDataType.FLOAT,
         editable=False,
     ),
