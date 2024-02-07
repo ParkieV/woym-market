@@ -117,10 +117,10 @@
 
     button.confirm {
         @include primary-button;
-        padding-left: 24px;
-        padding-right: 24px;
+        width: 80px;
     }
     button.cancel {
         @include secondary-button;
+        width: 80px;
     }
 </style>

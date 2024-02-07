@@ -26,6 +26,7 @@
 </Modal>
 
 <style lang="scss">
+    @use "mixins.scss" as *;
     div {
         display: flex;
         flex-direction: column;
@@ -43,11 +44,8 @@
             gap: 8px;
             margin-top: 8px;
             > button {
+                @include primary-button;
                 width: 80px;
-                height: 40px;
-                border-radius: 8px;
-                border: 0;
-                color: white;
             }
         }
     }

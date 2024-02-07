@@ -34,12 +34,13 @@
 </Modal>
 
 <style lang="scss">
+    @use "mixins.scss" as *;
     div {
         display: flex;
         flex-direction: column;
         gap: 8px;
-        width: 400px;
-        padding: 12px;
+        width: 460px;
+        padding: 20px 30px;
         gap: 8px;
 
         > span {
@@ -51,11 +52,14 @@
             gap: 8px;
             margin-top: 8px;
             > button {
-                width: 80px;
-                height: 40px;
-                border-radius: 8px;
-                border: 0;
-                color: white;
+                &.cancel {
+                    @include secondary-button;
+                    width: 80px;
+                }
+                &.confirm {
+                    @include primary-button;
+                    width: 80px;
+                }
             }
         }
     }

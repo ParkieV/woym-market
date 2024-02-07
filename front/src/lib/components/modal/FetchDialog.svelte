@@ -86,10 +86,6 @@
             > button {
                 @include primary-button;
                 width: 80px;
-                height: 40px;
-                border-radius: 8px;
-                border: 0;
-                color: white;
             }
         }
     }

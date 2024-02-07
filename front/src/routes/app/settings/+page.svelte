@@ -89,10 +89,7 @@
         background-color: #ebebeb;
         > button {
             @include primary-button;
-            padding: 0 16px;
             height: 40px;
-            border: 0;
-            min-width: 100px;
         }
     }
 </style>

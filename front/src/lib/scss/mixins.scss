@@ -19,6 +19,7 @@
         background-color: #2f4880;
     }
     border-radius: 4px;
+    height: 32px;
 }
 
 @mixin secondary-button {
@@ -30,6 +31,7 @@
         background-color: #ececee
     }
     border-radius: 4px;
+    height: 32px;
 }
 
 @mixin selectable-button {

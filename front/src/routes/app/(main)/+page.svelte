@@ -111,12 +111,13 @@
         button {
             padding-left: 16px;
             padding-right: 16px;
-            height: 40px;
             &.confirm {
                 @include primary-button;
+                height: 40px;
             }
             &.cancel {
                 @include secondary-button;
+                height: 40px;
             }
             &:disabled,
             &:disabled:hover {

@@ -36,7 +36,7 @@
         ])}
         <ConfirmationDialog
             header="Изменения будут потеряны"
-            text={`Вы внесли ${modal.changed} ${word}. ${part}, продолжить?`}
+            text={`Вы внесли ${modal.changed} ${word}. ${part}. Продолжить?`}
             on:confirm={modal.onConfirm}
             on:close={close}
         />

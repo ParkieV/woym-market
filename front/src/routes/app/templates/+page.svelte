@@ -71,7 +71,7 @@
         </ul>
     </div>
     <footer>
-        <button class="confirm" on:click={update}>Сохранить изменения</button>
+        <button on:click={update}>Сохранить</button>
     </footer>
 </main>
 
@@ -113,14 +113,10 @@
             margin: 0 -20px -20px -20px;
             padding: 16px;
             gap: 16px;
-            background-color: white;
+            background-color: #ebebeb;
             button {
-                padding-left: 16px;
-                padding-right: 16px;
+                @include primary-button;
                 height: 40px;
-                &.confirm {
-                    @include primary-button;
-                }
             }
         }
     }
