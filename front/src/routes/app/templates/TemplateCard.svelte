@@ -6,12 +6,12 @@
 
     const ToggleFieldNames = {
         use_total_price: "Расчётная цена",
-        use_attractive_price_threshold: "Порог привлекательной цены",
-        use_moderately_attractive_price_threshold: "Порог умеренно привлекательной цены",
-        use_your_price_for_buyers: "Своя цена для покупателей",
-        use_best_price_wm: "Цена площадки (без учета Маркета)",
-        use_best_price_im: "Цена площадки (на Маркете)",
-        use_minimum_group_price: "Минимальная цена в группе"
+        use_attractive_price_threshold: "Порог для привлекательной цены",
+        use_moderately_attractive_price_threshold: "Порог для умеренно привлекательной цены",
+        use_your_price_for_buyers: "Ваша цена для покупателей",
+        use_min_price_in_market: "Лучшая цена на Я.Маркете в группе",
+        use_min_price_without_market: "Лучшая цена без учета Я.Маркета",
+        use_min_general_markets_price: "Лучшая цена среди всех площадок"
     } as const;
     const ToggleFields = Object.keys(ToggleFieldNames) as (keyof typeof ToggleFieldNames)[];
 
@@ -51,7 +51,7 @@
             />
         </label>
         <label>
-            <span>Множитель (%)</span>
+            <span>Прибавить/отнять (%)</span>
             <input
                 type="number"
                 step="0.01"

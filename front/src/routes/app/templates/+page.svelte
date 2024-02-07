@@ -7,9 +7,9 @@
         use_attractive_price_threshold: boolean;
         use_moderately_attractive_price_threshold: boolean;
         use_your_price_for_buyers: boolean;
-        use_best_price_wm: boolean;
-        use_best_price_im: boolean;
-        use_minimum_group_price: boolean;
+        use_min_price_in_market: boolean;
+        use_min_price_without_market: boolean;
+        use_min_general_markets_price: boolean;
 
         /** Number that the resulting price will be divided by. */
         n: number;
@@ -101,6 +101,7 @@
                 display: flex;
                 flex-wrap: wrap;
                 justify-content: center;
+                align-content: start;
                 align-items: start;
                 gap: 20px;
                 padding: 30px 0;
