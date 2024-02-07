@@ -239,6 +239,7 @@ columns_info = [
     ),
     ColumnCreate(
         index=0,
+        name='Цена для покупателя',
         key='your_price_for_buyers',
         data_type=ColumnDataType.FLOAT,
         editable=False

@@ -44,7 +44,7 @@ async def setup_offers_data(user_id: int):
         for i in range(5):
             await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L{i+1}'))
 
-        data = utils.build_offers_data(yandex_offers_df, setup_mode=True, settings=settings)
+        data = await utils.build_offers_data(yandex_offers_df, setup_mode=True, settings=settings)
 
         offers_db = await db.create_offers(session, data)
         return offers_db
@@ -73,7 +73,7 @@ async def update_offers(user_id: int):
 
     to_update_df = pd.merge(yandex_offers_df, pd.DataFrame(to_update, columns=mapping_fields), how='inner')
     to_create_df = pd.merge(yandex_offers_df, pd.DataFrame(to_create, columns=mapping_fields), how='inner')
-    to_create_df = utils.build_offers_data(to_create_df, settings, setup_mode=True)
+    to_create_df = await utils.build_offers_data(to_create_df, settings, setup_mode=True)
     to_delete_df = pd.DataFrame(to_delete, columns=mapping_fields)
 
     async with async_session() as session:
@@ -99,20 +99,13 @@ async def update_yandex_offers_price(session: AsyncSession):
 
 async def recalculate_values(session: AsyncSession, settings, which=None):
     if which is None:
-        offers = await db.get_offers(session, model_schema=OfferOutWithPriceScheme)
+        offers = await db.get_offers(session, model_schema=OfferOut)
     else:
-        offers = await db.get_offers_by(session, which, model_schema=OfferOutWithPriceScheme)
+        offers = await db.get_offers_by(session, which, model_schema=OfferOut)
 
-    data = [offer.model_dump() for offer in offers]
-    for offer in data:
-        offer['n'] = offer['pricing_scheme']['n']
-        offer['m'] = offer['pricing_scheme']['m']
-        offer['sum_fields'] = PricingSchemeOut.active_fields(offer['pricing_scheme'])
-        del offer['pricing_scheme']
-
-    df = pd.DataFrame(data)
-    df = utils.calculate_offers_values(df, settings)
-    df.drop(['id', 'sum_fields', 'n', 'm'], axis=1, inplace=True, errors='ignore')
+    df = pd.DataFrame([offer.model_dump() for offer in offers])
+    df = await utils.calculate_offers_values(df, settings)
+    df.drop('id', axis=1, inplace=True, errors='ignore')
 
     await db.update_offers(session, df, mapping_columns=['sku', 'name_of_shop'])
 

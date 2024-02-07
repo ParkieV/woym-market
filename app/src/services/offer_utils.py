@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from io import BytesIO
 from fastapi import HTTPException, status
+from src.database.offer_db import get_pricing_schemes
+from src.database.db import async_session
 
 
 def count_fby(data: pd.DataFrame, settings) -> pd.Series:
@@ -22,7 +24,7 @@ def count_fby(data: pd.DataFrame, settings) -> pd.Series:
     return data['fby']
 
 
-def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
+async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
     data = data.copy()
 
     data['fby'] = count_fby(data, settings)
@@ -34,7 +36,7 @@ def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
                                    data['cost_price'] * data['total_price_coeff'],
                                    data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional'])
 
-    data = calculate_price(data)
+    data = await calculate_price(data)
 
     data['profit'] = data['current_price'] - data['fby'] - data['cost_price']
     data['margin'] = data['profit'] / data['cost_price'] * 100
@@ -43,18 +45,37 @@ def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
     return data
 
 
-def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
+async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     data = data.copy()
 
     # не меняем цену
 
-    data['scheme_result'] = data.apply(lambda row: sum(row[i] for i in row['sum_fields']), axis=1) / data['n']
-    data['scheme_result'] = data['scheme_result'] + data['scheme_result'] * data['m'] / 100
+    # data['scheme_result'] = data.apply(lambda row: sum(row[i] for i in row['sum_fields']), axis=1) / data['n']
+    # data['scheme_result'] = data['scheme_result'] + data['scheme_result'] * data['m'] / 100
+    #
+    # data['min_level'] = np.where(
+    #     ( (data['scheme_result'] < data['best_price_im']) | (np.isnan(data['scheme_result'])) ),
+    #     data['best_price_im'],
+    #     data['scheme_result']
+    # )
+    data['min_level'] = 0
+
+    async with async_session() as session:
+        for price_scheme in await get_pricing_schemes(session):
+            sum_fields = price_scheme.active_fields(price_scheme.model_dump())
+            n = price_scheme.n
+            m = price_scheme.m
+
+            data['min_level'] = np.where(
+                data['pricing_scheme_id'] == price_scheme.id,
+                data[sum_fields].sum(axis=1),
+                data['min_level']
+            )
 
     data['min_level'] = np.where(
-        ( (data['scheme_result'] < data['best_price_im']) | (np.isnan(data['scheme_result'])) ),
+        (data['min_level'] < data['best_price_im']) | (np.isnan(data['min_level'])),
         data['best_price_im'],
-        data['scheme_result']
+        data['min_level']
     )
 
     # используем ручную мин планку
@@ -77,7 +98,7 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
 
     df = pd.concat([sub_data_2, sub_data_3])
     df.reset_index(drop=True, inplace=True)
-    df.drop(['scheme_result', 'min_level'], axis=1, inplace=True)
+    df.drop('min_level', axis=1, inplace=True)
 
     # прибовляем 5% если магазин с лучшей ценой это текущий магазин
     df[['target_price', 'best_price_im']] = df[['target_price', 'best_price_im']].astype(float)
@@ -90,7 +111,7 @@ def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False, default_price_scheme_id: int = 1) -> pd.DataFrame:
+async def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False, default_price_scheme_id: int = 1) -> pd.DataFrame:
     data = data.copy()
 
     if data.empty:
@@ -99,8 +120,6 @@ def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2
     if setup_mode:
         data['dollar_cost_price'] = np.nan  # закупка
         data[['self_weight', 'self_length', 'self_width', 'self_height']] = np.nan
-        data[['n', 'm']] = np.nan
-        data['sum_fields'] = data.apply(lambda x: [], axis=1)
         data['pricing_scheme_id'] = default_price_scheme_id
 
     data['total_price_coeff'] = total_price_coeff
@@ -113,31 +132,11 @@ def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2
     data['use_manual_min_price'] = False
     data['auto_price_control'] = True
 
-    data = calculate_offers_values(data, settings)
+    data = await calculate_offers_values(data, settings)
     data['auto_price_control'] = False
     data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im']].astype(str)
-    data.drop(['n', 'm', 'sum_fields'], inplace=True, axis=1)
 
     return data
-
-
-def update_offers_data(data: pd.DataFrame, changes: pd.DataFrame, settings) -> pd.DataFrame:
-    updated_offers: pd.DataFrame = data.copy()
-
-    updated_offers.sort_values(['sku', 'name_of_shop'], inplace=True)
-    updated_offers.reset_index(drop=True, inplace=True)
-
-    changes.sort_values(['sku', 'name_of_shop'], inplace=True)
-    changes.reset_index(drop=True, inplace=True)
-
-    updated_offers.update(changes)
-    updated_offers.drop('id', axis=1, errors='ignore')
-
-    updated_offers = calculate_offers_values(updated_offers, settings)
-    updated_offers[['note_1', 'note_2', 'note_3']].fillna('', inplace=True)
-    updated_offers['hidden'].fillna(False, inplace=True)
-
-    return updated_offers
 
 
 def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0, file_extension: str = 'xlsx') -> pd.DataFrame:
