@@ -31,9 +31,9 @@ async def get_pricing_schemes():
 #     return await service.create_pricing_scheme(data)
 
 
-@data_router.patch('/pricing-schemes', dependencies=[Depends(get_current_user)])
-async def change_pricing_schemes(data: PricingSchemeChange):
-    await service.change_pricing_scheme(data)
+@data_router.patch('/pricing-schemes')
+async def change_pricing_schemes(data: PricingSchemeChange, current_user=Depends(get_current_user)):
+    await service.change_pricing_scheme(data, current_user.id)
     return {'status': 'OK'}
 
 

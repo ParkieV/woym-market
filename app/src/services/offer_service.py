@@ -104,6 +104,10 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
         offers = await db.get_offers_by(session, which, model_schema=OfferOut)
 
     df = pd.DataFrame([offer.model_dump() for offer in offers])
+
+    if df.empty:
+        return
+
     df = await utils.calculate_offers_values(df, settings)
     df.drop('id', axis=1, inplace=True, errors='ignore')
 
@@ -255,7 +259,11 @@ async def delete_pricing_schemes(data: list[int]) -> None:
         await db.delete_pricing_scheme(session, data)
 
 
-async def change_pricing_scheme(data: PricingSchemeChange):
+async def change_pricing_scheme(data: PricingSchemeChange, user_id: int):
+    settings = await get_settings(user_id)
+
     async with async_session() as session:
         await db.change_pricing_scheme(session, data)
+
+        await recalculate_values(session, settings, which=[{'pricing_scheme_id': data.id}])
 

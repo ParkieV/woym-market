@@ -68,7 +68,7 @@ async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
 
             data['min_level'] = np.where(
                 data['pricing_scheme_id'] == price_scheme.id,
-                data[sum_fields].sum(axis=1),
+                (data[sum_fields].sum(axis=1) / n) + (data[sum_fields].sum(axis=1) / n) * (m / 100),
                 data['min_level']
             )
 
