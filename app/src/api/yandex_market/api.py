@@ -162,7 +162,8 @@ class YandexMarketAPI(BaseAPI):
                     }
                 }
                     for offer in _offers[i:i + chunk_size] if
-                    (offer['target_price'] is not None and not np.isnan(offer['target_price'])) and offer['auto_price_control']]
+                    (offer['target_price'] is not None and not np.isnan(offer['target_price'])) and offer['auto_price_control'] and offer['target_price'] > 0
+                ]
                 body = {
                     'offers': data
                 }

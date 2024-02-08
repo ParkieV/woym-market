@@ -58,7 +58,7 @@ async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     #     data['min_price_in_market'],
     #     data['scheme_result']
     # )
-    data['min_level'] = 0
+    data['min_level'] = np.nan
 
     async with async_session() as session:
         for price_scheme in await get_pricing_schemes(session):
@@ -68,7 +68,7 @@ async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
 
             data['min_level'] = np.where(
                 data['pricing_scheme_id'] == price_scheme.id,
-                (data[sum_fields].sum(axis=1) / n) + (data[sum_fields].sum(axis=1) / n) * (m / 100),
+                (data[sum_fields].sum(axis=1, skipna=False) / n) + (data[sum_fields].sum(axis=1, skipna=False) / n) * (m / 100),
                 data['min_level']
             )
 
@@ -77,6 +77,7 @@ async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
         data['min_price_in_market'],
         data['min_level']
     )
+    data['min_level'] = data['min_level'].replace(0, np.nan)
 
     # используем ручную мин планку
     sub_data_2 = data[data['use_manual_min_price'] == True]
