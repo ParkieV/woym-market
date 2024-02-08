@@ -2,7 +2,7 @@
     import ButtonGroup from "$lib/components/ButtonGroup.svelte";
     import Search from "$lib/components/Search.svelte";
     import type { Offer } from "$lib/data/offers";
-    import { createEventDispatcher } from "svelte";
+    import { createEventDispatcher, onMount } from "svelte";
 
     let shops = new Set([
         { name: "CALMAR.SHOP", selected: true },
@@ -52,6 +52,10 @@
         show_hidden;
         dispatch("filterChanged", filter);
     }
+
+    onMount(() => {
+        dispatch("filterChanged", filter);
+    })
 </script>
 
 <menu>
