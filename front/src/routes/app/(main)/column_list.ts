@@ -1,5 +1,5 @@
 import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
-import type { Template } from "../templates/+page.svelte";
+import type { Template } from "$lib/data/templates";
 
 export default function columnList(templates: Template[]): (Column | ColumnGroup)[] {
     return [

@@ -1,52 +1,22 @@
-<script lang="ts" context="module">
-    export type Template = {
-        id: number;
-        name: string;
-
-        use_total_price: boolean;
-        use_attractive_price_threshold: boolean;
-        use_moderately_attractive_price_threshold: boolean;
-        use_your_price_for_buyers: boolean;
-        use_min_price_in_market: boolean;
-        use_min_price_without_market: boolean;
-        use_min_general_markets_price: boolean;
-
-        /** Number that the resulting price will be divided by. */
-        n: number;
-        /** Amount that will be added to the price (in percent). */
-        m: number;
-    };
-</script>
-
 <script lang="ts">
-    import { fetchAuthenticated } from "$lib/auth";
     import { getContext, onMount } from "svelte";
     import type { ModalKind } from "$lib/components/modal/Modals.svelte";
     import TemplateCard from "./TemplateCard.svelte";
-
-    let templates: Template[] = [];
+    import { fetchTemplates, patchTemplate, type Template } from "$lib/data/templates";
 
     const addModal = getContext<(modal: ModalKind) => void>("addModal");
-    onMount(async () => {
-        let _templates: Template[] = await (
-            await fetchAuthenticated("data/pricing-schemes")
-        ).json();
-        _templates.sort((a, b) => a.id - b.id);
-        templates = _templates;
-    });
+
+    let templates: Template[] = [];
+    const changed = new Set<number>();
 
     const update = async () => {
         let promises = [];
         for (const id of changed) {
             let template = templates.find(x => x.id === id);
-            let promise = fetchAuthenticated("data/pricing-schemes", {
-                method: "PATCH",
-                body: JSON.stringify(template),
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            });
-            promises.push(promise);
+            if (template) {
+                let promise = patchTemplate(template);
+                promises.push(promise);
+            }
         }
         addModal({
             kind: "await",
@@ -56,7 +26,9 @@
         });
     };
 
-    const changed = new Set<number>();
+    onMount(async () => {
+        templates = await fetchTemplates();
+    });
 </script>
 
 <main>

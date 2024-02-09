@@ -4,10 +4,9 @@
     import { type Offer, fetchOfferList, patchOfferList } from "$lib/data/offers";
     import { ChangeList } from "$lib/components/datagrid/changes";
     import Toolbar from "./Toolbar.svelte";
-    import { fetchAuthenticated } from "$lib/auth";
     import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
     import Footer from "./Footer.svelte";
-    import type { Template } from "../templates/+page.svelte";
+    import { fetchTemplates, type Template } from "$lib/data/templates";
     import columnList from "./column_list";
 
     let data: Offer[] = [];
@@ -27,8 +26,7 @@
     }
 
     onMount(async () => {
-        let templates: Template[] = await (await fetchAuthenticated("data/pricing-schemes")).json();
-        templates.sort((a, b) => a.id - b.id);
+        let templates: Template[] = await fetchTemplates();
         columns = columnList(templates);
         refreshData();
     });
