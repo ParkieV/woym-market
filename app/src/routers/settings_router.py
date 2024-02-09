@@ -1,6 +1,6 @@
 from fastapi import Depends, APIRouter
 from src.services import settings_service as service
-from src.schemas.settings_schemas import LogsOut, SettingsOut, SettingsUpdate, ColumnOut, ColumnUpdate
+from src.schemas.settings_schemas import LogsOut, SettingsOut, SettingsUpdate, ColumnOut, ColumnUpdate, Tables
 from src.services.auth_utils import get_current_user
 
 settings_router = APIRouter(
@@ -26,9 +26,8 @@ async def get_logs(current_user=Depends(get_current_user)):
 
 
 @settings_router.get('/columns', response_model=list[ColumnOut])
-async def get_columns(current_user=Depends(get_current_user)):
-    settings = await service.get_settings(current_user.id)
-    return settings.columns
+async def get_columns(table: Tables, current_user=Depends(get_current_user)):
+    return await service.get_columns(current_user.id, table)
 
 
 @settings_router.patch('/columns')
