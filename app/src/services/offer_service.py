@@ -31,6 +31,7 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
 
     async with async_session() as session:
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
+        await db.validate_pricing_scheme_id(session, set(changes['pricing_scheme_id'].values.tolist()))
 
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'])
         await recalculate_values(session, settings, which=changes[['sku', 'name_of_shop', 'market']])
@@ -139,7 +140,7 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
 
 
 async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
-    required_fields = set(['sku', 'market', 'name_of_shop'])
+    required_fields = {'sku', 'market', 'name_of_shop'}
 
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
@@ -164,6 +165,9 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
     df[['sku', 'name_of_shop', 'market']] = df[['sku', 'name_of_shop', 'market']].astype("string")
 
     async with async_session() as session:
+        if 'pricing_scheme_id' in df.columns:
+            await db.validate_pricing_scheme_id(session, set(df['pricing_scheme_id'].values.tolist()))
+
         try:
             await db.update_offers(session, df, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
         except Exception as e:
