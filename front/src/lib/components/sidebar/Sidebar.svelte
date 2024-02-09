@@ -13,8 +13,8 @@
 <nav class:collapsed={$collapsed}>
     <Header />
     <Link text="Товары" icon="/house.svg" path="/app" />
-    <Link text="Остатки" icon="/package.svg" path="/app/storage" />
-    <Link text="Яндекс" icon="/yandex.svg" path="/app/storage/yandex" />
+    <Link text="Мои остатки" icon="/warehouse.svg" path="/app/own_storage" />
+    <Link text="FBO остатки" icon="/package.svg" path="/app/fbo_storage" />
     <Spacer />
     <Link text="Шаблоны цен" icon="/math.svg" path="/app/templates" />
     <Link text="Настройки" icon="/gear.svg" path="/app/settings" />
