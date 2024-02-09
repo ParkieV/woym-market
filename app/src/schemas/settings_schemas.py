@@ -34,31 +34,29 @@ class ColumnDataType(str, Enum):
     COMBOBOX = 'combobox'
 
 
+class Tables(str, Enum):
+    OFFERS = 'offers'
+    MATRIX_STOCKS = 'matrix_stocks'
+    MATRIX_WAREHOUSES = 'matrix_warehouses'
+
+
 class BaseColumn(BaseModel):
-    index: int
-    width: float = 120
-    is_visible: bool = True
+    table: Tables = Tables.OFFERS
+    data: list | dict | None = None
+
+
+class ColumnCreate(BaseColumn):
+    pass
 
 
 class ColumnUpdate(BaseColumn):
-    key: str
+    id: int
 
 
 class ColumnOut(ColumnUpdate):
-    name: str
-    data_type: ColumnDataType
-    editable: bool
-    tooltip: str = ''
-    pinned: bool = False
-    options: Json | list[dict] | None = None
+    updated_at: datetime
 
 
-class ColumnCreate(ColumnOut):
-    pass
-
-
-class ColumnFullUpdate(ColumnOut):
-    pass
 
 
 

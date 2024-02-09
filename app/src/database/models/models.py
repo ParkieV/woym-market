@@ -6,11 +6,11 @@ from sqlalchemy import (
     Boolean,
     TIMESTAMP,
     Float,
-    DateTime, JSON,
+    DateTime, JSON, func
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
-
+from datetime import datetime
 from .base import Base
 
 
@@ -120,17 +120,9 @@ class ColumnInfo(Base):
     settings_id = Column(Integer, ForeignKey('settings.id', ondelete='CASCADE'))
     settings = relationship("Settings", back_populates='columns')
 
-    name = Column(String)
-    key = Column(String, unique=True, index=True)
-    edit_key = Column(String, nullable=True, default=None)
-    data_type = Column(String)
-    index = Column(Integer)
-    width = Column(Float, default=100)
-    editable = Column(Boolean)
-    is_visible = Column(Boolean, default=True)
-    pinned = Column(Boolean, default=False)
-    tooltip = Column(String, default='')
-    options = Column(JSON, nullable=True, default=None)
+    table = Column(String)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    data = Column(JSON, nullable=True, default=None)
 
 
 class PricingScheme(Base):
