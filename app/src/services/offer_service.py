@@ -4,12 +4,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database.db import async_session
 from src.database import offer_db as db
 import src.services.offer_utils as utils
-from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate, OfferOutWithPriceScheme
+from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market, \
+    PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate, OfferOutWithPriceScheme, BaseOffer
 import pandas as pd
 from src.api.factory import MPTypes, APIFactory
 import numpy as np
 from src.services.settings_service import get_settings, update_logs
 from src.params.confing import config
+from fastapi.exceptions import HTTPException
+from fastapi import status
+
 
 yandex_repository = APIFactory.get(MPTypes.YANDEX, token=config.yandex_token)
 
@@ -135,6 +139,8 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
 
 
 async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+    required_fields = set(['sku', 'market', 'name_of_shop'])
+
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df.fillna({
@@ -143,17 +149,27 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
         'note_3': '',
     }, inplace=True)
 
+    if len(set(df.columns) & required_fields) != len(required_fields):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные. Следующие колонки должны быть обязательно: {", ".join(BaseOffer.fields().values())}')
+
     if name_of_shop:
         df = df[df['name_of_shop'] == name_of_shop]
 
     if market:
         df = df[df['market'] == market]
 
-    columns_to_change = list(set(df.columns) & set(OfferOut.fields().keys()))
+    columns_to_change = list(set(df.columns) & set(OfferChange.fields().keys()))
     df = df[columns_to_change]
 
+    df[['sku', 'name_of_shop', 'market']] = df[['sku', 'name_of_shop', 'market']].astype("string")
+
     async with async_session() as session:
-        await db.update_offers(session, df, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
+        try:
+            await db.update_offers(session, df, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
+        except Exception as e:
+            print(e)
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
+
         await recalculate_values(session, settings, df[['sku', 'name_of_shop', 'market']])
 
 
@@ -162,6 +178,9 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
     df.drop(df.columns[[3, 4, 6, 7]], axis=1, inplace=True, errors='ignore')
     df.drop([i for i in range(8)], axis=0, inplace=True, errors='ignore')
     df.columns = ['sku', 'name', 'discount_price', 'price']
+
+    df['sku'] = df['sku'].astype('string')
+
     df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
 
     df['dollar_cost_price'] = np.where(
@@ -182,7 +201,12 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
         mapping_columns.append('market')
 
     async with async_session() as session:
-        await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
+        try:
+            await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
+        except Exception as e:
+            print(e)
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
+
         await recalculate_values(session, settings)
 
 
@@ -195,6 +219,7 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
     df[['self_length', 'self_width', 'self_height', 'self_weight']] = df[
         ['self_length', 'self_width', 'self_height', 'self_weight']].astype(float)
     df['volume'] = df['self_length'] * df['self_width'] * df['self_height'] / 1000
+    df['sku'] = df['sku'].astype('string')
 
     df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
     df.fillna(0, inplace=True)
@@ -211,7 +236,12 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
         mapping_columns.append('market')
 
     async with async_session() as session:
-        await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
+        try:
+            await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
+        except Exception as e:
+            print(e)
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
+
         await recalculate_values(session, settings)
 
 

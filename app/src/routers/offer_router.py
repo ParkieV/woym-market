@@ -1,5 +1,6 @@
-from fastapi import APIRouter, File, Depends, UploadFile
+from fastapi import APIRouter, File, Depends, UploadFile, status
 from fastapi.responses import FileResponse
+from fastapi.exceptions import HTTPException
 from pathlib import PurePath
 from src.services.auth_utils import get_current_user
 from src.schemas.offer_schemas import OfferOut, OfferChange, ImportType, ExportType, Market, PricingSchemeOut, PricingSchemeChange
