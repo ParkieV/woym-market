@@ -36,7 +36,6 @@ class BaseModelFields(ABC):
     _skip_fields = [
         'group_sellers_amount',
         'pricing_scheme',
-        'pricing_scheme_id',
         'business_id',
 
     ]

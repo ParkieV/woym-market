@@ -6,6 +6,8 @@ from sqlalchemy import select, update, delete
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate
 from .models.models import Offer, PricingScheme
 from typing import Iterable, Any, Type
+from fastapi.exceptions import HTTPException
+from fastapi import status
 
 
 def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
@@ -131,3 +133,14 @@ async def change_pricing_scheme(session: AsyncSession, data: PricingSchemeChange
     await session.execute(query)
     await session.commit()
 
+
+async def validate_pricing_scheme_id(session: AsyncSession, data: int | Iterable[int]) -> None:
+    if isinstance(data, int):
+        data = [data]
+
+    for i in data:
+        query = select(PricingScheme).where(PricingScheme.id == i)
+        rez = await session.execute(query)
+
+        if rez.scalar_one_or_none() is None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Схемы ценообразования с id - {i} не найдено')
