@@ -1,21 +1,19 @@
-import { fetchAuthenticated } from "$lib/auth";
-import type { ColDef, GridApi } from "ag-grid-community";
+import type { ColDef, ColGroupDef, ColumnGroupShowType } from "ag-grid-community";
 import { numberValueSetter, stringValueSetter } from "./util";
+
+export type ColumnGroup = { header: string; children: Column[] };
 
 export type Column =
     | ({ data_type: "string" | "image" | "boolean" | NumberDataType } & ColumnData)
     | ({ data_type: "combobox"; options: { value: any; name: string }[] } & ColumnData);
 
 type ColumnData = {
-    id: number;
-    name: string;
-    tooltip: string;
+    header: string;
     key: string;
-    index: number;
-    width: number;
-    is_visible: boolean;
-    editable: boolean;
-    pinned: boolean;
+    editable?: boolean;
+    tooltip?: string;
+    pinned?: boolean;
+    columnGroupShow?: ColumnGroupShowType;
 };
 
 type NumberDataType = (typeof numberDataTypes)[number];
@@ -25,20 +23,29 @@ function isNumeric(data_type: string): data_type is NumberDataType {
     return numberDataTypes.includes(data_type as any);
 }
 
-export async function getColumns(init: {
-    onPhotoClicked: (url: string) => void;
-    isRowChanged: (row: any) => boolean;
-}): Promise<ColDef[]> {
-    let columns: Column[] = await (await fetchAuthenticated("settings/columns")).json();
-    columns.sort((a, b) => a.index - b.index);
+export function getColumns(
+    columns: (Column | ColumnGroup)[],
+    init: {
+        onPhotoClicked: (url: string) => void;
+        isRowChanged: (row: any) => boolean;
+    }
+): ColDef[] {
     let colDefs = columns.map(col => {
+        if ("children" in col) {
+            return {
+                headerName: col.header,
+                children: getColumns(col.children, init),
+                marryChildren: true
+            } satisfies ColGroupDef;
+        }
+
         let colDef: ColDef = {
             field: col.key,
-            headerName: col.name,
-            width: col.width,
+            headerName: col.header,
             editable: col.editable,
-            cellClass: cellClass(col.editable, col.data_type),
+            cellClass: cellClass(col.editable === true, col.data_type),
             wrapHeaderText: true,
+            columnGroupShow: col.columnGroupShow,
             headerTooltip: col.tooltip
         };
 
@@ -123,33 +130,4 @@ function cellClass(editable: boolean, data_type: string): string[] {
     if (isNumeric(data_type)) classes.push("ag-right-aligned-cell");
     if (data_type == "image") classes.push("product-photo-cell");
     return classes;
-}
-
-export async function patchColumns(grid: GridApi) {
-    type PatchData = {
-        key: string;
-        is_visible: true;
-        width: number;
-        index: number;
-    };
-
-    let colDefs = grid.getColumnDefs();
-    if (!colDefs) return;
-    let patches: PatchData[] = colDefs.map((colDef: ColDef, index) => {
-        let column = grid.getColumns()!.find(x => x.getColDef().field == colDef.field)!;
-        return {
-            key: colDef.field!,
-            index,
-            is_visible: true,
-            width: column.getActualWidth()
-        };
-    });
-
-    await fetchAuthenticated("settings/columns", {
-        method: "PATCH",
-        body: JSON.stringify(patches),
-        headers: {
-            "Content-Type": "application/json"
-        }
-    });
 }
