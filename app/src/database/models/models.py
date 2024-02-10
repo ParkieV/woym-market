@@ -34,7 +34,7 @@ class Settings(Base):
     fby_sales_commission = Column(Float, default=19)
     rate = Column(Float, default=10)
 
-    columns = relationship('ColumnInfo', back_populates='settings', lazy='subquery')
+    tables = relationship('TableInfo', back_populates='settings', lazy='subquery')
 
 
 class Offer(Base):
@@ -113,16 +113,16 @@ class Logs(Base):
     updated_at = Column(DateTime(timezone=True), nullable=True, default=None)
 
 
-class ColumnInfo(Base):
-    __tablename__ = 'columns'
+class TableInfo(Base):
+    __tablename__ = 'tables'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     settings_id = Column(Integer, ForeignKey('settings.id', ondelete='CASCADE'))
-    settings = relationship("Settings", back_populates='columns')
+    settings = relationship("Settings", back_populates='tables')
 
-    table = Column(String)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
-    data = Column(JSON, nullable=True, default=None)
+    name = Column(String, unique=True)
+    updated_at = Column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+    data = Column(String, nullable=True, default=None)
 
 
 class PricingScheme(Base):

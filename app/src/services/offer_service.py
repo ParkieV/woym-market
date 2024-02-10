@@ -9,8 +9,8 @@ from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, Export
 import pandas as pd
 from src.api.factory import MPTypes, APIFactory
 import numpy as np
-from src.services.settings_service import get_settings, update_logs
 from src.params.confing import config
+from src.database.settings_db import update_logs, get_user_settings
 from fastapi.exceptions import HTTPException
 from fastapi import status
 
@@ -27,9 +27,9 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
     if not offers_data:
         return offers_data
 
-    settings = await get_settings(user_id)
-
     async with async_session() as session:
+        settings = await get_user_settings(session, user_id)
+
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
         await db.validate_pricing_scheme_id(session, set(changes['pricing_scheme_id'].values.tolist()))
 
@@ -39,11 +39,11 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
 
 
 async def setup_offers_data(user_id: int):
-    settings = await get_settings(user_id)
 
     yandex_offers = await yandex_repository.get_offers_list()
     yandex_offers_df = pd.DataFrame(yandex_offers)
     async with async_session() as session:
+        settings = await get_user_settings(session, user_id)
         await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L0', use_min_price_in_market=True))
 
         for i in range(5):
@@ -58,8 +58,7 @@ async def setup_offers_data(user_id: int):
 async def update_offers(user_id: int):
     async with async_session() as session:
         await update_yandex_offers_price(session)
-
-    settings = await get_settings(user_id)
+        settings = await get_user_settings(session, user_id)
 
     mapping_fields = ['sku', 'name_of_shop', 'market']
 
@@ -87,7 +86,7 @@ async def update_offers(user_id: int):
         await db.delete_offers(session, to_delete_df)
         await recalculate_values(session, settings)
 
-    await update_logs(user_id, {'updated_at': datetime.now()})
+        await update_logs(session, user_id, {'updated_at': datetime.now()})
 
 
 async def delete_offers(offers: list[OfferDelete]):
@@ -120,7 +119,8 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
 
 
 async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None, user_id: int, file_extension: str = 'xlsx') -> None:
-    settings = await get_settings(user_id)
+    async with async_session() as session:
+        settings = await get_user_settings(session, user_id)
 
     if market == Market.ALL:
         market = None
@@ -294,9 +294,9 @@ async def delete_pricing_schemes(data: list[int]) -> None:
 
 
 async def change_pricing_scheme(data: PricingSchemeChange, user_id: int):
-    settings = await get_settings(user_id)
 
     async with async_session() as session:
+        settings = await get_user_settings(session, user_id)
         await db.change_pricing_scheme(session, data)
 
         await recalculate_values(session, settings, which=[{'pricing_scheme_id': data.id}])

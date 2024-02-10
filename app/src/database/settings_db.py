@@ -1,8 +1,8 @@
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.schemas import settings_schemas as schema
-from src.database.models.models import Logs, Settings, ColumnInfo
-from src.schemas.settings_schemas import ColumnOut, ColumnCreate
+from src.database.models.models import Logs, Settings, TableInfo
+from src.schemas.settings_schemas import TableInfoOut, TableInfoCreate
 
 
 async def create_logs(session: AsyncSession, user_id: int) -> Logs:
@@ -45,29 +45,27 @@ async def update_user_settings(session: AsyncSession, user_id: int, settings_upd
     await session.commit()
 
 
-async def create_columns(session: AsyncSession, settings_id: int,  data: list[ColumnCreate]) -> list[ColumnOut]:
-    columns_db = [ColumnInfo(settings_id=settings_id, **dict(column)) for column in data]
-    session.add_all(columns_db)
+async def create_table(session: AsyncSession, settings_id: int, data: TableInfoCreate) -> TableInfoOut:
+    table_db = TableInfo(settings_id=settings_id, **data.model_dump())
+    session.add(table_db)
     await session.commit()
-    return [ColumnOut.model_validate(column, from_attributes=True) for column in columns_db]
+    return TableInfoOut.model_validate(table_db, from_attributes=True)
 
 
-async def get_columns(session: AsyncSession, settings_id: int, table: schema.Tables) -> list[ColumnOut]:
-    query = select(ColumnInfo).where(ColumnInfo.settings_id==settings_id).where(ColumnInfo.table==table)
+async def get_table(session: AsyncSession, settings_id: int, name: str):
+    query = select(TableInfo).where(TableInfo.settings_id==settings_id).where(TableInfo.name==name)
     result = await session.execute(query)
-    return [schema.ColumnOut.model_validate(i, from_attributes=True) for i in result.scalars().all()]
+    return result.scalar_one_or_none()
 
 
-async def update_columns(session: AsyncSession, settings_id: int,  data: list[schema.ColumnUpdate]) -> None:
-    for column in data:
-        query = update(ColumnInfo).where((ColumnInfo.settings_id == settings_id) & (ColumnInfo.id == column.id)).values(**dict(column))
-        await session.execute(query)
-
+async def update_table(session: AsyncSession, settings_id: int, data: schema.TableInfoUpdate) -> None:
+    query = update(TableInfo).where((TableInfo.settings_id == settings_id) & (TableInfo.name == data.name)).values(data.model_dump())
+    await session.execute(query)
     await session.commit()
 
 
-async def delete_columns(session: AsyncSession, settings_id: int, ids: list[int]) -> None:
-    stmp = delete(ColumnInfo).where(ColumnInfo.settings_id==settings_id).where(ColumnInfo.id.in_(ids))
+async def delete_table(session: AsyncSession, settings_id: int, names: list[str]) -> None:
+    stmp = delete(TableInfo).where(TableInfo.settings_id==settings_id).where(TableInfo.name.in_(names))
     await session.execute(stmp)
     await session.commit()
 
