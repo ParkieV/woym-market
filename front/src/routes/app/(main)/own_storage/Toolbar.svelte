@@ -1,6 +1,6 @@
 <script lang="ts">
     import Search from "$lib/components/Search.svelte";
-    import type { Storage } from "$lib/data/storage";
+    import type { OwnStorage } from "$lib/data/own_storage";
     import { createEventDispatcher, onMount } from "svelte";
 
     let search = "";
@@ -9,7 +9,7 @@
     /** Fields that are compared to search query.*/
     const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"] as const;
 
-    function filter(storage: Storage): boolean {
+    function filter(storage: OwnStorage): boolean {
         if (storage.hidden && !show_hidden) {
             return false;
         }
@@ -25,7 +25,7 @@
         return false;
     }
 
-    let dispatch = createEventDispatcher<{ filterChanged: (storage: Storage) => boolean }>();
+    let dispatch = createEventDispatcher<{ filterChanged: (storage: OwnStorage) => boolean }>();
     $: {
         search;
         show_hidden;

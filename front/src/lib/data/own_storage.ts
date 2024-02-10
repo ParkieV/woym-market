@@ -1,4 +1,4 @@
-export type Storage = {
+export type OwnStorage = {
     sku: string;
     photo: string;
     name: string;
@@ -10,7 +10,7 @@ export type Storage = {
     hidden: boolean;
 };
 
-export async function fetchStorages(): Promise<Storage[]> {
+export async function fetchOwnStorages(): Promise<OwnStorage[]> {
     // TODO: replace with API call after backend implementation.
     return [
         {
@@ -44,6 +44,6 @@ export async function fetchStorages(): Promise<Storage[]> {
     ];
 }
 
-export async function patchStorages(storages: Storage[]) {
+export async function patchOwnStorages(storages: OwnStorage[]) {
     // TODO: replace with API call after backend implementation.
 }

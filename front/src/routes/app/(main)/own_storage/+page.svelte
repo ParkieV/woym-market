@@ -5,18 +5,18 @@
     import { onMount } from "svelte";
     import Footer from "../Footer.svelte";
     import columnList from "./column_list";
-    import { fetchStorages, type Storage } from "$lib/data/storage";
+    import { fetchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
     import { getStores as fetchStores } from "$lib/data/stores";
     import Toolbar from "./Toolbar.svelte";
 
-    let data: Storage[] = [];
-    let changes = new ChangeList<Storage, "sku">();
+    let data: OwnStorage[] = [];
+    let changes = new ChangeList<OwnStorage, "sku">();
     let columns: (Column | ColumnGroup)[] = [];
-    let filter: (storage: Storage) => boolean = () => true;
+    let filter: (storage: OwnStorage) => boolean = () => true;
 
     onMount(async () => {
         columns = columnList(await fetchStores());
-        data = await fetchStorages();
+        data = await fetchOwnStorages();
     });
 </script>
 
