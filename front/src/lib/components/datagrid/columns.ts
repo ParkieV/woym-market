@@ -1,4 +1,4 @@
-import type { ColDef, ColGroupDef, ColumnGroupShowType } from "ag-grid-community";
+import type { ColDef, ColGroupDef, ColumnGroupShowType } from "ag-grid-enterprise";
 import { numberValueSetter, stringValueSetter } from "./util";
 
 export type ColumnGroup = { header: string; children: Column[] };

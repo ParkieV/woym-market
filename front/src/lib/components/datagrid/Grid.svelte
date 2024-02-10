@@ -2,7 +2,7 @@
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import { getColumns, type Column, type ColumnGroup } from "./columns";
     import { ChangeList } from "$lib/components/datagrid/changes";
-    import { createGrid, type ColDef, type GridApi, type GridOptions } from "ag-grid-community";
+    import { createGrid, type ColDef, type GridApi, type GridOptions } from "ag-grid-enterprise";
     import { onMount } from "svelte";
 
     /** Name of the grid that is used as key to preserve order of columns, etc. */
