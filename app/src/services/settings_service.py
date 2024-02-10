@@ -1,9 +1,8 @@
-import json
 
 from src.database import settings_db as db
 from src.database.db import async_session
-from src.schemas.settings_schemas import SettingsUpdate, ColumnUpdate, Tables, ColumnCreate, ColumnOut
-from src.schemas.offer_schemas import OfferOut
+from src.schemas.settings_schemas import SettingsUpdate, TableInfoUpdate, Tables, TableInfoCreate, TableInfoOut
+from src.services.offer_service import recalculate_values
 
 
 async def get_logs(user_id: int):
@@ -24,7 +23,7 @@ async def update_logs(user_id: int, data: dict):
 async def create_settings(user_id: int):
     async with async_session() as session:
         settings = await db.create_user_settings(session, user_id)
-        await db.create_columns(session, settings, [ColumnCreate(table=Tables.OFFERS, data=None) for _ in OfferOut.fields().keys()])
+        await db.create_table(session, settings.id, TableInfoCreate(name='offers', data=None))
         return settings
 
 
@@ -35,32 +34,34 @@ async def get_settings(user_id: int):
 
 async def update_settings(user_id: int, data: SettingsUpdate):
     async with async_session() as session:
-        return await db.update_user_settings(session, user_id, data)
+        await db.update_user_settings(session, user_id, data)
+        settings = await db.get_user_settings(session, user_id)
+        await recalculate_values(session, settings)
 
 
-async def update_columns(user_id: int, data: list[ColumnUpdate]):
+async def update_table(user_id: int, data: TableInfoUpdate):
     async with async_session() as session:
         settings = await db.get_user_settings(session, user_id)
 
-        return await db.update_columns(session, settings.id, data)
+        return await db.update_table(session, settings.id, data)
 
 
-async def get_columns(user_id: int, table: Tables) -> list[ColumnOut]:
+async def get_table(user_id: int, name: str) -> TableInfoOut:
     async with async_session() as session:
         settings = await db.get_user_settings(session, user_id)
 
-        return await db.get_columns(session, settings.id, table)
+        return await db.get_table(session, settings.id, name)
 
 
-async def create_columns(data: list[ColumnCreate], user_id: int) -> list[ColumnOut]:
+async def create_table(data: TableInfoCreate, user_id: int) -> TableInfoOut:
     async with async_session() as session:
         settings = await db.get_user_settings(session, user_id)
 
-        return await db.create_columns(session, settings.id, data)
+        return await db.create_table(session, settings.id, data)
 
 
-async def delete_columns(data: list[int], user_id: int):
+async def delete_tables(data: list[str], user_id: int):
     async with async_session() as session:
         settings = await db.get_user_settings(session, user_id)
 
-        return await db.delete_columns(session, settings.id, data)
+        return await db.delete_table(session, settings.id, data)

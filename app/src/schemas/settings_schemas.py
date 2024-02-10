@@ -40,20 +40,20 @@ class Tables(str, Enum):
     MATRIX_WAREHOUSES = 'matrix_warehouses'
 
 
-class BaseColumn(BaseModel):
-    table: Tables = Tables.OFFERS
-    data: list | dict | None = None
+class BaseTableInfo(BaseModel):
+    name: str
+    data: str | None = None
 
 
-class ColumnCreate(BaseColumn):
+class TableInfoCreate(BaseTableInfo):
     pass
 
 
-class ColumnUpdate(BaseColumn):
-    id: int
+class TableInfoUpdate(BaseTableInfo):
+    pass
 
 
-class ColumnOut(ColumnUpdate):
+class TableInfoOut(TableInfoUpdate):
     updated_at: datetime
 
 
