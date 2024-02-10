@@ -39,11 +39,11 @@ async def update_settings(user_id: int, data: SettingsUpdate):
         await recalculate_values(session, settings)
 
 
-async def update_table(user_id: int, data: TableInfoUpdate):
+async def update_table(user_id: int, table_name: str, data: TableInfoUpdate):
     async with async_session() as session:
         settings = await db.get_user_settings(session, user_id)
 
-        return await db.update_table(session, settings.id, data)
+        return await db.update_table(session, settings.id, table_name, data)
 
 
 async def get_table(user_id: int, name: str) -> TableInfoOut:

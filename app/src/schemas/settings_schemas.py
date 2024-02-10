@@ -41,12 +41,11 @@ class Tables(str, Enum):
 
 
 class BaseTableInfo(BaseModel):
-    name: str
     data: str | None = None
 
 
 class TableInfoCreate(BaseTableInfo):
-    pass
+    name: str
 
 
 class TableInfoUpdate(BaseTableInfo):

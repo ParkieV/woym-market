@@ -30,8 +30,8 @@ async def get_table(table_name: str, current_user=Depends(get_current_user)):
     return await service.get_table(current_user.id, table_name)
 
 
-@settings_router.put('/tables')
-async def update_table(data: TableInfoUpdate, current_user=Depends(get_current_user)):
-    await service.update_table(current_user.id, data)
+@settings_router.put('/tables/{table_name}')
+async def update_table(data: TableInfoUpdate, table_name: str,  current_user=Depends(get_current_user)):
+    await service.update_table(current_user.id, table_name, data)
     return {'status': 'OK'}
 

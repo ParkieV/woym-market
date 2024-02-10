@@ -58,8 +58,8 @@ async def get_table(session: AsyncSession, settings_id: int, name: str):
     return result.scalar_one_or_none()
 
 
-async def update_table(session: AsyncSession, settings_id: int, data: schema.TableInfoUpdate) -> None:
-    query = update(TableInfo).where((TableInfo.settings_id == settings_id) & (TableInfo.name == data.name)).values(data.model_dump())
+async def update_table(session: AsyncSession, settings_id: int, table_name: str, data: schema.TableInfoUpdate) -> None:
+    query = update(TableInfo).where((TableInfo.settings_id == settings_id) & (TableInfo.name == table_name)).values(data.model_dump())
     await session.execute(query)
     await session.commit()
 
