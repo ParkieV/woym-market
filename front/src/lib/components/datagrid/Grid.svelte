@@ -63,6 +63,7 @@
             },
             enableRangeSelection: true,
             enableRangeHandle: true,
+            getContextMenuItems: () => ["cut", "copy", "paste"],
             initialState
         };
 
