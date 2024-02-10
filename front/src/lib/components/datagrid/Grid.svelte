@@ -61,6 +61,8 @@
                 let _state = { columnOrder, columnGroup, columnPinning, columnSizing, sort };
                 localStorage.setItem(stateKey, JSON.stringify(_state));
             },
+            enableRangeSelection: true,
+            enableRangeHandle: true,
             initialState
         };
 
