@@ -1,16 +1,31 @@
 <script lang="ts" generics="T, K extends keyof T">
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
-    import { getColumns, patchColumns } from "./columns";
+    import { getColumns, type Column, type ColumnGroup } from "./columns";
     import { ChangeList } from "$lib/components/datagrid/changes";
-    import { createGrid, type ColDef, type GridApi, type GridOptions } from "ag-grid-community";
+    import { createGrid, type ColDef, type GridApi, type GridOptions } from "ag-grid-enterprise";
     import { onMount } from "svelte";
 
+    /** Name of the grid that is used as key to preserve order of columns, etc. */
+    export let grid_name: string;
     /** Data to display in the table. */
     export let data: T[];
     /** Field name in the data that is used as key. */
     export let key: K;
     /** Tracker of changed entries. */
     export let changes: ChangeList<T, K>;
+    /** Filter function for rows. */
+    export let filter: (value: T) => boolean = () => true;
+    /** List of column definitions (in custom format). */
+    export let columns: (Column | ColumnGroup)[];
+    /** Unmanaged grid options to apply. Managed fields will be overwritten. */
+    export let otherGridOptions: GridOptions = {};
+
+    $: if (grid) {
+        filter;
+        grid.setGridOption("doesExternalFilterPass", e => filter(e.data!));
+        grid.setGridOption("isExternalFilterPresent", () => true);
+        grid.onFilterChanged();
+    }
 
     let selected_image: string | undefined = undefined;
 
@@ -21,23 +36,20 @@
         grid.showLoadingOverlay();
     }
 
-    export let filter: (value: T) => boolean;
-    $: if (grid) {
-        filter;
-        grid.setGridOption("doesExternalFilterPass", e => filter(e.data!));
-        grid.setGridOption("isExternalFilterPresent", () => true);
-        grid.onFilterChanged();
-    }
-
     onMount(async () => {
-        const columnDefs: ColDef<T>[] = await getColumns({
+        const columnDefs: ColDef<T>[] = getColumns(columns, {
             onPhotoClicked: url => (selected_image = url),
             isRowChanged: (value: T) => {
                 return changes.isChanged(value[key]);
             }
         });
 
+        const stateKey = `gridState-${grid_name}}`;
+        const _initialState = localStorage.getItem(stateKey);
+        const initialState = _initialState ? JSON.parse(_initialState) : undefined;
+
         const options: GridOptions<T> = {
+            ...otherGridOptions,
             columnDefs,
             suppressDragLeaveHidesColumns: true,
             rowHeight: 75,
@@ -47,8 +59,15 @@
                 e.api.redrawRows({ rowNodes: [e.node] });
             },
             tooltipShowDelay: 500,
-            onColumnResized: e => patchColumns(e.api),
-            onColumnMoved: e => patchColumns(e.api)
+            onStateUpdated: ({ state }) => {
+                let { columnOrder, columnGroup, columnPinning, columnSizing, sort } = state;
+                let _state = { columnOrder, columnGroup, columnPinning, columnSizing, sort };
+                localStorage.setItem(stateKey, JSON.stringify(_state));
+            },
+            enableRangeSelection: true,
+            enableRangeHandle: true,
+            getContextMenuItems: () => ["cut", "copy", "paste"],
+            initialState
         };
 
         grid = createGrid(element, options);

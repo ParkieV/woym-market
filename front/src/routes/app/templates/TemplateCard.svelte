@@ -1,6 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
-    import type { Template } from "./+page.svelte";
+    import type { Template } from "$lib/data/templates";
 
     export let template: Template;
 
