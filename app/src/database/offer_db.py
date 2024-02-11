@@ -3,7 +3,7 @@ import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
-from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate
+from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate, BaseOffer
 from .models.models import Offer, PricingScheme
 from typing import Iterable, Any, Type
 from fastapi.exceptions import HTTPException
@@ -97,6 +97,12 @@ async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.D
         result.extend([model_schema.model_validate(offer, from_attributes=True) for offer in query_result.scalars().all()])
 
     return result
+
+
+async def get_offer(session: AsyncSession, filters: dict, model_schema: Type[BaseOffer] = OfferOut):
+    query = select(Offer).filter_by(**filters)
+    result = await session.execute(query)
+    return model_schema.model_validate(result.scalar_one(), from_attributes=True)
 
 
 async def create_pricing_scheme(session: AsyncSession, data: PricingSchemeCreate | dict) -> PricingSchemeOut:

@@ -37,7 +37,7 @@ class BaseModelFields(ABC):
         'group_sellers_amount',
         'pricing_scheme',
         'business_id',
-
+        'id',
     ]
 
     @classmethod
@@ -82,6 +82,7 @@ class OfferChange(BaseOffer):
 
 class OfferOut(OfferChange):
     # from yandex api
+    id: int = Field(title='id')
     name: str = Field(title='Название')
 
     yandex_weight: float | None = Field(title='Вес с маркета', default=0)
@@ -122,6 +123,8 @@ class OfferOut(OfferChange):
         orm_mode = True
 
 
+
+
 class OfferOutWithPriceScheme(OfferOut):
     pricing_scheme: PricingSchemeOut | None = None
 
@@ -149,44 +152,4 @@ class ExportType(str, Enum):
     TABLE = 'table'
     MATRIX_STOCKS = 'matrix-stocks'
     MATRIX_OFFERS = 'matrix-offers'
-
-
-class BaseWarehouse(BaseModel):
-    name: str
-    warehouse_id: int
-    market: str
-
-
-class WarehouseCreate(BaseWarehouse):
-    pass
-
-
-class WarehouseOut(BaseWarehouse):
-    id: int
-
-
-class BaseOfferStock(BaseModel):
-    offer_id: int
-    warehouse_id: int
-    in_stock: int = 0
-    min_stock: int = 0
-    for_delivery: int = 0
-
-
-class OfferStockCreate(BaseOfferStock):
-    pass
-
-
-class OfferStockOut(BaseOfferStock):
-    id: int
-
-
-class OfferStockUpdate(BaseModel):
-    id: int
-    in_stock: int = 0
-    min_stock: int = 0
-    for_delivery: int = 0
-
-
-
 

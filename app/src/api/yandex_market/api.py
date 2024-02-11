@@ -233,26 +233,50 @@ class YandexMarketAPI(BaseAPI):
         campaigns = self.get_campaigns()
         warehouses = self._get_warehouses_info()
 
-        for campaign in campaigns:
-            offers_stocks = self._get_offers_stocks(campaign.id, WAREHOUSES)
+        for warehouse_id in warehouses.keys():
+            offers = []
+            for campaign in campaigns:
+                offers_stocks = self._get_offers_stocks(campaign.id, WAREHOUSES)
 
-            for warehouse_id in warehouses.keys():
-
-                offers = [
+                offers.extend([
                     APIWarehouseOffer(
                         sku=offer['offerId'],
                         name_of_shop=campaign.business.name,
-                        in_stock=sum([i['count'] for i in offer['stocks'] if i['type'] == 'AVAILABLE'])
+                        current_stock=sum([i['count'] for i in offer['stocks'] if i['type'] == 'AVAILABLE'])
                     )
                     for offer in offers_stocks[warehouse_id]
-                ]
+                            ])
 
-                warehouse = APIWarehouse(
-                    warehouse_id=warehouse_id,
-                    market='yandex',
-                    offers=offers
-                )
-                result.append(warehouse)
+            warehouse = APIWarehouse(
+                        warehouse_id=warehouse_id,
+                        market='yandex',
+                        offers=offers,
+                        name=warehouses[warehouse_id]['name']
+                    )
+            result.append(warehouse)
+        return result
+
+        # for campaign in campaigns:
+        #     offers_stocks = self._get_offers_stocks(campaign.id, WAREHOUSES)
+        #
+        #     for warehouse_id in warehouses.keys():
+        #
+        #         offers = [
+        #             APIWarehouseOffer(
+        #                 sku=offer['offerId'],
+        #                 name_of_shop=campaign.business.name,
+        #                 current_stock=sum([i['count'] for i in offer['stocks'] if i['type'] == 'AVAILABLE'])
+        #             )
+        #             for offer in offers_stocks[warehouse_id]
+        #         ]
+        #
+        #         warehouse = APIWarehouse(
+        #             warehouse_id=warehouse_id,
+        #             market='yandex',
+        #             offers=offers,
+        #             name=warehouses[warehouse_id]['name']
+        #         )
+        #         result.append(warehouse)
 
         return result
 
