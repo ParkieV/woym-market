@@ -4,7 +4,7 @@
     import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
     import { onMount } from "svelte";
     import Footer from "../Footer.svelte";
-    import columnList from "./column_list";
+    import { ownStorageColumns } from "$lib/columns";
     import { fetchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
     import { getStores as fetchStores } from "$lib/data/stores";
     import Toolbar from "../Toolbar.svelte";
@@ -15,7 +15,7 @@
     let filter: (storage: OwnStorage) => boolean = () => true;
 
     onMount(async () => {
-        columns = columnList(await fetchStores());
+        columns = ownStorageColumns(await fetchStores());
         data = await fetchOwnStorages();
     });
 </script>

@@ -1,47 +1,9 @@
-import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
-import type { Template } from "$lib/data/templates";
+import type { Column, ColumnGroup } from "./components/datagrid/columns";
+import type { Template } from "./data/templates";
 
-export default function columnList(templates: Template[]): (Column | ColumnGroup)[] {
+export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
     return [
-        { header: "SKU", key: "sku", data_type: "string", pinned: true },
-        {
-            header: "Информация",
-            children: [
-                { header: "Фото", key: "photo", data_type: "image" },
-                { header: "Название", key: "name", data_type: "string" },
-                {
-                    header: "Примечание 1",
-                    key: "note_1",
-                    data_type: "string",
-                    editable: true,
-                    columnGroupShow: "closed"
-                },
-                {
-                    header: "Примечание 2",
-                    key: "note_2",
-                    data_type: "string",
-                    editable: true,
-                    columnGroupShow: "closed"
-                },
-                {
-                    header: "Примечание 3",
-                    key: "note_3",
-                    data_type: "string",
-                    editable: true,
-                    columnGroupShow: "closed"
-                },
-                {
-                    key: "market",
-                    header: "Площадка",
-                    data_type: "string"
-                },
-                {
-                    key: "name_of_shop",
-                    header: "Название магазина",
-                    data_type: "string"
-                }
-            ]
-        },
+        ...baseOfferColumns(),
         {
             header: "Габариты (Собственные)",
             children: [
@@ -222,5 +184,66 @@ export default function columnList(templates: Template[]): (Column | ColumnGroup
             data_type: "int"
         },
         { header: "Скрыт", key: "hidden", data_type: "boolean", editable: true }
+    ];
+}
+
+export function ownStorageColumns(
+    markets: { id: number; name: string }[]
+): (Column | ColumnGroup)[] {
+    return [
+        ...baseOfferColumns(),
+        { header: "Мой склад", key: "own_storage", data_type: "int", editable: true },
+        ...markets.map<Column>(x => ({
+            header: `${x.name}, шт.`,
+            key: `shops.${x.id}`,
+            data_type: "int"
+        })),
+        { header: "Скрыт", key: "hidden", data_type: "boolean", editable: true }
+    ];
+}
+
+function baseOfferColumns(): (Column | ColumnGroup)[] {
+    return [
+        { header: "SKU", key: "sku", data_type: "string", pinned: true },
+        {
+            header: "Информация",
+            children: [
+                { header: "Фото", key: "photo", data_type: "image" },
+                { header: "Название", key: "name", data_type: "string" },
+                {
+                    header: "Примечание 1",
+                    key: "note_1",
+                    data_type: "string",
+                    editable: true,
+                    columnGroupShow: "closed"
+                },
+                {
+                    header: "Примечание 2",
+                    key: "note_2",
+                    data_type: "string",
+                    editable: true,
+                    columnGroupShow: "closed"
+                },
+                {
+                    header: "Примечание 3",
+                    key: "note_3",
+                    data_type: "string",
+                    editable: true,
+                    columnGroupShow: "closed"
+                },
+                {
+                    key: "market",
+                    header: "Площадка",
+                    data_type: "string",
+                    columnGroupShow: "closed"
+                },
+                {
+                    key: "name_of_shop",
+                    header: "Название магазина",
+                    data_type: "string",
+                    columnGroupShow: "closed"
+                }
+            ]
+        }
     ];
 }

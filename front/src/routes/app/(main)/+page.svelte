@@ -7,7 +7,7 @@
     import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
     import Footer from "./Footer.svelte";
     import { fetchTemplates, type Template } from "$lib/data/templates";
-    import columnList from "./column_list";
+    import { offerColumns } from "$lib/columns";
 
     let data: Offer[] = [];
     let changes = new ChangeList<Offer, "sku">();
@@ -27,7 +27,7 @@
 
     onMount(async () => {
         let templates: Template[] = await fetchTemplates();
-        columns = columnList(templates);
+        columns = offerColumns(templates);
         refreshData();
     });
 
