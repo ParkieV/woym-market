@@ -7,7 +7,7 @@
     import columnList from "./column_list";
     import { fetchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
     import { getStores as fetchStores } from "$lib/data/stores";
-    import Toolbar from "./Toolbar.svelte";
+    import Toolbar from "../Toolbar.svelte";
 
     let data: OwnStorage[] = [];
     let changes = new ChangeList<OwnStorage, "sku">();

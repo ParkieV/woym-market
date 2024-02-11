@@ -1,7 +1,7 @@
 <script lang="ts">
     import ButtonGroup from "$lib/components/ButtonGroup.svelte";
     import Search from "$lib/components/Search.svelte";
-    import type { Offer } from "$lib/data/offers";
+    import type { OfferBase } from "$lib/data/offers";
     import { createEventDispatcher, onMount } from "svelte";
 
     let shops = new Set([
@@ -18,7 +18,7 @@
     /** Fields that are compared to search query.*/
     const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"] as const;
 
-    function filter(offer: Offer): boolean {
+    function filter(offer: OfferBase): boolean {
         if (offer.hidden && !show_hidden) {
             return false;
         }
@@ -44,7 +44,7 @@
         return false;
     }
 
-    let dispatch = createEventDispatcher<{ filterChanged: (offer: Offer) => boolean }>();
+    let dispatch = createEventDispatcher<{ filterChanged: (offer: OfferBase) => boolean }>();
     $: {
         search;
         shops;
@@ -55,7 +55,7 @@
 
     onMount(() => {
         dispatch("filterChanged", filter);
-    })
+    });
 </script>
 
 <menu>
