@@ -1,4 +1,6 @@
 <script lang="ts" generics="T, K extends keyof T">
+    import { getGridState, setGridState } from "./state";
+
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import { getColumns, type Column, type ColumnGroup } from "./columns";
     import { ChangeList } from "$lib/components/datagrid/changes";
@@ -44,10 +46,6 @@
             }
         });
 
-        const stateKey = `gridState-${grid_name}}`;
-        const _initialState = localStorage.getItem(stateKey);
-        const initialState = _initialState ? JSON.parse(_initialState) : undefined;
-
         const options: GridOptions<T> = {
             ...otherGridOptions,
             columnDefs,
@@ -59,15 +57,11 @@
                 e.api.redrawRows({ rowNodes: [e.node] });
             },
             tooltipShowDelay: 500,
-            onStateUpdated: ({ state }) => {
-                let { columnOrder, columnGroup, columnPinning, columnSizing, sort } = state;
-                let _state = { columnOrder, columnGroup, columnPinning, columnSizing, sort };
-                localStorage.setItem(stateKey, JSON.stringify(_state));
-            },
+            onStateUpdated: ({ state }) => setGridState(grid_name, state),
             enableRangeSelection: true,
             enableRangeHandle: true,
             getContextMenuItems: () => ["cut", "copy", "paste"],
-            initialState
+            initialState: getGridState(grid_name)
         };
 
         grid = createGrid(element, options);
