@@ -34,13 +34,14 @@ class APIOffer:
 class APIWarehouseOffer:
     sku: str
     name_of_shop: str
-    in_stock: int = 0
+    current_stock: int = 0
 
 
 @dataclass
 class APIWarehouse:
     warehouse_id: int
     market: str
+    name: str
     offers: list[APIWarehouseOffer]
 
 

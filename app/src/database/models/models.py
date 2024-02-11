@@ -104,6 +104,8 @@ class Offer(Base):
     pricing_scheme_id = Column(Integer, ForeignKey('pricing_schemes.id', ondelete='RESTRICT'), nullable=False)
     pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
 
+    stocks = relationship('OfferStock')
+
 
 class Logs(Base):
     __tablename__ = 'logs'
@@ -128,7 +130,7 @@ class TableInfo(Base):
 class PricingScheme(Base):
     __tablename__ = 'pricing_schemes'
 
-    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
     name = Column(String, nullable=False)
 
     use_total_price = Column(Boolean, default=False, nullable=False)
@@ -145,22 +147,38 @@ class PricingScheme(Base):
     offers = relationship(Offer, back_populates='pricing_scheme')
 
 
-# class Warehouse(Base):
-#     __tablename__ = 'warehouses'
-#
-#     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
-#
-#     name = Column(String)
-#     warehouse_id = Column(Integer)
-#     market = Column(String)
-#
-#
-# class OfferStock(Base):
-#     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
-#
-#     offer_id = Column(Integer, ForeignKey('offers.id', ondelete='CASCADE'))
-#     warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='CASCADE'))
-#     in_stock = Column(Integer, default=0)
-#     min_stock = Column(Integer, default=0)
-#     for_delivery = Column(Integer, default=0)
+class Warehouse(Base):
+    __tablename__ = 'warehouses'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+
+    name = Column(String)
+    warehouse_id_in_marketplace = Column(Integer)
+    market = Column(String)
+
+
+class OfferStock(Base):
+    __tablename__ = 'offers_stocks'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+
+    offer_id = Column(Integer, ForeignKey('offers.id', ondelete='CASCADE'))
+    warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='CASCADE'))
+    warehouse = relationship(Warehouse, uselist=False)
+    current_stock = Column(Integer, default=0)
+    min_stock = Column(Integer, default=0)
+    for_delivery = Column(Integer, default=0)
+
+
+class Market(Base):
+    __tablename__ = 'markets'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    name = Column(String)
+
+    token = Column(String)
+    campaign_id = Column(Integer, nullable=True, default=None)
+
+    tax = Column(Float, default=0)
+
 
