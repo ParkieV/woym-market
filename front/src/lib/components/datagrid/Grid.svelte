@@ -17,6 +17,8 @@
     export let filter: (value: T) => boolean = () => true;
     /** List of column definitions (in custom format). */
     export let columns: (Column | ColumnGroup)[];
+    /** Unmanaged grid options to apply. Managed fields will be overwritten. */
+    export let otherGridOptions: GridOptions = {};
 
     $: if (grid) {
         filter;
@@ -47,6 +49,7 @@
         const initialState = _initialState ? JSON.parse(_initialState) : undefined;
 
         const options: GridOptions<T> = {
+            ...otherGridOptions,
             columnDefs,
             suppressDragLeaveHidesColumns: true,
             rowHeight: 75,

@@ -1,5 +1,7 @@
+import type { ValueGetterParams } from "ag-grid-enterprise";
 import type { Column, ColumnGroup } from "./components/datagrid/columns";
 import type { Template } from "./data/templates";
+import type { FboStocks } from "./data/fbo_storage";
 
 export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
     return [
@@ -202,9 +204,89 @@ export function ownStorageColumns(
     ];
 }
 
+export function fboStocksColumns(): (Column | ColumnGroup)[] {
+    return [
+        ...baseOfferColumns(),
+        {
+            header: "Остатки",
+            children: [
+                {
+                    header: "В наличии",
+                    key: "current_stock",
+                    data_type: "int",
+                    valueGetter: (params: ValueGetterParams<FboStocks>) => {
+                        if (!params.data) return 0;
+                        return params.data.storages
+                            .map(x => x.current_stock)
+                            .reduce((a, b) => a + b, 0);
+                    }
+                },
+                {
+                    header: "Мин. остаток",
+                    key: "min_stock",
+                    data_type: "int",
+                    valueGetter: (params: ValueGetterParams<FboStocks>) => {
+                        if (!params.data) return 0;
+                        return params.data.storages
+                            .map(x => x.min_stock)
+                            .reduce((a, b) => a + b, 0);
+                    }
+                },
+                {
+                    header: "К поставке",
+                    key: "to_deliver",
+                    data_type: "int",
+                    valueGetter: (params: ValueGetterParams<FboStocks>) => {
+                        if (!params.data) return 0;
+                        return params.data.storages
+                            .map(x => Math.max(0, x.min_stock - x.current_stock))
+                            .reduce((a, b) => a + b, 0);
+                    }
+                }
+            ]
+        },
+        { header: "Скрыт", key: "hidden", data_type: "boolean", editable: true }
+    ];
+}
+
+export function fboStorageColumns(): (Column | ColumnGroup)[] {
+    return [
+        { header: "Склад", key: "warehouse.name", data_type: "string" },
+        {
+            header: "В наличии",
+            key: "current_stock",
+            data_type: "int"
+        },
+        {
+            header: "Мин. остаток",
+            key: "min_stock",
+            data_type: "int",
+            editable: true
+        },
+        {
+            header: "К поставке",
+            key: "to_deliver",
+            data_type: "int",
+            valueGetter: params => {
+                if (params.data) {
+                    return Math.max(0, params.data.min_stock - params.data.current_stock);
+                } else {
+                    return 0;
+                }
+            }
+        }
+    ];
+}
+
 function baseOfferColumns(): (Column | ColumnGroup)[] {
     return [
-        { header: "SKU", key: "sku", data_type: "string", pinned: true },
+        {
+            header: "SKU",
+            key: "sku",
+            data_type: "string",
+            pinned: true,
+            cellRenderer: "agGroupCellRenderer"
+        },
         {
             header: "Информация",
             children: [

@@ -1,4 +1,4 @@
-import type { ColDef, ColGroupDef, ColumnGroupShowType } from "ag-grid-enterprise";
+import type { ColDef, ColGroupDef, ColumnGroupShowType, ValueGetterFunc } from "ag-grid-enterprise";
 import { numberValueSetter, stringValueSetter } from "./util";
 
 export type ColumnGroup = { header: string; children: Column[] };
@@ -14,6 +14,8 @@ type ColumnData = {
     tooltip?: string;
     pinned?: boolean;
     columnGroupShow?: ColumnGroupShowType;
+    cellRenderer?: string;
+    valueGetter?: ValueGetterFunc;
 };
 
 type NumberDataType = (typeof numberDataTypes)[number];
@@ -46,7 +48,9 @@ export function getColumns(
             cellClass: cellClass(col.editable === true, col.data_type),
             wrapHeaderText: true,
             columnGroupShow: col.columnGroupShow,
-            headerTooltip: col.tooltip
+            headerTooltip: col.tooltip,
+            cellRenderer: col.cellRenderer,
+            valueGetter: col.valueGetter
         };
 
         if (col.data_type == "combobox") {
@@ -101,7 +105,7 @@ export function getColumns(
                 ...colDef,
                 lockPosition: "left",
                 pinned: "left",
-                cellClass: e => (init.isRowChanged(e.data!) ? "changed" : [])
+                cellClass: e => (e.data && init.isRowChanged(e.data) ? "changed" : [])
             };
         }
         return colDef;
