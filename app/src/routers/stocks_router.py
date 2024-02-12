@@ -32,7 +32,7 @@ async def change_fbo_stocks(data: list[OfferWithStocksUpdate]):
 
 @stocks_router.post('/setup', dependencies=[Depends(get_current_user)])
 async def setup_fbo_stocks():
-    await service.setup_warehouses_and_stocks()
+    await service.update_warehouses_and_stocks()
     return {'status': 'OK'}
 
 

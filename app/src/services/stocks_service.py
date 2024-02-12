@@ -1,3 +1,4 @@
+from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
 from src.database import offer_db
@@ -7,15 +8,16 @@ from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStock
 from fastapi import status
 from fastapi.exceptions import HTTPException
 
+api_wrapper = APIWrapper()
 
 
-async def setup_warehouses_and_stocks():
-    stocks = await yandex_api.get_stocks()
+async def update_warehouses_and_stocks():
+    stocks = await api_wrapper.get_stocks()
 
     async with async_session() as session:
 
         for warehouse in stocks:
-            warehouse_db = await db.create_warehouse(session, WarehouseCreate(
+            warehouse_db, _ = await db.update_or_create_warehouse(session, WarehouseCreate(
                 name=warehouse.name,
                 warehouse_id_in_marketplace=warehouse.warehouse_id,
                 market=warehouse.market
@@ -29,7 +31,7 @@ async def setup_warehouses_and_stocks():
                     warehouse_id=warehouse_db.id,
                     offer_id=offer.id
                 )
-                await db.create_offer_stock(session, offer_stock_create)
+                await db.update_or_create_offer_stock(session, offer_stock_create)
 
 
 async def get_warehouses():

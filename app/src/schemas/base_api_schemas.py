@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+from typing import Union
+
+import numpy as np
 
 
 @dataclass(frozen=True)
@@ -43,5 +46,16 @@ class APIWarehouse:
     market: str
     name: str
     offers: list[APIWarehouseOffer]
+
+
+@dataclass
+class APIPriceChangeData:
+    sku: str
+    market: str
+    name_of_shop: str
+    target_price: Union[int, float, None]
+
+    def is_valid_data(self) -> bool:
+        return isinstance(self.target_price, (float, int))
 
 
