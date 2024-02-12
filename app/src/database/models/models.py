@@ -6,12 +6,14 @@ from sqlalchemy import (
     Boolean,
     TIMESTAMP,
     Float,
-    DateTime, JSON, func
+    DateTime,
+    Enum
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
 from datetime import datetime
 from .base import Base
+from ...api.factory import APITypes
 
 
 class Users(Base):
@@ -177,7 +179,8 @@ class Market(Base):
     name = Column(String)
 
     token = Column(String)
-    campaign_id = Column(Integer, nullable=True, default=None)
+    entity_id = Column(Integer, nullable=True, default=None)
+    type = Column(Enum(APITypes))
 
     tax = Column(Float, default=0)
 

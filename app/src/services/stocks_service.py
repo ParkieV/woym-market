@@ -1,13 +1,12 @@
 from src.database.db import async_session
 from src.database import warehouse_db as db
 from src.database import offer_db
-from src.api.factory import APIFactory, MPTypes
+from src.api.factory import APIFactory, APITypes
 from src.params.confing import config
 from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStockOut, OfferStockCreate, OfferWithStocksUpdate
 from fastapi import status
 from fastapi.exceptions import HTTPException
 
-yandex_api = APIFactory.get(MPTypes.YANDEX, token=config.yandex_token)
 
 
 async def setup_warehouses_and_stocks():

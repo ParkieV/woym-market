@@ -1,21 +1,23 @@
 from datetime import datetime
 from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import offer_db as db
 import src.services.offer_utils as utils
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market, \
     PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate, OfferOutWithPriceScheme, BaseOffer
 import pandas as pd
-from src.api.factory import MPTypes, APIFactory
+# from src.api.factory import APITypes, APIFactory
 import numpy as np
-from src.params.confing import config
+# from src.params.confing import config
 from src.database.settings_db import update_logs, get_user_settings
 from fastapi.exceptions import HTTPException
 from fastapi import status
 
-
-yandex_repository = APIFactory.get(MPTypes.YANDEX, token=config.yandex_token)
+api_wrapper = APIWrapper()
+# yandex_repository = APIFactory.get(APITypes.YANDEX, token=config.yandex_token)
 
 
 async def get_offers(filters: dict[str, Any] | None = None) -> list[OfferOut]:
@@ -40,7 +42,7 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
 
 async def setup_offers_data(user_id: int):
 
-    yandex_offers = await yandex_repository.get_offers_list()
+    yandex_offers = await api_wrapper.get_offers_list()
     yandex_offers_df = pd.DataFrame(yandex_offers)
     async with async_session() as session:
         settings = await get_user_settings(session, user_id)
@@ -62,7 +64,7 @@ async def update_offers(user_id: int):
 
     mapping_fields = ['sku', 'name_of_shop', 'market']
 
-    yandex_offers = await yandex_repository.get_offers_list()
+    yandex_offers = await api_wrapper.get_offers_list()
     db_offers = await get_offers()
 
     offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
@@ -98,7 +100,7 @@ async def update_yandex_offers_price(session: AsyncSession):
     offers_db = await db.get_offers(session)
     offers_df = pd.DataFrame([offer.model_dump() for offer in offers_db])
     data = offers_df.to_dict('records')
-    await yandex_repository.change_prices(data)
+    await api_wrapper.change_prices(data)
 
 
 async def recalculate_values(session: AsyncSession, settings, which=None):

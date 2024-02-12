@@ -4,18 +4,18 @@ from .base_api import BaseAPI
 from .yandex_market.api import YandexMarketAPI
 
 
-class MPTypes(str, Enum):
+class APITypes(str, Enum):
     OZON = 'ozon'
     YANDEX = 'yandex'
 
 
 class APIFactory:
-    __api_types: dict[MPTypes, Type[BaseAPI]] = {
-        MPTypes.YANDEX: YandexMarketAPI
+    __api_types: dict[APITypes, Type[BaseAPI]] = {
+        APITypes.YANDEX: YandexMarketAPI
     }
 
     @classmethod
-    def get(cls, api_type: MPTypes, **kwargs) -> BaseAPI:
+    def get(cls, api_type: APITypes, **kwargs) -> BaseAPI:
         api_class = cls.__api_types.get(api_type, None)
 
         if api_class is None:
