@@ -1,59 +1,60 @@
-from dataclasses import asdict
 from io import BytesIO
 import asyncio
 from typing import Any
 from fastapi import HTTPException
 from requests import Session, Response
-from src.schemas.yandex_api_schemas import CampaignInfo, BusinessInfo
 from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS, OFFERS_DETAIL, WAREHOUSES
 import pandas as pd
-from collections import defaultdict
 import numpy as np
 from src.api.base_api import BaseAPI
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse
 
 
 class YandexMarketAPI(BaseAPI):
+
     def check_auth_data(self, token: str):
         pass
 
-    def __init__(self, token: str):
+    def __init__(self, token: str, entity_id: int, shop_name: str):
         self.check_auth_data(token)
 
         self.session = Session()
-        self.token = token
+        self._token = token
+        self._entity_id = entity_id # same as campaign_id
+        self._shop_name = shop_name
         self.auth_headers = {
-            'Authorization': f'Bearer {token}'
+            'Authorization': f'Bearer {self._token}'
         }
+
+    def get_business_id_by_campaign_id(self, campaign_id: int) -> int:
+        return self._get_campaigns()[campaign_id]['business_id']
 
     async def get_offers_list(self) -> list[APIOffer]:
         result = []
+        business_id = self.get_business_id_by_campaign_id(self._entity_id)
 
-        campaigns = self.get_campaigns()
+        stocks = self._get_offers_stocks(self._entity_id, OFFERS)
+        price_report = await self._get_market_prices_report(business_id)
+        base_offers = self._get_campaign_offers(business_id)
 
-        for campaign in campaigns:
-            stocks = self._get_offers_stocks(campaign.id, OFFERS)
-            price_report = await self._get_market_prices_report(campaign.business.id)
-            base_offers = self._get_campaign_offers(campaign.business.id)
+        for offer in base_offers:
+            report_line = price_report.get(offer['sku'], {})
 
-            for offer in base_offers:
-                report_line = price_report.get(offer['sku'], {})
-
-                extended_offer = {
-                    'attractive_price_threshold': report_line.get('attractive_price_threshold', 0),
-                    'moderately_attractive_price_threshold': report_line.get('moderately_attractive_price_threshold', 0),
-                    'best_place_wm': report_line.get('best_place_wm', ''),
-                    'min_price_without_market': report_line.get('min_price_without_market', 0),
-                    'best_place_im': report_line.get('best_place_im', ''),
-                    'min_price_in_market': report_line.get('min_price_in_market', 0),
-                    'min_general_markets_price': report_line.get('min_general_markets_price', 0),
-                    'your_price_for_buyers': report_line.get('your_price_for_buyers', 0),
-                    'group_sellers_amount': 0,
-                    'remaining_stock': stocks.get(offer['sku'], 0),
-                    'name_of_shop': campaign.business.name,
-                }
-                extended_offer.update(offer)
-                result.append(extended_offer)
+            extended_offer = {
+                'attractive_price_threshold': report_line.get('attractive_price_threshold', 0),
+                'moderately_attractive_price_threshold': report_line.get('moderately_attractive_price_threshold', 0),
+                'best_place_wm': report_line.get('best_place_wm', ''),
+                'min_price_without_market': report_line.get('min_price_without_market', 0),
+                'best_place_im': report_line.get('best_place_im', ''),
+                'min_price_in_market': report_line.get('min_price_in_market', 0),
+                'min_general_markets_price': report_line.get('min_general_markets_price', 0),
+                'your_price_for_buyers': report_line.get('your_price_for_buyers', 0),
+                'group_sellers_amount': 0,
+                'remaining_stock': stocks.get(offer['sku'], 0),
+                'name_of_shop': self._shop_name,
+            }
+            extended_offer.update(offer)
+            result.append(extended_offer)
 
         return [APIOffer(**offer) for offer in result]
 
@@ -68,26 +69,14 @@ class YandexMarketAPI(BaseAPI):
         # TODO write logs
         raise HTTPException(status_code, detail, body)
 
-    def get_campaigns(self) -> [CampaignInfo]:
+    def _get_campaigns(self) -> dict[int, dict[str, Any]]:
         response = self.session.get('https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
 
-        if response.status_code != 200:
-            return None
+        self.check_response(response)
 
         data = response.json()
-        return [
-            CampaignInfo(
-                id=campaign['id'],
-                client_id=campaign['clientId'],
-                domain=campaign['domain'],
-                business=BusinessInfo(
-                    id=campaign['business']['id'],
-                    name=campaign['business']['name']
-                )
 
-            )
-            for campaign in data['campaigns']
-        ]
+        return {campaign['id']: {'business_id': campaign['business']['id'], 'name': campaign['business']['name']} for campaign in data['campaigns']}
 
     def _get_offers_stocks(self, campaign_id: int, handler: StocksResponseHandler = OFFERS):
         warehouses = []
@@ -230,22 +219,19 @@ class YandexMarketAPI(BaseAPI):
     async def get_stocks(self) -> list[APIWarehouse]:
         result = []
 
-        campaigns = self.get_campaigns()
         warehouses = self._get_warehouses_info()
+        offers_stocks = self._get_offers_stocks(self._entity_id, WAREHOUSES)
 
         for warehouse_id in warehouses.keys():
-            offers = []
-            for campaign in campaigns:
-                offers_stocks = self._get_offers_stocks(campaign.id, WAREHOUSES)
 
-                offers.extend([
-                    APIWarehouseOffer(
-                        sku=offer['offerId'],
-                        name_of_shop=campaign.business.name,
-                        current_stock=sum([i['count'] for i in offer['stocks'] if i['type'] == 'AVAILABLE'])
-                    )
-                    for offer in offers_stocks[warehouse_id]
-                            ])
+            offers = [
+                APIWarehouseOffer(
+                    sku=offer['offerId'],
+                    name_of_shop=self._shop_name,
+                    current_stock=sum([i['count'] for i in offer['stocks'] if i['type'] == 'AVAILABLE'])
+                )
+                for offer in offers_stocks[warehouse_id]
+                        ]
 
             warehouse = APIWarehouse(
                         warehouse_id=warehouse_id,
@@ -254,30 +240,6 @@ class YandexMarketAPI(BaseAPI):
                         name=warehouses[warehouse_id]['name']
                     )
             result.append(warehouse)
-        return result
-
-        # for campaign in campaigns:
-        #     offers_stocks = self._get_offers_stocks(campaign.id, WAREHOUSES)
-        #
-        #     for warehouse_id in warehouses.keys():
-        #
-        #         offers = [
-        #             APIWarehouseOffer(
-        #                 sku=offer['offerId'],
-        #                 name_of_shop=campaign.business.name,
-        #                 current_stock=sum([i['count'] for i in offer['stocks'] if i['type'] == 'AVAILABLE'])
-        #             )
-        #             for offer in offers_stocks[warehouse_id]
-        #         ]
-        #
-        #         warehouse = APIWarehouse(
-        #             warehouse_id=warehouse_id,
-        #             market='yandex',
-        #             offers=offers,
-        #             name=warehouses[warehouse_id]['name']
-        #         )
-        #         result.append(warehouse)
-
         return result
 
     def _get_warehouses_info(self) -> dict[int, dict[str, Any]]:
@@ -293,6 +255,26 @@ class YandexMarketAPI(BaseAPI):
             }
 
         return result
+
+    def _get_offers_price(self, campaign_id: int) -> dict[str, float]:
+        page_token = ''
+        result = dict()
+
+        while True:
+            response = self.session.post(f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices?page_token={page_token}', headers=self.auth_headers)
+            self.check_response(response)
+
+            data = response.json()
+
+            for offer_data in data['offers']:
+                result[data['offerId']] = data['offerId']['price']['value']
+
+            page_token = data['result']['paging'].get('nextPageToken', None)
+            if page_token is None:
+                break
+
+        return result
+
 
 
 

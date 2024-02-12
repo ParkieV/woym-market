@@ -1,54 +1,32 @@
 import pytest
 
-from src.api.yandex_market.api import YandexMarketAPI
-from src.services.stocks_response_handlers import WAREHOUSES, OFFERS, OFFERS_DETAIL
+from src.api.factory import APIFactory, APITypes
 
-api = YandexMarketAPI('y0_AgAAAAAW8Hr_AAsIRgAAAAD1j7NA7uQ9YJbpR-elaniG1o-TiKxVJhU')
-campaigns = api.get_campaigns()
+
+api1 = APIFactory.get(APITypes.YANDEX, token='y0_AgAAAAAW8Hr_AAsIRgAAAAD1j7NA7uQ9YJbpR-elaniG1o-TiKxVJhU', entity_id=21952451, shop_name='CALMAR.SHOP')
+api2 = APIFactory.get(APITypes.YANDEX, token='y0_AgAAAAAW8Hr_AAsIRgAAAAD1j7NA7uQ9YJbpR-elaniG1o-TiKxVJhU', entity_id=82457010, shop_name='MASTERSKRAB')
 
 pytest_plugins = ('pytest_asyncio',)
 
 
-# def test_stocks():
-#     assert len(campaigns) != 0
+# @pytest.mark.asyncio
+# async def test_get_warehouses_info():
+#     warehouses1 = await api1.get_stocks()
+#     assert len(warehouses1)
 #
-#     for campaign in campaigns:
-#         stocks1 = api._get_offers_stocks(campaign.id, WAREHOUSES)
-#         assert bool(len(stocks1))
-#
-#         stocks2 = api._get_offers_stocks(campaign.id, OFFERS)
-#         assert bool(len(stocks2))
-#
-#         stock3 = api._get_offers_stocks(campaign.id, OFFERS_DETAIL)
-#         assert len(stock3)
+#     warehouses2 = await api2.get_stocks()
+#     assert len(warehouses2)
+
 
 @pytest.mark.asyncio
-async def test_get_warehouses_info():
-    warehouses = await api.get_stocks()
-    assert len(warehouses)
+async def test_get_offers():
+    offers1 = await api1.get_offers_list()
+    assert len(offers1)
 
-#
-#
-# def test_get_campaign_offers():
-#     for campaign in campaigns:
-#         offers = api._get_campaign_offers(campaign.business.id)
-#
-#         assert bool(len(offers))
-#         assert len(offers) == len(set([i.sku for i in offers]))
-#
-#
-# @pytest.mark.asyncio
-# async def test_market_price_report():
-#     for campaign in campaigns:
-#         df = await api._get_market_prices_report(campaign.business.id)
-#         assert df is not None
+    offers2 = await api2.get_offers_list()
+    assert len(offers2)
 
 
-# @pytest.mark.asyncio
-# async def test_get_offers():
-#     offers = await api.get_offers()
-#
-#     assert len(offers)
 
 
 

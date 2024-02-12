@@ -1,7 +1,7 @@
-
 from src.database import settings_db as db
 from src.database.db import async_session
-from src.schemas.settings_schemas import SettingsUpdate, TableInfoUpdate, Tables, TableInfoCreate, TableInfoOut
+from src.schemas.settings_schemas import SettingsUpdate, TableInfoUpdate, TableInfoCreate, TableInfoOut, \
+    MarketUpdate, MarketCreate
 from src.services.offer_service import recalculate_values
 
 
@@ -65,3 +65,23 @@ async def delete_tables(data: list[str], user_id: int):
         settings = await db.get_user_settings(session, user_id)
 
         return await db.delete_table(session, settings.id, data)
+
+
+async def get_markets():
+    async with async_session() as session:
+        return await db.get_markets(session)
+
+
+async def create_market(data: MarketCreate):
+    async with async_session() as session:
+        return await db.create_market(session, data)
+
+
+async def change_market(_id: int, data: MarketUpdate):
+    async with async_session() as session:
+        await db.change_market(session, _id, data)
+
+
+async def delete_market(_id: int):
+    async with async_session() as session:
+        await db.delete_market(session, _id)

@@ -2,6 +2,8 @@ from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, json, Json
 
+from src.api.factory import APITypes
+
 
 class LogsOut(BaseModel):
     updated_at: datetime | None
@@ -54,6 +56,26 @@ class TableInfoUpdate(BaseTableInfo):
 
 class TableInfoOut(TableInfoUpdate):
     updated_at: datetime
+
+
+class BaseMarket(BaseModel):
+    name: str
+    token: str
+    entity_id: int
+    tax: float = 0
+    type: APITypes
+
+
+class MarketCreate(BaseMarket):
+    pass
+
+
+class MarketUpdate(BaseMarket):
+    pass
+
+
+class MarketOut(BaseMarket):
+    id: int
 
 
 

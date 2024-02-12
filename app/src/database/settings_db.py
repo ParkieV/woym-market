@@ -1,8 +1,12 @@
+from typing import Type
+
+from pydantic import BaseModel
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.schemas import settings_schemas as schema
-from src.database.models.models import Logs, Settings, TableInfo
-from src.schemas.settings_schemas import TableInfoOut, TableInfoCreate
+from src.database.models.models import Logs, Settings, TableInfo, Market
+from src.schemas.settings_schemas import TableInfoOut, TableInfoCreate, MarketCreate, MarketOut, MarketUpdate, \
+    BaseMarket
 
 
 async def create_logs(session: AsyncSession, user_id: int) -> Logs:
@@ -70,3 +74,26 @@ async def delete_table(session: AsyncSession, settings_id: int, names: list[str]
     await session.commit()
 
 
+async def create_market(session: AsyncSession, data: MarketCreate, model_schema: Type[BaseMarket] = MarketOut) -> BaseMarket:
+    market_db = Market(**data.model_dump())
+    session.add(market_db)
+    await session.commit()
+    return model_schema.model_validate(market_db, from_attributes=True)
+
+
+async def get_markets(session: AsyncSession, model_schema: Type[BaseMarket] = MarketOut) -> list[BaseMarket]:
+    query = select(Market)
+    result = await session.execute(query)
+    return [model_schema.model_validate(market, from_attributes=True) for market in result.scalars().all()]
+
+
+async def change_market(session: AsyncSession, _id: int, data: MarketUpdate):
+    stmp = update(Market).where(Market.id==_id).values(**data.model_dump())
+    await session.execute(stmp)
+    await session.commit()
+
+
+async def delete_market(session: AsyncSession, _id: int):
+    stmp = delete(Market).where(Market.id==_id)
+    await session.execute(stmp)
+    await session.commit()
