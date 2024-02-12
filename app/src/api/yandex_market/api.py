@@ -7,7 +7,7 @@ from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS,
 import pandas as pd
 import numpy as np
 from src.api.base_api import BaseAPI
-from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse
+from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData
 
 
 class YandexMarketAPI(BaseAPI):
@@ -20,18 +20,18 @@ class YandexMarketAPI(BaseAPI):
 
         self.session = Session()
         self._token = token
-        self._entity_id = entity_id # same as campaign_id
+        self._entity_id = entity_id  # same as campaign_id
         self._shop_name = shop_name
         self.auth_headers = {
             'Authorization': f'Bearer {self._token}'
         }
 
-    def get_business_id_by_campaign_id(self, campaign_id: int) -> int:
+    def _get_business_id_by_campaign_id(self, campaign_id: int) -> int:
         return self._get_campaigns()[campaign_id]['business_id']
 
     async def get_offers_list(self) -> list[APIOffer]:
         result = []
-        business_id = self.get_business_id_by_campaign_id(self._entity_id)
+        business_id = self._get_business_id_by_campaign_id(self._entity_id)
 
         stocks = self._get_offers_stocks(self._entity_id, OFFERS)
         price_report = await self._get_market_prices_report(business_id)
@@ -76,7 +76,8 @@ class YandexMarketAPI(BaseAPI):
 
         data = response.json()
 
-        return {campaign['id']: {'business_id': campaign['business']['id'], 'name': campaign['business']['name']} for campaign in data['campaigns']}
+        return {campaign['id']: {'business_id': campaign['business']['id'], 'name': campaign['business']['name']} for
+                campaign in data['campaigns']}
 
     def _get_offers_stocks(self, campaign_id: int, handler: StocksResponseHandler = OFFERS):
         warehouses = []
@@ -119,7 +120,8 @@ class YandexMarketAPI(BaseAPI):
                     'yandex_width': offer['weightDimensions']['width'] if 'weightDimensions' in offer else None,
                     'yandex_height': offer['weightDimensions']['height'] if 'weightDimensions' in offer else None,
                     'yandex_volume': (offer['weightDimensions']['length'] * offer['weightDimensions']['width'] *
-                                   offer['weightDimensions']['height']) / 1000 if 'weightDimensions' in offer else None,
+                                      offer['weightDimensions'][
+                                          'height']) / 1000 if 'weightDimensions' in offer else None,
                     'photo': offer['pictures'][0] if len(offer['pictures']) > 0 else None,
                     'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,
                     'business_id': business_id
@@ -133,39 +135,35 @@ class YandexMarketAPI(BaseAPI):
 
         return results
 
-    async def change_prices(self, offers: pd.DataFrame | list[dict]) -> None:
-        if isinstance(offers, pd.DataFrame):
-            offers = offers.to_dict('records')
-
+    async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 500
-        for business_id in set([i['business_id'] for i in offers]):
 
-            _offers = list(filter(lambda x: x['business_id'] == business_id, offers))
+        business_id = self._get_business_id_by_campaign_id(self._entity_id)
 
-            for i in range(0, len(_offers), chunk_size):
-                data = [{
-                    'offerId': offer['sku'],
+        for i in range(0, len(data), chunk_size):
+            post_data = [
+                {
+                    'offerId': price_data.sku,
                     'price': {
-                        'value': round(offer['target_price'], 2),
+                        'value': price_data.target_price,
                         'currencyId': "RUR"
                     }
                 }
-                    for offer in _offers[i:i + chunk_size] if
-                    (offer['target_price'] is not None and not np.isnan(offer['target_price'])) and offer['auto_price_control'] and offer['target_price'] > 0
-                ]
-                body = {
-                    'offers': data
-                }
+                for price_data in data[i:i + chunk_size] if price_data.is_valid_data()]
 
-                if not body['offers']:
-                    continue
+            if not post_data:
+                continue
 
-                response = self.session.post(
-                    f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
-                    headers=self.auth_headers,
-                    json=body
-                )
-                self.check_response(response, body=body, raise_error=False)
+            body = {
+                'offers': post_data
+            }
+
+            response = self.session.post(
+                        f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
+                        headers=self.auth_headers,
+                        json=body
+                    )
+            self.check_response(response, body=body, raise_error=False)
 
     def _download_report(self, url_path: str) -> pd.DataFrame:
         output = BytesIO()
@@ -174,7 +172,8 @@ class YandexMarketAPI(BaseAPI):
         return pd.read_excel(output, engine='openpyxl')
 
     async def _get_market_prices_report(self, business_id: int) -> dict[str, dict[str, Any]]:
-        response = self.session.post('https://api.partner.market.yandex.ru/reports/prices/generate', json={'businessId': business_id}, headers=self.auth_headers)
+        response = self.session.post('https://api.partner.market.yandex.ru/reports/prices/generate',
+                                     json={'businessId': business_id}, headers=self.auth_headers)
 
         self.check_response(response)
 
@@ -182,7 +181,8 @@ class YandexMarketAPI(BaseAPI):
         report_id = data['result']['reportId']
 
         while True:
-            response = self.session.get(f'https://api.partner.market.yandex.ru/reports/info/{report_id}', headers=self.auth_headers)
+            response = self.session.get(f'https://api.partner.market.yandex.ru/reports/info/{report_id}',
+                                        headers=self.auth_headers)
             data = response.json()
 
             if data['result']['status'] == 'DONE':
@@ -190,7 +190,8 @@ class YandexMarketAPI(BaseAPI):
                 df.drop([0, 1, 2, 3], inplace=True)
                 new_df = pd.DataFrame()
                 new_df[['sku', 'attractive_price_threshold', 'moderately_attractive_price_threshold',
-                        'your_price_for_buyers', 'min_general_markets_price', 'best_place_wm', 'min_price_without_market', 'best_place_im',
+                        'your_price_for_buyers', 'min_general_markets_price', 'best_place_wm',
+                        'min_price_without_market', 'best_place_im',
                         'min_price_in_market']] = df.iloc[:, [0, 6, 7, 8, 11, 12, 13, 14, 15]]
                 new_df.replace({'–': np.nan}, inplace=True)
                 new_df[['best_place_wm', 'best_place_im']] = new_df[['best_place_wm', 'best_place_im']].fillna('')
@@ -223,7 +224,6 @@ class YandexMarketAPI(BaseAPI):
         offers_stocks = self._get_offers_stocks(self._entity_id, WAREHOUSES)
 
         for warehouse_id in warehouses.keys():
-
             offers = [
                 APIWarehouseOffer(
                     sku=offer['offerId'],
@@ -231,14 +231,14 @@ class YandexMarketAPI(BaseAPI):
                     current_stock=sum([i['count'] for i in offer['stocks'] if i['type'] == 'AVAILABLE'])
                 )
                 for offer in offers_stocks[warehouse_id]
-                        ]
+            ]
 
             warehouse = APIWarehouse(
-                        warehouse_id=warehouse_id,
-                        market='yandex',
-                        offers=offers,
-                        name=warehouses[warehouse_id]['name']
-                    )
+                warehouse_id=warehouse_id,
+                market='yandex',
+                offers=offers,
+                name=warehouses[warehouse_id]['name']
+            )
             result.append(warehouse)
         return result
 
@@ -261,7 +261,9 @@ class YandexMarketAPI(BaseAPI):
         result = dict()
 
         while True:
-            response = self.session.post(f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices?page_token={page_token}', headers=self.auth_headers)
+            response = self.session.post(
+                f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices?page_token={page_token}',
+                headers=self.auth_headers)
             self.check_response(response)
 
             data = response.json()
@@ -274,8 +276,3 @@ class YandexMarketAPI(BaseAPI):
                 break
 
         return result
-
-
-
-
-

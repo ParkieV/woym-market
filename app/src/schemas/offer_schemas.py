@@ -71,7 +71,6 @@ class OfferChange(BaseOffer):
     note_3: str = Field('', title='Примечание 3')
 
     use_manual_min_price: bool = Field(True, title='Использовать ручную мин. цену')
-
     auto_min_price: float = Field(title='Авто мин. цена %')  # в процентах
     manual_min_price: float | None = Field(None, title='Ручная мин. цена')
     auto_price_control: bool = Field(False, title='Авто контроль цен')

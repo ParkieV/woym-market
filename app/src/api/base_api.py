@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from src.schemas.base_api_schemas import APIOffer, APIWarehouse
+from src.schemas.base_api_schemas import APIOffer, APIWarehouse, APIPriceChangeData
 
 
 class BaseAPI(ABC):
@@ -17,6 +17,6 @@ class BaseAPI(ABC):
         pass
 
     @abstractmethod
-    async def change_prices(self, *args, **kwargs) -> None:
+    async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         pass
 
