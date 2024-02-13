@@ -47,9 +47,9 @@ async def create_market(data: MarketCreate):
     return await service.create_market(data)
 
 
-@settings_router.patch('/markets/{market_id}', dependencies=[Depends(get_current_user)])
-async def change_market(market_id: int, data: MarketUpdate):
-    await service.change_market(market_id, data)
+@settings_router.patch('/markets/{market_id}', dependencies=[])
+async def change_market(market_id: int, data: MarketUpdate, current_user=Depends(get_current_user)):
+    await service.change_market(market_id, data, current_user.id)
     return {'status': 'OK'}
 
 

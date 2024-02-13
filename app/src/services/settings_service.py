@@ -77,9 +77,11 @@ async def create_market(data: MarketCreate):
         return await db.create_market(session, data)
 
 
-async def change_market(_id: int, data: MarketUpdate):
+async def change_market(_id: int, data: MarketUpdate, user_id: int):
     async with async_session() as session:
         await db.change_market(session, _id, data)
+        settings = await db.get_user_settings(session, user_id)
+        await recalculate_values(session, settings, [{'market': data.type, 'name_of_shop': data.name}])
 
 
 async def delete_market(_id: int):

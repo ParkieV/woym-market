@@ -4,6 +4,7 @@ from io import BytesIO
 from fastapi import HTTPException, status
 from src.database.offer_db import get_pricing_schemes
 from src.database.db import async_session
+from src.database.settings_db import get_markets
 
 
 def count_fby(data: pd.DataFrame, settings) -> pd.Series:
@@ -27,6 +28,7 @@ def count_fby(data: pd.DataFrame, settings) -> pd.Series:
 async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
     data = data.copy()
 
+
     data['fby'] = count_fby(data, settings)
     data['yandex_volume'] = data['yandex_length'] * data['yandex_width'] * data['yandex_height'] / 1000
     data['volume'] = data['self_length'] * data['self_width'] * data['self_height'] / 1000
@@ -40,6 +42,15 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
 
     data['profit'] = data['current_price'] - data['fby'] - data['cost_price']
     data['margin'] = data['profit'] / data['cost_price'] * 100
+
+    async with async_session() as session:
+        for market in await get_markets(session):
+            data['margin'] = np.where(
+                ((data['market'] == market.type) & (data['name_of_shop'] == market.name)),
+                data['profit'] * (1 - market.tax / 100) / data['cost_price'] * 100,
+                data['margin']
+            )
+
     data['discount_base_price'] = data['current_price'] * 1.2
 
     return data
