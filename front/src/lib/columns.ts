@@ -216,7 +216,7 @@ export function fboStocksColumns(): (Column | ColumnGroup)[] {
                     data_type: "int",
                     valueGetter: (params: ValueGetterParams<FboStocks>) => {
                         if (!params.data) return 0;
-                        return params.data.storages
+                        return params.data.stocks
                             .map(x => x.current_stock)
                             .reduce((a, b) => a + b, 0);
                     }
@@ -227,9 +227,7 @@ export function fboStocksColumns(): (Column | ColumnGroup)[] {
                     data_type: "int",
                     valueGetter: (params: ValueGetterParams<FboStocks>) => {
                         if (!params.data) return 0;
-                        return params.data.storages
-                            .map(x => x.min_stock)
-                            .reduce((a, b) => a + b, 0);
+                        return params.data.stocks.map(x => x.min_stock).reduce((a, b) => a + b, 0);
                     }
                 },
                 {
@@ -238,7 +236,7 @@ export function fboStocksColumns(): (Column | ColumnGroup)[] {
                     data_type: "int",
                     valueGetter: (params: ValueGetterParams<FboStocks>) => {
                         if (!params.data) return 0;
-                        return params.data.storages
+                        return params.data.stocks
                             .map(x => Math.max(0, x.min_stock - x.current_stock))
                             .reduce((a, b) => a + b, 0);
                     }

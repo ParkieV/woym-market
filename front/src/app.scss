@@ -36,7 +36,7 @@ button {
         justify-content: end;
     }
 
-    &.changed {
+    #wrapper &.changed {
         text-decoration: underline;
         background-color: hsl(51, 100%, 72%);
     }
