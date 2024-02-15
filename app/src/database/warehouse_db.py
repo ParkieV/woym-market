@@ -85,7 +85,7 @@ async def _update_or_create_object(
         update_by:  ColumnElement[bool],
         model_schema: Type[BaseModel]
 ) -> (Any, bool):
-    query = select(model).filter_by(**data.model_dump())
+    query = select(model).where(update_by).distinct()
     result = await session.execute(query)
     object_db = result.scalar_one_or_none()
     created = object_db is None
