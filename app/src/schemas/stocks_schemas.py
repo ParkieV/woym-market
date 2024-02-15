@@ -48,6 +48,7 @@ class OfferWithStocks(BaseModel):
     note_1: str
     note_2: str
     note_3: str
+    hidden: bool
     stocks: list[OfferStockWithWarehouseOut]
 
 
@@ -56,6 +57,7 @@ class OfferWithStocksUpdate(BaseModel):
     note_1: str = ''
     note_2: str = ''
     note_3: str = ''
+    hidden: bool
     stocks: list[OfferStockUpdate]
 
 
