@@ -1,6 +1,9 @@
+import json
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_, ColumnElement, func
+from sqlalchemy import select, update, delete, and_, ColumnElement
 from sqlalchemy.orm import selectinload, subqueryload
+from sqlalchemy.sql import func
 from src.database.models.base import Base
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
     OfferStockWithWarehouseOut, OfferWithStocksUpdate, OfferStockUpdate
@@ -127,7 +130,19 @@ async def update_or_create_offer_stock(session: AsyncSession, data: OfferStockCr
 
 
 async def test_own_storage(session: AsyncSession, sku: str):
-    query = select(Offer.name, Offer.name_of_shop).where(Offer.sku==sku)
-    result = (await session.execute(query)).all()
-    return result
+    query = (
+        select(
+            Offer.sku,
+            func.array_agg(Offer.photo),
+            func.array_agg(Offer.name),
+            func.array_agg(Offer.note_1),
+            func.array_agg(Offer.note_2),
+            func.array_agg(Offer.note_3),
+            )
+
+        .where(Offer.sku==sku)
+        .group_by(Offer.sku)
+    )
+    result = (await session.execute(query)).first()
+    return {'sku': result[0], 'photo': set(result[1]), 'name': set(result[2]), 'note_1': set(result[3]), 'note_2': set(result[4]), 'note_3': set(result[5])}
 

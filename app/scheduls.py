@@ -5,9 +5,6 @@ from src.services.stocks_service import update_warehouses_and_stocks
 async def update_data(user_id: int):
     try:
         await update_offers(user_id)
-    except Exception as e:
-        print(f"Error in update offers: {e}")
-    try:
         await update_warehouses_and_stocks()
     except Exception as e:
-        print(f"Error in update warehouses and stocks: {e}")
+        print(f"Error in update warehouses and stocks or update offers: {e}")

@@ -175,7 +175,7 @@ class OfferStock(Base):
 class Market(Base):
     __tablename__ = 'markets'
 
-    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
     name = Column(String)
 
     token = Column(String)
@@ -183,5 +183,14 @@ class Market(Base):
     type = Column(Enum(APITypes))
 
     tax = Column(Float, default=0)
+
+
+# class OwnStorage(Base):
+#     __tablename__ = 'own_storage'
+#
+#     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+#     sku = Column(String, unique=True)
+#
+#     value = Column(Integer, default=0)
 
 

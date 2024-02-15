@@ -302,8 +302,9 @@ class YandexMarketAPI(BaseAPI):
             data = response.json()
 
             for offer_price_info in data['result']['offers']:
-                if 'price' not in offer_price_info:
+                if 'price' not in offer_price_info or 'value' not in offer_price_info['price']:
                     continue
+
                 result[offer_price_info['offerId']] = offer_price_info['price']['value']
 
         return result
