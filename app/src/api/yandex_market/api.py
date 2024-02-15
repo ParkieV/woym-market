@@ -32,10 +32,10 @@ class YandexMarketAPI(BaseAPI):
     async def get_offers_list(self) -> list[APIOffer]:
         result = []
         business_id = self._get_business_id_by_campaign_id(self._entity_id)
-
         stocks = self._get_offers_stocks(self._entity_id, OFFERS)
         price_report = await self._get_market_prices_report(business_id)
         base_offers = self._get_campaign_offers(business_id)
+        offers_prices = self._get_offers_prices(self._entity_id, [i['sku'] for i in base_offers])
 
         for offer in base_offers:
             report_line = price_report.get(offer['sku'], {})
@@ -52,18 +52,20 @@ class YandexMarketAPI(BaseAPI):
                 'group_sellers_amount': 0,
                 'remaining_stock': stocks.get(offer['sku'], 0),
                 'name_of_shop': self._shop_name,
+                'current_price': offers_prices.get(offer['sku'], None)
             }
             extended_offer.update(offer)
             result.append(extended_offer)
 
         return [APIOffer(**offer) for offer in result]
 
-    def check_response(self, response: Response, raise_error: bool = True, body: Any = None):
+    def validate_response(self, response: Response, raise_error: bool = True, body: Any = None) -> Any:
         if response.status_code != 200:
             if raise_error:
                 self._raise_error(response.json(), response.status_code, body)
             else:
                 print(response.reason, response.status_code, response.json(), body)
+        return response.json()
 
     def _raise_error(self, detail: str, status_code: int = 500, body: Any = None):
         # TODO write logs
@@ -72,7 +74,7 @@ class YandexMarketAPI(BaseAPI):
     def _get_campaigns(self) -> dict[int, dict[str, Any]]:
         response = self.session.get('https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
 
-        self.check_response(response)
+        self.validate_response(response)
 
         data = response.json()
 
@@ -87,7 +89,7 @@ class YandexMarketAPI(BaseAPI):
                 f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offers/stocks?page_token={page_token}',
                 headers=self.auth_headers
             )
-            self.check_response(response)
+            self.validate_response(response)
             data = response.json()
             warehouses.extend(data['result']['warehouses'])
 
@@ -107,23 +109,29 @@ class YandexMarketAPI(BaseAPI):
                 headers=self.auth_headers
             )
 
-            self.check_response(response)
+            self.validate_response(response)
             data = response.json()
 
             for offer in data['result']['offerMappings']:
                 offer = offer['offer']
+
+                if 'weightDimensions' in offer:
+                    weight_dimensions = offer['weightDimensions']
+                    volume = weight_dimensions['width'] * weight_dimensions['length'] * weight_dimensions['height'] / 1000
+                else:
+                    weight_dimensions = dict()
+                    volume = None
+
                 offer_data = {
                     'sku': offer['offerId'],
                     'name': offer['name'],
-                    'yandex_weight': offer['weightDimensions']['weight'] if 'weightDimensions' in offer else None,
-                    'yandex_length': offer['weightDimensions']['length'] if 'weightDimensions' in offer else None,
-                    'yandex_width': offer['weightDimensions']['width'] if 'weightDimensions' in offer else None,
-                    'yandex_height': offer['weightDimensions']['height'] if 'weightDimensions' in offer else None,
-                    'yandex_volume': (offer['weightDimensions']['length'] * offer['weightDimensions']['width'] *
-                                      offer['weightDimensions'][
-                                          'height']) / 1000 if 'weightDimensions' in offer else None,
+                    'yandex_weight': weight_dimensions.get('weight'),
+                    'yandex_length': weight_dimensions.get('length'),
+                    'yandex_width': weight_dimensions.get('width'),
+                    'yandex_height': weight_dimensions.get('height'),
+                    'yandex_volume': volume,
                     'photo': offer['pictures'][0] if len(offer['pictures']) > 0 else None,
-                    'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,
+                    # 'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,
                     'business_id': business_id
                 }
                 results.append(offer_data)
@@ -163,7 +171,7 @@ class YandexMarketAPI(BaseAPI):
                         headers=self.auth_headers,
                         json=body
                     )
-            self.check_response(response, body=body, raise_error=False)
+            self.validate_response(response, body=body, raise_error=False)
 
     def _download_report(self, url_path: str) -> pd.DataFrame:
         output = BytesIO()
@@ -175,7 +183,7 @@ class YandexMarketAPI(BaseAPI):
         response = self.session.post('https://api.partner.market.yandex.ru/reports/prices/generate',
                                      json={'businessId': business_id}, headers=self.auth_headers)
 
-        self.check_response(response)
+        self.validate_response(response)
 
         data = response.json()
         report_id = data['result']['reportId']
@@ -244,7 +252,7 @@ class YandexMarketAPI(BaseAPI):
 
     def _get_warehouses_info(self) -> dict[int, dict[str, Any]]:
         response = self.session.get(f'https://api.partner.market.yandex.ru/warehouses', headers=self.auth_headers)
-        self.check_response(response, raise_error=True)
+        self.validate_response(response, raise_error=True)
 
         data = response.json()
 
@@ -264,7 +272,7 @@ class YandexMarketAPI(BaseAPI):
             response = self.session.post(
                 f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices?page_token={page_token}',
                 headers=self.auth_headers)
-            self.check_response(response)
+            self.validate_response(response)
 
             data = response.json()
 
@@ -274,5 +282,28 @@ class YandexMarketAPI(BaseAPI):
             page_token = data['result']['paging'].get('nextPageToken', None)
             if page_token is None:
                 break
+
+        return result
+
+    def _get_offers_prices(self, campaign_id: int, skus: list[str]) -> dict[str, int]:
+        chunk_size = 80
+        result = dict()
+
+        for i in range(0, len(skus), chunk_size):
+            body = {
+                "offerIds": skus[i:i+chunk_size],
+            }
+            response = self.session.post(
+                f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices',
+                headers=self.auth_headers,
+                json=body
+            )
+            self.validate_response(response)
+            data = response.json()
+
+            for offer_price_info in data['result']['offers']:
+                if 'price' not in offer_price_info:
+                    continue
+                result[offer_price_info['offerId']] = offer_price_info['price']['value']
 
         return result

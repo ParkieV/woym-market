@@ -9,9 +9,9 @@ stocks_router = APIRouter(
 )
 
 
-@stocks_router.get('/own-storage', dependencies=[Depends(get_current_user)])
-async def get_self_stocks():
-    pass
+@stocks_router.get('/own-storage/{sku}', dependencies=[Depends(get_current_user)])
+async def get_self_stocks(sku: str):
+    return await service.test_own_storage(sku)
 
 
 @stocks_router.patch('/own-storage', dependencies=[Depends(get_current_user)])

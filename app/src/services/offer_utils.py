@@ -28,7 +28,6 @@ def count_fby(data: pd.DataFrame, settings) -> pd.Series:
 async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
     data = data.copy()
 
-
     data['fby'] = count_fby(data, settings)
     data['yandex_volume'] = data['yandex_length'] * data['yandex_width'] * data['yandex_height'] / 1000
     data['volume'] = data['self_length'] * data['self_width'] * data['self_height'] / 1000

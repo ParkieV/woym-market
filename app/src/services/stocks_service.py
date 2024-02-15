@@ -53,3 +53,8 @@ async def change_offer_with_stock(data: list[OfferWithStocksUpdate]):
     async with async_session() as session:
         await db.change_offer_with_stock(session, data)
 
+
+async def test_own_storage(sku: str):
+    async with async_session() as session:
+        return await db.test_own_storage(session, sku)
+

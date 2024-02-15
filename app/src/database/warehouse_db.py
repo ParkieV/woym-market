@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_, ColumnElement
+from sqlalchemy import select, update, delete, and_, ColumnElement, func
 from sqlalchemy.orm import selectinload, subqueryload
-
 from src.database.models.base import Base
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
     OfferStockWithWarehouseOut, OfferWithStocksUpdate, OfferStockUpdate
@@ -125,3 +124,10 @@ async def update_or_create_offer_stock(session: AsyncSession, data: OfferStockCr
              OfferStock.warehouse_id == data.warehouse_id),
         OfferStockOut
     )
+
+
+async def test_own_storage(session: AsyncSession, sku: str):
+    query = select(Offer.name, Offer.name_of_shop).where(Offer.sku==sku)
+    result = (await session.execute(query)).all()
+    return result
+
