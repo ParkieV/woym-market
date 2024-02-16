@@ -1,7 +1,7 @@
 from fastapi import Depends, APIRouter
 from src.services import settings_service as service
 from src.schemas.settings_schemas import LogsOut, SettingsOut, SettingsUpdate, TableInfoOut, TableInfoUpdate, Tables, \
-    MarketOut, MarketCreate, MarketUpdate
+    MarketOut, MarketCreate, MarketUpdate, TableInfoCreate
 from src.services.auth_utils import get_current_user
 
 settings_router = APIRouter(
@@ -32,8 +32,20 @@ async def get_table(table_name: str):
 
 
 @settings_router.put('/tables', dependencies=[Depends(get_current_user)])
-async def update_table(data: TableInfoUpdate):
+async def update_or_create_table(data: TableInfoUpdate):
     await service.update_or_create_table(data)
+    return {'status': 'OK'}
+
+
+@settings_router.post('/tables', dependencies=[Depends(get_current_user)])
+async def create_table(data: TableInfoCreate):
+    await service.create_table(data)
+    return {'status': 'OK'}
+
+
+@settings_router.patch('/tables/{table_name}')
+async def update_table(data: TableInfoUpdate, table_name: str,  current_user=Depends(get_current_user)):
+    await service.update_table(current_user.id, table_name, data)
     return {'status': 'OK'}
 
 

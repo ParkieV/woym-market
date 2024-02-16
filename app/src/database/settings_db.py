@@ -60,6 +60,19 @@ async def update_or_create_table(session: AsyncSession, data: TableInfoCreate | 
     )
 
 
+async def create_table(session: AsyncSession,  data: TableInfoCreate) -> TableInfoOut:
+    table_db = TableInfo(**data.model_dump())
+    session.add(table_db)
+    await session.commit()
+    return TableInfoOut.model_validate(table_db, from_attributes=True)
+
+
+async def update_table(session: AsyncSession, table_name: str, data: schema.TableInfoUpdate) -> None:
+    query = update(TableInfo).where(TableInfo.name == table_name).values(data.model_dump())
+    await session.execute(query)
+    await session.commit()
+
+
 async def get_table(session: AsyncSession, name: str):
     query = select(TableInfo).where(TableInfo.name==name)
     result = await session.execute(query)

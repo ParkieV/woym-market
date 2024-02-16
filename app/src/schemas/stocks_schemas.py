@@ -91,11 +91,15 @@ class OfferStorage(BaseModel):
     note_2: list[str | None]
     note_3: list[str | None]
     stocks: list[OfferStorageStock]
+    own_storage: OwnStorageOut
 
 
 class OwnStorages(BaseModel):
     markets: list[MarketOut]
     data: list[OfferStorage]
+
+
+
 
 
 

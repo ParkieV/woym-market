@@ -50,6 +50,19 @@ async def get_table(name: str) -> TableInfoOut:
         return await db.get_table(session, name)
 
 
+async def update_table(user_id: int, table_name: str, data: TableInfoUpdate):
+    async with async_session() as session:
+        settings = await db.get_user_settings(session, user_id)
+
+        return await db.update_table(session, table_name, data)
+
+
+async def create_table(data: TableInfoCreate) -> TableInfoOut:
+    async with async_session() as session:
+
+        return await db.create_table(session, data)
+
+
 async def delete_tables(data: list[str], user_id: int):
     async with async_session() as session:
         settings = await db.get_user_settings(session, user_id)
