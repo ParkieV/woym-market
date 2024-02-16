@@ -61,4 +61,19 @@ class OfferWithStocksUpdate(BaseModel):
     stocks: list[OfferStockUpdate]
 
 
+class OwnStorageCreate(BaseModel):
+    sku: str
+    value: int = 0
+
+
+class OwnStorageOut(BaseModel):
+    id: int
+    value: int = 0
+
+
+class OwnStorageUpdate(BaseModel):
+    id: int
+    value: int = 0
+
+
 

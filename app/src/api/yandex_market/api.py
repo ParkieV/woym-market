@@ -35,7 +35,7 @@ class YandexMarketAPI(BaseAPI):
         stocks = self._get_offers_stocks(self._entity_id, OFFERS)
         price_report = await self._get_market_prices_report(business_id)
         base_offers = self._get_campaign_offers(business_id)
-        offers_prices = self._get_offers_prices(self._entity_id, [i['sku'] for i in base_offers])
+        # offers_prices = self._get_offers_prices(self._entity_id, [i['sku'] for i in base_offers])
 
         for offer in base_offers:
             report_line = price_report.get(offer['sku'], {})
@@ -52,7 +52,7 @@ class YandexMarketAPI(BaseAPI):
                 'group_sellers_amount': 0,
                 'remaining_stock': stocks.get(offer['sku'], 0),
                 'name_of_shop': self._shop_name,
-                'current_price': offers_prices.get(offer['sku'], None)
+                # 'current_price': offers_prices.get(offer['sku'], None)
             }
             extended_offer.update(offer)
             result.append(extended_offer)
@@ -131,7 +131,7 @@ class YandexMarketAPI(BaseAPI):
                     'yandex_height': weight_dimensions.get('height'),
                     'yandex_volume': volume,
                     'photo': offer['pictures'][0] if len(offer['pictures']) > 0 else None,
-                    # 'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,
+                    'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,
                     'business_id': business_id
                 }
                 results.append(offer_data)

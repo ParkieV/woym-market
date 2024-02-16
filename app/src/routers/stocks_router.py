@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from src.services import stocks_service as service
 from src.services.auth_utils import get_current_user
-from src.schemas.stocks_schemas import OfferWithStocksUpdate, OfferWithStocks
+from src.schemas.stocks_schemas import OfferWithStocksUpdate, OfferWithStocks, OwnStorageUpdate
 
 stocks_router = APIRouter(
     prefix='/stocks',
@@ -9,14 +9,15 @@ stocks_router = APIRouter(
 )
 
 
-@stocks_router.get('/own-storage/{sku}', dependencies=[Depends(get_current_user)])
-async def get_self_stocks(sku: str):
-    return await service.test_own_storage(sku)
+@stocks_router.get('/own-storage', dependencies=[Depends(get_current_user)])
+async def get_self_stocks():
+    return await service.get_own_storages()
 
 
 @stocks_router.patch('/own-storage', dependencies=[Depends(get_current_user)])
-async def change_self_stocks():
-    pass
+async def change_self_stocks(data: list[OwnStorageUpdate]):
+    await service.change_own_storages(data)
+    return {'status': 'OK'}
 
 
 @stocks_router.get('/fbo', response_model=list[OfferWithStocks], dependencies=[Depends(get_current_user)])

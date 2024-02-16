@@ -150,3 +150,9 @@ async def validate_pricing_scheme_id(session: AsyncSession, data: int | Iterable
 
         if rez.scalar_one_or_none() is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Схемы ценообразования с id - {i} не найдено')
+
+
+async def get_unique_skus(session: AsyncSession) -> list[str]:
+    query = select(Offer.sku).distinct()
+    result = await session.execute(query)
+    return [i[0] for i in result.all()]

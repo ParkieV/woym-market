@@ -6,11 +6,13 @@ from sqlalchemy.orm import selectinload, subqueryload
 from sqlalchemy.sql import func
 from src.database.models.base import Base
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
-    OfferStockWithWarehouseOut, OfferWithStocksUpdate, OfferStockUpdate
-from src.database.models.models import Warehouse, OfferStock
+    OfferStockWithWarehouseOut, OfferWithStocksUpdate, OfferStockUpdate, OwnStorageCreate, OwnStorageOut, \
+    OwnStorageUpdate
+from src.database.models.models import Warehouse, OfferStock, OwnStorage
 from pydantic import BaseModel
 from src.database.models.models import Offer
 from typing import Type, TypeVar, Any
+from collections import defaultdict
 
 ModelSchema = TypeVar('ModelSchema', bound=Type[BaseModel])
 
@@ -129,20 +131,65 @@ async def update_or_create_offer_stock(session: AsyncSession, data: OfferStockCr
     )
 
 
-async def test_own_storage(session: AsyncSession, sku: str):
-    query = (
-        select(
-            Offer.sku,
-            func.array_agg(Offer.photo),
-            func.array_agg(Offer.name),
-            func.array_agg(Offer.note_1),
-            func.array_agg(Offer.note_2),
-            func.array_agg(Offer.note_3),
-            )
-
-        .where(Offer.sku==sku)
-        .group_by(Offer.sku)
+async def update_or_create_own_storage(session: AsyncSession, data: OwnStorageCreate) -> (OwnStorageCreate, bool):
+    return await _update_or_create_object(
+        session,
+        OwnStorage,
+        data,
+        OwnStorage.sku==data.sku,
+        OwnStorageOut
     )
-    result = (await session.execute(query)).first()
-    return {'sku': result[0], 'photo': set(result[1]), 'name': set(result[2]), 'note_1': set(result[3]), 'note_2': set(result[4]), 'note_3': set(result[5])}
+
+
+async def get_own_storages(session: AsyncSession):
+    storages_result = []
+
+    skus_query = await session.execute(select(Offer.sku).distinct())
+
+    for sku in skus_query.all():
+        offers_query = await session.execute(
+            select(Offer, OwnStorage).where(Offer.sku == sku[0]).join(OwnStorage, OwnStorage.sku==Offer.sku)
+        )
+
+        data = {
+            'sku': sku[0],
+            'name': set(),
+            'name_of_shop': set(),
+            'market': set(),
+            'note_1': set(),
+            'note_2': set(),
+            'note_3': set(),
+            'stocks': []
+        }
+
+        for offer, own_storage in offers_query.all():
+            data['name'].add(offer.name)
+            data['note_1'].add(offer.note_1)
+            data['note_2'].add(offer.note_2)
+            data['note_3'].add(offer.note_3)
+            data['name_of_shop'].add(offer.name_of_shop)
+            data['market'].add(offer.market)
+            data['stocks'].append(
+                {
+                    'name_of_shop': offer.name_of_shop,
+                    'market': offer.market,
+                    'value': offer.remaining_stock
+                }
+            )
+            data['own_storage'] = OwnStorageOut.model_validate(own_storage, from_attributes=True)
+
+        storages_result.append(data)
+
+    return storages_result
+
+
+async def change_own_storages(session: AsyncSession, data: list[OwnStorageUpdate]):
+    for storage in data:
+        stmp = update(OwnStorage).where(OwnStorage.id==storage.id).values(**storage.model_dump())
+        a = await session.execute(stmp)
+
+    await session.commit()
+
+
+
 

@@ -2,8 +2,8 @@ from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
 from src.database import offer_db
-from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStockOut, OfferStockCreate, OfferWithStocksUpdate
-
+from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStockOut, OfferStockCreate, \
+    OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate
 
 api_wrapper = APIWrapper()
 
@@ -30,6 +30,9 @@ async def update_warehouses_and_stocks():
                 )
                 await db.update_or_create_offer_stock(session, offer_stock_create)
 
+        for sku in await offer_db.get_unique_skus(session):
+            await db.update_or_create_own_storage(session, OwnStorageCreate(sku=sku))
+
 
 async def get_warehouses():
     async with async_session() as session:
@@ -51,7 +54,12 @@ async def change_offer_with_stock(data: list[OfferWithStocksUpdate]):
         await db.change_offer_with_stock(session, data)
 
 
-async def test_own_storage(sku: str):
+async def get_own_storages():
     async with async_session() as session:
-        return await db.test_own_storage(session, sku)
+        return await db.get_own_storages(session)
+
+
+async def change_own_storages(data: list[OwnStorageUpdate]):
+    async with async_session() as session:
+        await db.change_own_storages(session, data)
 

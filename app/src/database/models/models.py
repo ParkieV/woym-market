@@ -185,12 +185,12 @@ class Market(Base):
     tax = Column(Float, default=0)
 
 
-# class OwnStorage(Base):
-#     __tablename__ = 'own_storage'
-#
-#     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
-#     sku = Column(String, unique=True)
-#
-#     value = Column(Integer, default=0)
+class OwnStorage(Base):
+    __tablename__ = 'own_storage'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+    sku = Column(String, unique=True, index=True, nullable=False)
+
+    value = Column(Integer, default=0, nullable=False)
 
 
