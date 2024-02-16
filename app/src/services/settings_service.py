@@ -24,7 +24,7 @@ async def update_logs(user_id: int, data: dict):
 async def create_settings(user_id: int):
     async with async_session() as session:
         settings = await db.create_user_settings(session, user_id)
-        await db.create_table(session, settings.id, TableInfoCreate(name='offers', data=None))
+        await db.update_or_create_table(session, TableInfoCreate(name='offers', data=None))
         return settings
 
 

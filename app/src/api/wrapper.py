@@ -3,6 +3,7 @@ from src.schemas.base_api_schemas import APIWarehouse, APIOffer, APIPriceChangeD
 from src.database.settings_db import get_markets
 from src.api.factory import APIFactory
 from ..database.db import async_session
+from src.schemas.settings_schemas import MarketFullOut
 
 
 class APIWrapper(BaseAPI):
@@ -12,7 +13,7 @@ class APIWrapper(BaseAPI):
     async def get_offers_list(self) -> list[APIOffer]:
         result = []
         async with async_session() as session:
-            for market in await get_markets(session):
+            for market in await get_markets(session, MarketFullOut):
                 api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
                 offers = await api.get_offers_list()
                 result.extend(offers)
@@ -22,7 +23,7 @@ class APIWrapper(BaseAPI):
     async def get_stocks(self) -> list[APIWarehouse]:
         result = []
         async with async_session() as session:
-            for market in await get_markets(session):
+            for market in await get_markets(session, MarketFullOut):
                 api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
                 offers = await api.get_stocks()
                 result.extend(offers)
@@ -31,7 +32,7 @@ class APIWrapper(BaseAPI):
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         async with async_session() as session:
-            for market in await get_markets(session):
+            for market in await get_markets(session, MarketFullOut):
                 api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
 
                 price_data = [i for i in data if i.market==market.type and i.name_of_shop==market.name]
