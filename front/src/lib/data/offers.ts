@@ -1,3 +1,4 @@
+import { handleRequest } from "$lib";
 import { fetchAuthenticated } from "$lib/auth";
 
 /** Basic information about the offer. */
@@ -70,16 +71,20 @@ export type Offer = OfferBase & {
 };
 
 export async function fetchOfferList(): Promise<Offer[]> {
-    let offers = await (await fetchAuthenticated("data/offers")).json();
-    return offers;
+    let promise = fetchAuthenticated("data/offers");
+    await handleRequest(promise);
+    return await (await promise).json();
 }
 
-export async function patchOfferList(changed: Offer[]): Promise<void> {
-    await fetchAuthenticated("data/offers", {
+export async function patchOfferList(changed: Offer[]): Promise<boolean> {
+    let promise = fetchAuthenticated("data/offers", {
         method: "PATCH",
         body: JSON.stringify(changed),
         headers: {
             "Content-Type": "application/json"
         }
     });
+    let ok = false;
+    await handleRequest(promise, { header: "Сохранение...", onSuccess: () => (ok = true) });
+    return ok;
 }

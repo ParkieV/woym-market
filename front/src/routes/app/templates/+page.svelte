@@ -1,29 +1,22 @@
 <script lang="ts">
-    import { getContext, onMount } from "svelte";
-    import type { ModalKind } from "$lib/components/modal/Modals.svelte";
+    import { onMount } from "svelte";
     import TemplateCard from "./TemplateCard.svelte";
-    import { fetchTemplates, patchTemplate, type Template } from "$lib/data/templates";
-
-    const addModal = getContext<(modal: ModalKind) => void>("addModal");
+    import { fetchTemplates, patchTemplates, type Template } from "$lib/data/templates";
 
     let templates: Template[] = [];
-    const changed = new Set<number>();
+    let changed = new Set<number>();
 
-    const update = async () => {
-        let promises = [];
-        for (const id of changed) {
+    const save = async () => {
+        let _templates = Array.from(changed).flatMap(id => {
             let template = templates.find(x => x.id === id);
-            if (template) {
-                let promise = patchTemplate(template);
-                promises.push(promise);
-            }
-        }
-        addModal({
-            kind: "await",
-            errorHeader: "Ошибка при сохранении изменений в формуле",
-            header: "Обновляем данные на сервере...",
-            promise: Promise.all(promises)
+            return template ?? [];
         });
+
+        let ok = await patchTemplates(_templates);
+        if (ok) {
+            changed.clear();
+            changed = changed;
+        }
     };
 
     onMount(async () => {
@@ -38,12 +31,18 @@
         </header>
         <ul>
             {#each templates as template}
-                <TemplateCard bind:template on:changed={() => changed.add(template.id)} />
+                <TemplateCard
+                    bind:template
+                    on:changed={() => {
+                        changed.add(template.id);
+                        changed = changed;
+                    }}
+                />
             {/each}
         </ul>
     </div>
     <footer>
-        <button on:click={update}>Сохранить</button>
+        <button on:click={save} disabled={changed.size === 0}>Сохранить</button>
     </footer>
 </main>
 

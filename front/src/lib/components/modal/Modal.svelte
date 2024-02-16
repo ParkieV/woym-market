@@ -8,7 +8,7 @@
     }
 </script>
 
-<dialog bind:this={dialog} on:close={() => open = false}>
+<dialog bind:this={dialog} on:close={() => (open = false)}>
     <slot />
 </dialog>
 

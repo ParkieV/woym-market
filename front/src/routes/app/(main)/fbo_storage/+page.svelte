@@ -1,6 +1,11 @@
 <script lang="ts">
     import { ChangeList } from "$lib/components/datagrid/changes";
-    import { fetchFboStocks, type FboStocks, type FboStorage } from "$lib/data/fbo_storage";
+    import {
+        fetchFboStocks,
+        patchFboStocks,
+        type FboStocks,
+        type FboStorage
+    } from "$lib/data/fbo_storage";
     import type { OfferBase } from "$lib/data/offers";
     import type { GridOptions, IDetailCellRendererParams, GridApi } from "ag-grid-enterprise";
     import Footer from "../Footer.svelte";
@@ -23,11 +28,14 @@
             let { api, data } = params;
             return {
                 detailGridOptions: {
-                    suppressMovableColumns: true,
                     columnDefs: getColumns(detailColumns, {
                         onPhotoClicked: () => {},
                         isRowChanged: () => false
                     }),
+                    suppressMovableColumns: true,
+                    enableRangeSelection: true,
+                    enableRangeHandle: true,
+                    getContextMenuItems: () => ["cut", "copy", "paste"],
                     onCellValueChanged: _ => {
                         changes.add(data.sku);
                         changes = changes;
@@ -35,11 +43,22 @@
                     }
                 },
                 getDetailRowData: params => {
-                    params.successCallback(params.data.storages);
+                    params.successCallback(params.data.stocks);
                 }
             } satisfies Partial<IDetailCellRendererParams<FboStocks, FboStorage>>;
         }
     };
+
+    async function refreshData() {
+        changes.clear();
+        changes = changes;
+        data = await fetchFboStocks();
+    }
+
+    async function save() {
+        let ok = await patchFboStocks(data.filter(x => changes.isChanged(x.sku)));
+        if (ok) await refreshData();
+    }
 
     onMount(async () => {
         data = await fetchFboStocks();
@@ -56,4 +75,4 @@
     bind:filter
     otherGridOptions={options}
 />
-<Footer bind:changes />
+<Footer bind:changes on:reload={refreshData} on:save={save} />

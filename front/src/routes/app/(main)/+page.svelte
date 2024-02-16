@@ -21,8 +21,8 @@
     }
 
     async function save() {
-        await patchOfferList(data.filter(x => changes.isChanged(x.sku)));
-        await refreshData();
+        let ok = await patchOfferList(data.filter(x => changes.isChanged(x.sku)));
+        if (ok) await refreshData();
     }
 
     onMount(async () => {

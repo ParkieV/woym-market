@@ -4,6 +4,8 @@
     import type { OfferBase } from "$lib/data/offers";
     import { createEventDispatcher, onMount } from "svelte";
 
+    export let showAdditionalFilters: boolean = true;
+
     let shops = new Set([
         { name: "CALMAR.SHOP", selected: true },
         { name: "MASTERSKRAB", selected: true }
@@ -19,17 +21,19 @@
     const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"] as const;
 
     function filter(offer: OfferBase): boolean {
-        if (offer.hidden && !show_hidden) {
-            return false;
-        }
-        for (const option of shops) {
-            if (option.name == offer.name_of_shop && !option.selected) {
+        if (showAdditionalFilters) {
+            if (offer.hidden && !show_hidden) {
                 return false;
             }
-        }
-        for (const option of markets) {
-            if (option.key == offer.market && !option.selected) {
-                return false;
+            for (const option of shops) {
+                if (option.name == offer.name_of_shop && !option.selected) {
+                    return false;
+                }
+            }
+            for (const option of markets) {
+                if (option.key == offer.market && !option.selected) {
+                    return false;
+                }
             }
         }
         const _search = search.trim().toLowerCase().replaceAll("ё", "е");
@@ -59,11 +63,13 @@
 </script>
 
 <menu>
-    <ButtonGroup bind:options={shops} />
-    <ButtonGroup bind:options={markets} />
-    <button class:selected={show_hidden} on:click={() => (show_hidden = !show_hidden)}>
-        <img src="/eye-slash.svg" alt="Показать скрытые товары" />
-    </button>
+    {#if showAdditionalFilters}
+        <ButtonGroup bind:options={shops} />
+        <ButtonGroup bind:options={markets} />
+        <button class:selected={show_hidden} on:click={() => (show_hidden = !show_hidden)}>
+            <img src="/eye-slash.svg" alt="Показать скрытые товары" />
+        </button>
+    {/if}
     <div class="spacer" />
     <Search placeholder="Поиск..." bind:value={search} />
 </menu>

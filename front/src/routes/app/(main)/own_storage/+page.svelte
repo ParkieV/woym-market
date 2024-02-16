@@ -20,8 +20,8 @@
     });
 </script>
 
-<Toolbar on:filterChanged={f => (filter = f.detail)} />
+<Toolbar on:filterChanged={f => (filter = f.detail)} showAdditionalFilters={false} />
 {#if columns.length !== 0}
-    <Grid grid_name="storage" key="sku" {columns} bind:data bind:changes {filter} />
+    <Grid grid_name="own_storage" key="sku" {columns} bind:data bind:changes {filter} />
 {/if}
 <Footer bind:changes />

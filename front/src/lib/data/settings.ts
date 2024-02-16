@@ -1,3 +1,4 @@
+import { handleRequest } from "$lib";
 import { fetchAuthenticated } from "$lib/auth";
 
 export type Settings = {
@@ -13,7 +14,7 @@ export type Logs = {
     updated_at: string | null;
 };
 
-export async function patchUserInfo(val: Settings): Promise<Response> {
+export async function patchUserInfo(val: Settings): Promise<boolean> {
     let init: RequestInit = {
         method: "PATCH",
         body: JSON.stringify(val),
@@ -21,11 +22,16 @@ export async function patchUserInfo(val: Settings): Promise<Response> {
             "Content-Type": "application/json"
         }
     };
-    return fetchAuthenticated("settings", init);
+    let promise = fetchAuthenticated("settings", init);
+    let ok = false;
+    handleRequest(promise, { header: "Сохранение...", onSuccess: () => (ok = true) });
+    return ok;
 }
 
 export async function fetchUserInfo(): Promise<Settings> {
-    let info = await (await fetchAuthenticated("settings")).json();
+    let promise = fetchAuthenticated("settings");
+    await handleRequest(promise);
+    let info = await (await promise).json();
     return info;
 }
 
