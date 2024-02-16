@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-
+from .settings_schemas import MarketOut
 
 class BaseWarehouse(BaseModel):
     name: str
@@ -74,6 +74,28 @@ class OwnStorageOut(BaseModel):
 class OwnStorageUpdate(BaseModel):
     id: int
     value: int = 0
+
+
+class OfferStorageStock(BaseModel):
+    name_of_shop: str
+    market: str
+    value: int
+
+
+class OfferStorage(BaseModel):
+    sku: str
+    name: list[str]
+    name_of_shop: list[str]
+    market: list[str]
+    note_1: list[str | None]
+    note_2: list[str | None]
+    note_3: list[str | None]
+    stocks: list[OfferStorageStock]
+
+
+class OwnStorages(BaseModel):
+    markets: list[MarketOut]
+    data: list[OfferStorage]
 
 
 
