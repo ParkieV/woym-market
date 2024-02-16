@@ -1,37 +1,39 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
     import Modal from "./Modal.svelte";
 
-    export let open: boolean = true;
+    export let isOpen: boolean;
     export let header: string;
     export let text: string;
+    export let showCancelButton: boolean = false;
 
-    let dispatch = createEventDispatcher<{ close: void; cancel: void; confirm: void }>();
+    export let onConfirm: () => void = () => {};
+    export let onCancel: () => void = () => {};
 
-    const onConfirm = () => {
-        if (!open) return;
-        open = false;
-        dispatch("confirm");
-        dispatch("close");
+    const cancel = () => {
+        isOpen = false;
+        onCancel();
     };
-    const onCancel = () => {
-        if (!open) return;
-        open = false;
-        dispatch("cancel");
-        dispatch("close");
+
+    const confirm = () => {
+        isOpen = false;
+        onConfirm();
     };
 </script>
 
-<Modal {open}>
-    <div>
-        <h1>{header}</h1>
-        <span>{text}</span>
-        <footer>
-            <button class="cancel" on:click={onCancel}>Отмена</button>
-            <button class="confirm" on:click={onConfirm}>Ок</button>
-        </footer>
-    </div>
-</Modal>
+{#if isOpen}
+    <Modal open={isOpen}>
+        <div>
+            <h1>{header}</h1>
+            <span>{text}</span>
+            <footer>
+                {#if showCancelButton}
+                    <button class="cancel" on:click={cancel}>Отмена</button>
+                {/if}
+                <button class="confirm" on:click={confirm}>Ок</button>
+            </footer>
+        </div>
+    </Modal>
+{/if}
 
 <style lang="scss">
     @use "mixins.scss" as *;

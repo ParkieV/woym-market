@@ -1,6 +1,9 @@
 <script lang="ts" generics="T, K extends keyof T">
-    import { patchOfferList } from "$lib/data/offers";
-    import type { ModalKind } from "$lib/components/modal/Modals.svelte";
+    import {
+        showChangesLossConfirmation,
+        showSaveConfirmation,
+        showNotification
+    } from "$lib/components/modal/Modals.svelte";
     import { fetchLogs } from "$lib/data/settings";
     import type { ChangeList } from "$lib/components/datagrid/changes";
     import { createEventDispatcher, getContext, onMount } from "svelte";
@@ -9,7 +12,6 @@
     let updated_at: Date | null = null;
 
     const dispatch = createEventDispatcher<{ save: void; reload: void }>();
-    const addModal = getContext<(modal: ModalKind) => void>("addModal");
 
     onMount(() => {
         const fetchDate = async () => {
@@ -21,7 +23,7 @@
                 updated_at = new_updated_at;
             } else if (updated_at < new_updated_at) {
                 updated_at = new_updated_at;
-                addModal({ kind: "dataUpdatedOnServer" });
+                showNotification("Информация устарела", "Данные на сервере были обновлены.");
                 dispatch("reload");
             }
         };
@@ -31,22 +33,15 @@
 
     async function cancelEdits() {
         if (changes.hasChanges) {
-            addModal({
-                kind: "confirmChangesLoss",
-                changed: changes.count,
-                onConfirm: () => dispatch("reload")
-            });
+            showChangesLossConfirmation(changes.count, () => dispatch("reload"));
         } else {
             dispatch("reload");
         }
     }
 
     async function confirmSave() {
-        addModal({
-            kind: "confirmSave",
-            onConfirm: async () => {
-                dispatch("save");
-            }
+        showSaveConfirmation(() => {
+            dispatch("save");
         });
     }
 </script>

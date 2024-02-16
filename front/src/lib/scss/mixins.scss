@@ -15,9 +15,15 @@
 
     color: white;
     background-color: #3b5897;
+
     &:hover {
         background-color: #2f4880;
     }
+
+    &:disabled {
+        background-color: #747474;
+    }
+
     border-radius: 4px;
     height: 32px;
 }
@@ -27,9 +33,15 @@
 
     color: black;
     background-color: white;
+
     &:hover {
-        background-color: #ececee
+        background-color: #ececee;
     }
+
+    &:disabled {
+        background-color: #747474;
+    }
+
     border-radius: 4px;
     height: 32px;
 }

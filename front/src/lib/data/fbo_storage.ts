@@ -1,3 +1,4 @@
+import { handleRequest } from "$lib";
 import { fetchAuthenticated } from "$lib/auth";
 import type { OfferBase } from "./offers";
 
@@ -16,15 +17,20 @@ export type FboStorage = {
 };
 
 export async function fetchFboStocks(): Promise<FboStocks[]> {
-    return await (await fetchAuthenticated("stocks/fbo")).json();
+    let promise = fetchAuthenticated("stocks/fbo");
+    await handleRequest(promise);
+    return await (await promise).json();
 }
 
-export async function patchFboStocks(changed: FboStocks[]) {
-    await fetchAuthenticated("stocks/fbo", {
+export async function patchFboStocks(changed: FboStocks[]): Promise<boolean> {
+    let promise = fetchAuthenticated("stocks/fbo", {
         method: "PATCH",
         body: JSON.stringify(changed),
         headers: {
             "Content-Type": "application/json"
         }
     });
+    let ok = false;
+    await handleRequest(promise, { header: "Сохранение...", onSuccess: () => (ok = true) });
+    return ok;
 }

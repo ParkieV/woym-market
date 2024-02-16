@@ -56,8 +56,8 @@
     }
 
     async function save() {
-        await patchFboStocks(data.filter(x => changes.isChanged(x.sku)));
-        await refreshData();
+        let ok = await patchFboStocks(data.filter(x => changes.isChanged(x.sku)));
+        if (ok) await refreshData();
     }
 
     onMount(async () => {

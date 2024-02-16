@@ -1,3 +1,4 @@
+import { handleRequest } from "$lib";
 import { fetchAuthenticated } from "$lib/auth";
 
 export type Template = {
@@ -19,17 +20,28 @@ export type Template = {
 };
 
 export async function fetchTemplates(): Promise<Template[]> {
-    let templates: Template[] = await (await fetchAuthenticated("data/pricing-schemes")).json();
+    let promise = fetchAuthenticated("data/pricing-schemes");
+    await handleRequest(promise);
+    let templates: Template[] = await (await promise).json();
     templates.sort((a, b) => a.id - b.id);
     return templates;
 }
 
-export async function patchTemplate(template: Template) {
-    fetchAuthenticated("data/pricing-schemes", {
-        method: "PATCH",
-        body: JSON.stringify(template),
-        headers: {
-            "Content-Type": "application/json"
-        }
+export async function patchTemplates(templates: Template[]): Promise<boolean> {
+    let promises = templates.map(template => {
+        return fetchAuthenticated("data/pricing-schemes", {
+            method: "PATCH",
+            body: JSON.stringify(template),
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
     });
+
+    let ok = false;
+    await handleRequest(Promise.all(promises), {
+        header: "Сохранение...",
+        onSuccess: () => (ok = true)
+    });
+    return ok;
 }

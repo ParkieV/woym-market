@@ -1,9 +1,8 @@
 <script lang="ts">
-    import { fetchAuthenticated } from "$lib/auth";
     import { downloadFile } from "$lib/util";
-    import { getContext } from "svelte";
     import Window from "./Window.svelte";
-    import type { ModalKind } from "$lib/components/modal/Modals.svelte";
+    import { handleRequest } from "$lib";
+    import { fetchAuthenticated } from "$lib/auth";
 
     type Data = {
         market: "ozon" | "yandex" | "all";
@@ -17,8 +16,6 @@
         export_type: "table"
     };
 
-    const addModal = getContext<(modal: ModalKind) => void>("addModal");
-
     const ok = () => {
         if (data.name_of_shop === undefined) {
             delete data.name_of_shop;
@@ -26,19 +23,16 @@
         let url = "data/export?" + new URLSearchParams(data);
 
         let promise = fetchAuthenticated(url);
+        handleRequest(promise, {
+            header: "Скачивание файла...",
+            errorHeader: "Ошибка экспорта",
+            onSuccess: async response => {
+                let blob = await response.blob();
+                downloadFile(blob, "report.xlsx");
+            }
+        });
+
         open = false;
-
-        promise.then(async response => {
-            let blob = await response.blob();
-            downloadFile(blob, "report.xlsx");
-        });
-
-        addModal({
-            kind: "await",
-            promise,
-            header: "Скачивание файла экспорта...",
-            errorHeader: "Ошибка экспорта"
-        });
     };
 </script>
 

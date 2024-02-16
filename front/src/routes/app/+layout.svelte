@@ -1,23 +1,15 @@
 <script lang="ts">
     import { logout } from "$lib/auth";
-    import type { ModalKind } from "$lib/components/modal/Modals.svelte";
-    import Modals from "$lib/components/modal/Modals.svelte";
     import Header from "$lib/components/sidebar/Header.svelte";
     import Link from "$lib/components/sidebar/Link.svelte";
     import Spacer from "$lib/components/sidebar/Spacer.svelte";
     import { setContext } from "svelte";
     import { writable } from "svelte/store";
 
-    let modals: ModalKind[] = [];
-    setContext("addModal", (modal: ModalKind) => {
-        modals = [...modals, modal];
-    });
-
     let collapsed = writable(true);
     setContext("collapsed", collapsed);
 </script>
 
-<Modals bind:modals />
 <div id="wrapper">
     <nav class:collapsed={$collapsed}>
         <Header />
