@@ -78,11 +78,6 @@
                 @include secondary-button;
                 height: 40px;
             }
-            &:disabled,
-            &:disabled:hover {
-                color: white;
-                background-color: #747474;
-            }
         }
         > span {
             font-size: 16px;
