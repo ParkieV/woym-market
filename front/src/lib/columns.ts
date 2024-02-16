@@ -2,6 +2,7 @@ import type { ValueGetterParams } from "ag-grid-enterprise";
 import type { Column, ColumnGroup } from "./components/datagrid/columns";
 import type { Template } from "./data/templates";
 import type { FboStocks } from "./data/fbo_storage";
+import type { Offer } from "./data/offers";
 
 export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
     return [
@@ -52,9 +53,18 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 },
                 {
                     key: "auto_min_price",
-                    header: "Авто мин. цена %",
+                    header: "Авто мин. цена (%)",
                     data_type: "percent",
                     editable: true
+                },
+                {
+                    key: "auto_min_price_rubles",
+                    header: "Авто мин. цена (руб)",
+                    data_type: "ruble",
+                    valueGetter: ({ data }: { data: Offer }) => {
+                        if (data.total_price === null) return null;
+                        return data.total_price * (data.auto_min_price / 100);
+                    }
                 },
                 {
                     key: "manual_min_price",
