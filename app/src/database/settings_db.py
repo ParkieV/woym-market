@@ -1,7 +1,12 @@
-from sqlalchemy import select, update
+from typing import Type
+
+from pydantic import BaseModel
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.schemas import settings_schemas as schema
-from src.database.models.models import Logs, Settings, ColumnInfo
+from src.database.models.models import Logs, Settings, TableInfo, Market
+from src.schemas.settings_schemas import TableInfoOut, TableInfoCreate, MarketCreate, MarketOut, MarketUpdate, \
+    BaseMarket
 
 
 async def create_logs(session: AsyncSession, user_id: int) -> Logs:
@@ -44,17 +49,51 @@ async def update_user_settings(session: AsyncSession, user_id: int, settings_upd
     await session.commit()
 
 
-async def create_columns(session: AsyncSession, settings: int,  data: list):
-    columns_db = [ColumnInfo(settings=settings, **dict(column)) for column in data]
-    session.add_all(columns_db)
+async def create_table(session: AsyncSession, settings_id: int, data: TableInfoCreate) -> TableInfoOut:
+    table_db = TableInfo(settings_id=settings_id, **data.model_dump())
+    session.add(table_db)
+    await session.commit()
+    return TableInfoOut.model_validate(table_db, from_attributes=True)
+
+
+async def get_table(session: AsyncSession, settings_id: int, name: str):
+    query = select(TableInfo).where(TableInfo.settings_id==settings_id).where(TableInfo.name==name)
+    result = await session.execute(query)
+    return result.scalar_one_or_none()
+
+
+async def update_table(session: AsyncSession, settings_id: int, table_name: str, data: schema.TableInfoUpdate) -> None:
+    query = update(TableInfo).where((TableInfo.settings_id == settings_id) & (TableInfo.name == table_name)).values(data.model_dump())
+    await session.execute(query)
     await session.commit()
 
 
-async def update_columns(session: AsyncSession, settings_id: int,  data: list[schema.ColumnUpdate]):
-    for column in data:
-        query = update(ColumnInfo).where((ColumnInfo.settings_id == settings_id) & (ColumnInfo.key == column.key)).values(**dict(column))
-        await session.execute(query)
-
+async def delete_table(session: AsyncSession, settings_id: int, names: list[str]) -> None:
+    stmp = delete(TableInfo).where(TableInfo.settings_id==settings_id).where(TableInfo.name.in_(names))
+    await session.execute(stmp)
     await session.commit()
 
 
+async def create_market(session: AsyncSession, data: MarketCreate, model_schema: Type[BaseMarket] = MarketOut) -> BaseMarket:
+    market_db = Market(**data.model_dump())
+    session.add(market_db)
+    await session.commit()
+    return model_schema.model_validate(market_db, from_attributes=True)
+
+
+async def get_markets(session: AsyncSession, model_schema: Type[BaseMarket] = MarketOut) -> list[BaseMarket]:
+    query = select(Market)
+    result = await session.execute(query)
+    return [model_schema.model_validate(market, from_attributes=True) for market in result.scalars().all()]
+
+
+async def change_market(session: AsyncSession, _id: int, data: MarketUpdate):
+    stmp = update(Market).where(Market.id==_id).values(**data.model_dump())
+    await session.execute(stmp)
+    await session.commit()
+
+
+async def delete_market(session: AsyncSession, _id: int):
+    stmp = delete(Market).where(Market.id==_id)
+    await session.execute(stmp)
+    await session.commit()

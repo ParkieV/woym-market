@@ -1,6 +1,7 @@
 from fastapi import Depends, APIRouter
 from src.services import settings_service as service
-from src.schemas.settings_schemas import LogsOut, SettingsOut, SettingsUpdate, ColumnOut, ColumnUpdate
+from src.schemas.settings_schemas import LogsOut, SettingsOut, SettingsUpdate, TableInfoOut, TableInfoUpdate, Tables, \
+    MarketOut, MarketCreate, MarketUpdate
 from src.services.auth_utils import get_current_user
 
 settings_router = APIRouter(
@@ -25,14 +26,35 @@ async def get_logs(current_user=Depends(get_current_user)):
     return await service.get_logs(current_user.id)
 
 
-@settings_router.get('/columns', response_model=list[ColumnOut])
-async def get_columns(current_user=Depends(get_current_user)):
-    settings = await service.get_settings(current_user.id)
-    return settings.columns
+@settings_router.get('/tables/{table_name}', response_model=TableInfoOut | None)
+async def get_table(table_name: str, current_user=Depends(get_current_user)):
+    return await service.get_table(current_user.id, table_name)
 
 
-@settings_router.patch('/columns')
-async def update_columns(data: list[ColumnUpdate], current_user=Depends(get_current_user)):
-    await service.update_columns(current_user.id, data)
+@settings_router.put('/tables/{table_name}')
+async def update_table(data: TableInfoUpdate, table_name: str,  current_user=Depends(get_current_user)):
+    await service.update_table(current_user.id, table_name, data)
+    return {'status': 'OK'}
+
+
+@settings_router.get('/markets', response_model=list[MarketOut], dependencies=[Depends(get_current_user)])
+async def get_markets():
+    return await service.get_markets()
+
+
+@settings_router.post('/markets', response_model=MarketOut, dependencies=[Depends(get_current_user)])
+async def create_market(data: MarketCreate):
+    return await service.create_market(data)
+
+
+@settings_router.patch('/markets/{market_id}', dependencies=[])
+async def change_market(market_id: int, data: MarketUpdate, current_user=Depends(get_current_user)):
+    await service.change_market(market_id, data, current_user.id)
+    return {'status': 'OK'}
+
+
+@settings_router.delete('/markets/{market_id}', dependencies=[Depends(get_current_user)])
+async def delete_market(market_id: int):
+    await service.delete_market(market_id)
     return {'status': 'OK'}
 

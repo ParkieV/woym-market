@@ -1,21 +1,12 @@
 <script lang="ts">
     import { fetchUserInfo, patchUserInfo, type Settings } from "$lib/data/settings";
-    import { getContext, onMount } from "svelte";
-    import type { ModalKind } from "$lib/components/modal/Modals.svelte";
-
-    const addModal = getContext<(modal: ModalKind) => void>("addModal");
+    import { onMount } from "svelte";
 
     let settings: Settings | undefined = undefined;
 
     async function ok() {
         if (!settings) return;
-        let promise = patchUserInfo(settings);
-        addModal({
-            kind: "await",
-            promise,
-            header: "Сохранение изменений...",
-            errorHeader: "Ошибка при сохранении настроек"
-        });
+        let ok = patchUserInfo(settings);
     }
 
     onMount(async () => {

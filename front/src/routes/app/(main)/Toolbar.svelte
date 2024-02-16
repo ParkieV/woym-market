@@ -1,8 +1,10 @@
 <script lang="ts">
     import ButtonGroup from "$lib/components/ButtonGroup.svelte";
     import Search from "$lib/components/Search.svelte";
-    import type { Offer } from "$lib/data/offers";
-    import { createEventDispatcher } from "svelte";
+    import type { OfferBase } from "$lib/data/offers";
+    import { createEventDispatcher, onMount } from "svelte";
+
+    export let showAdditionalFilters: boolean = true;
 
     let shops = new Set([
         { name: "CALMAR.SHOP", selected: true },
@@ -18,18 +20,20 @@
     /** Fields that are compared to search query.*/
     const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"] as const;
 
-    function filter(offer: Offer): boolean {
-        if (offer.hidden && !show_hidden) {
-            return false;
-        }
-        for (const option of shops) {
-            if (option.name == offer.name_of_shop && !option.selected) {
+    function filter(offer: OfferBase): boolean {
+        if (showAdditionalFilters) {
+            if (offer.hidden && !show_hidden) {
                 return false;
             }
-        }
-        for (const option of markets) {
-            if (option.key == offer.market && !option.selected) {
-                return false;
+            for (const option of shops) {
+                if (option.name == offer.name_of_shop && !option.selected) {
+                    return false;
+                }
+            }
+            for (const option of markets) {
+                if (option.key == offer.market && !option.selected) {
+                    return false;
+                }
             }
         }
         const _search = search.trim().toLowerCase().replaceAll("ё", "е");
@@ -44,7 +48,7 @@
         return false;
     }
 
-    let dispatch = createEventDispatcher<{ filterChanged: (offer: Offer) => boolean }>();
+    let dispatch = createEventDispatcher<{ filterChanged: (offer: OfferBase) => boolean }>();
     $: {
         search;
         shops;
@@ -52,14 +56,20 @@
         show_hidden;
         dispatch("filterChanged", filter);
     }
+
+    onMount(() => {
+        dispatch("filterChanged", filter);
+    });
 </script>
 
 <menu>
-    <ButtonGroup bind:options={shops} />
-    <ButtonGroup bind:options={markets} />
-    <button class:selected={show_hidden} on:click={() => (show_hidden = !show_hidden)}>
-        <img src="/eye-slash.svg" alt="Показать скрытые товары" />
-    </button>
+    {#if showAdditionalFilters}
+        <ButtonGroup bind:options={shops} />
+        <ButtonGroup bind:options={markets} />
+        <button class:selected={show_hidden} on:click={() => (show_hidden = !show_hidden)}>
+            <img src="/eye-slash.svg" alt="Показать скрытые товары" />
+        </button>
+    {/if}
     <div class="spacer" />
     <Search placeholder="Поиск..." bind:value={search} />
 </menu>

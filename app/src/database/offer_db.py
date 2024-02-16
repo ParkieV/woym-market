@@ -3,9 +3,11 @@ import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
-from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate
+from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate, BaseOffer
 from .models.models import Offer, PricingScheme
 from typing import Iterable, Any, Type
+from fastapi.exceptions import HTTPException
+from fastapi import status
 
 
 def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
@@ -97,6 +99,12 @@ async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.D
     return result
 
 
+async def get_offer(session: AsyncSession, filters: dict, model_schema: Type[BaseOffer] = OfferOut):
+    query = select(Offer).filter_by(**filters)
+    result = await session.execute(query)
+    return model_schema.model_validate(result.scalar_one(), from_attributes=True)
+
+
 async def create_pricing_scheme(session: AsyncSession, data: PricingSchemeCreate | dict) -> PricingSchemeOut:
     if isinstance(data, PricingSchemeCreate):
         data = data.model_dump()
@@ -131,3 +139,14 @@ async def change_pricing_scheme(session: AsyncSession, data: PricingSchemeChange
     await session.execute(query)
     await session.commit()
 
+
+async def validate_pricing_scheme_id(session: AsyncSession, data: int | Iterable[int]) -> None:
+    if isinstance(data, int):
+        data = [data]
+
+    for i in data:
+        query = select(PricingScheme).where(PricingScheme.id == i)
+        rez = await session.execute(query)
+
+        if rez.scalar_one_or_none() is None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Схемы ценообразования с id - {i} не найдено')

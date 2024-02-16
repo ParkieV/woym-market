@@ -6,12 +6,14 @@ from sqlalchemy import (
     Boolean,
     TIMESTAMP,
     Float,
-    DateTime, JSON,
+    DateTime,
+    Enum
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
-
+from datetime import datetime
 from .base import Base
+from ...api.factory import APITypes
 
 
 class Users(Base):
@@ -34,7 +36,7 @@ class Settings(Base):
     fby_sales_commission = Column(Float, default=19)
     rate = Column(Float, default=10)
 
-    columns = relationship('ColumnInfo', back_populates='settings', lazy='subquery')
+    tables = relationship('TableInfo', back_populates='settings', lazy='subquery')
 
 
 class Offer(Base):
@@ -104,6 +106,8 @@ class Offer(Base):
     pricing_scheme_id = Column(Integer, ForeignKey('pricing_schemes.id', ondelete='RESTRICT'), nullable=False)
     pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
 
+    stocks = relationship('OfferStock')
+
 
 class Logs(Base):
     __tablename__ = 'logs'
@@ -113,30 +117,22 @@ class Logs(Base):
     updated_at = Column(DateTime(timezone=True), nullable=True, default=None)
 
 
-class ColumnInfo(Base):
-    __tablename__ = 'columns'
+class TableInfo(Base):
+    __tablename__ = 'tables'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     settings_id = Column(Integer, ForeignKey('settings.id', ondelete='CASCADE'))
-    settings = relationship("Settings", back_populates='columns')
+    settings = relationship("Settings", back_populates='tables')
 
-    name = Column(String)
-    key = Column(String, unique=True, index=True)
-    edit_key = Column(String, nullable=True, default=None)
-    data_type = Column(String)
-    index = Column(Integer)
-    width = Column(Float, default=100)
-    editable = Column(Boolean)
-    is_visible = Column(Boolean, default=True)
-    pinned = Column(Boolean, default=False)
-    tooltip = Column(String, default='')
-    options = Column(JSON, nullable=True, default=None)
+    name = Column(String, unique=True)
+    updated_at = Column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+    data = Column(String, nullable=True, default=None)
 
 
 class PricingScheme(Base):
     __tablename__ = 'pricing_schemes'
 
-    id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
     name = Column(String, nullable=False)
 
     use_total_price = Column(Boolean, default=False, nullable=False)
@@ -153,22 +149,48 @@ class PricingScheme(Base):
     offers = relationship(Offer, back_populates='pricing_scheme')
 
 
-# class Warehouse(Base):
-#     __tablename__ = 'warehouses'
+class Warehouse(Base):
+    __tablename__ = 'warehouses'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+
+    name = Column(String)
+    warehouse_id_in_marketplace = Column(Integer)
+    market = Column(String)
+
+
+class OfferStock(Base):
+    __tablename__ = 'offers_stocks'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+
+    offer_id = Column(Integer, ForeignKey('offers.id', ondelete='CASCADE'))
+    warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='CASCADE'))
+    warehouse = relationship(Warehouse, uselist=False)
+    current_stock = Column(Integer, default=0)
+    min_stock = Column(Integer, default=0)
+    for_delivery = Column(Integer, default=0)
+
+
+class Market(Base):
+    __tablename__ = 'markets'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+    name = Column(String)
+
+    token = Column(String)
+    entity_id = Column(Integer, nullable=True, default=None)
+    type = Column(Enum(APITypes))
+
+    tax = Column(Float, default=0)
+
+
+# class OwnStorage(Base):
+#     __tablename__ = 'own_storage'
 #
-#     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
+#     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+#     sku = Column(String, unique=True)
 #
-#     name = Column(String)
-#     warehouse_id = Column(Integer)
-#     market = Column(String)
-#
-#
-# class OfferStock(Base):
-#     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
-#
-#     offer_id = Column(Integer, ForeignKey('offers.id', ondelete='CASCADE'))
-#     warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='CASCADE'))
-#     in_stock = Column(Integer, default=0)
-#     min_stock = Column(Integer, default=0)
-#     for_delivery = Column(Integer, default=0)
+#     value = Column(Integer, default=0)
+
 

@@ -2,6 +2,8 @@ from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, json, Json
 
+from src.api.factory import APITypes
+
 
 class LogsOut(BaseModel):
     updated_at: datetime | None
@@ -34,31 +36,48 @@ class ColumnDataType(str, Enum):
     COMBOBOX = 'combobox'
 
 
-class BaseColumn(BaseModel):
-    index: int
-    width: float = 120
-    is_visible: bool = True
+class Tables(str, Enum):
+    OFFERS = 'offers'
+    MATRIX_STOCKS = 'matrix_stocks'
+    MATRIX_WAREHOUSES = 'matrix_warehouses'
 
 
-class ColumnUpdate(BaseColumn):
-    key: str
+class BaseTableInfo(BaseModel):
+    data: str | None = None
 
 
-class ColumnOut(ColumnUpdate):
+class TableInfoCreate(BaseTableInfo):
     name: str
-    data_type: ColumnDataType
-    editable: bool
-    tooltip: str = ''
-    pinned: bool = False
-    options: Json | list[dict] | None = None
 
 
-class ColumnCreate(ColumnOut):
+class TableInfoUpdate(BaseTableInfo):
     pass
 
 
-class ColumnFullUpdate(ColumnOut):
+class TableInfoOut(TableInfoUpdate):
+    updated_at: datetime
+
+
+class BaseMarket(BaseModel):
+    name: str
+    token: str
+    entity_id: int
+    tax: float = 0
+    type: APITypes
+
+
+class MarketCreate(BaseMarket):
     pass
+
+
+class MarketUpdate(BaseMarket):
+    pass
+
+
+class MarketOut(BaseMarket):
+    id: int
+
+
 
 
 

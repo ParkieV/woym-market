@@ -1,4 +1,4 @@
-import type { ColDef, ValueSetterParams } from "ag-grid-community";
+import type { ColDef, ValueSetterParams } from "ag-grid-enterprise";
 
 export function numberValueSetter(field: string) {
     return (params: ValueSetterParams<any, number | null | undefined>) => {

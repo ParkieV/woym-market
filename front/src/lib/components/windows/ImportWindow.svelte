@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { fetchAuthenticated } from "$lib/auth";
     import { uploadFile } from "$lib/util";
-    import { createEventDispatcher, getContext } from "svelte";
+    import { createEventDispatcher } from "svelte";
     import Window from "./Window.svelte";
-    import type { ModalKind } from "$lib/components/modal/Modals.svelte";
+    import { handleRequest } from "$lib";
+    import { fetchAuthenticated } from "$lib/auth";
 
     type Data = {
         market: "ozon" | "yandex" | "all";
@@ -16,8 +16,6 @@
         market: "all",
         import_type: "table"
     };
-
-    const addModal = getContext<(modal: ModalKind) => void>("addModal");
 
     const ok = async () => {
         if (data.name_of_shop === undefined) {
@@ -32,18 +30,13 @@
             method: "POST",
             body: formData
         });
-
-        addModal({
-            kind: "await",
-            promise,
-            header: "Отправка файла импорта...",
-            errorHeader: "Ошибка импорта"
+        handleRequest(promise, {
+            header: "Отправка файла...",
+            errorHeader: "Ошибка импорта",
+            onSuccess: () => dispatch("import")
         });
+
         open = false;
-
-        promise.then(() => {
-            dispatch("import");
-        });
     };
 
     let dispatch = createEventDispatcher<{ import: void }>();

@@ -1,14 +1,21 @@
+import { handleRequest } from "$lib";
 import { fetchAuthenticated } from "$lib/auth";
 
-/** Product in store. */
-export type Offer = {
+/** Basic information about the offer. */
+export type OfferBase = {
     sku: string;
     name: string;
-    photo?: string | null;
-    note_1?: string | null;
-    note_2?: string | null;
-    note_3?: string | null;
+    photo: string | null;
+    note_1: string | null;
+    note_2: string | null;
+    note_3: string | null;
+    name_of_shop: string;
+    market: string;
+    hidden: boolean;
+};
 
+/** Product in store. */
+export type Offer = OfferBase & {
     self_weight: number;
     self_length: number;
     self_width: number;
@@ -23,8 +30,6 @@ export type Offer = {
     yandex_volume: number;
     volumn_difference: number | null;
 
-    name_of_shop: string;
-    market: string;
     group_sellers_amount: number;
     business_id: number;
 
@@ -63,20 +68,23 @@ export type Offer = {
     auto_price_control: boolean;
     /** If set to true, manual min price (manual_min_price) will be used. */
     use_manual_min_price: boolean;
-    hidden: boolean;
 };
 
 export async function fetchOfferList(): Promise<Offer[]> {
-    let offers = await (await fetchAuthenticated("data/offers")).json();
-    return offers;
+    let promise = fetchAuthenticated("data/offers");
+    await handleRequest(promise);
+    return await (await promise).json();
 }
 
-export async function patchOfferList(changed: Offer[]): Promise<void> {
-    await fetchAuthenticated("data/offers", {
+export async function patchOfferList(changed: Offer[]): Promise<boolean> {
+    let promise = fetchAuthenticated("data/offers", {
         method: "PATCH",
         body: JSON.stringify(changed),
         headers: {
             "Content-Type": "application/json"
         }
     });
+    let ok = false;
+    await handleRequest(promise, { header: "Сохранение...", onSuccess: () => (ok = true) });
+    return ok;
 }

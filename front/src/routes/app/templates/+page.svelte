@@ -1,62 +1,27 @@
-<script lang="ts" context="module">
-    export type Template = {
-        id: number;
-        name: string;
-
-        use_total_price: boolean;
-        use_attractive_price_threshold: boolean;
-        use_moderately_attractive_price_threshold: boolean;
-        use_your_price_for_buyers: boolean;
-        use_min_price_in_market: boolean;
-        use_min_price_without_market: boolean;
-        use_min_general_markets_price: boolean;
-
-        /** Number that the resulting price will be divided by. */
-        n: number;
-        /** Amount that will be added to the price (in percent). */
-        m: number;
-    };
-</script>
-
 <script lang="ts">
-    import { fetchAuthenticated } from "$lib/auth";
-    import { getContext, onMount } from "svelte";
-    import type { ModalKind } from "$lib/components/modal/Modals.svelte";
+    import { onMount } from "svelte";
     import TemplateCard from "./TemplateCard.svelte";
+    import { fetchTemplates, patchTemplates, type Template } from "$lib/data/templates";
 
     let templates: Template[] = [];
+    let changed = new Set<number>();
 
-    const addModal = getContext<(modal: ModalKind) => void>("addModal");
-    onMount(async () => {
-        let _templates: Template[] = await (
-            await fetchAuthenticated("data/pricing-schemes")
-        ).json();
-        _templates.sort((a, b) => a.id - b.id);
-        templates = _templates;
-    });
-
-    const update = async () => {
-        let promises = [];
-        for (const id of changed) {
+    const save = async () => {
+        let _templates = Array.from(changed).flatMap(id => {
             let template = templates.find(x => x.id === id);
-            let promise = fetchAuthenticated("data/pricing-schemes", {
-                method: "PATCH",
-                body: JSON.stringify(template),
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            });
-            promises.push(promise);
-        }
-        addModal({
-            kind: "await",
-            errorHeader: "Ошибка при сохранении изменений в формуле",
-            header: "Обновляем данные на сервере...",
-            promise: Promise.all(promises)
+            return template ?? [];
         });
+
+        let ok = await patchTemplates(_templates);
+        if (ok) {
+            changed.clear();
+            changed = changed;
+        }
     };
 
-    const changed = new Set<number>();
+    onMount(async () => {
+        templates = await fetchTemplates();
+    });
 </script>
 
 <main>
@@ -66,12 +31,18 @@
         </header>
         <ul>
             {#each templates as template}
-                <TemplateCard bind:template on:changed={() => changed.add(template.id)} />
+                <TemplateCard
+                    bind:template
+                    on:changed={() => {
+                        changed.add(template.id);
+                        changed = changed;
+                    }}
+                />
             {/each}
         </ul>
     </div>
     <footer>
-        <button on:click={update}>Сохранить</button>
+        <button on:click={save} disabled={changed.size === 0}>Сохранить</button>
     </footer>
 </main>
 

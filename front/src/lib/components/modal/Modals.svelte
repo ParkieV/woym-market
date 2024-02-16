@@ -1,60 +1,38 @@
 <script lang="ts" context="module">
-    export type ModalKind =
-        | { kind: "confirmChangesLoss"; changed: number; onConfirm: () => void }
-        | { kind: "confirmSave"; onConfirm: () => void }
-        | { kind: "dataUpdatedOnServer" }
-        | {
-              kind: "await";
-              promise: Promise<any>;
-              header: string;
-              errorHeader: string;
-          };
-</script>
+    import { openModal } from "svelte-modals";
 
-<script lang="ts">
-    import FetchDialog from "$lib/components/modal/FetchDialog.svelte";
-    import ConfirmationDialog from "$lib/components/modal/ConfirmationDialog.svelte";
-    import NotificationDialog from "$lib/components/modal/NotificationDialog.svelte";
-    import { num_word } from "$lib/util";
-
-    export let modals: ModalKind[];
-    $: modal = modals.at(-1);
-
-    let close = () => {
-        modals.pop();
-        modals = modals;
-    };
-</script>
-
-{#if modal}
-    {#if modal.kind == "confirmChangesLoss"}
-        {@const word = num_word(modal.changed, ["изменение", "изменения", "изменений"])}
-        {@const part = num_word(modal.changed, [
+    export function showChangesLossConfirmation(changed: number, onConfirm?: () => void) {
+        const word = num_word(changed, ["изменение", "изменения", "изменений"]);
+        const part = num_word(changed, [
             "Оно будет потеряно",
             "Они будут потеряны",
             "Они будут потеряны"
-        ])}
-        <ConfirmationDialog
-            header="Изменения будут потеряны"
-            text={`Вы внесли ${modal.changed} ${word}. ${part}. Продолжить?`}
-            on:confirm={modal.onConfirm}
-            on:close={close}
-        />
-    {:else if modal.kind == "confirmSave"}
-        <ConfirmationDialog
-            header="Сохранить изменения?"
-            text="Данные обновятся на сервере"
-            on:confirm={modal.onConfirm}
-            on:close={close}
-        />
-    {:else if modal.kind == "dataUpdatedOnServer"}
-        <NotificationDialog
-            header="Информация устарела"
-            text="Данные в таблице были обновлены"
-            on:close={close}
-        />
-    {:else if modal.kind == "await"}
-        {@const { header, promise, errorHeader } = modal}
-        <FetchDialog {header} {promise} {errorHeader} on:close={close} />
-    {/if}
-{/if}
+        ]);
+        const header = "Изменения будут потеряны";
+        const text = `Вы внесли ${changed} ${word}. ${part}. Продолжить?`;
+        openModal(ConfirmationDialog, { header, text, onConfirm, showCancelButton: true });
+    }
+
+    export function showSaveConfirmation(onConfirm?: () => void) {
+        const header = "Сохранить изменения?";
+        const text = "Данные обновятся на сервере";
+        openModal(ConfirmationDialog, { header, text, onConfirm, showCancelButton: true });
+    }
+
+    export function showNotification(header: string, text: string) {
+        openModal(ConfirmationDialog, { header, text, showCancelButton: false });
+    }
+
+    export function showLoadingModal<T>(promise: Promise<T>, header?: string) {
+        openModal(FetchDialog<T>, { header: header ?? "Загрузка...", promise });
+    }
+</script>
+
+<script lang="ts">
+    import { Modals } from "svelte-modals";
+    import ConfirmationDialog from "$lib/components/modal/ConfirmationDialog.svelte";
+    import { num_word } from "$lib/util";
+    import FetchDialog from "./FetchDialog.svelte";
+</script>
+
+<Modals />

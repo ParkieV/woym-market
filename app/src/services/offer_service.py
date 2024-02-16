@@ -1,17 +1,21 @@
 from datetime import datetime
 from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import offer_db as db
 import src.services.offer_utils as utils
-from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate, OfferOutWithPriceScheme
+from src.schemas.base_api_schemas import APIPriceChangeData
+from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market, \
+    PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate, BaseOffer
 import pandas as pd
-from src.api.factory import MPTypes, APIFactory
 import numpy as np
-from src.services.settings_service import get_settings, update_logs
-from src.params.confing import config
+from src.database.settings_db import update_logs, get_user_settings
+from fastapi.exceptions import HTTPException
+from fastapi import status
 
-yandex_repository = APIFactory.get(MPTypes.YANDEX, token=config.yandex_token)
+api_wrapper = APIWrapper()
 
 
 async def get_offers(filters: dict[str, Any] | None = None) -> list[OfferOut]:
@@ -23,10 +27,11 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
     if not offers_data:
         return offers_data
 
-    settings = await get_settings(user_id)
-
     async with async_session() as session:
+        settings = await get_user_settings(session, user_id)
+
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
+        await db.validate_pricing_scheme_id(session, set(changes['pricing_scheme_id'].values.tolist()))
 
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'])
         await recalculate_values(session, settings, which=changes[['sku', 'name_of_shop', 'market']])
@@ -34,14 +39,12 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
 
 
 async def setup_offers_data(user_id: int):
-    settings = await get_settings(user_id)
-
-    yandex_offers = await yandex_repository.get_offers_list()
+    yandex_offers = await api_wrapper.get_offers_list()
     yandex_offers_df = pd.DataFrame(yandex_offers)
     async with async_session() as session:
-        await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L0', use_min_price_in_market=True))
+        settings = await get_user_settings(session, user_id)
 
-        for i in range(5):
+        for i in range(6):
             await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L{i+1}'))
 
         data = await utils.build_offers_data(yandex_offers_df, setup_mode=True, settings=settings)
@@ -53,12 +56,11 @@ async def setup_offers_data(user_id: int):
 async def update_offers(user_id: int):
     async with async_session() as session:
         await update_yandex_offers_price(session)
-
-    settings = await get_settings(user_id)
+        settings = await get_user_settings(session, user_id)
 
     mapping_fields = ['sku', 'name_of_shop', 'market']
 
-    yandex_offers = await yandex_repository.get_offers_list()
+    yandex_offers = await api_wrapper.get_offers_list()
     db_offers = await get_offers()
 
     offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
@@ -82,7 +84,7 @@ async def update_offers(user_id: int):
         await db.delete_offers(session, to_delete_df)
         await recalculate_values(session, settings)
 
-    await update_logs(user_id, {'updated_at': datetime.now()})
+        await update_logs(session, user_id, {'updated_at': datetime.now()})
 
 
 async def delete_offers(offers: list[OfferDelete]):
@@ -91,10 +93,18 @@ async def delete_offers(offers: list[OfferDelete]):
 
 
 async def update_yandex_offers_price(session: AsyncSession):
-    offers_db = await db.get_offers(session)
-    offers_df = pd.DataFrame([offer.model_dump() for offer in offers_db])
-    data = offers_df.to_dict('records')
-    await yandex_repository.change_prices(data)
+    offers_db = await db.get_offers(session, {'auto_price_control': True})
+
+    data = [
+        APIPriceChangeData(
+            sku=offer.sku,
+            market=offer.market,
+            name_of_shop=offer.name_of_shop,
+            target_price=offer.target_price
+        )
+        for offer in offers_db
+    ]
+    await api_wrapper.change_prices(data)
 
 
 async def recalculate_values(session: AsyncSession, settings, which=None):
@@ -104,6 +114,7 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
         offers = await db.get_offers_by(session, which, model_schema=OfferOut)
 
     df = pd.DataFrame([offer.model_dump() for offer in offers])
+    df.fillna(np.nan, inplace=True)
 
     if df.empty:
         return
@@ -115,7 +126,8 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
 
 
 async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None, user_id: int, file_extension: str = 'xlsx') -> None:
-    settings = await get_settings(user_id)
+    async with async_session() as session:
+        settings = await get_user_settings(session, user_id)
 
     if market == Market.ALL:
         market = None
@@ -135,6 +147,8 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
 
 
 async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+    required_fields = {'sku', 'market', 'name_of_shop'}
+
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df.fillna({
@@ -143,17 +157,30 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
         'note_3': '',
     }, inplace=True)
 
+    if len(set(df.columns) & required_fields) != len(required_fields):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные. Следующие колонки должны быть обязательно: {", ".join(BaseOffer.fields().values())}')
+
     if name_of_shop:
         df = df[df['name_of_shop'] == name_of_shop]
 
     if market:
         df = df[df['market'] == market]
 
-    columns_to_change = list(set(df.columns) & set(OfferOut.fields().keys()))
+    columns_to_change = list(set(df.columns) & set(OfferChange.fields().keys()))
     df = df[columns_to_change]
 
+    df[['sku', 'name_of_shop', 'market']] = df[['sku', 'name_of_shop', 'market']].astype("string")
+
     async with async_session() as session:
-        await db.update_offers(session, df, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
+        if 'pricing_scheme_id' in df.columns:
+            await db.validate_pricing_scheme_id(session, set(df['pricing_scheme_id'].values.tolist()))
+
+        try:
+            await db.update_offers(session, df, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
+        except Exception as e:
+            print(e)
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
+
         await recalculate_values(session, settings, df[['sku', 'name_of_shop', 'market']])
 
 
@@ -162,6 +189,9 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
     df.drop(df.columns[[3, 4, 6, 7]], axis=1, inplace=True, errors='ignore')
     df.drop([i for i in range(8)], axis=0, inplace=True, errors='ignore')
     df.columns = ['sku', 'name', 'discount_price', 'price']
+
+    df['sku'] = df['sku'].astype('string')
+
     df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
 
     df['dollar_cost_price'] = np.where(
@@ -182,7 +212,12 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
         mapping_columns.append('market')
 
     async with async_session() as session:
-        await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
+        try:
+            await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
+        except Exception as e:
+            print(e)
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
+
         await recalculate_values(session, settings)
 
 
@@ -195,6 +230,7 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
     df[['self_length', 'self_width', 'self_height', 'self_weight']] = df[
         ['self_length', 'self_width', 'self_height', 'self_weight']].astype(float)
     df['volume'] = df['self_length'] * df['self_width'] * df['self_height'] / 1000
+    df['sku'] = df['sku'].astype('string')
 
     df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
     df.fillna(0, inplace=True)
@@ -211,7 +247,12 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
         mapping_columns.append('market')
 
     async with async_session() as session:
-        await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
+        try:
+            await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
+        except Exception as e:
+            print(e)
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
+
         await recalculate_values(session, settings)
 
 
@@ -260,9 +301,9 @@ async def delete_pricing_schemes(data: list[int]) -> None:
 
 
 async def change_pricing_scheme(data: PricingSchemeChange, user_id: int):
-    settings = await get_settings(user_id)
 
     async with async_session() as session:
+        settings = await get_user_settings(session, user_id)
         await db.change_pricing_scheme(session, data)
 
         await recalculate_values(session, settings, which=[{'pricing_scheme_id': data.id}])

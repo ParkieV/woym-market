@@ -3,6 +3,8 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+from scheduls import update_data
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
 from src.routers.offer_router import data_router
@@ -11,7 +13,6 @@ from src.routers.stocks_router import stocks_router
 from src.routers.settings_router import settings_router
 from src.database.db import db_create
 import aioschedule
-from src.services.offer_service import update_offers
 from src.params.confing import config
 
 
@@ -19,7 +20,7 @@ app: FastAPI = FastAPI(default_response_class=ORJSONResponse)
 
 
 async def scheduler():
-    aioschedule.every(60).minutes.do(update_offers, 1)
+    aioschedule.every(60).minutes.do(update_data, 1)
 
     while True:
         await aioschedule.run_pending()

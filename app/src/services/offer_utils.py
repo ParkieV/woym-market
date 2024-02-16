@@ -4,6 +4,7 @@ from io import BytesIO
 from fastapi import HTTPException, status
 from src.database.offer_db import get_pricing_schemes
 from src.database.db import async_session
+from src.database.settings_db import get_markets
 
 
 def count_fby(data: pd.DataFrame, settings) -> pd.Series:
@@ -14,6 +15,8 @@ def count_fby(data: pd.DataFrame, settings) -> pd.Series:
     # если dimensions_sum < 150 и вес < 25 кг, то 3% (20 <= x <= 60), иначе 350 - доставка внутри округа
 
     dimensions_sum = data['yandex_length'] + data['yandex_width'] + data['yandex_height']
+    dimensions_sum.fillna(0, inplace=True)
+
     delivery_and_warehouse_processing_price = np.where(
         (dimensions_sum < 150) | (data['yandex_weight'] < 25),
         data['current_price'] * 0.06,
@@ -39,6 +42,15 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
     data = await calculate_price(data)
 
     data['profit'] = data['current_price'] - data['fby'] - data['cost_price']
+
+    async with async_session() as session:
+        for market in await get_markets(session):
+            data['profit'] = np.where(
+                ((data['market'] == market.type) & (data['name_of_shop'] == market.name)),
+                data['profit'] * (1 - market.tax / 100),
+                data['profit']
+            )
+
     data['margin'] = data['profit'] / data['cost_price'] * 100
     data['discount_base_price'] = data['current_price'] * 1.2
 
@@ -47,17 +59,6 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
 
 async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     data = data.copy()
-
-    # не меняем цену
-
-    # data['scheme_result'] = data.apply(lambda row: sum(row[i] for i in row['sum_fields']), axis=1) / data['n']
-    # data['scheme_result'] = data['scheme_result'] + data['scheme_result'] * data['m'] / 100
-    #
-    # data['min_level'] = np.where(
-    #     ( (data['scheme_result'] < data['min_price_in_market']) | (np.isnan(data['scheme_result'])) ),
-    #     data['min_price_in_market'],
-    #     data['scheme_result']
-    # )
     data['min_level'] = np.nan
 
     async with async_session() as session:

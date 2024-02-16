@@ -36,9 +36,8 @@ class BaseModelFields(ABC):
     _skip_fields = [
         'group_sellers_amount',
         'pricing_scheme',
-        'pricing_scheme_id',
         'business_id',
-
+        'id',
     ]
 
     @classmethod
@@ -50,15 +49,40 @@ class BaseModelFields(ABC):
         return {field.title: name for name, field in cls.model_fields.items() if name not in cls._skip_fields}
 
 
-class OfferOut(BaseModel, BaseModelFields):
-    # from yandex api
+class BaseOffer(BaseModel, BaseModelFields):
     sku: str = Field(title='sku')
-    name: str = Field(title='Название')
+    name_of_shop: str = Field(title='Название магазина')
 
+    market: str = Field(title='Площадка')
+
+
+class OfferChange(BaseOffer):
     self_weight: float | None = Field(title='Вес')
     self_length: float | None = Field(title='Длина')
     self_width: float | None = Field(title='Ширина')
     self_height: float | None = Field(title='Высота')
+
+    dollar_cost_price: float | None = Field(title='Закупка у. е.', default=0)
+    total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену', default=200)
+    total_price_coeff: float = Field(title='Коэфициент расчетной цены', default=2.4)
+
+    note_1: str = Field('', title='Примечание 1')
+    note_2: str = Field('', title='Примечание 2')
+    note_3: str = Field('', title='Примечание 3')
+
+    use_manual_min_price: bool = Field(True, title='Использовать ручную мин. цену')
+    auto_min_price: float = Field(title='Авто мин. цена %')  # в процентах
+    manual_min_price: float | None = Field(None, title='Ручная мин. цена')
+    auto_price_control: bool = Field(False, title='Авто контроль цен')
+    pricing_scheme_id: int = Field(title='Id схемы ценообразования')
+
+    hidden: bool = Field(False, title='Скрыт')
+
+
+class OfferOut(OfferChange):
+    # from yandex api
+    id: int = Field(title='id')
+    name: str = Field(title='Название')
 
     yandex_weight: float | None = Field(title='Вес с маркета', default=0)
     yandex_length: float | None = Field(title='Длинна с маркета', default=0)
@@ -71,16 +95,11 @@ class OfferOut(BaseModel, BaseModelFields):
 
     photo: str | None = Field(title='Фото')
     remaining_stock: int = Field(title='Остатки на складах')
-    name_of_shop: str = Field(title='Название магазина')
-    market: str = Field(title='Площадка')
     group_sellers_amount: int = Field(title='Количество продавцов в группе')
     business_id: int = Field(title='id бизнесса')
 
     # countable/editable values
-    dollar_cost_price: float | None = Field(title='Закупка у. е.', default=0)
-    total_price_coeff: float = Field(title='Коэфициент расчетной цены')
     cost_price: float | None = Field(title='Себестоимость (Закупка у. е. * курс)')
-    total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену')
     total_price: float | None = Field(title='Расчетная цена (Закупка * коэф. ?+ мин. наценка)')
     discount_base_price: float | None = Field(title='Цена до скидки (Текущая цена + 20%)')
     profit: float | None = Field(title='Прибыль (Текущая цена - закупка - FBY)')
@@ -99,55 +118,14 @@ class OfferOut(BaseModel, BaseModelFields):
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')
 
-    # User additional fields
-    note_1: str = Field('', title='Примечание 1')
-    note_2: str = Field('', title='Примечание 2')
-    note_3: str = Field('', title='Примечание 3')
-
-    use_manual_min_price: bool = Field(True,
-                                       title='Использовать ручную мин. цену')  # использовать ли автоматический расчет нижней планки цены
-    auto_min_price: float = Field(title='Авто мин. цена %')  # в процентах
-    manual_min_price: float | None = Field(None, title='Ручная мин. цена')
-
-    auto_price_control: bool = Field(False, title='Авто контроль цен')
-
-    hidden: bool = Field(False, title='Скрыт')
-
-    pricing_scheme_id: int
-
     class Config:
         orm_mode = True
 
 
-class OfferOutWithPriceScheme(OfferOut, BaseModelFields):
+
+
+class OfferOutWithPriceScheme(OfferOut):
     pricing_scheme: PricingSchemeOut | None = None
-
-
-class OfferChange(BaseModel):
-    sku: str
-    name_of_shop: str
-    market: str
-
-    self_weight: float | None
-    self_length: float | None
-    self_width: float | None
-    self_height: float | None
-
-    dollar_cost_price: float | None
-    total_price_min_additional: float = 200
-    total_price_coeff: float = 2.4
-
-    note_1: str = ''
-    note_2: str = ''
-    note_3: str = ''
-
-    use_manual_min_price: bool = True  # использовать ли автоматический расчет нижней планки цены
-    auto_min_price: float = 100  # в процентах
-    manual_min_price: float | None = None
-    auto_price_control: bool = False  # ручное управление ценами
-    pricing_scheme_id: int
-
-    hidden: bool = False
 
 
 class OfferDelete(BaseModel):
@@ -173,44 +151,4 @@ class ExportType(str, Enum):
     TABLE = 'table'
     MATRIX_STOCKS = 'matrix-stocks'
     MATRIX_OFFERS = 'matrix-offers'
-
-
-class BaseWarehouse(BaseModel):
-    name: str
-    warehouse_id: int
-    market: str
-
-
-class WarehouseCreate(BaseWarehouse):
-    pass
-
-
-class WarehouseOut(BaseWarehouse):
-    id: int
-
-
-class BaseOfferStock(BaseModel):
-    offer_id: int
-    warehouse_id: int
-    in_stock: int = 0
-    min_stock: int = 0
-    for_delivery: int = 0
-
-
-class OfferStockCreate(BaseOfferStock):
-    pass
-
-
-class OfferStockOut(BaseOfferStock):
-    id: int
-
-
-class OfferStockUpdate(BaseModel):
-    id: int
-    in_stock: int = 0
-    min_stock: int = 0
-    for_delivery: int = 0
-
-
-
 

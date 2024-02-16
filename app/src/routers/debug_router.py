@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
-from src.schemas.settings_schemas import ColumnFullUpdate
-from src.schemas.offer_schemas import OfferOut, OfferDelete
+from src.schemas.offer_schemas import OfferDelete
 from src.services import offer_service, settings_service
 from src.services.auth_utils import get_current_user
+from src.schemas.settings_schemas import TableInfoCreate
 
 debug_router = APIRouter(
     prefix='/debug',
@@ -22,10 +22,14 @@ async def force_update(current_user=Depends(get_current_user)):
     return {'status': 'OK'}
 
 
-@debug_router.put('/columns')
-async def full_update_columns(data: list[ColumnFullUpdate], current_user=Depends(get_current_user)):
-    await settings_service.update_columns(current_user.id, data)
-    return {'status': 'OK'}
+@debug_router.post('/columns')
+async def create_columns(data: TableInfoCreate, current_user=Depends(get_current_user)):
+    return await settings_service.create_table(data, current_user.id)
 
+
+@debug_router.delete('/columns')
+async def delete_columns(data: list[str], current_user=Depends(get_current_user)):
+    await settings_service.delete_tables(data, current_user.id)
+    return {'status': 'OK'}
 
 

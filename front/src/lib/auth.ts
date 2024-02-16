@@ -4,7 +4,6 @@ import Cookies from "js-cookie";
 
 export async function fetchAuthenticated(endpoint: string, init?: RequestInit): Promise<Response> {
     let token = Cookies.get("mpToken");
-    if (!token) throw new Error("403");
 
     if (!init) init = {};
     init.headers = new Headers(init.headers);
