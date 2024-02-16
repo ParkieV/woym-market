@@ -1,18 +1,14 @@
-import json
-
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_, ColumnElement
+from sqlalchemy import select, update, delete, and_
 from sqlalchemy.orm import selectinload, subqueryload
-from sqlalchemy.sql import func
-from src.database.models.base import Base
+from src.database.utils import _update_or_create_object
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
     OfferStockWithWarehouseOut, OfferWithStocksUpdate, OfferStockUpdate, OwnStorageCreate, OwnStorageOut, \
     OwnStorageUpdate
 from src.database.models.models import Warehouse, OfferStock, OwnStorage
 from pydantic import BaseModel
 from src.database.models.models import Offer
-from typing import Type, TypeVar, Any
-from collections import defaultdict
+from typing import Type, TypeVar
 
 ModelSchema = TypeVar('ModelSchema', bound=Type[BaseModel])
 
@@ -78,36 +74,6 @@ async def change_offer_with_stock(session: AsyncSession, data: list[OfferWithSto
             await session.execute(stmp)
 
     await session.commit()
-
-
-async def _update_or_create_object(
-        session: AsyncSession,
-        model: Type[Base],
-        data: BaseModel,
-        update_by:  ColumnElement[bool],
-        model_schema: Type[BaseModel]
-) -> (Any, bool):
-    query = select(model).where(update_by).distinct()
-    result = await session.execute(query)
-    object_db = result.scalar_one_or_none()
-    created = object_db is None
-
-    if object_db is None:
-        object_db = model(**data.model_dump())
-        session.add(object_db)
-        await session.commit()
-    else:
-        stmp = (
-            update(model)
-            .where(update_by)
-            .values(**data.model_dump())
-        )
-        await session.execute(stmp)
-        await session.commit()
-        query = select(model).filter_by(**data.model_dump())
-        object_db = (await session.execute(query)).scalar_one()
-
-    return model_schema.model_validate(object_db, from_attributes=True), created
 
 
 async def update_or_create_warehouse(session: AsyncSession, data: WarehouseCreate) -> (WarehouseOut, bool):

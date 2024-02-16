@@ -2,6 +2,7 @@ from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
 from src.database import offer_db
+from src.database.settings_db import get_markets
 from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStockOut, OfferStockCreate, \
     OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate
 
@@ -56,7 +57,9 @@ async def change_offer_with_stock(data: list[OfferWithStocksUpdate]):
 
 async def get_own_storages():
     async with async_session() as session:
-        return await db.get_own_storages(session)
+        storages = await db.get_own_storages(session)
+        markets = await get_markets(session)
+        return {'markets': markets, 'data': storages}
 
 
 async def change_own_storages(data: list[OwnStorageUpdate]):

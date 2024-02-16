@@ -26,14 +26,14 @@ async def get_logs(current_user=Depends(get_current_user)):
     return await service.get_logs(current_user.id)
 
 
-@settings_router.get('/tables/{table_name}', response_model=TableInfoOut | None)
-async def get_table(table_name: str, current_user=Depends(get_current_user)):
-    return await service.get_table(current_user.id, table_name)
+@settings_router.get('/tables/{table_name}', response_model=TableInfoOut | None, dependencies=[Depends(get_current_user)])
+async def get_table(table_name: str):
+    return await service.get_table(table_name)
 
 
-@settings_router.put('/tables/{table_name}')
-async def update_table(data: TableInfoUpdate, table_name: str,  current_user=Depends(get_current_user)):
-    await service.update_table(current_user.id, table_name, data)
+@settings_router.put('/tables', dependencies=[Depends(get_current_user)])
+async def update_table(data: TableInfoUpdate):
+    await service.update_or_create_table(data)
     return {'status': 'OK'}
 
 

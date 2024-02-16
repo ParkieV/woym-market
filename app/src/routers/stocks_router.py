@@ -10,12 +10,12 @@ stocks_router = APIRouter(
 
 
 @stocks_router.get('/own-storage', dependencies=[Depends(get_current_user)])
-async def get_self_stocks():
+async def get_own_storages():
     return await service.get_own_storages()
 
 
 @stocks_router.patch('/own-storage', dependencies=[Depends(get_current_user)])
-async def change_self_stocks(data: list[OwnStorageUpdate]):
+async def change_own_storages(data: list[OwnStorageUpdate]):
     await service.change_own_storages(data)
     return {'status': 'OK'}
 

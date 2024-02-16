@@ -1,7 +1,7 @@
 from io import BytesIO
 import asyncio
 from typing import Any
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from requests import Session, Response
 from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS, OFFERS_DETAIL, WAREHOUSES
 import pandas as pd
@@ -11,13 +11,12 @@ from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehou
 
 
 class YandexMarketAPI(BaseAPI):
-
-    def check_auth_data(self, token: str):
-        pass
+    def validate_auth_data(self, token: str):
+        response = self.session.get('https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
+        if response.status_code != 200:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Некорректные данные для инициализации API Яндекс маркта")
 
     def __init__(self, token: str, entity_id: int, shop_name: str):
-        self.check_auth_data(token)
-
         self.session = Session()
         self._token = token
         self._entity_id = entity_id  # same as campaign_id
@@ -25,6 +24,7 @@ class YandexMarketAPI(BaseAPI):
         self.auth_headers = {
             'Authorization': f'Bearer {self._token}'
         }
+        self.validate_auth_data(token)
 
     def _get_business_id_by_campaign_id(self, campaign_id: int) -> int:
         return self._get_campaigns()[campaign_id]['business_id']

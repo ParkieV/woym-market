@@ -44,10 +44,11 @@ class Tables(str, Enum):
 
 class BaseTableInfo(BaseModel):
     data: str | None = None
+    name: str
 
 
 class TableInfoCreate(BaseTableInfo):
-    name: str
+    pass
 
 
 class TableInfoUpdate(BaseTableInfo):
@@ -58,26 +59,30 @@ class TableInfoOut(TableInfoUpdate):
     updated_at: datetime
 
 
-class BaseMarket(BaseModel):
+class MarketOut(BaseModel):
+    id: int
     name: str
-    token: str
-    entity_id: int
     tax: float = 0
     type: APITypes
 
 
-class MarketCreate(BaseMarket):
+class MarketUpdate(BaseModel):
+    tax: float = 0
+
+
+class MarketFullOut(MarketOut):
+    token: str
+    entity_id: int
+
+
+class MarketFullUpdate(MarketFullOut):
     pass
 
 
-class MarketUpdate(BaseMarket):
-    pass
-
-
-class MarketOut(BaseMarket):
-    id: int
-
-
-
-
+class MarketCreate(BaseModel):
+    name: str
+    tax: float = 0
+    type: APITypes
+    token: str
+    entity_id: int
 

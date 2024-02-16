@@ -6,7 +6,7 @@ from ..database.db import async_session
 
 
 class APIWrapper(BaseAPI):
-    async def check_auth_data(self, **kwargs):
+    async def validate_auth_data(self, **kwargs):
         pass
 
     async def get_offers_list(self) -> list[APIOffer]:
