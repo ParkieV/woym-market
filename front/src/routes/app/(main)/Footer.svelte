@@ -28,7 +28,10 @@
             }
         };
         fetchDate();
-        setInterval(fetchDate, 15 * 1000);
+        let interval = setInterval(fetchDate, 15 * 1000);
+        return () => {
+            clearInterval(interval);
+        };
     });
 
     async function cancelEdits() {
