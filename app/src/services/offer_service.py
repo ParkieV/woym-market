@@ -43,9 +43,8 @@ async def setup_offers_data(user_id: int):
     yandex_offers_df = pd.DataFrame(yandex_offers)
     async with async_session() as session:
         settings = await get_user_settings(session, user_id)
-        await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L0', use_min_price_in_market=True))
 
-        for i in range(5):
+        for i in range(6):
             await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L{i+1}'))
 
         data = await utils.build_offers_data(yandex_offers_df, setup_mode=True, settings=settings)
@@ -115,6 +114,7 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
         offers = await db.get_offers_by(session, which, model_schema=OfferOut)
 
     df = pd.DataFrame([offer.model_dump() for offer in offers])
+    df.fillna(np.nan, inplace=True)
 
     if df.empty:
         return
