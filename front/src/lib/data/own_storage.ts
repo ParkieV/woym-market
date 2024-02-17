@@ -1,48 +1,54 @@
-import type { OfferBase } from "./offers";
+import { handleRequest } from "$lib";
+import { fetchAuthenticated } from "$lib/auth";
+import type { Market } from "./markets";
 
-export type OwnStorage = OfferBase & {
-    own_storage: number;
-    shops: Record<number, number | null>;
+export type OwnStoragesInfo = {
+    markets: Market[];
+    data: OwnStorage[];
 };
 
-export async function fetchOwnStorages(): Promise<OwnStorage[]> {
-    // TODO: replace with API call after backend implementation.
-    return [
-        {
-            sku: "123",
-            photo: "https://www.vincenzosplate.com/wp-content/uploads/2023/03/1500x1500-Photo-3_2447-How-to-Make-PECORINO-CHEESE-at-Home-Like-an-Italian-CheeseMaker-V1-1.jpg",
-            name: "Товар 1",
-            note_1: "",
-            note_2: "",
-            note_3: "",
-            market: "yandex",
-            name_of_shop: "CALMAR.SHOP",
-            own_storage: 123,
-            shops: {
-                "0": 4192,
-                "1": 12
-            },
-            hidden: false
-        },
-        {
-            sku: "456",
-            photo: "https://www.vincenzosplate.com/wp-content/uploads/2023/03/1500x1500-Photo-3_2447-How-to-Make-PECORINO-CHEESE-at-Home-Like-an-Italian-CheeseMaker-V1-1.jpg",
-            name: "Товар 2",
-            note_1: "",
-            note_2: "",
-            note_3: "",
-            market: "yandex",
-            name_of_shop: "CALMAR.SHOP",
-            own_storage: 100,
-            shops: {
-                "0": 5,
-                "1": null
-            },
-            hidden: false
-        }
-    ];
+export type OwnStorage = {
+    sku: string;
+    name: string[];
+    photo: (string | null)[];
+    note_1: string[];
+    note_2: string[];
+    note_3: string[];
+    name_of_shop: string[];
+    market: string[];
+    own_storage: {
+        id: number;
+        value: number;
+    };
+    stocks: {
+        name_of_shop: string;
+        market: string;
+        value: number;
+    }[];
+};
+
+export async function fetchOwnStorages(): Promise<OwnStoragesInfo> {
+    let promise = fetchAuthenticated("stocks/own-storage");
+    let info = await handleRequest(promise, { onSuccess: async response => await response.json() });
+    return info as OwnStoragesInfo;
 }
 
-export async function patchOwnStorages(storages: OwnStorage[]) {
-    // TODO: replace with API call after backend implementation.
+export async function patchOwnStorages(storages: OwnStorage[]): Promise<boolean> {
+    let data: { id: number; value: number }[] = storages.map(x => {
+        return {
+            id: x.own_storage.id,
+            value: x.own_storage.value
+        };
+    });
+
+    let promise = fetchAuthenticated("stocks/own-storage", {
+        method: "PATCH",
+        body: JSON.stringify(data),
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+    let ok = false;
+    await handleRequest(promise, { header: "Сохранение...", onSuccess: () => (ok = true) });
+    return ok;
 }
