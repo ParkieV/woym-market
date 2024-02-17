@@ -55,3 +55,26 @@ async def _update_or_create_object(
         object_db = (await session.execute(query)).scalar_one()
 
     return model_schema.model_validate(object_db, from_attributes=True), created
+
+
+async def _get_or_create(
+        session: AsyncSession,
+        model: Type[Base],
+        data: BaseModel,
+        filter_by:  ColumnElement[bool],
+        model_schema: Type[BaseModel]
+) -> (Any, bool):
+    query = select(model).where(filter_by)
+    result = await session.execute(query)
+    
+    object_db = result.scalar()
+    created = object_db is None
+    
+    if created:
+        object_db = model(**data.model_dump())
+        session.add(object_db)
+        await session.commit()
+        await session.refresh(object_db)
+        
+    return model_schema.model_validate(object_db, from_attributes=True), created
+

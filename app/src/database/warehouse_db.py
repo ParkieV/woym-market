@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, and_
 from sqlalchemy.orm import selectinload, subqueryload
-from src.database.utils import _update_or_create_object
+from src.database.utils import _update_or_create_object, _get_or_create
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
     OfferStockWithWarehouseOut, OfferWithStocksUpdate, OfferStockUpdate, OwnStorageCreate, OwnStorageOut, \
     OwnStorageUpdate
@@ -155,6 +155,17 @@ async def change_own_storages(session: AsyncSession, data: list[OwnStorageUpdate
         a = await session.execute(stmp)
 
     await session.commit()
+    
+
+async def get_or_create_offer_stocks(session: AsyncSession, data: OfferStockCreate):
+    return _get_or_create(
+        session,
+        OfferStock,
+        data,
+        and_(OfferStock.offer_id == data.offer_id,
+             OfferStock.warehouse_id == data.warehouse_id),
+        OfferStockOut
+    )
 
 
 
