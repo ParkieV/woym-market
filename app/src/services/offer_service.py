@@ -14,6 +14,7 @@ import numpy as np
 from src.database.settings_db import update_logs, get_user_settings
 from fastapi.exceptions import HTTPException
 from fastapi import status
+from src.services.stocks_service import get_offers_with_stocks, get_own_storages
 
 api_wrapper = APIWrapper()
 
@@ -264,6 +265,12 @@ async def export_data(market: Market, export_type: ExportType, name_of_shop: str
         case ExportType.TABLE:
             return await export_offers(name_of_shop, market)
 
+        case ExportType.STOCKS:
+            return await export_stocks(name_of_shop, market)
+
+        case ExportType.OWN_STORAGE:
+            return await export_own_storages(name_of_shop, market)
+
         case _:
             raise NotImplemented(f'Export type "{export_type}" not implemented yet')
 
@@ -281,8 +288,42 @@ async def export_offers(name_of_shop: str | None = None, market: str | None = No
 
     df = pd.DataFrame([offer.model_dump() for offer in offers], columns=OfferOut.fields().keys())
     df.rename(columns=OfferOut.fields(), inplace=True)
-    df.to_excel('data/out.xlsx', index=False)
-    return 'data/out.xlsx'
+    df.to_excel('data/out-offers.xlsx', index=False)
+    return 'data/out-offers.xlsx'
+
+
+async def export_stocks(name_of_shop: str | None = None, market: str | None = None) -> str:
+    offers_with_stocks = await get_offers_with_stocks()
+    raise NotImplementedError()
+
+
+async def export_own_storages(name_of_shop: str | None = None, market: str | None = None) -> str:
+    data = await get_own_storages()
+    columns = ['sku', 'Название', 'Магазин', 'Маркетплейс', 'Примечание 1', 'Примечание 2', 'Примечание 3', 'Мои остатки']
+    aggregated_columns = ['name', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']
+
+    df = pd.DataFrame(data['data'])
+    df[aggregated_columns] = df[aggregated_columns].applymap(lambda x: ', '.join([str(i) for i in x]))
+    df['own_storage'] = df['own_storage'].apply(lambda x: x.value)
+
+    stocks = df.pop('stocks').values.tolist()
+
+    df.columns = columns
+
+    stocks_columns = [f'{i.name} {i.type}' for i in data['markets']]
+    df[stocks_columns] = 0
+
+    for index, stocks_data in enumerate(stocks):
+        for stock in stocks_data:
+            col_name = f'{stock["name_of_shop"]} {stock["market"]}'
+            df.at[index, col_name] = stock['value']
+
+    df.to_excel('data/out-own-storages.xlsx', index=False)
+    return 'data/out-own-storages.xlsx'
+
+
+
+
 
 
 async def get_pricing_schemes() -> list[PricingSchemeOut]:

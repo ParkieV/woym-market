@@ -135,6 +135,7 @@ async def get_own_storages(session: AsyncSession):
             data['note_3'].add(offer.note_3)
             data['name_of_shop'].add(offer.name_of_shop)
             data['market'].add(offer.market)
+            data['own_storage'] = OwnStorageOut.model_validate(own_storage, from_attributes=True)
             data['stocks'].append(
                 {
                     'name_of_shop': offer.name_of_shop,
@@ -142,7 +143,6 @@ async def get_own_storages(session: AsyncSession):
                     'value': offer.remaining_stock
                 }
             )
-            data['own_storage'] = OwnStorageOut.model_validate(own_storage, from_attributes=True)
 
         storages_result.append(data)
 

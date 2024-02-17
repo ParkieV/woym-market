@@ -144,11 +144,11 @@ class ImportType(str, Enum):
     PRICES = 'prices'
     SIZES = 'sizes'
     TABLE = 'table'
-    MATRIX_STOCKS = 'matrix-stocks'
+    STOCKS = 'matrix-stocks'
 
 
 class ExportType(str, Enum):
     TABLE = 'table'
-    MATRIX_STOCKS = 'matrix-stocks'
-    MATRIX_OFFERS = 'matrix-offers'
+    STOCKS = 'matrix-stocks'
+    OWN_STORAGE = 'matrix-own-storage'
 
