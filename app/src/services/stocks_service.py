@@ -143,52 +143,6 @@ async def import_offers_stocks(data, name_of_shop: str | None = None, market: st
         await db.change_offer_with_stock(session, [OfferWithStocksUpdate(**i) for i in to_update])
 
 
-    # for row in df.iterrows():
-    #     offer_series = row[1][0:10]
-    #     stocks_series = row[1][10:]
-    #
-    #     changable_indexes = [i for i in stocks_series.index.values if 'мин. остаток' in i and offer_series['market'] in i]
-    #     stocks_series = stocks_series[changable_indexes]
-    #
-    #     async with async_session() as session:
-    #         warehouses_data = [i.split(', ')[:2] for i in stocks_series.index.values]
-    #         a = [i.id for i in await db.get_warehouses_by_name_and_market(session, warehouses_data)]
-    #         print(a)
-    #         stocks_series.index = a
-    #
-    #
-    #     stocks_data = []
-
-
-        #
-        # for key, value in stocks_series.to_dict().items():
-        #     warehouse, market, _ = key.split(', ')
-        #
-        #     async with async_session() as session:
-        #         stock_db = await db.get_offer_stock_by(session, offer_series['id'], warehouse, market)
-        #
-        #         if stock_db is None:
-        #             continue
-        #
-        #         stocks_data.append({
-        #             'id': stock_db.id,
-        #             'current_stock': value
-        #         })
-    #
-    #     data = {
-    #         'id': offer_series['id'],
-    #         'sku': offer_series['sku'],
-    #         'note_1': offer_series['note_1'],
-    #         'note_2': offer_series['note_2'],
-    #         'note_3': offer_series['note_3'],
-    #         'hidden': offer_series['hidden'],
-    #         'stocks': stocks_data
-    #     }
-    #     update_data.append(data)
-    #
-    # print(df)
-
-
 async def export_stocks(name_of_shop: str | None = None, market: str | None = None) -> str:
     offers_with_stocks = await get_offers_with_stocks()
     warehouses = await get_warehouses()

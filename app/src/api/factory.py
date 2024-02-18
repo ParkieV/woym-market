@@ -21,12 +21,12 @@ class APIFactory:
         api_class = cls.__api_types.get(api_type, None)
 
         if api_class is None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'API class \"{api_type}\" not found in registered')
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'API \"{api_type}\"  не найдено в зарегестрированных')
 
         try:
             api_instance = api_class(**kwargs)
         except TypeError:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Not enough arguments to inizialize \"{api_type}\"')
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Недостаточно аргументов или неверные аргументы, чтобы инициализировать API \"{api_type}\"')
 
         return api_instance
 

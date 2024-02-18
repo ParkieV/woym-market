@@ -29,13 +29,13 @@ async def auth_user(login: str, password: str) -> Users:
     user = await db.get_user_by_login(login)
     if not user:
         raise HTTPException(
-            detail='login dont exist',
+            detail='Пользователя с таким логином не существует',
             status_code=status.HTTP_400_BAD_REQUEST
         )
 
     if not verify_password(password, user.password):
         raise HTTPException(
-            detail='password is incorrect',
+            detail='Неверный пароль',
             status_code=status.HTTP_400_BAD_REQUEST
         )
 
@@ -70,7 +70,7 @@ def verify_access_token(token: str, credentials_exception):
 
 async def get_current_user(token: str = Depends(auth.oauth2_scheme)) -> Users:
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                                          detail=f"Could not validate credentials",
+                                          detail=f"Не получилось авторизироваться в системе",
                                           headers={"WWW-Authenticate": "Bearer"})
 
     token = verify_access_token(token, credentials_exception)
