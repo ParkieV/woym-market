@@ -1,8 +1,12 @@
+import pandas as pd
+
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
 from src.database import offer_db
+import src.services.offer_utils as utils
 from src.database.settings_db import get_markets
+from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStockOut, OfferStockCreate, \
     OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate
 
@@ -21,7 +25,7 @@ async def update_warehouses_and_stocks():
                 ))
 
             for offer in await offer_db.get_offers(session, {'market': warehouse.market}):
-                await db.get_or_create_offer_stocks(session, OfferStockCreate(
+                stock, created = await db.get_or_create_offer_stocks(session, OfferStockCreate(
                     current_stock=0,
                     warehouse_id=warehouse_db.id,
                     offer_id=offer.id
@@ -89,4 +93,151 @@ async def get_own_storages():
 async def change_own_storages(data: list[OwnStorageUpdate]):
     async with async_session() as session:
         await db.change_own_storages(session, data)
+
+
+
+
+async def import_offers_stocks(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
+    df.rename(columns=OfferOut.reverse_fields(), inplace=True)
+    df[['note_1', 'note_2', 'note_3']] = df[['note_1', 'note_2', 'note_3']].fillna('')
+
+    # Выбираем изменяемые колонки
+    stocks_df = df[[i for i in df.columns.values[10:].tolist() if 'мин. остаток' in i]]
+    df = df[df.columns.values[:10]]
+
+    async with async_session() as session:
+        warehouse_columns = [i.split(', ')[:2] for i in stocks_df.columns.values]
+        warehouse_columns = [i.id for i in await db.get_warehouses_by_name_and_market(session, warehouse_columns)]
+
+        # колонки остатков теперь имеют id склада
+        stocks_df.columns = warehouse_columns
+
+        df = pd.concat([df, stocks_df], axis=1)
+
+        to_update = []
+
+        for row in df.iterrows():
+            offer_series = row[1][0:10]
+            stocks_series = row[1][10:]
+
+            offer_stocks = []
+            for warehouse_id, min_stock in stocks_series.to_dict().items():
+                offer_stock = await db.get_offer_stock(session, offer_series['id'], warehouse_id)
+
+                if offer_stock:
+                    offer_stocks.append(
+                        {'id': offer_stock.id, 'min_stock': min_stock}
+                    )
+
+            offer_data = {
+                'id': offer_series['id'],
+                'note_1': offer_series['note_1'],
+                'note_2': offer_series['note_2'],
+                'note_3': offer_series['note_3'],
+                'hidden': offer_series['hidden'],
+                'stocks': offer_stocks
+            }
+            to_update.append(offer_data)
+
+        await db.change_offer_with_stock(session, [OfferWithStocksUpdate(**i) for i in to_update])
+
+
+    # for row in df.iterrows():
+    #     offer_series = row[1][0:10]
+    #     stocks_series = row[1][10:]
+    #
+    #     changable_indexes = [i for i in stocks_series.index.values if 'мин. остаток' in i and offer_series['market'] in i]
+    #     stocks_series = stocks_series[changable_indexes]
+    #
+    #     async with async_session() as session:
+    #         warehouses_data = [i.split(', ')[:2] for i in stocks_series.index.values]
+    #         a = [i.id for i in await db.get_warehouses_by_name_and_market(session, warehouses_data)]
+    #         print(a)
+    #         stocks_series.index = a
+    #
+    #
+    #     stocks_data = []
+
+
+        #
+        # for key, value in stocks_series.to_dict().items():
+        #     warehouse, market, _ = key.split(', ')
+        #
+        #     async with async_session() as session:
+        #         stock_db = await db.get_offer_stock_by(session, offer_series['id'], warehouse, market)
+        #
+        #         if stock_db is None:
+        #             continue
+        #
+        #         stocks_data.append({
+        #             'id': stock_db.id,
+        #             'current_stock': value
+        #         })
+    #
+    #     data = {
+    #         'id': offer_series['id'],
+    #         'sku': offer_series['sku'],
+    #         'note_1': offer_series['note_1'],
+    #         'note_2': offer_series['note_2'],
+    #         'note_3': offer_series['note_3'],
+    #         'hidden': offer_series['hidden'],
+    #         'stocks': stocks_data
+    #     }
+    #     update_data.append(data)
+    #
+    # print(df)
+
+
+async def export_stocks(name_of_shop: str | None = None, market: str | None = None) -> str:
+    offers_with_stocks = await get_offers_with_stocks()
+    warehouses = await get_warehouses()
+    warehouse_columns = []
+    for warehouse in warehouses:
+        base_name = f'{warehouse.name}, {warehouse.market}'
+        warehouse_columns.append(f'{base_name}, в наличии')
+        warehouse_columns.append(f'{base_name}, мин. остаток')
+        warehouse_columns.append(f'{base_name}, к поставке')
+
+    df = pd.DataFrame([i.model_dump() for i in offers_with_stocks])
+    df[warehouse_columns] = 0
+
+    stocks = df.pop('stocks').values.tolist()
+
+    for index, offer in enumerate(stocks):
+        for stock in offer:
+            base_column_name = f"{stock['warehouse']['name']}, {stock['warehouse']['market']}"
+
+            df.at[index, f'{base_column_name}, в наличии'] = stock['current_stock']
+            df.at[index, f'{base_column_name}, мин. остаток'] = stock['min_stock']
+            df.at[index, f'{base_column_name}, к поставке'] = stock['for_delivery']
+
+    df.rename(columns=OfferOut.fields(), inplace=True)
+    df.to_excel('data/stocks-fbo.xlsx', index=False)
+    return 'data/stocks-fbo.xlsx'
+
+
+async def export_own_storages(name_of_shop: str | None = None, market: str | None = None) -> str:
+    data = await get_own_storages()
+    columns = ['sku', 'Название', 'Магазин', 'Маркетплейс', 'Примечание 1', 'Примечание 2', 'Примечание 3', 'Мои остатки']
+    aggregated_columns = ['name', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']
+
+    df = pd.DataFrame(data['data'])
+    df[aggregated_columns] = df[aggregated_columns].applymap(lambda x: ', '.join([str(i) for i in x]))
+    df['own_storage'] = df['own_storage'].apply(lambda x: x.value)
+
+    stocks = df.pop('stocks').values.tolist()
+
+    df.columns = columns
+
+    stocks_columns = [f'{i.name} {i.type}' for i in data['markets']]
+    df[stocks_columns] = 0
+
+    for index, stocks_data in enumerate(stocks):
+        for stock in stocks_data:
+            col_name = f'{stock["name_of_shop"]} {stock["market"]}'
+            df.at[index, col_name] = stock['value']
+
+    df.to_excel('data/out-own-storages.xlsx', index=False)
+    return 'data/out-own-storages.xlsx'
 

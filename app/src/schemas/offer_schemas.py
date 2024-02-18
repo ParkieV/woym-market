@@ -145,6 +145,8 @@ class ImportType(str, Enum):
     SIZES = 'sizes'
     TABLE = 'table'
     STOCKS = 'matrix-stocks'
+    OWN_STORAGE = 'matrix-own-storage'
+
 
 
 class ExportType(str, Enum):

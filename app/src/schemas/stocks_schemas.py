@@ -13,6 +13,7 @@ class WarehouseCreate(BaseWarehouse):
 
 class WarehouseOut(BaseWarehouse):
     id: int
+    market: str
 
 
 class BaseOfferStock(BaseModel):
@@ -86,11 +87,12 @@ class OfferStorageStock(BaseModel):
 class OfferStorage(BaseModel):
     sku: str
     name: list[str]
+    photo: list[str | None]
     name_of_shop: list[str]
     market: list[str]
-    note_1: list[str | None]
-    note_2: list[str | None]
-    note_3: list[str | None]
+    note_1: list[str]
+    note_2: list[str]
+    note_3: list[str]
     own_storage: OwnStorageOut
     stocks: list[OfferStorageStock]
 
