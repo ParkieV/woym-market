@@ -4,21 +4,20 @@
     import { handleRequest } from "$lib";
     import { fetchAuthenticated } from "$lib/auth";
 
-    type Data = {
-        market: "ozon" | "yandex" | "all";
-        export_type: "table" | "matrix-offers" | "matrix-stocks";
+    type Params = {
+        export_type: "table" | "matrix-fbo-stocks" | "matrix-own-storage";
+        market?: "ozon" | "yandex";
         name_of_shop?: "CALMAR.SHOP" | "MASTERSKRAB";
     };
 
     export let open: boolean;
-    let data: Data = {
-        market: "all",
-        export_type: "table"
-    };
+    let data: Params = { export_type: "table" };
 
     const ok = () => {
-        if (data.name_of_shop === undefined) {
-            delete data.name_of_shop;
+        for (const key in data) {
+            if (data[key as keyof Params] === undefined) {
+                delete data[key as keyof Params];
+            }
         }
         let url = "data/export?" + new URLSearchParams(data);
 
@@ -40,19 +39,19 @@
     <h1 slot="header">Экспорт</h1>
     <div>
         <label>
-            <span>Маркет</span>
-            <select bind:value={data.market}>
-                <option value="all">Все</option>
-                <option value="yandex">Яндекс</option>
-                <option value="ozon">Озон</option>
+            <span>Вид</span>
+            <select bind:value={data.export_type}>
+                <option value="table">Таблица</option>
+                <option value="matrix-fbo-stocks">FBO остатки</option>
+                <option value="matrix-own-storage">Свои остатков</option>
             </select>
         </label>
         <label>
-            <span>Вид экспорта</span>
-            <select bind:value={data.export_type}>
-                <option value="table">Таблица</option>
-                <option value="matrix-offers">Матрица товаров</option>
-                <option value="matrix-stocks">Матрица остатков</option>
+            <span>Маркет</span>
+            <select bind:value={data.market}>
+                <option value={undefined}>Все</option>
+                <option value="yandex">Яндекс</option>
+                <option value="ozon">Озон</option>
             </select>
         </label>
         <label>
