@@ -11,9 +11,10 @@
     import Footer from "../Footer.svelte";
     import Toolbar from "../Toolbar.svelte";
     import { fboStocksColumns, fboStorageColumns } from "$lib/columns";
-    import { onMount } from "svelte";
+    import { getContext, onMount } from "svelte";
     import { getColumns } from "$lib/components/datagrid/columns";
     import Grid from "$lib/components/datagrid/Grid.svelte";
+    import type { Writable } from "svelte/store";
 
     let data: FboStocks[] = [];
     let changes = new ChangeList<FboStocks, "sku">();
@@ -59,6 +60,9 @@
         let ok = await patchFboStocks(data.filter(x => changes.isChanged(x.sku)));
         if (ok) await refreshData();
     }
+
+    let refresh = getContext<Writable<() => {}>>("refresh");
+    $refresh = refreshData;
 
     onMount(async () => {
         data = await fetchFboStocks();

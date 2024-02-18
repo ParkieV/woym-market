@@ -2,16 +2,20 @@
     import Grid from "$lib/components/datagrid/Grid.svelte";
     import { ChangeList } from "$lib/components/datagrid/changes";
     import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
-    import { onMount } from "svelte";
+    import { getContext, onMount } from "svelte";
     import Footer from "../Footer.svelte";
     import { ownStorageColumns } from "$lib/columns";
     import { fetchOwnStorages, patchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
     import Toolbar from "./Toolbar.svelte";
+    import type { Writable } from "svelte/store";
 
     let data: OwnStorage[] = [];
     let changes = new ChangeList<OwnStorage, "sku">();
     let columns: (Column | ColumnGroup)[] = [];
     let filter: (storage: OwnStorage) => boolean = () => true;
+
+    let refresh = getContext<Writable<() => {}>>("refresh");
+    $refresh = refreshData;
 
     onMount(async () => {
         let info = await fetchOwnStorages();
