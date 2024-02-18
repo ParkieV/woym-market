@@ -73,14 +73,26 @@ class GridState {
 
 function getLocal(gridName: string): GridState | null {
     const item = localStorage.getItem(key(gridName));
-    return item ? GridState.fromString(item) : null;
+    if (item === null) return null;
+
+    try {
+        return GridState.fromString(item);
+    } catch {
+        let state = { updated_at: new Date(), data: {} };
+        setLocal(gridName, state);
+        return state;
+    }
 }
 
 async function getRemote(gridName: string): Promise<GridState | null> {
     const response = await fetchAuthenticated(`settings/tables/${gridName}`);
     const string = await response.text();
     if (string === "null") return null;
-    return GridState.fromString(string);
+    try {
+        return GridState.fromString(string);
+    } catch {
+        return null;
+    }
 }
 
 function setLocal(gridName: string, state: GridState) {
