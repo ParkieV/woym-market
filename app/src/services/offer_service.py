@@ -131,9 +131,6 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
     async with async_session() as session:
         settings = await get_user_settings(session, user_id)
 
-    if market == Market.ALL:
-        market = None
-
     match import_type:
         case ImportType.TABLE:
             return await import_offers(data, settings, name_of_shop, market, file_extension)
@@ -165,6 +162,7 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
         'note_3': '',
     }, inplace=True)
 
+
     if len(set(df.columns) & required_fields) != len(required_fields):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные. Следующие колонки должны быть обязательно: {", ".join(BaseOffer.fields().values())}')
 
@@ -177,7 +175,7 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
     columns_to_change = list(set(df.columns) & set(OfferChange.fields().keys()))
     df = df[columns_to_change]
 
-    df[['sku', 'name_of_shop', 'market']] = df[['sku', 'name_of_shop', 'market']].astype("string")
+    df[['sku', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']] = df[['sku', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']].astype("string")
 
     async with async_session() as session:
         if 'pricing_scheme_id' in df.columns:
