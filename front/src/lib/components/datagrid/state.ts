@@ -1,29 +1,113 @@
-import type { GridState } from "ag-grid-enterprise";
+import { fetchAuthenticated } from "$lib/auth";
+import type { GridState as AgGridState } from "ag-grid-enterprise";
 
-export function getGridState(grid_name: string): GridState | undefined {
-    const key = getLocalStorageKey(grid_name);
+export const gridStateSources: (keyof AgGridState)[] = [
+    "columnOrder",
+    "columnGroup",
+    "columnPinning",
+    "columnSizing",
+    "sort"
+];
 
-    const value = localStorage.getItem(key);
-    if (value === null) return undefined;
+export async function getState(gridName: string): Promise<AgGridState> {
+    let local = getLocal(gridName);
+    let remote = await getRemote(gridName);
 
-    return JSON.parse(value);
+    if (remote === null || remote.data === null) remote = { updated_at: new Date(0), data: null };
+    if (local === null || local.data === null) local = { updated_at: new Date(0), data: null };
+
+    if (local.updated_at > remote.updated_at) {
+        return local.data ?? {};
+    } else {
+        setLocal(gridName, new GridState(remote.data));
+        return remote.data ?? {};
+    }
 }
 
-export function setGridState(grid_name: string, state: GridState) {
-    const key = getLocalStorageKey(grid_name);
+export async function setState(gridName: string, state: AgGridState) {
+    let _state: GridState = new GridState(state);
+    setLocal(gridName, _state);
+    scheduleSetRemote(gridName, _state);
+}
 
-    let { columnOrder, columnGroup, columnPinning, columnSizing, sort } = state;
-    let value = JSON.stringify({
-        columnOrder,
-        columnGroup,
-        columnPinning,
-        columnSizing,
-        sort
+class GridState {
+    public updated_at: Date;
+    public data: AgGridState | null;
+
+    public static fromString(s: string): GridState {
+        let json: { updated_at: string; data: string } = JSON.parse(s);
+        const state: GridState = {
+            updated_at: new Date(json.updated_at),
+            data: JSON.parse(json.data)
+        };
+        return state;
+    }
+
+    public toString(): string {
+        let data: string;
+        if (this.data) {
+            let { columnOrder, columnGroup, columnPinning, columnSizing, sort } = this.data;
+            data = JSON.stringify({
+                columnOrder,
+                columnGroup,
+                columnPinning,
+                columnSizing,
+                sort
+            });
+        } else {
+            data = "null";
+        }
+        const intermediate: { data: string; updated_at: string } = {
+            data,
+            updated_at: this.updated_at.toISOString()
+        };
+
+        return JSON.stringify(intermediate);
+    }
+
+    public constructor(data: AgGridState | null, updated_at?: Date) {
+        this.updated_at = updated_at ?? new Date();
+        this.data = data;
+    }
+}
+
+function getLocal(gridName: string): GridState | null {
+    const item = localStorage.getItem(key(gridName));
+    return item ? GridState.fromString(item) : null;
+}
+
+async function getRemote(gridName: string): Promise<GridState | null> {
+    const response = await fetchAuthenticated(`settings/tables/${gridName}`);
+    const string = await response.text();
+    if (string === "null") return null;
+    return GridState.fromString(string);
+}
+
+function setLocal(gridName: string, state: GridState) {
+    localStorage.setItem(key(gridName), state.toString());
+}
+
+async function setRemote(gridName: string, state: GridState) {
+    await fetchAuthenticated(`settings/tables/${gridName}`, {
+        method: "PUT",
+        body: state.toString(),
+        headers: {
+            "Content-Type": "application/json"
+        }
     });
-
-    localStorage.setItem(key, value);
 }
 
-function getLocalStorageKey(grid_name: string) {
-    return `gridState-${grid_name}`;
+let plannedRemoteUpdate: GridState | undefined = undefined;
+function scheduleSetRemote(gridName: string, state: GridState) {
+    if (!plannedRemoteUpdate) {
+        setTimeout(async () => {
+            if (plannedRemoteUpdate) {
+                await setRemote(gridName, plannedRemoteUpdate);
+                plannedRemoteUpdate = undefined;
+            }
+        }, 2000);
+    }
+    plannedRemoteUpdate = state;
 }
+
+const key = (gridName: string) => `gridState-${gridName}`;

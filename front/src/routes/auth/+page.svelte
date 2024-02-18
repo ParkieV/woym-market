@@ -7,14 +7,10 @@
     let password: string;
 
     async function onclick() {
-        let login_result = login_request(login, password);
-        login_result.then(success => {
-            if (success) goto("/app");
-            else alert("Не удалось войти в аккаунт.");
-        });
-        login_result.catch(() => {
-            alert("Не удалось достичь сервера.");
-        });
+        let ok = await login_request(login, password);
+        if (ok) {
+            goto("/app");
+        }
     }
 </script>
 

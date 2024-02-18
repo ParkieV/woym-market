@@ -5,9 +5,8 @@
     import { onMount } from "svelte";
     import Footer from "../Footer.svelte";
     import { ownStorageColumns } from "$lib/columns";
-    import { fetchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
-    import { getStores as fetchStores } from "$lib/data/stores";
-    import Toolbar from "../Toolbar.svelte";
+    import { fetchOwnStorages, patchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
+    import Toolbar from "./Toolbar.svelte";
 
     let data: OwnStorage[] = [];
     let changes = new ChangeList<OwnStorage, "sku">();
@@ -15,13 +14,25 @@
     let filter: (storage: OwnStorage) => boolean = () => true;
 
     onMount(async () => {
-        columns = ownStorageColumns(await fetchStores());
-        data = await fetchOwnStorages();
+        let info = await fetchOwnStorages();
+        columns = ownStorageColumns(info.markets);
+        data = info.data;
     });
+
+    async function save() {
+        let ok = await patchOwnStorages(data.filter(x => changes.isChanged(x.sku)));
+        if (ok) await refreshData();
+    }
+
+    async function refreshData() {
+        changes.clear();
+        changes = changes;
+        data = (await fetchOwnStorages()).data;
+    }
 </script>
 
-<Toolbar on:filterChanged={f => (filter = f.detail)} showAdditionalFilters={false} />
+<Toolbar on:filterChanged={f => (filter = f.detail)} />
 {#if columns.length !== 0}
     <Grid grid_name="own_storage" key="sku" {columns} bind:data bind:changes {filter} />
 {/if}
-<Footer bind:changes />
+<Footer bind:changes on:reload={refreshData} on:save={save} />

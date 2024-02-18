@@ -1,5 +1,5 @@
 <script lang="ts" generics="T, K extends keyof T">
-    import { getGridState, setGridState } from "./state";
+    import { getState as getGridState, gridStateSources, setState as setGridState } from "./state";
 
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import { getColumns, type Column, type ColumnGroup } from "./columns";
@@ -57,11 +57,18 @@
                 e.api.redrawRows({ rowNodes: [e.node] });
             },
             tooltipShowDelay: 500,
-            onStateUpdated: ({ state }) => setGridState(grid_name, state),
+            onStateUpdated: ({ state, sources }) => {
+                for (const source of gridStateSources) {
+                    if (sources.includes(source)) {
+                        setGridState(grid_name, state);
+                        break;
+                    }
+                }
+            },
             enableRangeSelection: true,
             enableRangeHandle: true,
             getContextMenuItems: () => ["cut", "copy", "paste"],
-            initialState: getGridState(grid_name)
+            initialState: await getGridState(grid_name)
         };
 
         grid = createGrid(element, options);
