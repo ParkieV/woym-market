@@ -137,20 +137,19 @@ class OfferDelete(BaseModel):
 class Market(str, Enum):
     OZON = 'ozon'
     YANDEX = 'yandex'
-    ALL = 'all'
 
 
 class ImportType(str, Enum):
     PRICES = 'prices'
     SIZES = 'sizes'
     TABLE = 'table'
-    STOCKS = 'matrix-stocks'
+    FBO_STOCKS = 'matrix-fbo-stocks'
     OWN_STORAGE = 'matrix-own-storage'
 
 
 
 class ExportType(str, Enum):
     TABLE = 'table'
-    STOCKS = 'matrix-stocks'
+    FBO_STOCKS = 'matrix-fbo-stocks'
     OWN_STORAGE = 'matrix-own-storage'
 

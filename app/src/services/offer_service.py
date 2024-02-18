@@ -15,7 +15,7 @@ from src.database.settings_db import update_logs, get_user_settings
 from fastapi.exceptions import HTTPException
 from fastapi import status
 
-from src.services.stocks_service import export_stocks, export_own_storages, import_offers_stocks
+from src.services.stocks_service import export_stocks, export_own_storages, import_offers_stocks, import_own_storages
 
 api_wrapper = APIWrapper()
 
@@ -144,14 +144,14 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
         case ImportType.PRICES:
             return await import_prices(data, settings, name_of_shop, market, file_extension)
 
-        case ImportType.STOCKS:
+        case ImportType.FBO_STOCKS:
             return await import_offers_stocks(data, name_of_shop, market, file_extension)
+
+        case ImportType.OWN_STORAGE:
+            return await import_own_storages(data, name_of_shop, market, file_extension)
 
         case _:
             raise NotImplemented(f'Import type "{import_type}" not implemented yet')
-
-
-
 
 
 async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
@@ -265,14 +265,11 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
 
 
 async def export_data(market: Market, export_type: ExportType, name_of_shop: str | None):
-    if market == Market.ALL:
-        market = None
-
     match export_type:
         case ExportType.TABLE:
             return await export_offers(name_of_shop, market)
 
-        case ExportType.STOCKS:
+        case ExportType.FBO_STOCKS:
             return await export_stocks(name_of_shop, market)
 
         case ExportType.OWN_STORAGE:

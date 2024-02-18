@@ -206,3 +206,11 @@ async def get_offer_stock(session: AsyncSession, offer_id: int, warehouse_id: in
     return result.scalar_one_or_none()
 
 
+async def update_own_storages_by_sku(session: AsyncSession, data: list[dict]):
+    for storage in data:
+        stmp = update(OwnStorage).where(OwnStorage.sku == storage['sku']).values(**storage)
+        await session.execute(stmp)
+
+    await session.commit()
+
+

@@ -95,12 +95,16 @@ async def change_own_storages(data: list[OwnStorageUpdate]):
         await db.change_own_storages(session, data)
 
 
-
-
 async def import_offers_stocks(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df[['note_1', 'note_2', 'note_3']] = df[['note_1', 'note_2', 'note_3']].fillna('')
+
+    if name_of_shop:
+        df = df[df['name_of_shop'] == name_of_shop]
+
+    if market:
+        df = df[df['market'] == market]
 
     # Выбираем изменяемые колонки
     stocks_df = df[[i for i in df.columns.values[10:].tolist() if 'мин. остаток' in i]]
@@ -166,6 +170,14 @@ async def export_stocks(name_of_shop: str | None = None, market: str | None = No
             df.at[index, f'{base_column_name}, мин. остаток'] = stock['min_stock']
             df.at[index, f'{base_column_name}, к поставке'] = stock['for_delivery']
 
+    df['id'] = df['id'].astype(int)
+
+    if name_of_shop:
+        df = df[df['name_of_shop'] == name_of_shop]
+
+    if market:
+        df = df[df['market'] == market]
+
     df.rename(columns=OfferOut.fields(), inplace=True)
     df.to_excel('data/stocks-fbo.xlsx', index=False)
     return 'data/stocks-fbo.xlsx'
@@ -173,8 +185,8 @@ async def export_stocks(name_of_shop: str | None = None, market: str | None = No
 
 async def export_own_storages(name_of_shop: str | None = None, market: str | None = None) -> str:
     data = await get_own_storages()
-    columns = ['sku', 'Название', 'Магазин', 'Маркетплейс', 'Примечание 1', 'Примечание 2', 'Примечание 3', 'Мои остатки']
-    aggregated_columns = ['name', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']
+    columns = ['sku', 'Название', 'Фото', 'Магазин', 'Маркетплейс', 'Примечание 1', 'Примечание 2', 'Примечание 3', 'Мои остатки']
+    aggregated_columns = ['name', 'photo', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']
 
     df = pd.DataFrame(data['data'])
     df[aggregated_columns] = df[aggregated_columns].applymap(lambda x: ', '.join([str(i) for i in x]))
@@ -194,4 +206,17 @@ async def export_own_storages(name_of_shop: str | None = None, market: str | Non
 
     df.to_excel('data/out-own-storages.xlsx', index=False)
     return 'data/out-own-storages.xlsx'
+
+
+async def import_own_storages(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
+    df.rename(columns=OfferOut.reverse_fields(), inplace=True)
+    df.rename(columns={'Мои остатки': 'value'}, inplace=True)
+    df = df[['sku', 'value']]
+
+    data = df.to_dict('records')
+
+    async with async_session() as session:
+        await db.update_own_storages_by_sku(session, data)
+
 
