@@ -9,6 +9,7 @@ from src.database.settings_db import get_markets
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStockOut, OfferStockCreate, \
     OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate
+from src.services.base_utils import error_handler
 
 api_wrapper = APIWrapper()
 

@@ -23,9 +23,9 @@ class APIOffer:
 
     attractive_price_threshold: float | None = None
     moderately_attractive_price_threshold: float | None = None
-    best_place_wm: str | None = None
+    best_place_wm: str = ''
     min_price_without_market: float | None = None
-    best_place_im: str | None = None
+    best_place_im: str = ''
     min_price_in_market: float | None = None
     min_general_markets_price: float | None = None
     your_price_for_buyers: float | None = None
