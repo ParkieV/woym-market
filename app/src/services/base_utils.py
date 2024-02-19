@@ -23,5 +23,3 @@ def error_handler(default_message: str = 'Ошибка сервера'):
         return wrapped
 
     return wrapper
-
-
