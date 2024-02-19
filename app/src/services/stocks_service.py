@@ -9,6 +9,7 @@ from src.database.settings_db import get_markets
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStockOut, OfferStockCreate, \
     OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate
+from src.services.base_utils import error_handler
 
 api_wrapper = APIWrapper()
 
@@ -73,16 +74,19 @@ async def get_offers_stocks():
         return await db.get_offers_stocks(session)
 
 
+@error_handler('Не удалось получить остатки с магазинов.')
 async def get_offers_with_stocks():
     async with async_session() as session:
         return await db.get_offers_with_stocks(session)
 
 
+@error_handler('Не удалось обновить остатки с магазинов.')
 async def change_offer_with_stock(data: list[OfferWithStocksUpdate]):
     async with async_session() as session:
         await db.change_offer_with_stock(session, data)
 
 
+@error_handler('Не удалось получить собственные остатки.')
 async def get_own_storages():
     async with async_session() as session:
         storages = await db.get_own_storages(session)
@@ -90,11 +94,13 @@ async def get_own_storages():
         return {'markets': markets, 'data': storages}
 
 
+@error_handler('Не удалось обновить собственные остатки.')
 async def change_own_storages(data: list[OwnStorageUpdate]):
     async with async_session() as session:
         await db.change_own_storages(session, data)
 
 
+@error_handler('Ошибка импорта остатков магазинов.')
 async def import_offers_stocks(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
@@ -147,6 +153,7 @@ async def import_offers_stocks(data, name_of_shop: str | None = None, market: st
         await db.change_offer_with_stock(session, [OfferWithStocksUpdate(**i) for i in to_update])
 
 
+@error_handler('Ошибка экспорта остатков магазинов.')
 async def export_stocks(name_of_shop: str | None = None, market: str | None = None) -> str:
     offers_with_stocks = await get_offers_with_stocks()
     warehouses = await get_warehouses()
@@ -183,6 +190,7 @@ async def export_stocks(name_of_shop: str | None = None, market: str | None = No
     return 'data/stocks-fbo.xlsx'
 
 
+@error_handler('Ошибка экспорта собственных остатков.')
 async def export_own_storages(name_of_shop: str | None = None, market: str | None = None) -> str:
     data = await get_own_storages()
     columns = ['sku', 'Название', 'Фото', 'Магазин', 'Маркетплейс', 'Примечание 1', 'Примечание 2', 'Примечание 3', 'Мои остатки']
@@ -208,6 +216,7 @@ async def export_own_storages(name_of_shop: str | None = None, market: str | Non
     return 'data/out-own-storages.xlsx'
 
 
+@error_handler('Ошибка импорта собственных остатков.')
 async def import_own_storages(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)

@@ -2,6 +2,7 @@ from src.database import settings_db as db
 from src.database.db import async_session
 from src.schemas.settings_schemas import SettingsUpdate, TableInfoUpdate, TableInfoCreate, TableInfoOut, \
     MarketUpdate, MarketCreate, MarketFullUpdate
+from src.services.base_utils import error_handler
 from src.services.offer_service import recalculate_values
 from src.api.factory import APIFactory
 
@@ -33,6 +34,7 @@ async def get_settings(user_id: int):
         return await db.get_user_settings(session, user_id)
 
 
+@error_handler('Не удалось обновить настройки.')
 async def update_settings(user_id: int, data: SettingsUpdate):
     async with async_session() as session:
         await db.update_user_settings(session, user_id, data)
