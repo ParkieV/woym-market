@@ -5,17 +5,14 @@
     import { handleRequest } from "$lib";
     import { fetchAuthenticated } from "$lib/auth";
 
-    type Data = {
-        market: "ozon" | "yandex" | "all";
-        import_type: "prices" | "sizes" | "table" | "matrix-stocks";
+    type Params = {
+        import_type: "table" | "sizes" | "prices" | "matrix-fbo-stocks" | "matrix-own-storage";
+        market?: "ozon" | "yandex";
         name_of_shop?: "CALMAR.SHOP" | "MASTERSKRAB";
     };
 
     export let open: boolean;
-    let data: Data = {
-        market: "all",
-        import_type: "table"
-    };
+    let data: Params = { import_type: "table" };
 
     const ok = async () => {
         if (data.name_of_shop === undefined) {
@@ -24,6 +21,12 @@
         let blob = await uploadFile();
         let formData = new FormData();
         formData.append("data", blob);
+
+        for (const key in data) {
+            if (data[key as keyof Params] === undefined) {
+                delete data[key as keyof Params];
+            }
+        }
         let url = "data/import?" + new URLSearchParams(data);
 
         let promise = fetchAuthenticated(url, {
@@ -46,20 +49,21 @@
     <h1 slot="header">Импорт</h1>
     <div>
         <label>
-            <span>Маркет</span>
-            <select bind:value={data.market}>
-                <option value="all">Все</option>
-                <option value="yandex">Яндекс</option>
-                <option value="ozon">Озон</option>
+            <span>Вид</span>
+            <select bind:value={data.import_type}>
+                <option value="table">Таблица</option>
+                <option value="sizes">Размеры</option>
+                <option value="prices">Цены</option>
+                <option value="matrix-fbo-stocks">FBO остатки</option>
+                <option value="matrix-own-storage">Свои остатки</option>
             </select>
         </label>
         <label>
-            <span>Вид импорта</span>
-            <select bind:value={data.import_type}>
-                <option value="table">Таблица</option>
-                <option value="prices">Цены</option>
-                <option value="sizes">Размеры</option>
-                <option value="matrix-stocks">Матрица остатков</option>
+            <span>Маркет</span>
+            <select bind:value={data.market}>
+                <option value={undefined}>Все</option>
+                <option value="yandex">Яндекс</option>
+                <option value="ozon">Озон</option>
             </select>
         </label>
         <label>

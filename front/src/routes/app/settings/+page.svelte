@@ -1,6 +1,7 @@
 <script lang="ts">
     import { fetchSettings, patchSettings, type Settings } from "$lib/data/settings";
     import { onMount } from "svelte";
+    import NumberInput from "./NumberInput.svelte";
 
     let settings: Settings | undefined = undefined;
 
@@ -12,54 +13,47 @@
     onMount(async () => {
         settings = await fetchSettings();
     });
+
+    let form: HTMLFormElement;
+    let disabled = false;
 </script>
 
 <main>
-    <div class="content">
+    <form on:input={() => (disabled = !form.checkValidity())} bind:this={form}>
+        <h1>НАСТРОЙКИ</h1>
         {#if settings}
-            <h1>Настройки</h1>
-            <div>
-                {#if settings}
-                    <label>
-                        <span>Текущий курс</span>
-                        <input type="number" min="0" bind:value={settings.rate} />
-                    </label>
-                    <label>
-                        <span>Скидка на товары (%)</span>
-                        <input
-                            type="number"
-                            min="0"
-                            max="99"
-                            bind:value={settings.discount_purchase}
-                        />
-                    </label>
-                    <label>
-                        <span>Комиссия за продажу в FBY (%)</span>
-                        <input
-                            type="number"
-                            min="0"
-                            max="99"
-                            bind:value={settings.fby_sales_commission}
-                        />
-                    </label>
-                {/if}
-            </div>
-            <h1>Налоги</h1>
-            <div>
+            <section>
+                <h2>Основное</h2>
+                <NumberInput label="Текущий курс" min={0} bind:value={settings.rate} />
+                <NumberInput
+                    label="Скидка на товары (%)"
+                    min={0}
+                    max={99}
+                    bind:value={settings.discount_purchase}
+                />
+                <NumberInput
+                    label="Комиссия за продажу в FBY (%)"
+                    min={0}
+                    max={99}
+                    bind:value={settings.fby_sales_commission}
+                />
+            </section>
+            <section>
+                <h2>Налоги</h2>
                 {#each settings.taxes as market}
-                    <label>
-                        <span>{market.name} ({market.type})</span>
-                        <input type="number" min="0" max="99" bind:value={market.tax} />
-                    </label>
+                    <NumberInput
+                        label={`${market.name} (${market.type})`}
+                        min={0}
+                        max={99}
+                        bind:value={market.tax}
+                    />
                 {/each}
-            </div>
-        {:else}
-            Загрузка...
+            </section>
         {/if}
-    </div>
+    </form>
     <footer>
         <div style:flex="1" />
-        <button class="confirm" on:click={ok}>Сохранить</button>
+        <button class="confirm" {disabled} on:click={ok}>Сохранить</button>
     </footer>
 </main>
 
@@ -71,32 +65,27 @@
         display: flex;
         flex-direction: column;
 
-        > .content {
+        > form {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            overflow-y: auto;
+            margin: 40px;
+            gap: 24px;
 
             > h1 {
-                font-size: 21px;
-                margin-bottom: 8px;
-                padding: 20px 20px 0 20px;
+                font-size: 28px;
             }
-            > div {
+
+            section {
                 display: flex;
                 flex-direction: column;
-                width: 600px;
-                padding: 0 20px;
+                max-width: 600px;
                 gap: 12px;
 
-                > label {
-                    display: flex;
-                    justify-content: space-between;
-                    font-size: 16px;
-                    > input {
-                        font-size: 14px;
-                        width: 100px;
-                    }
+                > h2 {
+                    font-size: 24px;
+                    padding: 20px 20px 0 0;
                 }
             }
         }
