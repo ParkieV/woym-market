@@ -1,16 +1,16 @@
-import json
-
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_, ColumnElement
+from sqlalchemy import select, update, delete, and_
 from sqlalchemy.orm import selectinload, subqueryload
-from sqlalchemy.sql import func
-from src.database.models.base import Base
+from src.database.utils import _update_or_create_object, _get_or_create
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
-    OfferStockWithWarehouseOut, OfferWithStocksUpdate, OfferStockUpdate
-from src.database.models.models import Warehouse, OfferStock
+    OfferStockWithWarehouseOut, OfferWithStocksUpdate, OfferStockUpdate, OwnStorageCreate, OwnStorageOut, \
+    OwnStorageUpdate
+from src.database.models.models import Warehouse, OfferStock, OwnStorage
 from pydantic import BaseModel
 from src.database.models.models import Offer
-from typing import Type, TypeVar, Any
+from typing import Type, TypeVar
+from fastapi import status
+from fastapi.exceptions import HTTPException
 
 ModelSchema = TypeVar('ModelSchema', bound=Type[BaseModel])
 
@@ -78,36 +78,6 @@ async def change_offer_with_stock(session: AsyncSession, data: list[OfferWithSto
     await session.commit()
 
 
-async def _update_or_create_object(
-        session: AsyncSession,
-        model: Type[Base],
-        data: BaseModel,
-        update_by:  ColumnElement[bool],
-        model_schema: Type[BaseModel]
-) -> (Any, bool):
-    query = select(model).where(update_by).distinct()
-    result = await session.execute(query)
-    object_db = result.scalar_one_or_none()
-    created = object_db is None
-
-    if object_db is None:
-        object_db = model(**data.model_dump())
-        session.add(object_db)
-        await session.commit()
-    else:
-        stmp = (
-            update(model)
-            .where(update_by)
-            .values(**data.model_dump())
-        )
-        await session.execute(stmp)
-        await session.commit()
-        query = select(model).filter_by(**data.model_dump())
-        object_db = (await session.execute(query)).scalar_one()
-
-    return model_schema.model_validate(object_db, from_attributes=True), created
-
-
 async def update_or_create_warehouse(session: AsyncSession, data: WarehouseCreate) -> (WarehouseOut, bool):
     return await _update_or_create_object(
         session,
@@ -129,20 +99,118 @@ async def update_or_create_offer_stock(session: AsyncSession, data: OfferStockCr
     )
 
 
-async def test_own_storage(session: AsyncSession, sku: str):
-    query = (
-        select(
-            Offer.sku,
-            func.array_agg(Offer.photo),
-            func.array_agg(Offer.name),
-            func.array_agg(Offer.note_1),
-            func.array_agg(Offer.note_2),
-            func.array_agg(Offer.note_3),
+async def update_or_create_own_storage(session: AsyncSession, data: OwnStorageCreate) -> (OwnStorageCreate, bool):
+    return await _update_or_create_object(
+        session,
+        OwnStorage,
+        data,
+        OwnStorage.sku==data.sku,
+        OwnStorageOut
+    )
+
+
+async def get_own_storages(session: AsyncSession):
+    storages_result = []
+
+    skus_query = await session.execute(select(Offer.sku).distinct())
+
+    for sku in skus_query.all():
+        offers_query = await session.execute(
+            select(Offer, OwnStorage).where(Offer.sku == sku[0]).join(OwnStorage, OwnStorage.sku==Offer.sku)
+        )
+
+        data = {
+            'sku': sku[0],
+            'name': set(),
+            'photo': set(),
+            'name_of_shop': set(),
+            'market': set(),
+            'note_1': set(),
+            'note_2': set(),
+            'note_3': set(),
+            'stocks': []
+        }
+
+        for offer, own_storage in offers_query.all():
+            data['name'].add(offer.name)
+            data['photo'].add(offer.photo)
+            data['note_1'].add(offer.note_1)
+            data['note_2'].add(offer.note_2)
+            data['note_3'].add(offer.note_3)
+            data['name_of_shop'].add(offer.name_of_shop)
+            data['market'].add(offer.market)
+            data['own_storage'] = OwnStorageOut.model_validate(own_storage, from_attributes=True)
+            data['stocks'].append(
+                {
+                    'name_of_shop': offer.name_of_shop,
+                    'market': offer.market,
+                    'value': offer.remaining_stock
+                }
             )
 
-        .where(Offer.sku==sku)
-        .group_by(Offer.sku)
+        storages_result.append(data)
+
+    return storages_result
+
+
+async def change_own_storages(session: AsyncSession, data: list[OwnStorageUpdate]):
+    for storage in data:
+        stmp = update(OwnStorage).where(OwnStorage.id==storage.id).values(**storage.model_dump())
+        a = await session.execute(stmp)
+
+    await session.commit()
+    
+
+async def get_or_create_offer_stocks(session: AsyncSession, data: OfferStockCreate):
+    return await _get_or_create(
+        session,
+        OfferStock,
+        data,
+        and_(OfferStock.offer_id == data.offer_id,
+             OfferStock.warehouse_id == data.warehouse_id),
+        OfferStockOut
     )
-    result = (await session.execute(query)).first()
-    return {'sku': result[0], 'photo': set(result[1]), 'name': set(result[2]), 'note_1': set(result[3]), 'note_2': set(result[4]), 'note_3': set(result[5])}
+
+#
+# async def get_offer_stock_by(session: AsyncSession, offer_id: int, warehouse_name: str, warehouse_market: str):
+#     warehouse_query = select(Warehouse).where(Warehouse.name==warehouse_name).where(Warehouse.market==warehouse_market)
+#     result = await session.execute(warehouse_query)
+#     warehouse_db = result.scalar_one_or_none()
+#
+#     if warehouse_db is None:
+#         return None
+#
+#     stock_query = select(OfferStock).where(OfferStock.offer_id==offer_id).where(OfferStock.warehouse_id==warehouse_db.id)
+#     result = await session.execute(stock_query)
+#     return result.scalar_one_or_none()
+
+
+async def get_warehouses_by_name_and_market(session: AsyncSession, data: list[list[str, str]]) -> list[WarehouseOut]:
+    results = []
+
+    for i in data:
+        query = select(Warehouse).where(and_(Warehouse.name==i[0], Warehouse.market==i[1]))
+        warehouse_db = (await session.execute(query)).scalar_one_or_none()
+
+        if warehouse_db is None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Некоректные данные для определения склада')
+
+        results.append(WarehouseOut.model_validate(warehouse_db, from_attributes=True))
+
+    return results
+
+
+async def get_offer_stock(session: AsyncSession, offer_id: int, warehouse_id: int):
+    query = select(OfferStock).where(OfferStock.offer_id == offer_id).where(OfferStock.warehouse_id == warehouse_id)
+    result = await session.execute(query)
+    return result.scalar_one_or_none()
+
+
+async def update_own_storages_by_sku(session: AsyncSession, data: list[dict]):
+    for storage in data:
+        stmp = update(OwnStorage).where(OwnStorage.sku == storage['sku']).values(**storage)
+        await session.execute(stmp)
+
+    await session.commit()
+
 

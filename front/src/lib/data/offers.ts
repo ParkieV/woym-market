@@ -16,33 +16,33 @@ export type OfferBase = {
 
 /** Product in store. */
 export type Offer = OfferBase & {
-    self_weight: number;
-    self_length: number;
-    self_width: number;
-    self_height: number;
+    self_weight: number | null;
+    self_length: number | null;
+    self_width: number | null;
+    self_height: number | null;
+    volume: number | null;
 
-    yandex_weight: number;
-    yandex_length: number;
-    yandex_width: number;
-    yandex_height: number;
+    yandex_weight: number | null;
+    yandex_length: number | null;
+    yandex_width: number | null;
+    yandex_height: number | null;
+    yandex_volume: number | null;
 
-    volume: number;
-    yandex_volume: number;
     volumn_difference: number | null;
 
     group_sellers_amount: number;
     business_id: number;
 
     /** Final price calculated by service. */
-    total_price: number;
+    total_price: number | null;
     /** Price that is currently set in Yandex Market. */
     current_price: number | null;
     /** Price after calculations. */
     target_price: number | null;
     /** The price **in rubles** at which goods are or have been bought by a merchant or retailer. */
-    cost_price: number;
+    cost_price: number | null;
     /** The price **in dollars** at which goods are or have been bought by a merchant or retailer. */
-    dollar_cost_price: number;
+    dollar_cost_price: number | null;
     /** Minimal addition to the total price. */
     total_price_min_additional: number;
 

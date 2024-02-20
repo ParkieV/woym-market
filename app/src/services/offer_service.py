@@ -15,14 +15,19 @@ from src.database.settings_db import update_logs, get_user_settings
 from fastapi.exceptions import HTTPException
 from fastapi import status
 
+from src.services.base_utils import error_handler
+from src.services.stocks_service import export_stocks, export_own_storages, import_offers_stocks, import_own_storages
+
 api_wrapper = APIWrapper()
 
 
+@error_handler('Не удалось данные о товарах.')
 async def get_offers(filters: dict[str, Any] | None = None) -> list[OfferOut]:
     async with async_session() as session:
         return await db.get_offers(session, filters)
 
 
+@error_handler('Не удалось изменить данные товаров.')
 async def change_offers(offers_data: list[OfferChange], user_id: int):
     if not offers_data:
         return offers_data
@@ -129,9 +134,6 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
     async with async_session() as session:
         settings = await get_user_settings(session, user_id)
 
-    if market == Market.ALL:
-        market = None
-
     match import_type:
         case ImportType.TABLE:
             return await import_offers(data, settings, name_of_shop, market, file_extension)
@@ -142,10 +144,17 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
         case ImportType.PRICES:
             return await import_prices(data, settings, name_of_shop, market, file_extension)
 
+        case ImportType.FBO_STOCKS:
+            return await import_offers_stocks(data, name_of_shop, market, file_extension)
+
+        case ImportType.OWN_STORAGE:
+            return await import_own_storages(data, name_of_shop, market, file_extension)
+
         case _:
             raise NotImplemented(f'Import type "{import_type}" not implemented yet')
 
 
+@error_handler('Ошибка импорта данных о товарах.')
 async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     required_fields = {'sku', 'market', 'name_of_shop'}
 
@@ -169,7 +178,7 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
     columns_to_change = list(set(df.columns) & set(OfferChange.fields().keys()))
     df = df[columns_to_change]
 
-    df[['sku', 'name_of_shop', 'market']] = df[['sku', 'name_of_shop', 'market']].astype("string")
+    df[['sku', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']] = df[['sku', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']].astype("string")
 
     async with async_session() as session:
         if 'pricing_scheme_id' in df.columns:
@@ -184,6 +193,7 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
         await recalculate_values(session, settings, df[['sku', 'name_of_shop', 'market']])
 
 
+@error_handler('Ошибка импорта данных о ценах.')
 async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.drop(df.columns[[3, 4, 6, 7]], axis=1, inplace=True, errors='ignore')
@@ -221,6 +231,7 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
         await recalculate_values(session, settings)
 
 
+@error_handler('Ошибка импорта данных о размерах.')
 async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, 'Список товаров', file_extension)
     df.drop([0, 1], axis=0, inplace=True, errors='ignore')
@@ -257,17 +268,21 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
 
 
 async def export_data(market: Market, export_type: ExportType, name_of_shop: str | None):
-    if market == Market.ALL:
-        market = None
-
     match export_type:
         case ExportType.TABLE:
             return await export_offers(name_of_shop, market)
+
+        case ExportType.FBO_STOCKS:
+            return await export_stocks(name_of_shop, market)
+
+        case ExportType.OWN_STORAGE:
+            return await export_own_storages(name_of_shop, market)
 
         case _:
             raise NotImplemented(f'Export type "{export_type}" not implemented yet')
 
 
+@error_handler('Ошибка экспорта данных о товарах.')
 async def export_offers(name_of_shop: str | None = None, market: str | None = None) -> str:
     filters = {}
 
@@ -281,8 +296,8 @@ async def export_offers(name_of_shop: str | None = None, market: str | None = No
 
     df = pd.DataFrame([offer.model_dump() for offer in offers], columns=OfferOut.fields().keys())
     df.rename(columns=OfferOut.fields(), inplace=True)
-    df.to_excel('data/out.xlsx', index=False)
-    return 'data/out.xlsx'
+    df.to_excel('data/out-offers.xlsx', index=False)
+    return 'data/out-offers.xlsx'
 
 
 async def get_pricing_schemes() -> list[PricingSchemeOut]:
@@ -300,6 +315,7 @@ async def delete_pricing_schemes(data: list[int]) -> None:
         await db.delete_pricing_scheme(session, data)
 
 
+@error_handler('Не удалось обновить схемы ценообразования.')
 async def change_pricing_scheme(data: PricingSchemeChange, user_id: int):
 
     async with async_session() as session:

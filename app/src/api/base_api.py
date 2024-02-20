@@ -5,7 +5,7 @@ from src.schemas.base_api_schemas import APIOffer, APIWarehouse, APIPriceChangeD
 class BaseAPI(ABC):
 
     @abstractmethod
-    async def check_auth_data(self, **kwargs):
+    async def validate_auth_data(self, **kwargs):
         pass
 
     @abstractmethod

@@ -1,10 +1,4 @@
-from fastapi import HTTPException, status
-import requests
-
-import src.database.user_db as db
 import src.services.auth_utils as auth
-from src.database.models.models import Users
-from src.database.db import async_session
 from src.services.settings_service import create_logs, create_settings
 
 

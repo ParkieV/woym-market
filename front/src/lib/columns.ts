@@ -2,6 +2,9 @@ import type { ValueGetterParams } from "ag-grid-enterprise";
 import type { Column, ColumnGroup } from "./components/datagrid/columns";
 import type { Template } from "./data/templates";
 import type { FboStocks } from "./data/fbo_storage";
+import type { Offer } from "./data/offers";
+import type { Market } from "./data/markets";
+import type { OwnStorage } from "./data/own_storage";
 
 export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
     return [
@@ -52,9 +55,18 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 },
                 {
                     key: "auto_min_price",
-                    header: "Авто мин. цена %",
+                    header: "Авто мин. цена (%)",
                     data_type: "percent",
                     editable: true
+                },
+                {
+                    key: "auto_min_price_rubles",
+                    header: "Авто мин. цена (руб)",
+                    data_type: "ruble",
+                    valueGetter: ({ data }: { data: Offer }) => {
+                        if (data.total_price === null) return null;
+                        return data.total_price * (data.auto_min_price / 100);
+                    }
                 },
                 {
                     key: "manual_min_price",
@@ -189,9 +201,32 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
     ];
 }
 
-export function ownStorageColumns(
-    markets: { id: number; name: string }[]
-): (Column | ColumnGroup)[] {
+export function ownStorageColumns(markets: Market[]): (Column | ColumnGroup)[] {
+    const noteCols = ([1, 2, 3] as const).map(i => {
+        return {
+            header: `Примечание ${i}`,
+            key: `note_${i}`,
+            valueGetter: ({ data }: { data: OwnStorage }) =>
+                data[`note_${i}`].filter(x => x !== "").join("; "),
+            data_type: "string",
+            columnGroupShow: "closed"
+        } as Column;
+    });
+    const marketCols = markets.map(market => {
+        return {
+            header: `${market.name} (${market.type}), шт.`,
+            key: `shops-${market.id}`,
+            valueGetter: ({ data }: { data: OwnStorage }) => {
+                let stock = data.stocks.find(
+                    ({ market: type, name_of_shop }) =>
+                        market.type === type && market.name === name_of_shop
+                );
+                return stock?.value;
+            },
+            data_type: "int"
+        } as Column;
+    });
+
     return [
         {
             header: "SKU",
@@ -203,34 +238,30 @@ export function ownStorageColumns(
         {
             header: "Информация",
             children: [
-                { header: "Фото", key: "photo", data_type: "image" },
-                { header: "Название", key: "name", data_type: "string" },
                 {
-                    header: "Примечание 1",
-                    key: "note_1",
-                    data_type: "string",
-                    columnGroupShow: "closed"
+                    header: "Фото",
+                    key: "photo",
+                    data_type: "image",
+                    valueGetter: ({ data }: { data: OwnStorage }) => {
+                        if (data.photo === undefined || data.photo.length === 0) return null;
+                        let photo = data.photo
+                            .map(x => x ?? "")
+                            .filter(x => x !== "")
+                            .at(0);
+                        return photo ?? null;
+                    }
                 },
-                {
-                    header: "Примечание 2",
-                    key: "note_2",
-                    data_type: "string",
-                    columnGroupShow: "closed"
-                },
-                {
-                    header: "Примечание 3",
-                    key: "note_3",
-                    data_type: "string",
-                    columnGroupShow: "closed"
-                }
+                { header: "Название", key: "name.0", data_type: "string" },
+                ...noteCols
             ]
         },
-        { header: "Мой склад", key: "own_storage", data_type: "int", editable: true },
-        ...markets.map<Column>(x => ({
-            header: `${x.name}, шт.`,
-            key: `shops.${x.id}`,
-            data_type: "int"
-        }))
+        {
+            header: "Мой склад",
+            key: "own_storage.value",
+            data_type: "int",
+            editable: true
+        },
+        ...marketCols
     ];
 }
 

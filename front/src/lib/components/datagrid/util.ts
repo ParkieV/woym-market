@@ -5,7 +5,8 @@ export function numberValueSetter(field: string) {
         if (params.newValue === null || params.newValue === undefined) {
             return false;
         } else {
-            params.data[field] = params.newValue as any;
+            // FIXME: won't handle fields with dots correctly
+            setByPath(params.data, params.newValue, field);
             return true;
         }
     };
@@ -13,11 +14,12 @@ export function numberValueSetter(field: string) {
 
 export function stringValueSetter(field: string) {
     return (params: ValueSetterParams<any, string | null | undefined>) => {
+        let value = params.newValue;
         if (params.newValue === null || params.newValue === undefined) {
-            params.data[field] = "";
-        } else {
-            params.data[field] = params.newValue as any;
+            value = "";
         }
+        // FIXME: won't handle fields with dots correctly
+        setByPath(params.data, value, field);
         return true;
     };
 }
@@ -34,4 +36,12 @@ export function notNullNumberFormatter<T, V = any>(
                 ? "N/A"
                 : `${params.value.toFixed(precision)}${postfix}`
     };
+}
+
+function setByPath(data: any, value: any, path: string) {
+    let fields = path.split(".");
+    for (let i = 0; i < fields.length - 1; i++) {
+        data = data[fields[i]];
+    }
+    data[fields[fields.length - 1]] = value;
 }

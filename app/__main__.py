@@ -57,8 +57,8 @@ app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(settings_router)
 app.include_router(data_router)
-app.include_router(debug_router)
 app.include_router(stocks_router)
+app.include_router(debug_router)
 
 
 if __name__ == '__main__':

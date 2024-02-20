@@ -36,8 +36,6 @@ class Settings(Base):
     fby_sales_commission = Column(Float, default=19)
     rate = Column(Float, default=10)
 
-    tables = relationship('TableInfo', back_populates='settings', lazy='subquery')
-
 
 class Offer(Base):
     __tablename__ = 'offers'
@@ -121,8 +119,6 @@ class TableInfo(Base):
     __tablename__ = 'tables'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
-    settings_id = Column(Integer, ForeignKey('settings.id', ondelete='CASCADE'))
-    settings = relationship("Settings", back_populates='tables')
 
     name = Column(String, unique=True)
     updated_at = Column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
@@ -185,12 +181,12 @@ class Market(Base):
     tax = Column(Float, default=0)
 
 
-# class OwnStorage(Base):
-#     __tablename__ = 'own_storage'
-#
-#     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
-#     sku = Column(String, unique=True)
-#
-#     value = Column(Integer, default=0)
+class OwnStorage(Base):
+    __tablename__ = 'own_storage'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+    sku = Column(String, unique=True, index=True, nullable=False)
+
+    value = Column(Integer, default=0, nullable=False)
 
 

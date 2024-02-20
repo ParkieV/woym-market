@@ -1,5 +1,5 @@
 <script lang="ts">
-    export let options: Set<{ name: string; selected: boolean }>;
+    export let options: { name: string; selected: boolean }[];
 </script>
 
 <div>

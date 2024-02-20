@@ -1,5 +1,5 @@
 <script lang="ts" generics="T, K extends keyof T">
-    import { getGridState, setGridState } from "./state";
+    import { getState as getGridState, gridStateSources, setState as setGridState } from "./state";
 
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import { getColumns, type Column, type ColumnGroup } from "./columns";
@@ -46,6 +46,7 @@
             }
         });
 
+        const initialState = await getGridState(grid_name);
         const options: GridOptions<T> = {
             ...otherGridOptions,
             columnDefs,
@@ -57,14 +58,32 @@
                 e.api.redrawRows({ rowNodes: [e.node] });
             },
             tooltipShowDelay: 500,
-            onStateUpdated: ({ state }) => setGridState(grid_name, state),
+            onStateUpdated: ({ state, sources }) => {
+                for (const source of gridStateSources) {
+                    if (sources.includes(source)) {
+                        setGridState(grid_name, state);
+                        break;
+                    }
+                }
+            },
             enableRangeSelection: true,
             enableRangeHandle: true,
             getContextMenuItems: () => ["cut", "copy", "paste"],
-            initialState: getGridState(grid_name)
+            initialState
         };
 
         grid = createGrid(element, options);
+        // FIXME: remove after column sizing bug is solved in AG Grid (AG-10388)
+        if (initialState.columnSizing) {
+            grid.setColumnWidths(
+                initialState.columnSizing.columnSizingModel.map(x => {
+                    return {
+                        key: x.colId,
+                        newWidth: x.width ?? 200
+                    };
+                })
+            );
+        }
     });
 
     let element: HTMLElement;

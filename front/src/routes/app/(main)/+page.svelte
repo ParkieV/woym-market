@@ -1,6 +1,6 @@
 <script lang="ts">
     import Grid from "$lib/components/datagrid/Grid.svelte";
-    import { onMount } from "svelte";
+    import { getContext, onMount } from "svelte";
     import { type Offer, fetchOfferList, patchOfferList } from "$lib/data/offers";
     import { ChangeList } from "$lib/components/datagrid/changes";
     import Toolbar from "./Toolbar.svelte";
@@ -8,6 +8,7 @@
     import Footer from "./Footer.svelte";
     import { fetchTemplates, type Template } from "$lib/data/templates";
     import { offerColumns } from "$lib/columns";
+    import type { Writable } from "svelte/store";
 
     let data: Offer[] = [];
     let changes = new ChangeList<Offer, "sku">();
@@ -24,6 +25,9 @@
         let ok = await patchOfferList(data.filter(x => changes.isChanged(x.sku)));
         if (ok) await refreshData();
     }
+
+    let refresh = getContext<Writable<() => {}>>("refresh");
+    $refresh = refreshData;
 
     onMount(async () => {
         let templates: Template[] = await fetchTemplates();
