@@ -46,6 +46,7 @@
             }
         });
 
+        const initialState = await getGridState(grid_name);
         const options: GridOptions<T> = {
             ...otherGridOptions,
             columnDefs,
@@ -68,10 +69,21 @@
             enableRangeSelection: true,
             enableRangeHandle: true,
             getContextMenuItems: () => ["cut", "copy", "paste"],
-            initialState: await getGridState(grid_name)
+            initialState
         };
 
         grid = createGrid(element, options);
+        // FIXME: remove after column sizing bug is solved in AG Grid (AG-10388)
+        if (initialState.columnSizing) {
+            grid.setColumnWidths(
+                initialState.columnSizing.columnSizingModel.map(x => {
+                    return {
+                        key: x.colId,
+                        newWidth: x.width ?? 200
+                    };
+                })
+            );
+        }
     });
 
     let element: HTMLElement;
