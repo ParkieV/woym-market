@@ -124,7 +124,7 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                     key: "profit",
                     header: "Прибыль",
                     data_type: "float",
-                    tooltip: "Цена - закупка - FBY"
+                    tooltip: "Текущая цена - налог - FBY  - себестоимость"
                 },
                 {
                     key: "total_price_coeff",
