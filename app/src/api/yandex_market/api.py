@@ -173,11 +173,6 @@ class YandexMarketAPI(BaseAPI):
                     )
             self.validate_response(response, body=body, raise_error=False)
 
-    def _download_report(self, url_path: str) -> pd.DataFrame:
-        output = BytesIO()
-        response = self.session.get(url_path)
-        output.write(response.content)
-        return pd.read_excel(output, engine='openpyxl')
 
     async def _get_market_prices_report(self, business_id: int) -> dict[str, dict[str, Any]]:
         response = self.session.post('https://api.partner.market.yandex.ru/reports/prices/generate',
