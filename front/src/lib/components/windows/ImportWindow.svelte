@@ -1,14 +1,15 @@
 <script lang="ts">
     import { uploadFile } from "$lib/util";
-    import { createEventDispatcher } from "svelte";
+    import { createEventDispatcher, onMount } from "svelte";
     import Window from "./Window.svelte";
     import { handleRequest } from "$lib";
     import { fetchAuthenticated } from "$lib/auth";
+    import { getStoreNames, getStoreTypes } from "$lib/data/markets";
 
     type Params = {
         import_type: "table" | "sizes" | "prices" | "matrix-fbo-stocks" | "matrix-own-storage";
-        market?: "ozon" | "yandex";
-        name_of_shop?: "CALMAR.SHOP" | "MASTERSKRAB";
+        market?: string;
+        name_of_shop?: string;
     };
 
     export let open: boolean;
@@ -43,6 +44,15 @@
     };
 
     let dispatch = createEventDispatcher<{ import: void }>();
+
+    let name_of_shop_options: string[] = [];
+    let market_options: string[] = [];
+    onMount(async () => {
+        [name_of_shop_options, market_options] = await Promise.all([
+            getStoreNames(),
+            getStoreTypes()
+        ]);
+    });
 </script>
 
 <Window bind:open>
@@ -62,16 +72,18 @@
             <span>Маркет</span>
             <select bind:value={data.market}>
                 <option value={undefined}>Все</option>
-                <option value="yandex">Яндекс</option>
-                <option value="ozon">Озон</option>
+                {#each market_options as option}
+                    <option value={option}>{option}</option>
+                {/each}
             </select>
         </label>
         <label>
             <span>Магазин</span>
             <select bind:value={data.name_of_shop}>
                 <option value={undefined}>Все</option>
-                <option value="CALMAR.SHOP">CALMAR.SHOP</option>
-                <option value="MASTERSKRAB">MASTERSKRAB</option>
+                {#each name_of_shop_options as option}
+                    <option value={option}>{option}</option>
+                {/each}
             </select>
         </label>
     </div>
