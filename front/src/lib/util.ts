@@ -38,3 +38,12 @@ export function downloadFile(blob: Blob, defaultFilename: string) {
     link.download = defaultFilename;
     link.click();
 }
+
+/** Filter that rejects all repeating elements in an array. */
+export function filterUnique<T extends string | number | boolean | boolean | null | undefined>(
+    value: T,
+    index: number,
+    array: T[]
+) {
+    return array.indexOf(value) === index;
+}
