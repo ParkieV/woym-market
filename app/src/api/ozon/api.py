@@ -106,7 +106,8 @@ class OzonAPI(BaseAPI):
                     'remaining_stock': offer['stocks']['present'],
                     'min_price_in_market': self.__str_to_float(offer['min_ozon_price']),
                     'min_price_without_market': self.__str_to_float(offer['price_indexes']['external_index_data']['minimal_price']),
-                    'attractive_price_threshold': self.__str_to_float(offer['recommended_price'])
+                    'attractive_price_threshold': self.__str_to_float(offer['recommended_price']),
+                    'market': 'ozon'
                 })
 
         return result
