@@ -95,8 +95,8 @@ class OfferOut(OfferChange):
 
     photo: str | None = Field(title='Фото')
     remaining_stock: int = Field(title='Остатки на складах')
-    group_sellers_amount: int = Field(title='Количество продавцов в группе')
-    business_id: int = Field(title='id бизнесса')
+    group_sellers_amount: int | None = Field(title='Количество продавцов в группе')
+    business_id: int | None = Field(title='id бизнесса')
 
     # countable/editable values
     cost_price: float | None = Field(title='Себестоимость (Закупка у. е. * курс)')

@@ -24,6 +24,12 @@ def count_fby(data: pd.DataFrame, settings) -> pd.Series:
     )
 
     data['fby'] = data['current_price'] * (settings.fby_sales_commission / 100) + delivery_and_warehouse_processing_price + data['current_price'] * 0.01
+
+    data['fby'] = np.where(
+        data['market'] == 'ozon',
+        0,
+        data['fby']
+    )
     return data['fby']
 
 
