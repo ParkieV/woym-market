@@ -28,6 +28,11 @@ class OzonAPI(BaseAPI):
     async def validate_auth_data(self, **kwargs):
         pass
 
+    def __str_to_float(self, value):
+        if value:
+            return float(value)
+        return None
+
     async def get_offers_list(self) -> list[APIOffer]:
         offers_identifiers = self._get_offers_identifiers()
         offers = self._get_offers_base_info(offers_identifiers)
@@ -41,7 +46,8 @@ class OzonAPI(BaseAPI):
         return [APIOffer(**i) for i in offers]
 
     async def get_stocks(self) -> list[APIWarehouse]:
-        pass
+        # TODO подключить склады и остатки
+        return []
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 1000
@@ -61,11 +67,11 @@ class OzonAPI(BaseAPI):
                 'prices': post_data
             }
 
-            # response = self.session.post(
-            #     'https://api-seller.ozon.ru/v1/product/import/prices',
-            #     headers=self.auth_headers,
-            #     json=body
-            # )
+            response = self.session.post(
+                'https://api-seller.ozon.ru/v1/product/import/prices',
+                headers=self.auth_headers,
+                json=body
+            )
 
     def _get_offers_identifiers(self) -> list[OfferIdentifier]:
         response = self.session.post('https://api-seller.ozon.ru/v2/product/list', headers=self.auth_headers)
@@ -96,9 +102,11 @@ class OzonAPI(BaseAPI):
                     'sku': offer['offer_id'],
                     'name': offer['name'],
                     'photo': offer['primary_image'],
-                    'current_price': offer['price'],
-                    'remaining_stock': offer['discounted_stocks']['present'],
-
+                    'current_price': self.__str_to_float(offer['price']) ,
+                    'remaining_stock': offer['stocks']['present'],
+                    'min_price_in_market': self.__str_to_float(offer['min_ozon_price']),
+                    'min_price_without_market': self.__str_to_float(offer['price_indexes']['external_index_data']['minimal_price']),
+                    'attractive_price_threshold': self.__str_to_float(offer['recommended_price'])
                 })
 
         return result
