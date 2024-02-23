@@ -112,11 +112,11 @@ async def update_or_create_own_storage(session: AsyncSession, data: OwnStorageCr
 async def get_own_storages(session: AsyncSession):
     storages_result = []
 
-    skus_query = await session.execute(select(Offer.sku).distinct())
+    skus_query = await session.execute(select(Offer.sku).where(Offer.market != 'ozon').distinct())
 
     for sku in skus_query.all():
         offers_query = await session.execute(
-            select(Offer, OwnStorage).where(Offer.sku == sku[0]).join(OwnStorage, OwnStorage.sku==Offer.sku)
+            select(Offer, OwnStorage).where(Offer.sku == sku[0]).where(Offer.market != 'ozon').join(OwnStorage, OwnStorage.sku==Offer.sku)
         )
 
         data = {

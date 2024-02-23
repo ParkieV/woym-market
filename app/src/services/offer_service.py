@@ -130,6 +130,7 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
     await db.update_offers(session, df, mapping_columns=['sku', 'name_of_shop'])
 
 
+@error_handler('Ошибка импорта')
 async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None, user_id: int, file_extension: str = 'xlsx') -> None:
     async with async_session() as session:
         settings = await get_user_settings(session, user_id)
@@ -267,6 +268,7 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
         await recalculate_values(session, settings)
 
 
+@error_handler('Ошибка экспорта')
 async def export_data(market: Market, export_type: ExportType, name_of_shop: str | None):
     match export_type:
         case ExportType.TABLE:

@@ -1,17 +1,12 @@
 <script lang="ts">
     import ButtonGroup from "$lib/components/ButtonGroup.svelte";
     import Search from "$lib/components/Search.svelte";
+    import { getStoreNames, getStoreTypes } from "$lib/data/markets";
     import type { OfferBase } from "$lib/data/offers";
     import { createEventDispatcher, onMount } from "svelte";
 
-    let shops = [
-        { name: "CALMAR.SHOP", selected: true },
-        { name: "MASTERSKRAB", selected: true }
-    ];
-    let markets = [
-        { key: "yandex", name: "Яндекс", selected: true },
-        { key: "ozon", name: "Озон", selected: true }
-    ];
+    let shops: { key: string; name: string; selected: boolean }[] = [];
+    let markets: { key: string; name: string; selected: boolean }[] = [];
     let search = "";
     let show_hidden: boolean = false;
 
@@ -53,7 +48,10 @@
         dispatch("filterChanged", filter);
     }
 
-    onMount(() => {
+    onMount(async () => {
+        [shops, markets] = (await Promise.all([getStoreNames(), getStoreTypes()])).map(arr =>
+            arr.map(x => ({ key: x, name: x, selected: true }))
+        );
         dispatch("filterChanged", filter);
     });
 </script>
