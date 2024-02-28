@@ -43,7 +43,6 @@ class OzonAPI(BaseAPI):
 
         return [APIOfferWithMinPrice(**i) for i in offers]
 
-
     async def get_stocks(self) -> list[APIWarehouse]:
         # TODO подключить склады и остатки
         return []
