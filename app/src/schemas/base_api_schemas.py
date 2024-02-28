@@ -33,6 +33,11 @@ class APIOffer:
     market: str = 'yandex'
 
 
+@dataclass(frozen=True)
+class APIOfferWithMinPrice(APIOffer):
+    manual_min_price: float | None = None
+
+
 @dataclass
 class APIWarehouseOffer:
     sku: str

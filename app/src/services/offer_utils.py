@@ -89,7 +89,7 @@ async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
     # используем ручную мин планку
     sub_data_2 = data[data['use_manual_min_price'] == True]
     sub_data_2.loc[:, 'target_price'] = np.where(
-        sub_data_2['current_price'] >= sub_data_2['min_price_in_market'],
+        ((sub_data_2['min_price_in_market'].isnull()) | (sub_data_2['current_price'] >= sub_data_2['min_price_in_market'])),
         sub_data_2[['min_level', 'manual_min_price']].max(axis=1),
         sub_data_2[['total_price', 'min_level']].min(axis=1)
     )

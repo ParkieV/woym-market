@@ -59,17 +59,8 @@ class YandexMarketAPI(BaseAPI):
 
         return [APIOffer(**offer) for offer in result]
 
-    def validate_response(self, response: Response, raise_error: bool = True, body: Any = None) -> Any:
-        if response.status_code != 200:
-            if raise_error:
-                self._raise_error(response.json(), response.status_code, body)
-            else:
-                print(response.reason, response.status_code, response.json(), body)
-        return response.json()
 
-    def _raise_error(self, detail: str, status_code: int = 500, body: Any = None):
-        # TODO write logs
-        raise HTTPException(status_code, detail, body)
+
 
     def _get_campaigns(self) -> dict[int, dict[str, Any]]:
         response = self.session.get('https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)

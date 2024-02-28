@@ -62,6 +62,9 @@ async def update_offers(
         if 'id' in offer.keys():
             del offer['id']
 
+        if 'manual_min_price' in offer.keys() and offer['manual_min_price'] is None:
+            del offer['manual_min_price']
+
         query = update(Offer)
 
         if filters:
