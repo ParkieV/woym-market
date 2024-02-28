@@ -1,10 +1,8 @@
 from typing import Any
-
-from fastapi import HTTPException, status
 from requests import Session
-
 from src.api.base_api import BaseAPI
-from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData
+from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, \
+    APIOfferWithMinPrice
 from dataclasses import dataclass
 
 
@@ -43,7 +41,8 @@ class OzonAPI(BaseAPI):
             offer.update(attrs)
             offer['name_of_shop'] = self.shop_name
 
-        return [APIOffer(**i) for i in offers]
+        return [APIOfferWithMinPrice(**i) for i in offers]
+
 
     async def get_stocks(self) -> list[APIWarehouse]:
         # TODO подключить склады и остатки
@@ -73,10 +72,12 @@ class OzonAPI(BaseAPI):
                 json=body
             )
 
+            self.validate_response(response, raise_error=False, body=body)
+
     def _get_offers_identifiers(self) -> list[OfferIdentifier]:
         response = self.session.post('https://api-seller.ozon.ru/v2/product/list', headers=self.auth_headers)
 
-        data = response.json()['result']['items']
+        data = self.validate_response(response)['result']['items']
 
         return [OfferIdentifier(product_id=offer['product_id'], offer_id=offer['offer_id']) for offer in data]
 
@@ -95,7 +96,7 @@ class OzonAPI(BaseAPI):
                 json=body
             )
 
-            data = response.json()
+            data = self.validate_response(response, body=body)
 
             for offer in data['result']['items']:
                 result.append({
@@ -107,7 +108,8 @@ class OzonAPI(BaseAPI):
                     'min_price_in_market': self.__str_to_float(offer['min_ozon_price']),
                     'min_price_without_market': self.__str_to_float(offer['price_indexes']['external_index_data']['minimal_price']),
                     'attractive_price_threshold': self.__str_to_float(offer['recommended_price']),
-                    'market': 'ozon'
+                    'market': 'ozon',
+                    'manual_min_price': self.__str_to_float(offer['min_price'])
                 })
 
         return result
@@ -132,7 +134,7 @@ class OzonAPI(BaseAPI):
                 json=body
             )
 
-            data = response.json()
+            data = self.validate_response(response, body=body)
 
             for offer in data['result']:
                 # TODO посчитать объем
@@ -144,3 +146,11 @@ class OzonAPI(BaseAPI):
                 }
 
         return result
+
+    def get_content_ratings(self, skus: list[str]):
+        body = {
+            'skus': skus
+        }
+        response = self.session.post('https://api-seller.ozon.ru/v1/product/rating-by-sku', headers=self.auth_headers, json=body)
+        data = self.validate_response(response, body=body)
+        return {item['sku']: item['rating'] for item in data['products']}

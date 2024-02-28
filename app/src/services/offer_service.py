@@ -21,13 +21,12 @@ from src.services.stocks_service import export_stocks, export_own_storages, impo
 api_wrapper = APIWrapper()
 
 
-@error_handler('Не удалось данные о товарах.')
 async def get_offers(filters: dict[str, Any] | None = None) -> list[OfferOut]:
     async with async_session() as session:
         return await db.get_offers(session, filters)
 
 
-@error_handler('Не удалось изменить данные товаров.')
+@error_handler('Ошибка изменения товаров')
 async def change_offers(offers_data: list[OfferChange], user_id: int):
     if not offers_data:
         return offers_data
@@ -155,7 +154,6 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
             raise NotImplemented(f'Import type "{import_type}" not implemented yet')
 
 
-@error_handler('Ошибка импорта данных о товарах.')
 async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     required_fields = {'sku', 'market', 'name_of_shop'}
 
@@ -166,6 +164,7 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
         'note_2': '',
         'note_3': '',
     }, inplace=True)
+
 
     if len(set(df.columns) & required_fields) != len(required_fields):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные. Следующие колонки должны быть обязательно: {", ".join(BaseOffer.fields().values())}')
@@ -194,7 +193,6 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
         await recalculate_values(session, settings, df[['sku', 'name_of_shop', 'market']])
 
 
-@error_handler('Ошибка импорта данных о ценах.')
 async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.drop(df.columns[[3, 4, 6, 7]], axis=1, inplace=True, errors='ignore')
@@ -232,7 +230,6 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
         await recalculate_values(session, settings)
 
 
-@error_handler('Ошибка импорта данных о размерах.')
 async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, 'Список товаров', file_extension)
     df.drop([0, 1], axis=0, inplace=True, errors='ignore')
@@ -284,7 +281,6 @@ async def export_data(market: Market, export_type: ExportType, name_of_shop: str
             raise NotImplemented(f'Export type "{export_type}" not implemented yet')
 
 
-@error_handler('Ошибка экспорта данных о товарах.')
 async def export_offers(name_of_shop: str | None = None, market: str | None = None) -> str:
     filters = {}
 
@@ -317,7 +313,6 @@ async def delete_pricing_schemes(data: list[int]) -> None:
         await db.delete_pricing_scheme(session, data)
 
 
-@error_handler('Не удалось обновить схемы ценообразования.')
 async def change_pricing_scheme(data: PricingSchemeChange, user_id: int):
 
     async with async_session() as session:
