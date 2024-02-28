@@ -14,7 +14,7 @@ def error_handler(default_message: str = 'Ошибка сервера'):
             except HTTPException as e:
                 print(func)
                 print(e)
-                raise HTTPException(e.status_code, e.detail)
+                raise HTTPException(e.status_code, e.status_code)
 
             except Exception as e:
                 print(e)
