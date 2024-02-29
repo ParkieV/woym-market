@@ -51,7 +51,7 @@ async def export_offers(market: Market = Market.YANDEX, export_type: ExportType 
 
 
 @data_router.post('/import')
-async def import_offers(data: UploadFile = File(), market: Market = Market.YANDEX, import_type: ImportType = ImportType.TABLE, name_of_shop: str | None = None, current_user=Depends(get_current_user)):
+async def import_offers(data: UploadFile = File(), market: Market = None, import_type: ImportType = ImportType.TABLE, name_of_shop: str | None = None, current_user=Depends(get_current_user)):
     content = await data.read()
     await service.import_data(content, market, import_type, name_of_shop, current_user.id, PurePath(data.filename).suffix)
     return {'status': 'OK'}

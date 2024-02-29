@@ -1,8 +1,7 @@
 from typing import Any
 from requests import Session
 from src.api.base_api import BaseAPI
-from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, \
-    APIOfferWithMinPrice
+from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData
 from dataclasses import dataclass
 
 
@@ -41,7 +40,7 @@ class OzonAPI(BaseAPI):
             offer.update(attrs)
             offer['name_of_shop'] = self.shop_name
 
-        return [APIOfferWithMinPrice(**i) for i in offers]
+        return [APIOffer(**i) for i in offers]
 
     async def get_stocks(self) -> list[APIWarehouse]:
         # TODO подключить склады и остатки
@@ -57,7 +56,8 @@ class OzonAPI(BaseAPI):
                     'price': str(price.target_price),
                     'currency_code': 'RUB',
                     'auto_action_enabled': 'UNKNOWN',
-                    'price_strategy_enabled': 'UNKNOWN'
+                    'price_strategy_enabled': 'UNKNOWN',
+                    'min_price': str(price.min_price)
                 }
                 for price in data[i:i + chunk_size]
             ]
@@ -102,13 +102,12 @@ class OzonAPI(BaseAPI):
                     'sku': offer['offer_id'],
                     'name': offer['name'],
                     'photo': offer['primary_image'],
-                    'current_price': self.__str_to_float(offer['price']) ,
+                    'current_price': self.__str_to_float(offer['price']),
                     'remaining_stock': offer['stocks']['present'],
                     'min_price_in_market': self.__str_to_float(offer['min_ozon_price']),
                     'min_price_without_market': self.__str_to_float(offer['price_indexes']['external_index_data']['minimal_price']),
                     'attractive_price_threshold': self.__str_to_float(offer['recommended_price']),
-                    'market': 'ozon',
-                    'manual_min_price': self.__str_to_float(offer['min_price'])
+                    'market': 'ozon'
                 })
 
         return result

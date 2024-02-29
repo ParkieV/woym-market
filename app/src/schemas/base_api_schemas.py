@@ -33,11 +33,6 @@ class APIOffer:
     market: str = 'yandex'
 
 
-@dataclass(frozen=True)
-class APIOfferWithMinPrice(APIOffer):
-    manual_min_price: float | None = None
-
-
 @dataclass
 class APIWarehouseOffer:
     sku: str
@@ -59,6 +54,7 @@ class APIPriceChangeData:
     market: str
     name_of_shop: str
     target_price: Union[int, float, None]
+    min_price: float
 
     def is_valid_data(self) -> bool:
         return isinstance(self.target_price, (float, int))

@@ -104,7 +104,8 @@ async def update_yandex_offers_price(session: AsyncSession):
             sku=offer.sku,
             market=offer.market,
             name_of_shop=offer.name_of_shop,
-            target_price=offer.target_price
+            target_price=offer.target_price,
+            min_price=offer.manual_min_price
         )
         for offer in offers_db
     ]
@@ -129,7 +130,7 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
     await db.update_offers(session, df, mapping_columns=['sku', 'name_of_shop'])
 
 
-@error_handler('Ошибка импорта')
+# @error_handler('Ошибка импорта')
 async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None, user_id: int, file_extension: str = 'xlsx') -> None:
     async with async_session() as session:
         settings = await get_user_settings(session, user_id)
@@ -164,7 +165,6 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
         'note_2': '',
         'note_3': '',
     }, inplace=True)
-
 
     if len(set(df.columns) & required_fields) != len(required_fields):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные. Следующие колонки должны быть обязательно: {", ".join(BaseOffer.fields().values())}')
