@@ -105,7 +105,7 @@ async def update_yandex_offers_price(session: AsyncSession):
             market=offer.market,
             name_of_shop=offer.name_of_shop,
             target_price=offer.target_price,
-            min_price=offer.manual_min_price
+            min_price=offer.manual_min_price if offer.use_manual_min_price else offer.current_price * offer.auto_min_price / 100
         )
         for offer in offers_db
     ]
