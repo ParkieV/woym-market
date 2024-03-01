@@ -122,8 +122,6 @@ class OfferOut(OfferChange):
         orm_mode = True
 
 
-
-
 class OfferOutWithPriceScheme(OfferOut):
     pricing_scheme: PricingSchemeOut | None = None
 

@@ -58,7 +58,8 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
             )
 
     data['margin'] = data['profit'] / data['cost_price'] * 100
-    data['discount_base_price'] = data['current_price'] * 1.2
+
+    data = round_values(data)
 
     return data
 
@@ -157,3 +158,11 @@ def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0, file_extension: 
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, f'Файлы с расширением "{file_extension}" не поддерживаются')
 
     return pd.read_excel(io, engine=pd_engine[file_extension], sheet_name=sheet_name)
+
+
+def round_values(data: pd.DataFrame) -> pd.DataFrame:
+    df = data.copy()
+
+    df[['current_price', 'target_price', 'cost_price', 'total_price', 'discount_base_price', 'profit', 'margin', 'fby']] = df[['current_price', 'target_price', 'cost_price', 'total_price', 'discount_base_price', 'profit', 'margin', 'fby']].round()
+
+    return df

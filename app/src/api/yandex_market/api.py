@@ -3,11 +3,16 @@ import asyncio
 from typing import Any
 from fastapi import HTTPException, status
 from requests import Session, Response
+
+from logs import get_logger
 from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS, OFFERS_DETAIL, WAREHOUSES
 import pandas as pd
 import numpy as np
 from src.api.base_api import BaseAPI
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData
+
+
+logger = get_logger(__name__)
 
 
 class YandexMarketAPI(BaseAPI):
@@ -57,10 +62,8 @@ class YandexMarketAPI(BaseAPI):
             extended_offer.update(offer)
             result.append(extended_offer)
 
+        logger.info('Yandex offers collected')
         return [APIOffer(**offer) for offer in result]
-
-
-
 
     def _get_campaigns(self) -> dict[int, dict[str, Any]]:
         response = self.session.get('https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
@@ -123,6 +126,7 @@ class YandexMarketAPI(BaseAPI):
                     'yandex_volume': volume,
                     'photo': offer['pictures'][0] if len(offer['pictures']) > 0 else None,
                     'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,
+                    'discount_base_price': offer['basicPrice']['value'] * 1.2 if 'basicPrice' in offer else None,
                     'business_id': business_id
                 }
                 results.append(offer_data)
@@ -164,6 +168,7 @@ class YandexMarketAPI(BaseAPI):
                     )
             self.validate_response(response, body=body, raise_error=False)
 
+        logger.info('Yandex prices updated')
 
     async def _get_market_prices_report(self, business_id: int) -> dict[str, dict[str, Any]]:
         response = self.session.post('https://api.partner.market.yandex.ru/reports/prices/generate',

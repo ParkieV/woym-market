@@ -42,8 +42,9 @@ class BaseAPI(ABC):
         if response.status_code != 200:
             if raise_error:
                 self._raise_error(response.json(), response.status_code, body)
-            else:
-                logger.warning(f'status: {response.status_code} \ndetail: {response.json()} \nbody: {body}')
+
+            logger.warning(f'status: {response.status_code} \ndetail: {response.json()} \nbody: {body}')
+
         return response.json()
 
 

@@ -78,7 +78,7 @@ class OzonAPI(BaseAPI):
             # TODO обработать ошибки
             self.validate_response(response, raise_error=False, body=body)
 
-        logger.info('Ozon price changed')
+        logger.info('Ozon price updated')
 
     def _get_offers_identifiers(self) -> list[OfferIdentifier]:
         response = self.session.post('https://api-seller.ozon.ru/v2/product/list', headers=self.auth_headers)
@@ -114,7 +114,8 @@ class OzonAPI(BaseAPI):
                     'min_price_in_market': self.__str_to_float(offer['min_ozon_price']),
                     'min_price_without_market': self.__str_to_float(offer['price_indexes']['external_index_data']['minimal_price']),
                     'attractive_price_threshold': self.__str_to_float(offer['recommended_price']),
-                    'market': 'ozon'
+                    'market': 'ozon',
+                    'discount_base_price': self.__str_to_float(offer['old_price'])
                 })
 
         return result
