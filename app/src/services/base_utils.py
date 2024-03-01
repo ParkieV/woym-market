@@ -1,6 +1,9 @@
 from functools import wraps
 from fastapi.exceptions import HTTPException
 from fastapi import status
+from logs import get_logger
+
+logger = get_logger(__name__)
 
 
 def error_handler(default_message: str = 'Ошибка сервера'):
@@ -12,12 +15,11 @@ def error_handler(default_message: str = 'Ошибка сервера'):
             try:
                 return await func(*args, **kwargs)
             except HTTPException as e:
-                print(func)
-                print(e)
-                raise HTTPException(e.status_code, e.status_code)
+                logger.error(f'Error in func {func}: {e.detail}')
+                raise HTTPException(e.status_code, e.detail)
 
             except Exception as e:
-                print(e)
+                logger.error(f'Error in func {func}', exc_info=True)
                 raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, default_message)
 
         return wrapped

@@ -3,6 +3,9 @@ from requests import Session
 from src.api.base_api import BaseAPI
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData
 from dataclasses import dataclass
+from logs import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -40,6 +43,7 @@ class OzonAPI(BaseAPI):
             offer.update(attrs)
             offer['name_of_shop'] = self.shop_name
 
+        logger.info('Ozon offers collected')
         return [APIOffer(**i) for i in offers]
 
     async def get_stocks(self) -> list[APIWarehouse]:
@@ -71,7 +75,10 @@ class OzonAPI(BaseAPI):
                 json=body
             )
 
+            # TODO обработать ошибки
             self.validate_response(response, raise_error=False, body=body)
+
+        logger.info('Ozon price changed')
 
     def _get_offers_identifiers(self) -> list[OfferIdentifier]:
         response = self.session.post('https://api-seller.ozon.ru/v2/product/list', headers=self.auth_headers)
