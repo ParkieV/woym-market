@@ -156,3 +156,11 @@ async def get_unique_skus(session: AsyncSession) -> list[str]:
     query = select(Offer.sku).distinct()
     result = await session.execute(query)
     return [i[0] for i in result.all()]
+
+
+async def set_supplier_available(session: AsyncSession, skus: Iterable[str], value: bool) -> None:
+    for sku in skus:
+        stmp = update(Offer).where(Offer.sku.endswith(sku)).values(supplier_available=value)
+        await session.execute(stmp)
+        await session.commit()
+

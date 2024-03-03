@@ -62,6 +62,8 @@ class OfferChange(BaseOffer):
     self_width: float | None = Field(title='Ширина')
     self_height: float | None = Field(title='Высота')
 
+    supplier_available: bool = Field(title='Наличие у поставщика')
+
     dollar_cost_price: float | None = Field(title='Закупка у. е.', default=0)
     total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену', default=200)
     total_price_coeff: float = Field(title='Коэфициент расчетной цены', default=2.4)
@@ -105,6 +107,9 @@ class OfferOut(OfferChange):
     profit: float | None = Field(title='Прибыль (Текущая цена - закупка - FBY)')
     margin: float | None = Field(title='Окупаемость (Прибыль / закупка * 100)')
     fby: float | None = Field(title='Цена за FBY')
+
+    content_rating: float | None = Field(title='Контент рейтинг')
+    price_index: str | None = Field(title='Индекс цены')
 
     attractive_price_threshold: float | None = Field(title='Порог для привлекательной цены')
     moderately_attractive_price_threshold: float | None = Field(title='Порог для умеренно привлекательной цены')

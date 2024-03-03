@@ -84,3 +84,4 @@ async def get_user_by_login(login: str):
 #         data_dict = {key: val for key, val in new_data if val is not None and key not in 'competence_list'}
 #         await user.update(**data_dict)
 #         await session.commit()
+

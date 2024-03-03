@@ -37,11 +37,14 @@ class OzonAPI(BaseAPI):
         offers_identifiers = self._get_offers_identifiers()
         offers = self._get_offers_base_info(offers_identifiers)
         offers_attributes = self._get_offers_attributes(offers_identifiers)
+        offers_content_rating = self._get_content_ratings([offer['market_sku'] for offer in offers if offer['market_sku'] > 0])
 
         for offer in offers:
             attrs = offers_attributes.get(offer['sku'], None)
             offer.update(attrs)
             offer['name_of_shop'] = self.shop_name
+            offer['content_rating'] = offers_content_rating.get(offer['market_sku'], None)
+            del offer['market_sku']
 
         logger.info('Ozon offers collected')
         return [APIOffer(**i) for i in offers]
@@ -115,7 +118,9 @@ class OzonAPI(BaseAPI):
                     'min_price_without_market': self.__str_to_float(offer['price_indexes']['external_index_data']['minimal_price']),
                     'attractive_price_threshold': self.__str_to_float(offer['recommended_price']),
                     'market': 'ozon',
-                    'discount_base_price': self.__str_to_float(offer['old_price'])
+                    'discount_base_price': self.__str_to_float(offer['old_price']),
+                    'price_index': self.__translate_price_index(offer['price_indexes']['price_index']),
+                    'market_sku': offer['sku']
                 })
 
         return result
@@ -153,10 +158,42 @@ class OzonAPI(BaseAPI):
 
         return result
 
-    def get_content_ratings(self, skus: list[str]):
-        body = {
-            'skus': skus
+    def __translate_price_index(self, value):
+        samples = {
+            "WITHOUT_INDEX": 'Без индекса',
+            "PROFIT": 'Выгодный',
+            "AVG_PROFIT": 'Умеренный',
+            "NON_PROFIT": 'Невыгодный'
         }
-        response = self.session.post('https://api-seller.ozon.ru/v1/product/rating-by-sku', headers=self.auth_headers, json=body)
-        data = self.validate_response(response, body=body)
-        return {item['sku']: item['rating'] for item in data['products']}
+        return samples.get(value, None)
+
+
+    def _get_content_ratings(self, skus: list[int]):
+        chunk_size = 100
+        result = {}
+
+        for i in range(0, len(skus), chunk_size):
+            body = {
+                'skus': skus[i:i+chunk_size]
+            }
+            response = self.session.post('https://api-seller.ozon.ru/v1/product/rating-by-sku', headers=self.auth_headers, json=body)
+            data = self.validate_response(response, body=body)
+            result.update({item['sku']: item['rating'] for item in data['products']})
+
+        return result
+
+    def _get_stock_on_warehouses(self):
+        chunk_size = 1000
+        offset = 0
+        result = []
+
+        while True:
+            body = {
+                'limit': 1000,
+                'offset': offset,
+                'warehouse_type': 'ALL'
+            }
+            response = self.session.post('https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses', headers=self.auth_headers, json=body)
+
+            data = self.validate_response(response, True, body)
+

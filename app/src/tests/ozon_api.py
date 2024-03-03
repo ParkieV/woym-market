@@ -1,7 +1,7 @@
 from src.api.ozon.api import OzonAPI
 import pytest
 
-api = OzonAPI(token='a66f89c1-73ef-487b-a051-f39875312fa2', entity_id=532844, shop_name='CALMAR.PLUS')
+api = OzonAPI(token='a66f89c1-73ef-487b-a051-f39875312fa2', entity_id=532844, shop_name='SkrabPlus')
 
 
 pytest_plugins = ('pytest_asyncio',)

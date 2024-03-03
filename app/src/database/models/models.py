@@ -77,6 +77,10 @@ class Offer(Base):
     margin = Column(Float, nullable=True)
     fby = Column(Float, nullable=True)
 
+    content_rating = Column(Float, nullable=True)
+    price_index = Column(String, nullable=True)
+    supplier_available = Column(Boolean, default=False)
+
     attractive_price_threshold = Column(Float, nullable=True)
     moderately_attractive_price_threshold = Column(Float, nullable=True)
     best_place_wm = Column(String, nullable=True)
@@ -188,5 +192,6 @@ class OwnStorage(Base):
     sku = Column(String, unique=True, index=True, nullable=False)
 
     value = Column(Integer, default=0, nullable=False)
+
 
 

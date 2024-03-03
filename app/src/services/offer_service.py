@@ -221,11 +221,13 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
         mapping_columns.append('market')
 
     async with async_session() as session:
-        try:
-            await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
-        except Exception as e:
-            print(e)
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
+        db_skus = set([i.lstrip('0') for i in await db.get_unique_skus(session)])
+        import_skus = set(df['sku'].values.tolist())
+
+        await db.set_supplier_available(session, db_skus & import_skus, True)
+        await db.set_supplier_available(session, db_skus - import_skus, False)
+
+        await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
 
         await recalculate_values(session, settings)
 
