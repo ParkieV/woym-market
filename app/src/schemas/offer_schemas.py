@@ -110,6 +110,7 @@ class OfferOut(OfferChange):
 
     content_rating: float | None = Field(title='Контент рейтинг')
     price_index: str | None = Field(title='Индекс цены')
+    volume_profitability_ratio: float | None = Field(title='Коэффициент прибыльности от объёма')
 
     attractive_price_threshold: float | None = Field(title='Порог для привлекательной цены')
     moderately_attractive_price_threshold: float | None = Field(title='Порог для умеренно привлекательной цены')

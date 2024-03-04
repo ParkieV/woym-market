@@ -59,6 +59,12 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
 
     data['margin'] = data['profit'] / data['cost_price'] * 100
 
+    data['volume_profitability_ratio'] = np.where(
+        data['volume'] == 0,
+        0,
+        data['profit'] / data['volume']
+    )
+
     data = round_values(data)
 
     return data

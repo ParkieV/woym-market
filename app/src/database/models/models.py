@@ -80,6 +80,7 @@ class Offer(Base):
     content_rating = Column(Float, nullable=True)
     price_index = Column(String, nullable=True)
     supplier_available = Column(Boolean, default=False)
+    volume_profitability_ratio = Column(Float, nullable=True, default=None)
 
     attractive_price_threshold = Column(Float, nullable=True)
     moderately_attractive_price_threshold = Column(Float, nullable=True)
