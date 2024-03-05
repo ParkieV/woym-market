@@ -81,6 +81,7 @@ class Offer(Base):
     price_index = Column(String, nullable=True)
     supplier_available = Column(Boolean, default=False)
     volume_profitability_ratio = Column(Float, nullable=True, default=None)
+    days_to_zero_profit = Column(Float, nullable=True, default=None)
 
     attractive_price_threshold = Column(Float, nullable=True)
     moderately_attractive_price_threshold = Column(Float, nullable=True)
@@ -184,6 +185,7 @@ class Market(Base):
     type = Column(Enum(APITypes))
 
     tax = Column(Float, default=0)
+    long_term_storage_cost = Column(Float, nullable=True, default=None)
 
 
 class OwnStorage(Base):

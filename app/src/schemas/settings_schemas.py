@@ -64,10 +64,12 @@ class MarketOut(BaseModel):
     name: str
     tax: float = 0
     type: APITypes
+    long_term_storage_cost: float | None
 
 
 class MarketUpdate(BaseModel):
     tax: float = 0
+    long_term_storage_cost: float | None = None
 
 
 class MarketFullOut(MarketOut):
