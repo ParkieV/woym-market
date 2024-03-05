@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, Depends
 from src.schemas.user_schemas import *
 from src.services.user_service import *
-from src.services.auth_utils import get_current_user
+from src.dependencies.users import get_current_user
 
 user_router = APIRouter(
     tags=['User'],
@@ -9,6 +9,12 @@ user_router = APIRouter(
 )
 
 
+@user_router.get('/me', response_model=UserOut | None)
+async def get_current_authorized_user(current_user=Depends(get_current_user)):
+    if current_user is None:
+        return current_user
+
+    return UserOut.model_validate(current_user, from_attributes=True)
 
 
 # TODO refactor this route

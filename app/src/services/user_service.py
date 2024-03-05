@@ -2,8 +2,8 @@ import src.services.auth_utils as auth
 from src.services.settings_service import create_logs, create_settings
 
 
-async def registration_user(login: str, password: str):
-    new_user = await auth.reg_user(login, password)
+async def registration_user(login: str, password: str, is_staff: bool):
+    new_user = await auth.reg_user(login, password, is_staff)
     settings = await create_settings(new_user.id)
     logs = await create_logs(new_user.id)
     return new_user

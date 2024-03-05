@@ -7,12 +7,14 @@ from pydantic import BaseModel
 class UserCreate(BaseModel):
     login: str
     password: str
+    is_staff: bool
 
 
 class UserOut(BaseModel):
     id: int
     login: str
     created_at: datetime
+    is_staff: bool
 
     class Config:
         orm_mode = True

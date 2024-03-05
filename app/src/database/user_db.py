@@ -7,7 +7,7 @@ from .utils import row_list_to_dict_list, row_to_dict
 from .models.models import Users, Settings
 
 
-async def reg_user(login: str, password: str) -> Users | None:
+async def reg_user(login: str, password: str, is_staff: bool) -> Users | None:
     session: AsyncSession
     async with async_session() as session:
         check = await session.execute(
@@ -26,7 +26,8 @@ async def reg_user(login: str, password: str) -> Users | None:
 
         new_user = Users(
             login=login,
-            password=password
+            password=password,
+            is_staff=is_staff
         )
         session.add(new_user)
         await session.commit()

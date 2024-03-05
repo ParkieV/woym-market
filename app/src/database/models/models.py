@@ -25,6 +25,7 @@ class Users(Base):
     login = Column(String, unique=True)
     password = Column(String)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+    is_staff = Column(Boolean, default=False)
 
 
 class Settings(Base):
