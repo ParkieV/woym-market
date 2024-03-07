@@ -3,16 +3,26 @@
     import Header from "$lib/components/sidebar/Header.svelte";
     import Link from "$lib/components/sidebar/Link.svelte";
     import Spacer from "$lib/components/sidebar/Spacer.svelte";
-    import { setContext } from "svelte";
+    import { user } from "$lib/user";
+    import { onMount, setContext } from "svelte";
     import { writable } from "svelte/store";
+    import { fetchUser } from "$lib/user";
 
     let collapsed = writable(true);
     setContext("collapsed", collapsed);
+
+    let name = "mp-auto-price";
+    $: name = $user?.login ?? "mp-auto-price";
+
+    onMount(() => {
+        $user = undefined;
+        fetchUser();
+    });
 </script>
 
 <div id="wrapper">
     <nav class:collapsed={$collapsed}>
-        <Header />
+        <Header text={name} />
         <Link text="Товары" icon="/house.svg" path="/app" />
         <Link text="Мои остатки" icon="/warehouse.svg" path="/app/own_storage" />
         <Link text="FBO остатки" icon="/package.svg" path="/app/fbo_storage" />

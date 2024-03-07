@@ -15,9 +15,10 @@
     import { getColumns } from "$lib/components/datagrid/columns";
     import Grid from "$lib/components/datagrid/Grid.svelte";
     import type { Writable } from "svelte/store";
+    import { userCanModify } from "$lib/user";
 
     let data: FboStocks[] = [];
-    let changes = new ChangeList<FboStocks, "sku">();
+    let changes = new ChangeList<FboStocks, "id">();
     let filter: (storage: OfferBase) => boolean = () => true;
 
     const columns = fboStocksColumns();
@@ -31,14 +32,16 @@
                 detailGridOptions: {
                     columnDefs: getColumns(detailColumns, {
                         onPhotoClicked: () => {},
-                        isRowChanged: () => false
+                        isRowChanged: () => false,
+                        readonly: !$userCanModify
                     }),
+                    autoSizeStrategy: { type: "fitCellContents" },
                     suppressMovableColumns: true,
                     enableRangeSelection: true,
                     enableRangeHandle: true,
                     getContextMenuItems: () => ["cut", "copy", "paste"],
                     onCellValueChanged: _ => {
-                        changes.add(data.sku);
+                        changes.add(data.id);
                         changes = changes;
                         api.redrawRows();
                     }
@@ -57,7 +60,7 @@
     }
 
     async function save() {
-        let ok = await patchFboStocks(data.filter(x => changes.isChanged(x.sku)));
+        let ok = await patchFboStocks(data.filter(x => changes.isChanged(x.id)));
         if (ok) await refreshData();
     }
 
@@ -71,7 +74,7 @@
 
 <Toolbar on:filterChanged={f => (filter = f.detail)} />
 <Grid
-    key="sku"
+    key="id"
     grid_name="fbo_storage"
     {columns}
     bind:data

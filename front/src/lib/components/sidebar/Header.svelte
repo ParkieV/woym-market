@@ -3,6 +3,7 @@
     import type { Writable } from "svelte/store";
     import { fade } from "svelte/transition";
 
+    export let text = "mp-auto-price";
     let collapsed = getContext<Writable<boolean>>("collapsed");
 </script>
 
@@ -11,7 +12,7 @@
         <img src="/list.svg" alt="" />
     </button>
     {#if !$collapsed}
-        <h1 out:fade={{ delay: 500, duration: 0 }}>mp-auto-price</h1>
+        <h1 out:fade={{ delay: 500, duration: 0 }}>{text}</h1>
     {/if}
 </header>
 

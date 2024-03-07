@@ -30,6 +30,7 @@ export function getColumns(
     init: {
         onPhotoClicked: (url: string) => void;
         isRowChanged: (row: any) => boolean;
+        readonly: boolean;
     }
 ): ColDef[] {
     let colDefs = columns.map(col => {
@@ -41,11 +42,13 @@ export function getColumns(
             } satisfies ColGroupDef;
         }
 
+        let editable = init.readonly ? false : col.editable === true;
+
         let colDef: ColDef = {
             field: col.key,
             headerName: col.header,
-            editable: col.editable,
-            cellClass: cellClass(col.editable === true, col.data_type),
+            editable,
+            cellClass: cellClass(editable, col.data_type),
             wrapHeaderText: true,
             columnGroupShow: col.columnGroupShow,
             headerTooltip: col.tooltip,
@@ -125,6 +128,7 @@ function postfix(data_type: string): string {
 /** Determines which precision to use for numeric cell. */
 function precision(data_type: NumberDataType): number {
     if (data_type == "int") return 0;
+    else if (data_type == "ruble") return 0;
     return 2;
 }
 

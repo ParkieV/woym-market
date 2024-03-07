@@ -7,6 +7,7 @@
     import { fetchLogs } from "$lib/data/settings";
     import type { ChangeList } from "$lib/components/datagrid/changes";
     import { createEventDispatcher, getContext, onMount } from "svelte";
+    import { userCanModify } from "$lib/user";
 
     export let changes: ChangeList<T, K>;
     let updated_at: Date | null = null;
@@ -54,10 +55,14 @@
         >{`Последнее обновление:\n${updated_at ? updated_at.toLocaleString("en-GB") : "N/A"}`}</span
     >
     <div style:flex="1" />
-    <button class="cancel" on:click={cancelEdits} disabled={!changes.hasChanges}> Отмена </button>
-    <button class="confirm" on:click={confirmSave} disabled={!changes.hasChanges}>
-        Сохранить
-    </button>
+    {#if $userCanModify}
+        <button class="cancel" on:click={cancelEdits} disabled={!changes.hasChanges}>
+            Отмена
+        </button>
+        <button class="confirm" on:click={confirmSave} disabled={!changes.hasChanges}>
+            Сохранить
+        </button>
+    {/if}
 </footer>
 
 <style lang="scss">
@@ -66,7 +71,8 @@
     footer {
         display: flex;
         align-items: center;
-        padding: 16px;
+        height: 70px;
+        padding: 0 16px;
         gap: 16px;
         background-color: #ebebeb;
         margin-top: auto;

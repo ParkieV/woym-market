@@ -189,6 +189,21 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                     key: "target_price",
                     header: "Целевая цена",
                     data_type: "float"
+                },
+                {
+                    key: "volume_profitability_ratio",
+                    header: "Коэффициент прибыльности от объёма",
+                    data_type: "float"
+                },
+                {
+                    key: "days_to_zero_profit",
+                    header: "Дней до нулевой прибыли",
+                    data_type: "float"
+                },
+                {
+                    key: "price_index",
+                    header: "Индекс цены",
+                    data_type: "string"
                 }
             ]
         },
@@ -196,6 +211,17 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
             key: "remaining_stock",
             header: "Остатки на складах",
             data_type: "int"
+        },
+        {
+            key: "content_rating",
+            header: "Контент рейтинг",
+            data_type: "float"
+        },
+        {
+            key: "supplier_available",
+            header: "Наличие у поставщика",
+            data_type: "boolean",
+            editable: true
         },
         { header: "Скрыт", key: "hidden", data_type: "boolean", editable: true }
     ];
