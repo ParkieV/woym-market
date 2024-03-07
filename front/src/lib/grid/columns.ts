@@ -1,10 +1,10 @@
 import type { ValueGetterParams } from "ag-grid-enterprise";
-import type { Column, ColumnGroup } from "./components/datagrid/columns";
-import type { Template } from "./data/templates";
-import type { FboStocks } from "./data/fbo_storage";
-import type { Offer } from "./data/offers";
-import type { Market } from "./data/markets";
-import type { OwnStorage } from "./data/own_storage";
+import type { Column, ColumnGroup } from "../components/datagrid/columns";
+import type { Template } from "$lib/data/templates";
+import type { FboStocks } from "$lib/data/fbo_storage";
+import type { Offer } from "$lib/data/offers";
+import type { Market } from "$lib/data/markets";
+import type { OwnStorage } from "$lib/data/own_storage";
 
 export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
     return [

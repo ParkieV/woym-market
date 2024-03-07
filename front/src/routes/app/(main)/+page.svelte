@@ -3,12 +3,12 @@
     import { getContext, onMount } from "svelte";
     import { type Offer, fetchOfferList, patchOfferList } from "$lib/data/offers";
     import { ChangeList } from "$lib/components/datagrid/changes";
-    import Toolbar from "./Toolbar.svelte";
     import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
     import Footer from "./Footer.svelte";
     import { fetchTemplates, type Template } from "$lib/data/templates";
-    import { offerColumns } from "$lib/columns";
+    import { offerColumns } from "$lib/grid/columns";
     import type { Writable } from "svelte/store";
+    import { type FilterParams, offerBaseFilter } from "$lib/grid/filters";
 
     let data: Offer[] = [];
     let changes = new ChangeList<Offer, "id">();
@@ -35,25 +35,11 @@
         refreshData();
     });
 
-    let filter: (offer: Offer) => boolean = () => true;
+    let filterParams = getContext<Writable<FilterParams>>("filterParams");
+    $: filter = offerBaseFilter($filterParams);
 </script>
 
-<main>
-    <Toolbar
-        on:filterChanged={e => {
-            filter = e.detail;
-        }}
-    />
-    {#if columns.length !== 0}
-        <Grid grid_name="offers" key="id" {columns} bind:data bind:changes bind:filter />
-    {/if}
-    <Footer bind:changes on:reload={refreshData} on:save={save} />
-</main>
-
-<style lang="scss">
-    main {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-    }
-</style>
+{#if columns.length !== 0}
+    <Grid grid_name="offers" key="id" {columns} bind:data bind:changes bind:filter />
+{/if}
+<Footer bind:changes on:reload={refreshData} on:save={save} />
