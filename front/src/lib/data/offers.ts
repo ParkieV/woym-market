@@ -3,6 +3,7 @@ import { fetchAuthenticated } from "$lib/auth";
 
 /** Basic information about the offer. */
 export type OfferBase = {
+    id: number;
     sku: string;
     name: string;
     photo: string | null;

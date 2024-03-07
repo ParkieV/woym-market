@@ -11,7 +11,7 @@
     import type { Writable } from "svelte/store";
 
     let data: Offer[] = [];
-    let changes = new ChangeList<Offer, "sku">();
+    let changes = new ChangeList<Offer, "id">();
     let columns: (Column | ColumnGroup)[] = [];
 
     /** Refreshes data displayed in the grid. */
@@ -22,7 +22,7 @@
     }
 
     async function save() {
-        let ok = await patchOfferList(data.filter(x => changes.isChanged(x.sku)));
+        let ok = await patchOfferList(data.filter(x => changes.isChanged(x.id)));
         if (ok) await refreshData();
     }
 
@@ -45,7 +45,7 @@
         }}
     />
     {#if columns.length !== 0}
-        <Grid grid_name="offers" key="sku" {columns} bind:data bind:changes bind:filter />
+        <Grid grid_name="offers" key="id" {columns} bind:data bind:changes bind:filter />
     {/if}
     <Footer bind:changes on:reload={refreshData} on:save={save} />
 </main>
