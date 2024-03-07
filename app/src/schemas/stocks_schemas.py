@@ -4,7 +4,7 @@ from src.schemas.settings_schemas import MarketOut
 
 class BaseWarehouse(BaseModel):
     name: str
-    warehouse_id_in_marketplace: int
+
 
 
 class WarehouseCreate(BaseWarehouse):

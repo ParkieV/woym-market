@@ -37,7 +37,8 @@ class OzonAPI(BaseAPI):
         offers_identifiers = self._get_offers_identifiers()
         offers = self._get_offers_base_info(offers_identifiers)
         offers_attributes = self._get_offers_attributes(offers_identifiers)
-        offers_content_rating = self._get_content_ratings([offer['market_sku'] for offer in offers if offer['market_sku'] > 0])
+        offers_content_rating = self._get_content_ratings(
+            [offer['market_sku'] for offer in offers if offer['market_sku'] > 0])
 
         for offer in offers:
             attrs = offers_attributes.get(offer['sku'], None)
@@ -50,8 +51,30 @@ class OzonAPI(BaseAPI):
         return [APIOffer(**i) for i in offers]
 
     async def get_stocks(self) -> list[APIWarehouse]:
-        # TODO подключить склады и остатки
-        return []
+        warehouse_stocks = self._get_stock_on_warehouses()
+        offer_ids = self._market_sku_to_offer_id()
+        temp: dict[str, dict] = dict()
+
+        for warehouse_stock in warehouse_stocks:
+            if warehouse_stock['market_sku'] not in offer_ids:
+                continue
+
+            stock = APIWarehouseOffer(
+                name_of_shop=self.shop_name,
+                sku=offer_ids[warehouse_stock['market_sku']],
+                current_stock=warehouse_stock['value']
+            )
+
+            if warehouse_stock['warehouse_name'] not in temp:
+                temp[warehouse_stock['warehouse_name']] = {
+                    'name': warehouse_stock['warehouse_name'],
+                    'market': 'ozon',
+                    'offers': [stock]
+                }
+            else:
+                temp[warehouse_stock['warehouse_name']]['offers'].append(stock)
+
+        return [APIWarehouse(**i) for i in temp.values()]
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 1000
@@ -115,7 +138,8 @@ class OzonAPI(BaseAPI):
                     'current_price': self.__str_to_float(offer['price']),
                     'remaining_stock': offer['stocks']['present'],
                     'min_price_in_market': self.__str_to_float(offer['min_ozon_price']),
-                    'min_price_without_market': self.__str_to_float(offer['price_indexes']['external_index_data']['minimal_price']),
+                    'min_price_without_market': self.__str_to_float(
+                        offer['price_indexes']['external_index_data']['minimal_price']),
                     'attractive_price_threshold': self.__str_to_float(offer['recommended_price']),
                     'market': 'ozon',
                     'discount_base_price': self.__str_to_float(offer['old_price']),
@@ -167,16 +191,16 @@ class OzonAPI(BaseAPI):
         }
         return samples.get(value, None)
 
-
     def _get_content_ratings(self, skus: list[int]):
         chunk_size = 100
         result = {}
 
         for i in range(0, len(skus), chunk_size):
             body = {
-                'skus': skus[i:i+chunk_size]
+                'skus': skus[i:i + chunk_size]
             }
-            response = self.session.post('https://api-seller.ozon.ru/v1/product/rating-by-sku', headers=self.auth_headers, json=body)
+            response = self.session.post('https://api-seller.ozon.ru/v1/product/rating-by-sku',
+                                         headers=self.auth_headers, json=body)
             data = self.validate_response(response, body=body)
             result.update({item['sku']: item['rating'] for item in data['products']})
 
@@ -189,11 +213,32 @@ class OzonAPI(BaseAPI):
 
         while True:
             body = {
-                'limit': 1000,
+                'limit': chunk_size,
                 'offset': offset,
                 'warehouse_type': 'ALL'
             }
-            response = self.session.post('https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses', headers=self.auth_headers, json=body)
+            response = self.session.post('https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses',
+                                         headers=self.auth_headers, json=body)
 
             data = self.validate_response(response, True, body)
 
+            if not data['result']['rows']:
+                break
+
+            for stock in data['result']['rows']:
+                stock_data = {
+                    'value': stock['free_to_sell_amount'],
+                    'market_sku': stock['sku'],
+                    'warehouse_name': stock['warehouse_name']
+                }
+                result.append(stock_data)
+
+            offset += chunk_size
+
+        return result
+
+    def _market_sku_to_offer_id(self) -> dict[int, str]:
+        offers_identifiers = self._get_offers_identifiers()
+        offers = self._get_offers_base_info(offers_identifiers)
+
+        return {offer['market_sku']: offer['sku'] for offer in offers if offer['market_sku'] != 0}
