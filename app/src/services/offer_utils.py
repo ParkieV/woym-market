@@ -59,7 +59,7 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
             )
             data['days_to_zero_profit'] = np.where(
                 ((data['market'] == market.type) & (data['name_of_shop'] == market.name)),
-                data['profit'] / market.long_term_storage_cost,
+                data['profit'] / (market.long_term_storage_cost or np.nan),
                 data['days_to_zero_profit']
             )
 
