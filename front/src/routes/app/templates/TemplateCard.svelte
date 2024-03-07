@@ -1,6 +1,7 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
     import type { Template } from "$lib/data/templates";
+    import { userCanModify } from "$lib/user";
 
     export let template: Template;
 
@@ -29,6 +30,9 @@
                     type="checkbox"
                     bind:checked={template[toggle_field]}
                     on:input={() => dispatch("changed")}
+                    on:click={e => {
+                        if (!$userCanModify) e.preventDefault();
+                    }}
                 />
                 <span>{ToggleFieldNames[toggle_field]}</span>
             </label>
@@ -48,6 +52,7 @@
                         template.n = 1;
                     }
                 }}
+                readonly={!$userCanModify}
             />
         </label>
         <label>
@@ -62,6 +67,7 @@
                         template.m = 0;
                     }
                 }}
+                readonly={!$userCanModify}
             />
         </label>
     </ul>

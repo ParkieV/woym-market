@@ -2,6 +2,7 @@
     import { fetchSettings, patchSettings, type Settings } from "$lib/data/settings";
     import { onMount } from "svelte";
     import NumberInput from "./NumberInput.svelte";
+    import { userCanModify } from "$lib/user";
 
     let settings: Settings | undefined = undefined;
 
@@ -24,17 +25,24 @@
         {#if settings}
             <section>
                 <h2>Основное</h2>
-                <NumberInput label="Текущий курс" min={0} bind:value={settings.rate} />
+                <NumberInput
+                    label="Текущий курс"
+                    min={0}
+                    readonly={!$userCanModify}
+                    bind:value={settings.rate}
+                />
                 <NumberInput
                     label="Скидка на товары (%)"
                     min={0}
                     max={99}
+                    readonly={!$userCanModify}
                     bind:value={settings.discount_purchase}
                 />
                 <NumberInput
                     label="Комиссия за продажу в FBY (%)"
                     min={0}
                     max={99}
+                    readonly={!$userCanModify}
                     bind:value={settings.fby_sales_commission}
                 />
             </section>
@@ -45,6 +53,7 @@
                         label={`${market.name} (${market.type})`}
                         min={0}
                         max={99}
+                        readonly={!$userCanModify}
                         bind:value={market.tax}
                     />
                 {/each}
@@ -53,7 +62,9 @@
     </form>
     <footer>
         <div style:flex="1" />
-        <button class="confirm" {disabled} on:click={ok}>Сохранить</button>
+        {#if $userCanModify}
+            <button class="confirm" {disabled} on:click={ok}>Сохранить</button>
+        {/if}
     </footer>
 </main>
 
@@ -93,7 +104,8 @@
         > footer {
             display: flex;
             align-items: center;
-            padding: 16px;
+            height: 70px;
+            padding: 0 16px;
             gap: 16px;
             background-color: #ebebeb;
             > button {

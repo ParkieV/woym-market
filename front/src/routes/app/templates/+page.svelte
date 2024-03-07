@@ -2,6 +2,7 @@
     import { onMount } from "svelte";
     import TemplateCard from "./TemplateCard.svelte";
     import { fetchTemplates, patchTemplates, type Template } from "$lib/data/templates";
+    import { userCanModify } from "$lib/user";
 
     let templates: Template[] = [];
     let changed = new Set<number>();
@@ -42,7 +43,9 @@
         </ul>
     </div>
     <footer>
-        <button on:click={save} disabled={changed.size === 0}>Сохранить</button>
+        {#if $userCanModify}
+            <button on:click={save} disabled={changed.size === 0}>Сохранить</button>
+        {/if}
     </footer>
 </main>
 
@@ -83,7 +86,8 @@
             justify-content: end;
             align-items: center;
             margin: 0 -20px -20px -20px;
-            padding: 16px;
+            height: 70px;
+            padding: 0 16px;
             gap: 16px;
             background-color: #ebebeb;
             button {

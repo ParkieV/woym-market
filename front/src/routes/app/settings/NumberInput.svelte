@@ -3,11 +3,12 @@
     export let max: number | undefined = undefined;
     export let min: number | undefined = undefined;
     export let value: number;
+    export let readonly: boolean = false;
 </script>
 
 <label>
     <span>{label}</span>
-    <input type="number" {min} {max} step="any" bind:value />
+    <input type="number" {min} {max} step="any" {readonly} bind:value />
 </label>
 
 <style lang="scss">

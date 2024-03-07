@@ -1,6 +1,6 @@
 <script lang="ts" generics="T, K extends keyof T">
     import { getState as getGridState, gridStateSources, setState as setGridState } from "./state";
-
+    import { userCanModify } from "$lib/user";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import { getColumns, type Column, type ColumnGroup } from "./columns";
     import { ChangeList } from "$lib/components/datagrid/changes";
@@ -43,7 +43,8 @@
             onPhotoClicked: url => (selected_image = url),
             isRowChanged: (value: T) => {
                 return changes.isChanged(value[key]);
-            }
+            },
+            readonly: !$userCanModify
         });
 
         const initialState = await getGridState(grid_name);

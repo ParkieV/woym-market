@@ -15,6 +15,7 @@
     import { getColumns } from "$lib/components/datagrid/columns";
     import Grid from "$lib/components/datagrid/Grid.svelte";
     import type { Writable } from "svelte/store";
+    import { userCanModify } from "$lib/user";
 
     let data: FboStocks[] = [];
     let changes = new ChangeList<FboStocks, "sku">();
@@ -31,7 +32,8 @@
                 detailGridOptions: {
                     columnDefs: getColumns(detailColumns, {
                         onPhotoClicked: () => {},
-                        isRowChanged: () => false
+                        isRowChanged: () => false,
+                        readonly: !$userCanModify
                     }),
                     suppressMovableColumns: true,
                     enableRangeSelection: true,

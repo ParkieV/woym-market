@@ -1,6 +1,7 @@
 <script lang="ts">
     import ExportWindow from "$lib/components/windows/ExportWindow.svelte";
     import ImportWindow from "$lib/components/windows/ImportWindow.svelte";
+    import { userCanModify } from "$lib/user";
     import { createEventDispatcher } from "svelte";
 
     let import_open = false;
@@ -9,11 +10,15 @@
     let dispatch = createEventDispatcher<{ import: void }>();
 </script>
 
-<ImportWindow bind:open={import_open} on:import={() => dispatch("import")} />
 <ExportWindow bind:open={export_open} />
+{#if $userCanModify}
+    <ImportWindow bind:open={import_open} on:import={() => dispatch("import")} />
+{/if}
 <menu>
     <button on:click={() => (export_open = true)}>Экспорт</button>
-    <button on:click={() => (import_open = true)}>Импорт</button>
+    {#if $userCanModify}
+        <button on:click={() => (import_open = true)}>Импорт</button>
+    {/if}
 </menu>
 
 <style lang="scss">
