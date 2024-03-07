@@ -128,6 +128,7 @@ function postfix(data_type: string): string {
 /** Determines which precision to use for numeric cell. */
 function precision(data_type: NumberDataType): number {
     if (data_type == "int") return 0;
+    else if (data_type == "ruble") return 0;
     return 2;
 }
 
