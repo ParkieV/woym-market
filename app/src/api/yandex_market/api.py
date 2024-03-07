@@ -233,7 +233,6 @@ class YandexMarketAPI(BaseAPI):
             ]
 
             warehouse = APIWarehouse(
-                warehouse_id=warehouse_id,
                 market='yandex',
                 offers=offers,
                 name=warehouses[warehouse_id]['name']

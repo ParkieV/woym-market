@@ -158,7 +158,6 @@ class Warehouse(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
 
     name = Column(String)
-    warehouse_id_in_marketplace = Column(Integer)
     market = Column(String)
 
 

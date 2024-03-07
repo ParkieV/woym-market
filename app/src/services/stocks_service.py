@@ -21,7 +21,6 @@ async def update_warehouses_and_stocks():
         for warehouse in stocks:
             warehouse_db, _ = await db.update_or_create_warehouse(session, WarehouseCreate(
                     name=warehouse.name,
-                    warehouse_id_in_marketplace=warehouse.warehouse_id,
                     market=warehouse.market
                 ))
 
@@ -41,24 +40,6 @@ async def update_warehouses_and_stocks():
                     offer_id=offer.id
                 )
                 await db.update_or_create_offer_stock(session, offer_stock_create)
-
-
-        # for warehouse in stocks:
-        #     warehouse_db, _ = await db.update_or_create_warehouse(session, WarehouseCreate(
-        #         name=warehouse.name,
-        #         warehouse_id_in_marketplace=warehouse.warehouse_id,
-        #         market=warehouse.market
-        #     ))
-        #
-        #     for offer_stock in warehouse.offers:
-        #         offer = await offer_db.get_offer(session, {'sku': offer_stock.sku, 'name_of_shop': offer_stock.name_of_shop, 'market': warehouse.market})
-        #
-        #         offer_stock_create = OfferStockCreate(
-        #             current_stock=offer_stock.current_stock,
-        #             warehouse_id=warehouse_db.id,
-        #             offer_id=offer.id
-        #         )
-        #         await db.update_or_create_offer_stock(session, offer_stock_create)
 
         for sku in await offer_db.get_unique_skus(session):
             await db.update_or_create_own_storage(session, OwnStorageCreate(sku=sku))

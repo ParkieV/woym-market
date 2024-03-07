@@ -47,7 +47,6 @@ class APIWarehouseOffer:
 
 @dataclass
 class APIWarehouse:
-    warehouse_id: int
     market: str
     name: str
     offers: list[APIWarehouseOffer]

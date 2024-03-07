@@ -83,7 +83,7 @@ async def update_or_create_warehouse(session: AsyncSession, data: WarehouseCreat
         session,
         Warehouse,
         data,
-        and_(Warehouse.market==data.market, Warehouse.warehouse_id_in_marketplace==data.warehouse_id_in_marketplace),
+        and_(Warehouse.market==data.market, Warehouse.name==data.name),
         WarehouseOut
     )
 
