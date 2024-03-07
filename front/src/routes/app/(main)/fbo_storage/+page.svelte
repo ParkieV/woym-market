@@ -35,6 +35,7 @@
                         isRowChanged: () => false,
                         readonly: !$userCanModify
                     }),
+                    autoSizeStrategy: { type: "fitCellContents" },
                     suppressMovableColumns: true,
                     enableRangeSelection: true,
                     enableRangeHandle: true,
