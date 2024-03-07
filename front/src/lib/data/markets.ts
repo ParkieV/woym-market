@@ -7,6 +7,7 @@ export type Market = {
     name: string;
     type: string;
     tax: number;
+    long_term_storage_cost: number;
 };
 
 export async function getStores(): Promise<Market[]> {

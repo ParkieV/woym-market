@@ -3,8 +3,9 @@
     import { onMount } from "svelte";
     import NumberInput from "./NumberInput.svelte";
     import { userCanModify } from "$lib/user";
+    import type { Market } from "$lib/data/markets";
 
-    let settings: Settings | undefined = undefined;
+    let settings: (Settings & { markets: Market[] }) | undefined = undefined;
 
     async function ok() {
         if (!settings) return;
@@ -48,13 +49,26 @@
             </section>
             <section>
                 <h2>Налоги</h2>
-                {#each settings.taxes as market}
+                <h3>В процентах</h3>
+                {#each settings.markets as market}
                     <NumberInput
                         label={`${market.name} (${market.type})`}
                         min={0}
                         max={99}
                         readonly={!$userCanModify}
                         bind:value={market.tax}
+                    />
+                {/each}
+            </section>
+            <section>
+                <h2>Цена длительного хранения</h2>
+                <h3>Рублей за литр в день</h3>
+                {#each settings.markets as market}
+                    <NumberInput
+                        label={`${market.name} (${market.type})`}
+                        min={0}
+                        readonly={!$userCanModify}
+                        bind:value={market.long_term_storage_cost}
                     />
                 {/each}
             </section>
@@ -95,8 +109,13 @@
                 gap: 12px;
 
                 > h2 {
-                    font-size: 24px;
-                    padding: 20px 20px 0 0;
+                    font-size: 20px;
+                    padding: 12px 0 0 0;
+                }
+                > h3 {
+                    font-size: 16px;
+                    margin-top: -10px;
+                    font-weight: 400;
                 }
             }
         }
