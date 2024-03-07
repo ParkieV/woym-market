@@ -78,6 +78,7 @@ async def update_offers(user_id: int):
     to_delete = offers_db_identifiers - yandex_offers_identifiers
 
     to_update_df = pd.merge(yandex_offers_df, pd.DataFrame(to_update, columns=mapping_fields), how='inner')
+    to_update_df[['best_place_wm', 'best_place_im', 'photo']] = to_update_df[['best_place_wm', 'best_place_im', 'photo']].astype('string')
     to_create_df = pd.merge(yandex_offers_df, pd.DataFrame(to_create, columns=mapping_fields), how='inner')
     to_create_df = await utils.build_offers_data(to_create_df, settings, setup_mode=True)
     to_delete_df = pd.DataFrame(to_delete, columns=mapping_fields)
