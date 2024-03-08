@@ -47,6 +47,8 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
 
     data = await calculate_price(data)
 
+    data['market_discount_in_percent'] = 100 - data['your_price_for_buyers'] * 100 / data['current_price']
+
     data['profit'] = data['current_price'] - data['fby'] - data['cost_price']
     data['days_to_zero_profit'] = np.nan
 

@@ -112,6 +112,7 @@ class OfferOut(OfferChange):
     price_index: str | None = Field(title='Индекс цены')
     volume_profitability_ratio: float | None = Field(title='Коэффициент прибыльности от объёма')
     days_to_zero_profit: float | None = Field(title='Дней до нулевой прибыли')
+    market_discount_in_percent: float | None = Field(title='Скидка маркета в %')
 
     attractive_price_threshold: float | None = Field(title='Порог для привлекательной цены')
     moderately_attractive_price_threshold: float | None = Field(title='Порог для умеренно привлекательной цены')
