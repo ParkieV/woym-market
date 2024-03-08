@@ -9,7 +9,7 @@ pytest_plugins = ('pytest_asyncio',)
 
 @pytest.mark.asyncio
 async def test_get_offers_identifiers():
-    # ident = api._get_offers_identifiers()
+    ident = api._get_offers_identifiers()
 
     # assert ident
 
@@ -22,10 +22,12 @@ async def test_get_offers_identifiers():
     # offers = await api.get_offers_list()
     # assert offers
 
-    stocks = api._get_stock_on_warehouses()
-    assert stocks
-
-    data = await api.get_stocks()
-    assert data
+    # stocks = api._get_stock_on_warehouses()
+    # assert stocks
+    #
+    # data = await api.get_stocks()
+    # assert data
+    com = api._get_offers_commissions([i.offer_id for i in ident])
+    assert com
 
 

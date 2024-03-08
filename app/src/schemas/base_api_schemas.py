@@ -31,6 +31,7 @@ class APIOffer:
     min_price_in_market: float | None = None
     min_general_markets_price: float | None = None
     your_price_for_buyers: float | None = None
+    fby: float | None = None
 
     content_rating: float | None = None
     price_index: float | None = None

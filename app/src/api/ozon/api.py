@@ -39,11 +39,13 @@ class OzonAPI(BaseAPI):
         offers_attributes = self._get_offers_attributes(offers_identifiers)
         offers_content_rating = self._get_content_ratings(
             [offer['market_sku'] for offer in offers if offer['market_sku'] > 0])
+        offers_commissions = self._get_offers_commissions(offers_identifiers)
 
         for offer in offers:
             attrs = offers_attributes.get(offer['sku'], None)
             offer.update(attrs)
             offer['name_of_shop'] = self.shop_name
+            offer['fby'] = offers_commissions.get(offer['sku'], None)
             offer['content_rating'] = offers_content_rating.get(offer['market_sku'], None)
             del offer['market_sku']
 
@@ -242,3 +244,35 @@ class OzonAPI(BaseAPI):
         offers = self._get_offers_base_info(offers_identifiers)
 
         return {offer['market_sku']: offer['sku'] for offer in offers if offer['market_sku'] != 0}
+
+    def _get_offers_commissions(self, data: list[OfferIdentifier]) -> dict[str, float]:
+        chunk_size = 1000
+        result = dict()
+
+        for i in range(0, len(data), chunk_size):
+            body = {
+                'filter': {
+                    'offer_id': [i.offer_id for i in data[i:i+chunk_size]]
+                },
+                'limit': chunk_size
+            }
+            response = self.session.post('https://api-seller.ozon.ru/v4/product/info/prices', headers=self.auth_headers, json=body)
+
+            data = self.validate_response(response, body=body)
+
+            for offer in data['result']['items']:
+                commissions = offer['commissions']
+
+                sales_percent = commissions['sales_percent_fbo']
+                price = self.__str_to_float(offer['price']['price'])
+
+                expenses = sum([
+                    commissions['fbo_return_flow_trans_max_amount'],
+                    commissions['fbo_deliv_to_customer_amount'],
+                ])
+
+                result[offer['offer_id']] = price * sales_percent / 100 + expenses
+
+        return result
+
+
