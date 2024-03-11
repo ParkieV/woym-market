@@ -94,8 +94,8 @@ async def import_offers_stocks(data, name_of_shop: str | None = None, market: st
         df = df[df['market'] == market]
 
     # Выбираем изменяемые колонки
-    stocks_df = df[[i for i in df.columns.values[10:].tolist() if 'мин. остаток' in i]]
-    df = df[df.columns.values[:10]]
+    stocks_df = df[[i for i in df.columns.values[11:].tolist() if 'мин. остаток' in i]]
+    df = df[df.columns.values[:11]]
 
     async with async_session() as session:
         warehouse_columns = [i.split(', ')[:2] for i in stocks_df.columns.values]
@@ -109,8 +109,8 @@ async def import_offers_stocks(data, name_of_shop: str | None = None, market: st
         to_update = []
 
         for row in df.iterrows():
-            offer_series = row[1][0:10]
-            stocks_series = row[1][10:]
+            offer_series = row[1][0:11]
+            stocks_series = row[1][11:]
 
             offer_stocks = []
             for warehouse_id, min_stock in stocks_series.to_dict().items():
@@ -127,6 +127,7 @@ async def import_offers_stocks(data, name_of_shop: str | None = None, market: st
                 'note_2': offer_series['note_2'],
                 'note_3': offer_series['note_3'],
                 'hidden': offer_series['hidden'],
+                'can_be_delivered': offer_series['can_be_delivered'],
                 'stocks': offer_stocks
             }
             to_update.append(offer_data)
