@@ -82,12 +82,12 @@ async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
 
     async with async_session() as session:
         for price_scheme in await get_pricing_schemes(session):
-            sum_fields = price_scheme.active_fields(price_scheme.model_dump())
+            sum_fields = price_scheme.active_fields()
             n = price_scheme.n
             m = price_scheme.m
 
             data['min_level'] = np.where(
-                data['pricing_scheme_id'] == price_scheme.id,
+                data['pricing_scheme_name'] == price_scheme.name,
                 (data[sum_fields].sum(axis=1, skipna=False) / n) + (data[sum_fields].sum(axis=1, skipna=False) / n) * (m / 100),
                 data['min_level']
             )
@@ -141,7 +141,12 @@ async def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: flo
     if setup_mode:
         data['dollar_cost_price'] = np.nan  # закупка
         data[['self_weight', 'self_length', 'self_width', 'self_height']] = np.nan
-        data['pricing_scheme_id'] = default_price_scheme_id
+        # data['pricing_scheme_name'] = 'Y0' if data['market'] == 'yandex' else 'O0'
+        data['pricing_scheme_name'] = np.where(
+            data['market'] == 'yandex',
+            'Y0',
+            'O0'
+        )
 
     data['total_price_coeff'] = total_price_coeff
     data['total_price_min_additional'] = total_price_min_additional
@@ -155,7 +160,7 @@ async def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: flo
 
     data = await calculate_offers_values(data, settings)
     data['auto_price_control'] = False
-    data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im']].astype(str)
+    data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']] = data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']].astype('string')
 
     return data
 

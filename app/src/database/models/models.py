@@ -110,7 +110,7 @@ class Offer(Base):
 
     hidden = Column(Boolean, default=False, nullable=False)
 
-    pricing_scheme_id = Column(Integer, ForeignKey('pricing_schemes.id', ondelete='RESTRICT'), nullable=False)
+    pricing_scheme_name = Column(String, ForeignKey('pricing_schemes.name', ondelete='RESTRICT'), nullable=False)
     pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
 
     stocks = relationship('OfferStock')
@@ -134,24 +134,24 @@ class TableInfo(Base):
     data = Column(String, nullable=True, default=None)
 
 
-class PricingScheme(Base):
-    __tablename__ = 'pricing_schemes'
-
-    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
-    name = Column(String, nullable=False)
-
-    use_total_price = Column(Boolean, default=False, nullable=False)
-    use_attractive_price_threshold = Column(Boolean, default=False, nullable=False)
-    use_moderately_attractive_price_threshold = Column(Boolean, default=False, nullable=False)
-    use_your_price_for_buyers = Column(Boolean, default=False, nullable=False)
-    use_min_price_without_market = Column(Boolean, default=False, nullable=False)
-    use_min_price_in_market = Column(Boolean, default=False, nullable=False)
-    use_min_general_markets_price = Column(Boolean, default=False, nullable=False)
-
-    n = Column(Float, default=1, nullable=False)
-    m = Column(Float, default=0, nullable=False)
-
-    offers = relationship(Offer, back_populates='pricing_scheme')
+# class PricingScheme(Base):
+#     __tablename__ = 'pricing_schemes'
+#
+#     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+#     name = Column(String, nullable=False)
+#
+#     use_total_price = Column(Boolean, default=False, nullable=False)
+#     use_attractive_price_threshold = Column(Boolean, default=False, nullable=False)
+#     use_moderately_attractive_price_threshold = Column(Boolean, default=False, nullable=False)
+#     use_your_price_for_buyers = Column(Boolean, default=False, nullable=False)
+#     use_min_price_without_market = Column(Boolean, default=False, nullable=False)
+#     use_min_price_in_market = Column(Boolean, default=False, nullable=False)
+#     use_min_general_markets_price = Column(Boolean, default=False, nullable=False)
+#
+#     n = Column(Float, default=1, nullable=False)
+#     m = Column(Float, default=0, nullable=False)
+#
+#     offers = relationship(Offer, back_populates='pricing_scheme')
 
 
 class Warehouse(Base):
@@ -197,6 +197,30 @@ class OwnStorage(Base):
     sku = Column(String, unique=True, index=True, nullable=False)
 
     value = Column(Integer, default=0, nullable=False)
+
+
+class PricingScheme(Base):
+    __tablename__ = 'pricing_schemes'
+
+    name = Column(String, unique=True, index=True, nullable=False, primary_key=True)
+    market = Column(Enum(APITypes))
+    m = Column(Float, default=0)
+    n = Column(Float, default=1)
+    fields = relationship('PricingSchemeField', back_populates='pricing_scheme')
+    offers = relationship(Offer, back_populates='pricing_scheme')
+
+
+class PricingSchemeField(Base):
+    __tablename__ = 'pricing_scheme_fields'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+
+    key = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    value = Column(Boolean, nullable=False, default=False)
+
+    pricing_scheme_name = Column(String, ForeignKey("pricing_schemes.name", ondelete='CASCADE'))
+    pricing_scheme = relationship(PricingScheme, uselist=False, back_populates='fields')
 
 
 

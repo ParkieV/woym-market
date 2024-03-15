@@ -3,7 +3,17 @@ from fastapi.responses import FileResponse
 from fastapi.exceptions import HTTPException
 from pathlib import PurePath
 from src.dependencies.users import get_current_user, require_staff
-from src.schemas.offer_schemas import OfferOut, OfferChange, ImportType, ExportType, Market, PricingSchemeOut, PricingSchemeChange
+from src.schemas.offer_schemas import (
+    OfferOut,
+    OfferChange,
+    ImportType,
+    ExportType,
+    Market,
+    PricingSchemeOut,
+    PricingSchemeCreate,
+    PricingSchemeFieldCreate,
+    PricingSchemeFieldChange, PricingSchemeChange
+)
 from src.services import offer_service as service
 
 data_router = APIRouter(
@@ -22,19 +32,43 @@ async def change_offer_fields(offers_data: list[OfferChange], current_user=Depen
     return await service.change_offers(offers_data, current_user.id)
 
 
-@data_router.get('/pricing-schemes', response_model=list[PricingSchemeOut], dependencies=[Depends(get_current_user)])
+@data_router.get('/pricing-schemes', response_model=list[PricingSchemeOut])
 async def get_pricing_schemes():
     return await service.get_pricing_schemes()
 
 
-# @data_router.post('/pricing-schemes', response_model=PricingSchemeOut)
-# async def create_pricing_scheme(data: PricingSchemeCreate):
-#     return await service.create_pricing_scheme(data)
+@data_router.post('/pricing-schemes')
+async def create_pricing_schemes(data: PricingSchemeCreate):
+    await service.create_pricing_scheme(data)
+    return {'status': 'OK'}
 
 
 @data_router.patch('/pricing-schemes')
-async def change_pricing_schemes(data: PricingSchemeChange, current_user=Depends(require_staff)):
-    await service.change_pricing_scheme(data, current_user.id)
+async def update_pricing_schemes(data: PricingSchemeChange):
+    await service.change_pricing_scheme(data)
+    return {'status': 'OK'}
+
+
+@data_router.delete('/pricing-schemes')
+async def delete_pricing_schemes(names: list[str]):
+    await service.delete_pricing_scheme(names)
+    return {'status': 'OK'}
+
+
+@data_router.get('/pricing-schemes/fields')
+async def get_pricing_schemes_fields(pricing_scheme_name: str | None = None):
+    raise NotImplementedError("Endpoint not implemented")
+
+
+@data_router.post('/pricing-schemes/fields')
+async def create_pricing_schemes_fields(data: PricingSchemeFieldCreate):
+    await service.create_pricing_scheme_field(data)
+    return {'status': 'OK'}
+
+
+@data_router.patch('/pricing-schemes/fields')
+async def update_pricing_schemes_fields(data):
+    await service.change_pricing_scheme_field(data)
     return {'status': 'OK'}
 
 

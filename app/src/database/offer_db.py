@@ -3,8 +3,11 @@ import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
-from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate, BaseOffer
-from .models.models import Offer, PricingScheme
+from sqlalchemy.orm import selectinload
+
+from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, BaseOffer, \
+    PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange
+from .models.models import Offer, PricingScheme, PricingSchemeField
 from typing import Iterable, Any, Type
 from fastapi.exceptions import HTTPException
 from fastapi import status
@@ -105,51 +108,94 @@ async def get_offer(session: AsyncSession, filters: dict, model_schema: Type[Bas
     return model_schema.model_validate(result.scalar_one(), from_attributes=True)
 
 
-async def create_pricing_scheme(session: AsyncSession, data: PricingSchemeCreate | dict) -> PricingSchemeOut:
-    if isinstance(data, PricingSchemeCreate):
+async def validate_pricing_scheme_field_data(session: AsyncSession, data: PricingSchemeFieldCreate | dict):
+    if isinstance(data, PricingSchemeFieldCreate):
         data = data.model_dump()
 
-    scheme_db = PricingScheme(**data)
-    session.add(scheme_db)
+    if data['key'] not in OfferOut.fields().keys():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Поля '{data['key']}' нет в модели Offer")
+
+    query = select(PricingScheme).where(PricingScheme.name == data['pricing_scheme_name']).options(selectinload(PricingScheme.fields))
+    result = (await session.execute(query)).scalar_one_or_none()
+
+    if result is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Схемы с именем {data["pricing_scheme_name"]} не найдено')
+
+    target_scheme_field_keys = [i.key for i in result.fields]
+
+    if data['key'] in target_scheme_field_keys:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Поле с ключем {data["key"]} уже есть в схеме {result.name}')
+
+    return data
+
+
+async def create_pricing_scheme_field(session: AsyncSession, data: PricingSchemeFieldCreate | dict) -> PricingSchemeFieldOut:
+    if isinstance(data, PricingSchemeFieldCreate):
+        data = data.model_dump()
+
+    data = await validate_pricing_scheme_field_data(session, data)
+    field_db = PricingSchemeField(**data)
+    session.add(field_db)
     await session.commit()
-    await session.refresh(scheme_db)
+    await session.refresh(field_db)
+    return PricingSchemeFieldOut.model_validate(field_db, from_attributes=True)
 
-    return PricingSchemeOut.model_validate(scheme_db, from_attributes=True)
+
+async def change_pricing_scheme_field(session: AsyncSession, data: PricingSchemeFieldChange):
+    stmp = update(PricingSchemeField).where(PricingSchemeField.id == data.id).values(**data.model_dump())
+    await session.execute(stmp)
+    await session.commit()
 
 
-async def delete_pricing_scheme(session: AsyncSession, data: list[int]):
-    query = delete(PricingScheme).where(PricingScheme.id.in_(data))
+async def create_pricing_scheme(session: AsyncSession, data: PricingSchemeCreate) -> PricingSchemeOut:
+    pricing_scheme_data = data.model_dump()
+    fields_data = [i for i in pricing_scheme_data['fields']]
+    del pricing_scheme_data['fields']
+
+    pricing_scheme_db = PricingScheme(**pricing_scheme_data)
+    session.add(pricing_scheme_db)
+    await session.commit()
+    await session.refresh(pricing_scheme_db)
+
+    for field in fields_data:
+        await create_pricing_scheme_field(session, PricingSchemeFieldCreate(**field))
+
+
+async def change_pricing_scheme(session: AsyncSession, data: PricingSchemeChange):
+    for field in data.fields:
+        await change_pricing_scheme_field(session, field)
+
+    # if isinstance(data, PricingSchemeCreate):
+    #     data = data.model_dump()
+    #
+    # scheme_db = PricingScheme(**data)
+    # session.add(scheme_db)
+    # await session.commit()
+    # await session.refresh(scheme_db)
+    #
+    # return PricingSchemeOut.model_validate(scheme_db, from_attributes=True)
+
+
+async def delete_pricing_scheme(session: AsyncSession, names: list[str]):
+    query = delete(PricingScheme).where(PricingScheme.name.in_(names))
     await session.execute(query)
     await session.commit()
 
 
 async def get_pricing_schemes(session: AsyncSession) -> list[PricingSchemeOut]:
-    query = select(PricingScheme)
+    query = select(PricingScheme).options(selectinload(PricingScheme.fields))
     scheme_db = await session.execute(query)
 
     return [PricingSchemeOut.model_validate(scheme, from_attributes=True) for scheme in
             scheme_db.unique().scalars().all()]
 
 
-async def change_pricing_scheme(session: AsyncSession, data: PricingSchemeChange | dict):
-    if isinstance(data, PricingSchemeChange):
-        data = data.model_dump()
+async def check_pricing_schemes_exists(session: AsyncSession, name: str):
+    query = select(PricingScheme).where(PricingScheme.name == name)
+    result = await session.execute(query)
 
-    query = update(PricingScheme).where(PricingScheme.id == data['id']).values(**data)
-    await session.execute(query)
-    await session.commit()
-
-
-async def validate_pricing_scheme_id(session: AsyncSession, data: int | Iterable[int]) -> None:
-    if isinstance(data, int):
-        data = [data]
-
-    for i in data:
-        query = select(PricingScheme).where(PricingScheme.id == i)
-        rez = await session.execute(query)
-
-        if rez.scalar_one_or_none() is None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Схемы ценообразования с id - {i} не найдено')
+    if not result.scalar_one_or_none():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Схемы ценообразования {name} не найдено')
 
 
 async def get_unique_skus(session: AsyncSession) -> list[str]:

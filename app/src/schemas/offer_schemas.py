@@ -3,33 +3,75 @@ from abc import ABC
 from enum import Enum
 
 
-class BasePricingScheme(BaseModel):
+# class BasePricingScheme(BaseModel):
+#     name: str
+#     use_total_price: bool = False
+#     use_attractive_price_threshold: bool = False
+#     use_moderately_attractive_price_threshold: bool = False
+#     use_your_price_for_buyers: bool = False
+#     use_min_price_without_market: bool = False
+#     use_min_price_in_market: bool = False
+#     use_min_general_markets_price: bool = False
+#     n: float = 1
+#     m: float = 0
+#
+#     @staticmethod
+#     def active_fields(dump: dict):
+#         return [k.replace('use_', '', 1) for k, v in dump.items() if k.startswith('use_') and v == True]
+#
+#
+# class PricingSchemeCreate(BasePricingScheme):
+#     pass
+#
+#
+# class PricingSchemeOut(BasePricingScheme):
+#     id: int
+#
+#
+# class PricingSchemeChange(PricingSchemeOut):
+#     pass
+
+class PricingSchemeFieldCreate(BaseModel):
+    key: str
     name: str
-    use_total_price: bool = False
-    use_attractive_price_threshold: bool = False
-    use_moderately_attractive_price_threshold: bool = False
-    use_your_price_for_buyers: bool = False
-    use_min_price_without_market: bool = False
-    use_min_price_in_market: bool = False
-    use_min_general_markets_price: bool = False
-    n: float = 1
-    m: float = 0
-
-    @staticmethod
-    def active_fields(dump: dict):
-        return [k.replace('use_', '', 1) for k, v in dump.items() if k.startswith('use_') and v == True]
+    pricing_scheme_name: str
 
 
-class PricingSchemeCreate(BasePricingScheme):
-    pass
-
-
-class PricingSchemeOut(BasePricingScheme):
+class PricingSchemeFieldOut(BaseModel):
     id: int
+    key: str
+    name: str
+    value: bool
+    pricing_scheme_name: str
 
 
-class PricingSchemeChange(PricingSchemeOut):
-    pass
+class PricingSchemeFieldChange(BaseModel):
+    id: int
+    value: bool
+
+
+class PricingSchemeCreate(BaseModel):
+    name: str
+    market: str
+    fields: list[PricingSchemeFieldCreate]
+
+
+class PricingSchemeOut(BaseModel):
+    name: str
+    market: str
+    n: float
+    m: float
+    fields: list[PricingSchemeFieldOut]
+
+    def active_fields(self) -> list[str]:
+        return [i.key for i in self.fields if i.value]
+
+
+class PricingSchemeChange(BaseModel):
+    name: str
+    n: float
+    m: float
+    fields: list[PricingSchemeFieldChange]
 
 
 class BaseModelFields(ABC):
@@ -77,7 +119,7 @@ class OfferChange(BaseOffer):
     auto_min_price: float = Field(title='Авто мин. цена %')  # в процентах
     manual_min_price: float | None = Field(None, title='Ручная мин. цена')
     auto_price_control: bool = Field(False, title='Авто контроль цен')
-    pricing_scheme_id: int = Field(title='Id схемы ценообразования')
+    pricing_scheme_name: str = Field(title='Id схемы ценообразования')
 
     hidden: bool = Field(False, title='Скрыт')
 
@@ -152,7 +194,6 @@ class ImportType(str, Enum):
     TABLE = 'table'
     FBO_STOCKS = 'matrix-fbo-stocks'
     OWN_STORAGE = 'matrix-own-storage'
-
 
 
 class ExportType(str, Enum):

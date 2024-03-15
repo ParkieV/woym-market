@@ -8,7 +8,8 @@ from src.database import offer_db as db
 import src.services.offer_utils as utils
 from src.schemas.base_api_schemas import APIPriceChangeData
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market, \
-    PricingSchemeOut, PricingSchemeChange, PricingSchemeCreate, BaseOffer
+    PricingSchemeOut, PricingSchemeCreate, BaseOffer, PricingSchemeFieldCreate, PricingSchemeFieldChange, \
+    PricingSchemeChange
 import pandas as pd
 import numpy as np
 from src.database.settings_db import update_logs, get_user_settings
@@ -35,7 +36,7 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
         settings = await get_user_settings(session, user_id)
 
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
-        await db.validate_pricing_scheme_id(session, set(changes['pricing_scheme_id'].values.tolist()))
+        [await db.check_pricing_schemes_exists(session, i) for i in changes['pricing_scheme_name'].values.tolist()]
 
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'])
         await recalculate_values(session, settings, which=changes[['sku', 'name_of_shop', 'market']])
@@ -46,10 +47,9 @@ async def setup_offers_data(user_id: int):
     yandex_offers = await api_wrapper.get_offers_list()
     yandex_offers_df = pd.DataFrame(yandex_offers)
     async with async_session() as session:
+        await db.check_pricing_schemes_exists(session, 'Y0')
+        await db.check_pricing_schemes_exists(session, 'O0')
         settings = await get_user_settings(session, user_id)
-
-        for i in range(6):
-            await db.create_pricing_scheme(session, PricingSchemeCreate(name=f'L{i+1}'))
 
         data = await utils.build_offers_data(yandex_offers_df, setup_mode=True, settings=settings)
 
@@ -182,8 +182,8 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
     df[['sku', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']] = df[['sku', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']].astype("string")
 
     async with async_session() as session:
-        if 'pricing_scheme_id' in df.columns:
-            await db.validate_pricing_scheme_id(session, set(df['pricing_scheme_id'].values.tolist()))
+        if 'pricing_scheme_name' in df.columns:
+            [await db.check_pricing_schemes_exists(session, i) for i in set(df['pricing_scheme_name'].values.tolist())]
 
         try:
             await db.update_offers(session, df, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
@@ -311,16 +311,29 @@ async def create_pricing_scheme(data: PricingSchemeCreate) -> PricingSchemeOut:
         return await db.create_pricing_scheme(session, data)
 
 
-async def delete_pricing_schemes(data: list[int]) -> None:
+async def change_pricing_scheme(data: PricingSchemeChange):
+    async with async_session() as session:
+        await db.change_pricing_scheme(session, data)
+
+
+async def delete_pricing_scheme(names: list[str]):
+    async with async_session() as session:
+        await db.delete_pricing_scheme(session, names)
+
+
+async def change_pricing_scheme_field(data: PricingSchemeFieldChange):
+    async with async_session() as session:
+        await db.change_pricing_scheme_field(session, data)
+
+
+async def create_pricing_scheme_field(data: PricingSchemeFieldCreate):
+    async with async_session() as session:
+        return await db.create_pricing_scheme_field(session, data)
+
+
+async def delete_pricing_schemes(data: list[str]) -> None:
     async with async_session() as session:
         await db.delete_pricing_scheme(session, data)
 
 
-async def change_pricing_scheme(data: PricingSchemeChange, user_id: int):
-
-    async with async_session() as session:
-        settings = await get_user_settings(session, user_id)
-        await db.change_pricing_scheme(session, data)
-
-        await recalculate_values(session, settings, which=[{'pricing_scheme_id': data.id}])
 
