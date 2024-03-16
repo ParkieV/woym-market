@@ -131,8 +131,14 @@ class OzonAPI(BaseAPI):
             )
 
             data = self.validate_response(response, body=body)
-
             for offer in data['result']['items']:
+                price_indexes = offer.get('price_indexes', None)
+
+                external_index_data = price_indexes.get('external_index_data', None) if price_indexes is not None else None
+                minimal_price = external_index_data.get('minimal_price', None) if external_index_data is not None else None
+
+                price_index = price_indexes.get('price_index', None) if price_indexes is not None else None
+
                 result.append({
                     'sku': offer['offer_id'],
                     'name': offer['name'],
@@ -140,12 +146,11 @@ class OzonAPI(BaseAPI):
                     'current_price': self.__str_to_float(offer['price']),
                     'remaining_stock': offer['stocks']['present'],
                     'min_price_in_market': self.__str_to_float(offer['min_ozon_price']),
-                    'min_price_without_market': self.__str_to_float(
-                        offer['price_indexes']['external_index_data']['minimal_price']),
+                    'min_price_without_market': self.__str_to_float(minimal_price),
                     'attractive_price_threshold': self.__str_to_float(offer['recommended_price']),
                     'market': 'ozon',
                     'discount_base_price': self.__str_to_float(offer['old_price']),
-                    'price_index': self.__translate_price_index(offer['price_indexes']['price_index']),
+                    'price_index': self.__translate_price_index(price_index),
                     'market_sku': offer['sku']
                 })
 
