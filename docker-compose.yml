@@ -11,6 +11,8 @@ services:
       dockerfile: app.dockerfile
     depends_on:
       - db
+    volumes:
+      - /logs:/app/logs
     ports:
       - 8000:8000
 
