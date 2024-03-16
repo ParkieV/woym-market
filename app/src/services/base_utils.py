@@ -15,12 +15,12 @@ def error_handler(default_message: str = 'Ошибка сервера'):
             try:
                 return await func(*args, **kwargs)
             except HTTPException as e:
-                logger.error(f'Error in func {func}: {e.detail}')
+                logger.error(f'Error in func {func}: {e.detail}', exc_info=True)
                 raise HTTPException(e.status_code, e.detail)
 
             except Exception as e:
                 logger.error(f'Error in func {func}', exc_info=True)
-                raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, default_message)
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, default_message)
 
         return wrapped
 

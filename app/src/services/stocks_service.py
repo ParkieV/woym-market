@@ -1,5 +1,6 @@
 import pandas as pd
 
+from logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
@@ -10,11 +11,17 @@ from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStockOut, OfferStockCreate, \
     OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate
 from src.services.base_utils import error_handler
+from datetime import datetime
 
 api_wrapper = APIWrapper()
 
+logger = get_logger(__name__)
+
 
 async def update_warehouses_and_stocks():
+    logger.info('Start update warehouses and stocks')
+    start_time = datetime.now()
+
     stocks = await api_wrapper.get_stocks()
 
     async with async_session() as session:
@@ -43,6 +50,9 @@ async def update_warehouses_and_stocks():
 
         for sku in await offer_db.get_unique_skus(session):
             await db.update_or_create_own_storage(session, OwnStorageCreate(sku=sku))
+
+    _time = datetime.now() - start_time
+    logger.info(f'Warehouses and stocks updated completed in {_time}')
 
 
 async def get_warehouses():

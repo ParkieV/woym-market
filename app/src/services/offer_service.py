@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import offer_db as db
@@ -15,11 +16,13 @@ import numpy as np
 from src.database.settings_db import update_logs, get_user_settings
 from fastapi.exceptions import HTTPException
 from fastapi import status
-
+from datetime import datetime
 from src.services.base_utils import error_handler
 from src.services.stocks_service import export_stocks, export_own_storages, import_offers_stocks, import_own_storages
 
 api_wrapper = APIWrapper()
+
+logger = get_logger(__name__)
 
 
 async def get_offers(filters: dict[str, Any] | None = None) -> list[OfferOut]:
@@ -58,6 +61,9 @@ async def setup_offers_data(user_id: int):
 
 
 async def update_offers(user_id: int):
+    logger.info('Start update offers')
+    start_time = datetime.now()
+
     async with async_session() as session:
         await update_yandex_offers_price(session)
         settings = await get_user_settings(session, user_id)
@@ -90,6 +96,9 @@ async def update_offers(user_id: int):
         await recalculate_values(session, settings)
 
         await update_logs(session, user_id, {'updated_at': datetime.now()})
+
+    _time = datetime.now() - start_time
+    logger.info(f'Offers update completed in {_time}')
 
 
 async def delete_offers(offers: list[OfferDelete]):
@@ -311,6 +320,7 @@ async def create_pricing_scheme(data: PricingSchemeCreate) -> PricingSchemeOut:
         return await db.create_pricing_scheme(session, data)
 
 
+@error_handler('Не удалось обновить данные')
 async def change_pricing_scheme(user_id: int, data: PricingSchemeChange):
     async with async_session() as session:
         settings = await get_user_settings(session, user_id)

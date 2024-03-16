@@ -43,7 +43,7 @@ class BaseAPI(ABC):
             if raise_error:
                 self._raise_error(response.json(), response.status_code, body)
 
-            logger.warning(f'status: {response.status_code} \ndetail: {response.json()} \nbody: {body}')
+            logger.error(f'status: {response.status_code} \ndetail: {response.json()} \nbody: {body}')
 
         return response.json()
 

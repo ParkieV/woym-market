@@ -133,21 +133,24 @@ class OzonAPI(BaseAPI):
             data = self.validate_response(response, body=body)
 
             for offer in data['result']['items']:
-                result.append({
-                    'sku': offer['offer_id'],
-                    'name': offer['name'],
-                    'photo': offer['primary_image'],
-                    'current_price': self.__str_to_float(offer['price']),
-                    'remaining_stock': offer['stocks']['present'],
-                    'min_price_in_market': self.__str_to_float(offer['min_ozon_price']),
-                    'min_price_without_market': self.__str_to_float(
-                        offer['price_indexes']['external_index_data']['minimal_price']),
-                    'attractive_price_threshold': self.__str_to_float(offer['recommended_price']),
-                    'market': 'ozon',
-                    'discount_base_price': self.__str_to_float(offer['old_price']),
-                    'price_index': self.__translate_price_index(offer['price_indexes']['price_index']),
-                    'market_sku': offer['sku']
-                })
+                try:
+                    result.append({
+                        'sku': offer['offer_id'],
+                        'name': offer['name'],
+                        'photo': offer['primary_image'],
+                        'current_price': self.__str_to_float(offer['price']),
+                        'remaining_stock': offer['stocks']['present'],
+                        'min_price_in_market': self.__str_to_float(offer['min_ozon_price']),
+                        'min_price_without_market': self.__str_to_float(
+                            offer['price_indexes']['external_index_data']['minimal_price']),
+                        'attractive_price_threshold': self.__str_to_float(offer['recommended_price']),
+                        'market': 'ozon',
+                        'discount_base_price': self.__str_to_float(offer['old_price']),
+                        'price_index': self.__translate_price_index(offer['price_indexes']['price_index']),
+                        'market_sku': offer['sku']
+                    })
+                except Exception as e:
+                    logger.error(f'Error in get base info for offer with sku {offer["offer_id"]}', exc_info=True)
 
         return result
 
@@ -261,17 +264,20 @@ class OzonAPI(BaseAPI):
             data = self.validate_response(response, body=body)
 
             for offer in data['result']['items']:
-                commissions = offer['commissions']
+                try:
+                    commissions = offer['commissions']
 
-                sales_percent = commissions['sales_percent_fbo']
-                price = self.__str_to_float(offer['price']['price'])
+                    sales_percent = commissions['sales_percent_fbo']
+                    price = self.__str_to_float(offer['price']['price'])
 
-                expenses = sum([
-                    commissions['fbo_return_flow_trans_max_amount'],
-                    commissions['fbo_deliv_to_customer_amount'],
-                ])
+                    expenses = sum([
+                        commissions['fbo_return_flow_trans_max_amount'],
+                        commissions['fbo_deliv_to_customer_amount'],
+                    ])
 
-                result[offer['offer_id']] = price * sales_percent / 100 + expenses
+                    result[offer['offer_id']] = price * sales_percent / 100 + expenses
+                except Exception as e:
+                    logger.error(f'Error in get commission for offer with sku {offer["offer_id"]}', exc_info=True)
 
         return result
 
