@@ -141,9 +141,10 @@ async def create_pricing_scheme_field(session: AsyncSession, data: PricingScheme
     return PricingSchemeFieldOut.model_validate(field_db, from_attributes=True)
 
 
-async def change_pricing_scheme_field(session: AsyncSession, data: PricingSchemeFieldChange):
-    stmp = update(PricingSchemeField).where(PricingSchemeField.id == data.id).values(**data.model_dump())
-    await session.execute(stmp)
+async def change_pricing_scheme_field(session: AsyncSession, data: list[PricingSchemeFieldChange]):
+    for field in data:
+        stmp = update(PricingSchemeField).where(PricingSchemeField.id == field.id).values(**field.model_dump())
+        await session.execute(stmp)
     await session.commit()
 
 
@@ -162,8 +163,12 @@ async def create_pricing_scheme(session: AsyncSession, data: PricingSchemeCreate
 
 
 async def change_pricing_scheme(session: AsyncSession, data: PricingSchemeChange):
-    for field in data.fields:
-        await change_pricing_scheme_field(session, field)
+    base_scheme = data.model_dump()
+    del base_scheme['fields']
+    stmp = update(PricingScheme).where(PricingScheme.name == data.name).values(**base_scheme)
+    await session.execute(stmp)
+    await session.commit()
+    await change_pricing_scheme_field(session, data.fields)
 
     # if isinstance(data, PricingSchemeCreate):
     #     data = data.model_dump()
@@ -196,6 +201,12 @@ async def check_pricing_schemes_exists(session: AsyncSession, name: str):
 
     if not result.scalar_one_or_none():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Схемы ценообразования {name} не найдено')
+
+
+async def delete_pricing_scheme_fields(session: AsyncSession, ids: list[int]):
+    stmp = delete(PricingSchemeField).where(PricingSchemeField.id.in_(ids))
+    await session.execute(stmp)
+    await session.commit()
 
 
 async def get_unique_skus(session: AsyncSession) -> list[str]:

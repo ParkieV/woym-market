@@ -311,9 +311,12 @@ async def create_pricing_scheme(data: PricingSchemeCreate) -> PricingSchemeOut:
         return await db.create_pricing_scheme(session, data)
 
 
-async def change_pricing_scheme(data: PricingSchemeChange):
+async def change_pricing_scheme(user_id: int, data: PricingSchemeChange):
     async with async_session() as session:
+        settings = await get_user_settings(session, user_id)
+
         await db.change_pricing_scheme(session, data)
+        await recalculate_values(session, settings, which=[{'pricing_scheme_name': data.name}])
 
 
 async def delete_pricing_scheme(names: list[str]):
@@ -321,7 +324,7 @@ async def delete_pricing_scheme(names: list[str]):
         await db.delete_pricing_scheme(session, names)
 
 
-async def change_pricing_scheme_field(data: PricingSchemeFieldChange):
+async def change_pricing_scheme_field(data: list[PricingSchemeFieldChange]):
     async with async_session() as session:
         await db.change_pricing_scheme_field(session, data)
 
@@ -334,6 +337,12 @@ async def create_pricing_scheme_field(data: PricingSchemeFieldCreate):
 async def delete_pricing_schemes(data: list[str]) -> None:
     async with async_session() as session:
         await db.delete_pricing_scheme(session, data)
+
+
+async def delete_pricing_scheme_fields(ids: list[int]) -> None:
+    async with async_session() as session:
+        await db.delete_pricing_scheme_fields(session, ids)
+
 
 
 
