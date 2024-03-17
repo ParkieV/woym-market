@@ -2,28 +2,28 @@ import { handleRequest } from "$lib";
 import { fetchAuthenticated } from "$lib/auth";
 
 export type Template = {
-    id: number;
     name: string;
-
-    use_total_price: boolean;
-    use_attractive_price_threshold: boolean;
-    use_moderately_attractive_price_threshold: boolean;
-    use_your_price_for_buyers: boolean;
-    use_min_price_in_market: boolean;
-    use_min_price_without_market: boolean;
-    use_min_general_markets_price: boolean;
-
+    market: string;
     /** Number that the resulting price will be divided by. */
     n: number;
     /** Amount that will be added to the price (in percent). */
     m: number;
+    fields: [
+        {
+            id: number;
+            key: string;
+            name: string;
+            value: boolean;
+            pricing_scheme_name: string;
+        }
+    ];
 };
 
 export async function fetchTemplates(): Promise<Template[]> {
     let promise = fetchAuthenticated("data/pricing-schemes");
     await handleRequest(promise);
     let templates: Template[] = await (await promise).json();
-    templates.sort((a, b) => a.id - b.id);
+    templates.sort((a,b) => (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0));
     return templates;
 }
 

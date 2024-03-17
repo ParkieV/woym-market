@@ -5,11 +5,11 @@
     import { userCanModify } from "$lib/user";
 
     let templates: Template[] = [];
-    let changed = new Set<number>();
+    let changed = new Set<string>();
 
     const save = async () => {
-        let _templates = Array.from(changed).flatMap(id => {
-            let template = templates.find(x => x.id === id);
+        let _templates = Array.from(changed).flatMap(name => {
+            let template = templates.find(x => x.name === name);
             return template ?? [];
         });
 
@@ -26,22 +26,20 @@
 </script>
 
 <main>
-    <div>
-        <header>
-            <h1>ФОРМУЛЫ ЦЕНООБРАЗОВАНИЯ</h1>
-        </header>
-        <ul>
-            {#each templates as template}
-                <TemplateCard
-                    bind:template
-                    on:changed={() => {
-                        changed.add(template.id);
-                        changed = changed;
-                    }}
-                />
-            {/each}
-        </ul>
-    </div>
+    <header>
+        <h1>ФОРМУЛЫ ЦЕНООБРАЗОВАНИЯ</h1>
+    </header>
+    <ul>
+        {#each templates as template}
+            <TemplateCard
+                bind:template
+                on:changed={() => {
+                    changed.add(template.name);
+                    changed = changed;
+                }}
+            />
+        {/each}
+    </ul>
     <footer>
         {#if $userCanModify}
             <button on:click={save} disabled={changed.size === 0}>Сохранить</button>
@@ -53,33 +51,24 @@
     @use "mixins" as *;
 
     main {
+        flex: 1;
         display: flex;
         flex-direction: column;
         padding: 20px;
-        flex: 1;
-        > div {
-            overflow-y: scroll;
+        > header {
+            padding-left: 12px;
+            padding-bottom: 20px;
+            > h1 {
+                font-size: 28px;
+            }
+        }
+        > ul {
             display: flex;
             flex-direction: column;
-            padding: 20px;
-            flex: 1;
-            > header {
-                padding-left: 12px;
-                padding-bottom: 20px;
-                > h1 {
-                    font-size: 28px;
-                }
-            }
-            > ul {
-                flex: 1;
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: center;
-                align-content: start;
-                align-items: start;
-                gap: 20px;
-                padding: 30px 0;
-            }
+            align-items: center;
+            overflow-y: auto;
+            gap: 20px;
+            padding: 15px 15px;
         }
         > footer {
             display: flex;
