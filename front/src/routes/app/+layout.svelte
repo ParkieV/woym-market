@@ -7,6 +7,8 @@
     import { onMount, setContext } from "svelte";
     import { writable } from "svelte/store";
     import { fetchUser } from "$lib/user";
+    import { page } from "$app/stores";
+    import { BaseUrl } from "$lib";
 
     let collapsed = writable(true);
     setContext("collapsed", collapsed);
@@ -14,14 +16,18 @@
     let name = "mp-auto-price";
     $: name = $user?.login ?? "mp-auto-price";
 
+    $: is_dev_frontend = $page.url.hostname === "localhost" || $page.url.hostname.startsWith("dev");
+    $: is_dev_backend = BaseUrl.includes("dev.oy-pro.ru");
+    $: show_warning = is_dev_frontend && !is_dev_backend;
+
     onMount(() => {
         $user = undefined;
         fetchUser();
     });
 </script>
 
-<div id="wrapper">
-    <nav class:collapsed={$collapsed}>
+<div id="wrapper" class:collapsed={$collapsed} class:warning={show_warning}>
+    <nav>
         <Header text={name} />
         <Link text="Товары" icon="/house.svg" path="/app" />
         <Link text="Мои остатки" icon="/warehouse.svg" path="/app/own_storage" />
@@ -31,18 +37,39 @@
         <Link text="Настройки" icon="/gear.svg" path="/app/settings" />
         <Link text="Выход" icon="/sign-out.svg" path="/auth" on:click={logout} />
     </nav>
+    {#if show_warning}
+        <div class="dev-warning">
+            localhost или dev-сервер запущен с путём API production-сервера!
+        </div>
+    {/if}
     <slot />
 </div>
 
 <style lang="scss">
     #wrapper {
-        display: flex;
-        align-items: stretch;
+        display: grid;
+        grid-template-rows: 1fr;
+        grid-template-columns: var(--sidebar-width) 1fr;
+        grid-template-areas: "sidebar content";
+
+        &.warning {
+            grid-template-rows: 40px 1fr;
+            grid-template-areas:
+                "sidebar warning"
+                "sidebar content";
+        }
+
+        width: 100%;
         height: 100%;
+
+        transition: grid-template-columns 0.5s;
+        --sidebar-width: 200px;
+        &.collapsed {
+            --sidebar-width: 48px;
+        }
     }
     nav {
-        flex: 0 0 min(100vw, var(--sidebar-width));
-        transition: flex 0.5s;
+        grid-area: sidebar;
 
         display: flex;
         align-items: stretch;
@@ -51,12 +78,19 @@
         color: white;
         background-color: #455561;
         overflow: hidden;
+    }
+    .dev-warning {
+        grid-area: warning;
 
-        &.collapsed {
-            --sidebar-width: 48px;
-        }
-        &:not(.collapsed) {
-            --sidebar-width: 200px;
-        }
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        height: 40px;
+
+        font-size: 20px;
+        font-weight: bold;
+        color: white;
+        background-color: rgb(172, 0, 0);
     }
 </style>
