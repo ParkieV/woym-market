@@ -217,6 +217,11 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                     key: "price_index",
                     header: "Индекс цены",
                     base: stringColumn
+                },
+                {
+                    key: "market_discount_in_percent",
+                    header: "Скидка маркета в %",
+                    base: floatColumn
                 }
             ]
         },
@@ -224,6 +229,11 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
             key: "remaining_stock",
             header: "Остатки на складах",
             base: intColumn
+        },
+        {
+            key: "can_be_delivered",
+            header: "Можно поставить",
+            base: new BooleanColumn()
         },
         {
             key: "content_rating",
@@ -339,6 +349,11 @@ export function fboStocksColumns(): (Column | ColumnGroup)[] {
                             .map(x => Math.max(0, x.min_stock - x.current_stock))
                             .reduce((a, b) => a + b, 0);
                     }
+                },
+                {
+                    key: "can_be_delivered",
+                    header: "Можно поставить",
+                    base: new BooleanColumn()
                 }
             ]
         },
