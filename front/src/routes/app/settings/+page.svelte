@@ -87,7 +87,7 @@
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            margin: 40px;
+            padding: 40px;
             gap: 24px;
 
             > h1 {
@@ -114,12 +114,13 @@
 
         > footer {
             display: flex;
+            justify-content: end;
             align-items: center;
             height: 70px;
             padding: 0 16px;
             gap: 16px;
             background-color: #ebebeb;
-            > button {
+            button {
                 @include primary-button;
                 height: 40px;
             }

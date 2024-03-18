@@ -48,12 +48,12 @@
 <style lang="scss">
     #wrapper {
         display: grid;
-        grid-template-rows: 1fr;
+        grid-template-rows: minmax(0, 1fr);
         grid-template-columns: var(--sidebar-width) 1fr;
         grid-template-areas: "sidebar content";
 
         &.warning {
-            grid-template-rows: 40px 1fr;
+            grid-template-rows: 40px minmax(0, 1fr);
             grid-template-areas:
                 "sidebar warning"
                 "sidebar content";
