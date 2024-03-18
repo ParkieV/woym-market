@@ -1,15 +1,15 @@
 <script lang="ts">
-    import { onMount } from "svelte";
     import TemplateCard from "./TemplateCard.svelte";
-    import { fetchTemplates, patchTemplates, type Template } from "$lib/data/templates";
+    import { patchTemplates } from "$lib/data/templates";
     import { userCanModify } from "$lib/user";
+    import type { PageData } from "./$types";
 
-    let templates: Template[] = [];
+    export let data: PageData;
     let changed = new Set<string>();
 
     const save = async () => {
         let _templates = Array.from(changed).flatMap(name => {
-            let template = templates.find(x => x.name === name);
+            let template = data.templates.find(x => x.name === name);
             return template ?? [];
         });
 
@@ -19,10 +19,6 @@
             changed = changed;
         }
     };
-
-    onMount(async () => {
-        templates = await fetchTemplates();
-    });
 </script>
 
 <main>
@@ -30,7 +26,7 @@
         <h1>ФОРМУЛЫ ЦЕНООБРАЗОВАНИЯ</h1>
     </header>
     <ul>
-        {#each templates as template}
+        {#each data.templates as template}
             <TemplateCard
                 bind:template
                 on:changed={() => {

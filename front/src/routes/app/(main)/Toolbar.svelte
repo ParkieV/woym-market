@@ -10,9 +10,6 @@
     let search = "";
     let show_hidden: boolean = false;
 
-    /** Fields that are compared to search query.*/
-    const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"] as const;
-
     let dispatch = createEventDispatcher<{ filterChanged: FilterParams }>();
     $: {
         search, shops, markets, show_hidden;

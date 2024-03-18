@@ -1,78 +1,70 @@
 <script lang="ts">
-    import { fetchSettings, patchSettings, type Settings } from "$lib/data/settings";
-    import { onMount } from "svelte";
+    import { patchSettings } from "$lib/data/settings";
     import NumberInput from "./NumberInput.svelte";
     import { userCanModify } from "$lib/user";
-    import type { Market } from "$lib/data/markets";
+    import type { PageData } from "./$types";
 
-    let settings: (Settings & { markets: Market[] }) | undefined = undefined;
-
-    async function ok() {
-        if (!settings) return;
-        await patchSettings(settings);
-    }
-
-    onMount(async () => {
-        settings = await fetchSettings();
-    });
+    export let data: PageData;
 
     let form: HTMLFormElement;
     let disabled = false;
+
+    async function ok() {
+        await patchSettings(data.settings);
+    }
 </script>
 
 <main>
     <form on:input={() => (disabled = !form.checkValidity())} bind:this={form}>
         <h1>НАСТРОЙКИ</h1>
-        {#if settings}
-            <section>
-                <h2>Основное</h2>
+        <section>
+            <h2>Основное</h2>
+            <NumberInput
+                label="Текущий курс"
+                min={0}
+                readonly={!$userCanModify}
+                bind:value={data.settings.rate}
+            />
+            <NumberInput
+                label="Скидка на товары (%)"
+                min={0}
+                max={99}
+                readonly={!$userCanModify}
+                bind:value={data.settings.discount_purchase}
+            />
+            <NumberInput
+                label="Комиссия за продажу в FBY (%)"
+                min={0}
+                max={99}
+                readonly={!$userCanModify}
+                bind:value={data.settings.fby_sales_commission}
+            />
+        </section>
+        <section>
+            <h2>Налоги</h2>
+            <h3>В процентах</h3>
+            {#each data.settings.markets as market}
                 <NumberInput
-                    label="Текущий курс"
-                    min={0}
-                    readonly={!$userCanModify}
-                    bind:value={settings.rate}
-                />
-                <NumberInput
-                    label="Скидка на товары (%)"
+                    label={`${market.name} (${market.type})`}
                     min={0}
                     max={99}
                     readonly={!$userCanModify}
-                    bind:value={settings.discount_purchase}
+                    bind:value={market.tax}
                 />
+            {/each}
+        </section>
+        <section>
+            <h2>Цена длительного хранения</h2>
+            <h3>Рублей за литр в день</h3>
+            {#each data.settings.markets as market}
                 <NumberInput
-                    label="Комиссия за продажу в FBY (%)"
+                    label={`${market.name} (${market.type})`}
                     min={0}
-                    max={99}
                     readonly={!$userCanModify}
-                    bind:value={settings.fby_sales_commission}
+                    bind:value={market.long_term_storage_cost}
                 />
-            </section>
-            <section>
-                <h2>Налоги</h2>
-                <h3>В процентах</h3>
-                {#each settings.markets as market}
-                    <NumberInput
-                        label={`${market.name} (${market.type})`}
-                        min={0}
-                        max={99}
-                        readonly={!$userCanModify}
-                        bind:value={market.tax}
-                    />
-                {/each}
-            </section>
-            <section>
-                <h2>Цена длительного хранения</h2>
-                <h3>Рублей за литр в день</h3>
-                {#each settings.markets as market}
-                    <NumberInput
-                        label={`${market.name} (${market.type})`}
-                        min={0}
-                        readonly={!$userCanModify}
-                        bind:value={market.long_term_storage_cost}
-                    />
-                {/each}
-            </section>
-        {/if}
+            {/each}
+        </section>
     </form>
     <footer>
         <div style:flex="1" />
