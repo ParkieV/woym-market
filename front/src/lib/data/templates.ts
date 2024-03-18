@@ -23,7 +23,7 @@ export async function fetchTemplates(): Promise<Template[]> {
     let promise = fetchAuthenticated("data/pricing-schemes");
     await handleRequest(promise);
     let templates: Template[] = await (await promise).json();
-    templates.sort((a,b) => (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0));
+    templates.sort((a, b) => (a.name > b.name ? 1 : b.name > a.name ? -1 : 0));
     return templates;
 }
 
