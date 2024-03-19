@@ -4,18 +4,20 @@
     import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
     import { getContext, onMount } from "svelte";
     import Footer from "../Footer.svelte";
-    import { ownStorageColumns } from "$lib/columns";
+    import { ownStorageColumns } from "$lib/grid/columns";
     import { fetchOwnStorages, patchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
-    import Toolbar from "./Toolbar.svelte";
     import type { Writable } from "svelte/store";
+    import { ownStorageFilter, type FilterParams } from "$lib/grid/filters";
 
     let data: OwnStorage[] = [];
     let changes = new ChangeList<OwnStorage, "sku">();
     let columns: (Column | ColumnGroup)[] = [];
-    let filter: (storage: OwnStorage) => boolean = () => true;
 
     let refresh = getContext<Writable<() => {}>>("refresh");
     $refresh = refreshData;
+
+    let filterParams = getContext<Writable<FilterParams>>("filterParams");
+    $: filter = ownStorageFilter($filterParams);
 
     onMount(async () => {
         let info = await fetchOwnStorages();
@@ -35,7 +37,6 @@
     }
 </script>
 
-<Toolbar on:filterChanged={f => (filter = f.detail)} />
 {#if columns.length !== 0}
     <Grid grid_name="own_storage" key="sku" {columns} bind:data bind:changes {filter} />
 {/if}

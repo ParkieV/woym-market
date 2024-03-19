@@ -1,15 +1,15 @@
 <script lang="ts">
-    import { onMount } from "svelte";
     import TemplateCard from "./TemplateCard.svelte";
-    import { fetchTemplates, patchTemplates, type Template } from "$lib/data/templates";
+    import { patchTemplates } from "$lib/data/templates";
     import { userCanModify } from "$lib/user";
+    import type { PageData } from "./$types";
 
-    let templates: Template[] = [];
-    let changed = new Set<number>();
+    export let data: PageData;
+    let changed = new Set<string>();
 
     const save = async () => {
-        let _templates = Array.from(changed).flatMap(id => {
-            let template = templates.find(x => x.id === id);
+        let _templates = Array.from(changed).flatMap(name => {
+            let template = data.templates.find(x => x.name === name);
             return template ?? [];
         });
 
@@ -19,23 +19,17 @@
             changed = changed;
         }
     };
-
-    onMount(async () => {
-        templates = await fetchTemplates();
-    });
 </script>
 
 <main>
     <div>
-        <header>
-            <h1>ФОРМУЛЫ ЦЕНООБРАЗОВАНИЯ</h1>
-        </header>
+        <h1>ФОРМУЛЫ ЦЕНООБРАЗОВАНИЯ</h1>
         <ul>
-            {#each templates as template}
+            {#each data.templates as template}
                 <TemplateCard
                     bind:template
                     on:changed={() => {
-                        changed.add(template.id);
+                        changed.add(template.name);
                         changed = changed;
                     }}
                 />
@@ -53,39 +47,32 @@
     @use "mixins" as *;
 
     main {
+        flex: 1;
         display: flex;
         flex-direction: column;
-        padding: 20px;
-        flex: 1;
+
         > div {
-            overflow-y: scroll;
+            flex: 1;
             display: flex;
             flex-direction: column;
-            padding: 20px;
-            flex: 1;
-            > header {
-                padding-left: 12px;
-                padding-bottom: 20px;
-                > h1 {
-                    font-size: 28px;
-                }
+            padding: 40px;
+            overflow-y: auto;
+
+            > h1 {
+                font-size: 28px;
             }
             > ul {
-                flex: 1;
                 display: flex;
-                flex-wrap: wrap;
-                justify-content: center;
-                align-content: start;
-                align-items: start;
+                flex-direction: column;
+                align-items: center;
                 gap: 20px;
-                padding: 30px 0;
+                padding: 15px;
             }
         }
         > footer {
             display: flex;
             justify-content: end;
             align-items: center;
-            margin: 0 -20px -20px -20px;
             height: 70px;
             padding: 0 16px;
             gap: 16px;

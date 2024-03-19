@@ -5,36 +5,25 @@
 
     export let template: Template;
 
-    const ToggleFieldNames = {
-        use_total_price: "Расчётная цена",
-        use_attractive_price_threshold: "Порог для привлекательной цены",
-        use_moderately_attractive_price_threshold: "Порог для умеренно привлекательной цены",
-        use_your_price_for_buyers: "Ваша цена для покупателей",
-        use_min_price_in_market: "Лучшая цена на Я.Маркете в группе",
-        use_min_price_without_market: "Лучшая цена без учета Я.Маркета",
-        use_min_general_markets_price: "Лучшая цена среди всех площадок"
-    } as const;
-    const ToggleFields = Object.keys(ToggleFieldNames) as (keyof typeof ToggleFieldNames)[];
-
     let dispatch = createEventDispatcher<{ changed: void }>();
 </script>
 
-<li>
+<li class={template.market}>
     <header>
         <span>{template.name}</span>
     </header>
     <ul class="toggles">
-        {#each ToggleFields as toggle_field}
+        {#each template.fields as field}
             <label>
                 <input
                     type="checkbox"
-                    bind:checked={template[toggle_field]}
+                    bind:checked={field.value}
                     on:input={() => dispatch("changed")}
                     on:click={e => {
                         if (!$userCanModify) e.preventDefault();
                     }}
                 />
-                <span>{ToggleFieldNames[toggle_field]}</span>
+                <span>{field.name}</span>
             </label>
         {/each}
     </ul>
@@ -75,12 +64,29 @@
 
 <style lang="scss">
     li {
+        flex: 0 0 content;
         display: flex;
         flex-direction: column;
+        gap: 24px;
+        max-width: 800px;
+
         border-radius: 16px;
-        width: min-content;
         overflow: hidden;
         border: 2px black solid;
+
+        &.yandex {
+            border-color: #ec2300;
+            > header {
+                background-color: #ec2300;
+            }
+        }
+        &.ozon {
+            border-color: #0000c5;
+            > header {
+                background-color: #0000c5;
+            }
+        }
+
         > header {
             display: flex;
             justify-content: center;
@@ -99,17 +105,17 @@
         }
         > ul {
             display: flex;
+            margin: 0 40px;
+
             &.toggles {
-                display: flex;
                 flex-direction: column;
                 align-items: stretch;
+                gap: 8px;
 
-                padding: 24px 0;
                 > label {
                     display: flex;
                     gap: 12px;
                     height: min-content;
-                    padding: 8px 40px;
 
                     > span {
                         font-size: 16px;
@@ -118,18 +124,22 @@
                 }
             }
             &.numbers {
-                flex-direction: column;
-                gap: 12px;
-                padding: 0 40px 36px 40px;
+                display: flex;
+                flex-wrap: wrap;
+                row-gap: 16px;
+                column-gap: 64px;
+                margin-bottom: 32px;
                 > label {
+                    flex: 1;
                     display: flex;
-                    gap: 16px;
+                    gap: 32px;
                     justify-content: space-between;
                     > span {
+                        white-space: nowrap;
                         font-size: 16px;
                     }
                     > input {
-                        min-width: 0;
+                        width: 100px;
                     }
                 }
             }

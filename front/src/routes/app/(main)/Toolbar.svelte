@@ -2,7 +2,7 @@
     import ButtonGroup from "$lib/components/ButtonGroup.svelte";
     import Search from "$lib/components/Search.svelte";
     import { getStoreNames, getStoreTypes } from "$lib/data/markets";
-    import type { OfferBase } from "$lib/data/offers";
+    import type { FilterParams } from "$lib/grid/filters";
     import { createEventDispatcher, onMount } from "svelte";
 
     let shops: { key: string; name: string; selected: boolean }[] = [];
@@ -10,49 +10,16 @@
     let search = "";
     let show_hidden: boolean = false;
 
-    /** Fields that are compared to search query.*/
-    const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"] as const;
-
-    function filter(offer: OfferBase): boolean {
-        if (offer.hidden && !show_hidden) {
-            return false;
-        }
-        for (const option of shops) {
-            if (option.name == offer.name_of_shop && !option.selected) {
-                return false;
-            }
-        }
-        for (const option of markets) {
-            if (option.key == offer.market && !option.selected) {
-                return false;
-            }
-        }
-        const _search = search.trim().toLowerCase().replaceAll("ё", "е");
-        for (const key of SEARCH_FIELDS) {
-            let val = offer[key];
-            if (val === undefined || val === null) continue;
-            val = val.trim().toLowerCase().replaceAll("ё", "е");
-            if (val.includes(_search)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    let dispatch = createEventDispatcher<{ filterChanged: (offer: OfferBase) => boolean }>();
+    let dispatch = createEventDispatcher<{ filterChanged: FilterParams }>();
     $: {
-        search;
-        shops;
-        markets;
-        show_hidden;
-        dispatch("filterChanged", filter);
+        search, shops, markets, show_hidden;
+        dispatch("filterChanged", { markets, shops, search, show_hidden });
     }
 
     onMount(async () => {
         [shops, markets] = (await Promise.all([getStoreNames(), getStoreTypes()])).map(arr =>
             arr.map(x => ({ key: x, name: x, selected: true }))
         );
-        dispatch("filterChanged", filter);
     });
 </script>
 

@@ -1,10 +1,22 @@
 import type { ValueGetterParams } from "ag-grid-enterprise";
-import type { Column, ColumnGroup } from "./components/datagrid/columns";
-import type { Template } from "./data/templates";
-import type { FboStocks } from "./data/fbo_storage";
-import type { Offer } from "./data/offers";
-import type { Market } from "./data/markets";
-import type { OwnStorage } from "./data/own_storage";
+import type { Column, ColumnGroup } from "../components/datagrid/columns";
+import type { Template } from "$lib/data/templates";
+import type { FboStocks } from "$lib/data/fbo_storage";
+import type { Offer } from "$lib/data/offers";
+import type { Market } from "$lib/data/markets";
+import type { OwnStorage } from "$lib/data/own_storage";
+import {
+    ComboboxColumn,
+    GroupColumn,
+    BooleanColumn,
+    dollarColumn,
+    floatColumn,
+    imageColumn,
+    intColumn,
+    percentColumn,
+    rubleColumn,
+    stringColumn
+} from "$lib/components/datagrid/column_types";
 
 export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
     return [
@@ -12,14 +24,14 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
         {
             header: "Габариты (Собственные)",
             children: [
-                { header: "Вес", key: "self_weight", data_type: "float", editable: true },
-                { header: "Длина", key: "self_length", data_type: "float", editable: true },
-                { header: "Ширина", key: "self_width", data_type: "float", editable: true },
-                { header: "Высота", key: "self_height", data_type: "float", editable: true },
+                { header: "Вес", key: "self_weight", base: floatColumn, editable: true },
+                { header: "Длина", key: "self_length", base: floatColumn, editable: true },
+                { header: "Ширина", key: "self_width", base: floatColumn, editable: true },
+                { header: "Высота", key: "self_height", base: floatColumn, editable: true },
                 {
                     key: "volume",
                     header: "Объём",
-                    data_type: "float",
+                    base: floatColumn,
                     tooltip: "Длина * ширина * высота / 1000"
                 }
             ]
@@ -27,20 +39,20 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
         {
             header: "Габариты (Маркет)",
             children: [
-                { header: "Вес", key: "yandex_weight", data_type: "float" },
-                { header: "Длина", key: "yandex_length", data_type: "float" },
-                { header: "Ширина", key: "yandex_width", data_type: "float" },
-                { header: "Высота", key: "yandex_height", data_type: "float" },
+                { header: "Вес", key: "yandex_weight", base: floatColumn },
+                { header: "Длина", key: "yandex_length", base: floatColumn },
+                { header: "Ширина", key: "yandex_width", base: floatColumn },
+                { header: "Высота", key: "yandex_height", base: floatColumn },
                 {
                     key: "yandex_volume",
                     header: "Объём",
-                    data_type: "float",
+                    base: floatColumn,
                     tooltip: "Длина * ширина * высота / 1000"
                 },
                 {
                     key: "volume_difference",
                     header: "Разница объемов",
-                    data_type: "float"
+                    base: floatColumn
                 }
             ]
         },
@@ -50,19 +62,19 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "use_manual_min_price",
                     header: "Использовать ручную мин. цену",
-                    data_type: "boolean",
+                    base: new BooleanColumn(),
                     editable: true
                 },
                 {
                     key: "auto_min_price",
                     header: "Авто мин. цена (%)",
-                    data_type: "percent",
+                    base: percentColumn,
                     editable: true
                 },
                 {
                     key: "auto_min_price_rubles",
                     header: "Авто мин. цена (руб)",
-                    data_type: "ruble",
+                    base: rubleColumn,
                     valueGetter: ({ data }: { data: Offer }) => {
                         if (data.total_price === null) return null;
                         return data.total_price * (data.auto_min_price / 100);
@@ -71,159 +83,170 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "manual_min_price",
                     header: "Ручная мин. цена",
-                    data_type: "float",
+                    base: floatColumn,
                     editable: true
                 },
                 {
                     key: "auto_price_control",
                     header: "Авто контроль цен",
-                    data_type: "boolean",
+                    base: new BooleanColumn(),
                     editable: true
                 },
                 {
-                    key: "pricing_scheme_id",
+                    key: "pricing_scheme_name",
                     header: "Схема ценообразования",
-                    data_type: "combobox",
-                    editable: true,
-                    options: templates.map(t => ({ value: t.id, name: t.name }))
+                    base: new ComboboxColumn<string>(
+                        templates.map(t => ({ value: t.name, name: t.name }))
+                    ),
+                    editable: true
                 },
                 {
                     key: "your_price_for_buyers",
                     header: "Цена для покупателя",
-                    data_type: "float"
+                    base: floatColumn
                 },
                 {
                     key: "current_price",
                     header: "Текущая цена",
-                    data_type: "float"
+                    base: floatColumn
                 },
                 {
                     key: "dollar_cost_price",
                     header: "Закупка у. е.",
-                    data_type: "dollar",
+                    base: dollarColumn,
                     editable: true
                 },
                 {
                     key: "attractive_price_threshold",
                     header: "Порог для привлекательной цены",
-                    data_type: "float"
+                    base: floatColumn
                 },
                 {
                     key: "total_price_min_additional",
                     header: "Мин. наценка на расчетную цену",
-                    data_type: "float",
+                    base: floatColumn,
                     editable: true
                 },
                 {
                     key: "discount_base_price",
                     header: "Цена до скидки",
-                    data_type: "float",
+                    base: floatColumn,
                     tooltip: "Цена + 20%"
                 },
                 {
                     key: "profit",
                     header: "Прибыль",
-                    data_type: "float",
+                    base: floatColumn,
                     tooltip: "Текущая цена - налог - FBY  - себестоимость"
                 },
                 {
                     key: "total_price_coeff",
                     header: "Коэффициент расчетной цены",
-                    data_type: "float",
+                    base: floatColumn,
                     editable: true
                 },
                 {
                     key: "cost_price",
                     header: "Себестоимость",
-                    data_type: "float",
+                    base: floatColumn,
                     tooltip: "Закупка у. е. * курс"
                 },
                 {
                     key: "best_place_wm",
                     header: "Площадка с лучшей ценой (без учета Маркета)",
-                    data_type: "string"
+                    base: stringColumn
                 },
                 {
                     key: "min_price_without_market",
                     header: "Цена площадки (без учета Маркета)",
-                    data_type: "float"
+                    base: floatColumn
                 },
                 {
                     key: "fby",
                     header: "Цена за FBY",
-                    data_type: "float"
+                    base: floatColumn
                 },
                 {
                     key: "total_price",
                     header: "Расчетная цена",
-                    data_type: "float",
+                    base: floatColumn,
                     tooltip: "Закупка * коэф. ?+ мин. наценка"
                 },
                 {
                     key: "margin",
                     header: "Окупаемость",
-                    data_type: "percent",
+                    base: percentColumn,
                     tooltip: "Прибыль / закупка * 100"
                 },
                 {
                     key: "moderately_attractive_price_threshold",
                     header: "Порог для умеренно привлекательной цены",
-                    data_type: "float"
+                    base: floatColumn
                 },
                 {
                     key: "best_place_im",
                     header: "Площадка с лучшей ценой (на Маркете)",
-                    data_type: "string"
+                    base: stringColumn
                 },
                 {
                     key: "min_price_in_market",
                     header: "Цена площадки (на Маркете)",
-                    data_type: "float"
+                    base: floatColumn
                 },
                 {
                     key: "min_general_markets_price",
                     header: "Минимальная цена в группе",
-                    data_type: "float"
+                    base: floatColumn
                 },
                 {
                     key: "target_price",
                     header: "Целевая цена",
-                    data_type: "float"
+                    base: floatColumn
                 },
                 {
                     key: "volume_profitability_ratio",
                     header: "Коэффициент прибыльности от объёма",
-                    data_type: "float"
+                    base: floatColumn
                 },
                 {
                     key: "days_to_zero_profit",
                     header: "Дней до нулевой прибыли",
-                    data_type: "float"
+                    base: floatColumn
                 },
                 {
                     key: "price_index",
                     header: "Индекс цены",
-                    data_type: "string"
+                    base: stringColumn
+                },
+                {
+                    key: "market_discount_in_percent",
+                    header: "Скидка маркета в %",
+                    base: floatColumn
                 }
             ]
         },
         {
             key: "remaining_stock",
             header: "Остатки на складах",
-            data_type: "int"
+            base: intColumn
+        },
+        {
+            key: "can_be_delivered",
+            header: "Можно поставить",
+            base: new BooleanColumn()
         },
         {
             key: "content_rating",
             header: "Контент рейтинг",
-            data_type: "float"
+            base: floatColumn
         },
         {
             key: "supplier_available",
             header: "Наличие у поставщика",
-            data_type: "boolean",
+            base: new BooleanColumn(),
             editable: true
         },
-        { header: "Скрыт", key: "hidden", data_type: "boolean", editable: true }
+        { header: "Скрыт", key: "hidden", base: new BooleanColumn(), editable: true }
     ];
 }
 
@@ -234,7 +257,7 @@ export function ownStorageColumns(markets: Market[]): (Column | ColumnGroup)[] {
             key: `note_${i}`,
             valueGetter: ({ data }: { data: OwnStorage }) =>
                 data[`note_${i}`].filter(x => x !== "").join("; "),
-            data_type: "string",
+            base: stringColumn,
             columnGroupShow: "closed"
         } as Column;
     });
@@ -249,7 +272,7 @@ export function ownStorageColumns(markets: Market[]): (Column | ColumnGroup)[] {
                 );
                 return stock?.value;
             },
-            data_type: "int"
+            base: intColumn
         } as Column;
     });
 
@@ -257,9 +280,8 @@ export function ownStorageColumns(markets: Market[]): (Column | ColumnGroup)[] {
         {
             header: "SKU",
             key: "sku",
-            data_type: "string",
-            pinned: true,
-            cellRenderer: "agGroupCellRenderer"
+            base: new GroupColumn(),
+            pinned: true
         },
         {
             header: "Информация",
@@ -267,7 +289,7 @@ export function ownStorageColumns(markets: Market[]): (Column | ColumnGroup)[] {
                 {
                     header: "Фото",
                     key: "photo",
-                    data_type: "image",
+                    base: imageColumn,
                     valueGetter: ({ data }: { data: OwnStorage }) => {
                         if (data.photo === undefined || data.photo.length === 0) return null;
                         let photo = data.photo
@@ -277,14 +299,14 @@ export function ownStorageColumns(markets: Market[]): (Column | ColumnGroup)[] {
                         return photo ?? null;
                     }
                 },
-                { header: "Название", key: "name.0", data_type: "string" },
+                { header: "Название", key: "name.0", base: stringColumn },
                 ...noteCols
             ]
         },
         {
             header: "Мой склад",
             key: "own_storage.value",
-            data_type: "int",
+            base: intColumn,
             editable: true
         },
         ...marketCols
@@ -300,7 +322,7 @@ export function fboStocksColumns(): (Column | ColumnGroup)[] {
                 {
                     header: "В наличии",
                     key: "current_stock",
-                    data_type: "int",
+                    base: intColumn,
                     valueGetter: (params: ValueGetterParams<FboStocks>) => {
                         if (!params.data) return 0;
                         return params.data.stocks
@@ -311,7 +333,7 @@ export function fboStocksColumns(): (Column | ColumnGroup)[] {
                 {
                     header: "Мин. остаток",
                     key: "min_stock",
-                    data_type: "int",
+                    base: intColumn,
                     valueGetter: (params: ValueGetterParams<FboStocks>) => {
                         if (!params.data) return 0;
                         return params.data.stocks.map(x => x.min_stock).reduce((a, b) => a + b, 0);
@@ -320,38 +342,43 @@ export function fboStocksColumns(): (Column | ColumnGroup)[] {
                 {
                     header: "К поставке",
                     key: "to_deliver",
-                    data_type: "int",
+                    base: intColumn,
                     valueGetter: (params: ValueGetterParams<FboStocks>) => {
                         if (!params.data) return 0;
                         return params.data.stocks
                             .map(x => Math.max(0, x.min_stock - x.current_stock))
                             .reduce((a, b) => a + b, 0);
                     }
+                },
+                {
+                    key: "can_be_delivered",
+                    header: "Можно поставить",
+                    base: new BooleanColumn()
                 }
             ]
         },
-        { header: "Скрыт", key: "hidden", data_type: "boolean", editable: true }
+        { header: "Скрыт", key: "hidden", base: new BooleanColumn(), editable: true }
     ];
 }
 
 export function fboStorageColumns(): (Column | ColumnGroup)[] {
     return [
-        { header: "Склад", key: "warehouse.name", data_type: "string" },
+        { header: "Склад", key: "warehouse.name", base: stringColumn },
         {
             header: "В наличии",
             key: "current_stock",
-            data_type: "int"
+            base: intColumn
         },
         {
             header: "Мин. остаток",
             key: "min_stock",
-            data_type: "int",
+            base: intColumn,
             editable: true
         },
         {
             header: "К поставке",
             key: "to_deliver",
-            data_type: "int",
+            base: intColumn,
             valueGetter: params => {
                 if (params.data) {
                     return Math.max(0, params.data.min_stock - params.data.current_stock);
@@ -366,48 +393,55 @@ export function fboStorageColumns(): (Column | ColumnGroup)[] {
 function baseOfferColumns(): (Column | ColumnGroup)[] {
     return [
         {
+            base: new GroupColumn(),
             header: "SKU",
             key: "sku",
-            data_type: "string",
-            pinned: true,
-            cellRenderer: "agGroupCellRenderer"
+            pinned: true
         },
         {
             header: "Информация",
             children: [
-                { header: "Фото", key: "photo", data_type: "image" },
-                { header: "Название", key: "name", data_type: "string" },
                 {
+                    base: imageColumn,
+                    header: "Фото",
+                    key: "photo"
+                },
+                {
+                    base: stringColumn,
+                    header: "Название",
+                    key: "name"
+                },
+                {
+                    base: stringColumn,
                     header: "Примечание 1",
                     key: "note_1",
-                    data_type: "string",
                     editable: true,
                     columnGroupShow: "closed"
                 },
                 {
+                    base: stringColumn,
                     header: "Примечание 2",
                     key: "note_2",
-                    data_type: "string",
                     editable: true,
                     columnGroupShow: "closed"
                 },
                 {
+                    base: stringColumn,
                     header: "Примечание 3",
                     key: "note_3",
-                    data_type: "string",
                     editable: true,
                     columnGroupShow: "closed"
                 },
                 {
+                    base: stringColumn,
                     key: "market",
                     header: "Площадка",
-                    data_type: "string",
                     columnGroupShow: "closed"
                 },
                 {
+                    base: stringColumn,
                     key: "name_of_shop",
                     header: "Название магазина",
-                    data_type: "string",
                     columnGroupShow: "closed"
                 }
             ]
