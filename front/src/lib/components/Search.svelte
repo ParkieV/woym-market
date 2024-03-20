@@ -9,7 +9,7 @@
     .search-input {
         flex: 1;
         max-width: 300px;
-        min-width: 100px;
+        min-width: 150px;
 
         padding: 8px;
         border: 1px solid #ccc;
