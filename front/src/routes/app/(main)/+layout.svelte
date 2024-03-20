@@ -4,13 +4,15 @@
     import { setContext } from "svelte";
     import Toolbar from "./Toolbar.svelte";
     import type { FilterParams } from "$lib/grid/filters";
+    import type { LayoutData } from "./$types";
+
+    export let data: LayoutData;
 
     let refresh = writable(() => {});
     setContext("refresh", refresh); // FIXME: better solution is needed
 
     let filterParams = writable<FilterParams>({
-        markets: [],
-        shops: [],
+        stores: [],
         search: "",
         show_hidden: false
     });
@@ -19,7 +21,7 @@
 
 <main>
     <Menu on:import={$refresh} />
-    <Toolbar on:filterChanged={e => ($filterParams = e.detail)} />
+    <Toolbar options={data.options} on:filterChanged={e => ($filterParams = e.detail)} />
     <slot />
 </main>
 
@@ -29,5 +31,6 @@
     main {
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
 </style>

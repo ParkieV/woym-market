@@ -4,12 +4,11 @@ import type { OwnStorage } from "$lib/data/own_storage";
 /** Creates filter for OfferBase */
 export function offerBaseFilter(params: FilterParams): (offer: OfferBase) => boolean {
     const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"] as const;
-    const { search, markets, shops, show_hidden } = params;
+    const { search, stores, show_hidden } = params;
 
     return (offer: OfferBase) => {
         if (!show_hidden && offer.hidden) return false;
-        if (!passes(offer.name_of_shop, shops)) return false;
-        if (!passes(offer.market, markets)) return false;
+        if (!passes(offer.name_of_shop, stores)) return false;
         return searchStringInFields(search, SEARCH_FIELDS, offer);
     };
 
@@ -26,11 +25,10 @@ export function offerBaseFilter(params: FilterParams): (offer: OfferBase) => boo
 /** Creates filter for OwnStorage */
 export function ownStorageFilter(params: FilterParams): (offer: OwnStorage) => boolean {
     const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"] as const;
-    const { search, markets, shops } = params;
+    const { search, stores } = params;
 
     return (storage: OwnStorage) => {
-        if (!passes(storage.market, markets)) return false;
-        if (!passes(storage.name_of_shop, shops)) return false;
+        if (!passes(storage.name_of_shop, stores)) return false;
         return searchStringInFields(search, SEARCH_FIELDS, storage);
     };
 
@@ -47,8 +45,7 @@ export function ownStorageFilter(params: FilterParams): (offer: OwnStorage) => b
 
 /** Parameters used to create a filter. */
 export type FilterParams = {
-    shops: { key: string; selected: boolean }[];
-    markets: { key: string; selected: boolean }[];
+    stores: { key: string; selected: boolean }[];
     search: string;
     show_hidden: boolean;
 };

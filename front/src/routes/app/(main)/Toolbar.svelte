@@ -5,62 +5,72 @@
     import type { FilterParams } from "$lib/grid/filters";
     import { createEventDispatcher, onMount } from "svelte";
 
-    let shops: { key: string; name: string; selected: boolean }[] = [];
-    let markets: { key: string; name: string; selected: boolean }[] = [];
+    export let options: {
+        id: number;
+        name: string;
+        type: string;
+    }[];
+
+    let yandex = options
+        .filter(x => x.type === "yandex")
+        .map(({ name }) => ({ key: name, name, selected: true }));
+    let ozon = options
+        .filter(x => x.type === "ozon")
+        .map(({ name }) => ({ key: name, name, selected: true }));
     let search = "";
     let show_hidden: boolean = false;
 
     let dispatch = createEventDispatcher<{ filterChanged: FilterParams }>();
     $: {
-        search, shops, markets, show_hidden;
-        dispatch("filterChanged", { markets, shops, search, show_hidden });
+        search, yandex, ozon, show_hidden;
+        dispatch("filterChanged", { stores: [...yandex, ...ozon], search, show_hidden });
     }
-
-    onMount(async () => {
-        [shops, markets] = (await Promise.all([getStoreNames(), getStoreTypes()])).map(arr =>
-            arr.map(x => ({ key: x, name: x, selected: true }))
-        );
-    });
 </script>
 
 <menu>
-    <ButtonGroup bind:options={shops} />
-    <ButtonGroup bind:options={markets} />
+    <div class="stores">
+        <ButtonGroup image={"/yandex-market.svg"} bind:options={yandex} />
+        <ButtonGroup image={"/ozon.svg"} bind:options={ozon} />
+    </div>
+    <Search placeholder="Поиск..." bind:value={search} />
     <button class:selected={show_hidden} on:click={() => (show_hidden = !show_hidden)}>
         <img src="/eye-slash.svg" alt="Показать скрытые товары" />
     </button>
-    <div class="spacer" />
-    <Search placeholder="Поиск..." bind:value={search} />
 </menu>
 
 <style lang="scss">
     @use "mixins.scss" as *;
     menu {
         display: flex;
-        gap: 16px;
+        gap: 12px;
         padding: 8px 12px;
-    }
+        width: 100%;
+        overflow: hidden;
 
-    button {
-        @include selectable-button;
-        padding: 4px;
-        aspect-ratio: 1;
-        border: 0;
-        border-radius: 4px;
+        > .stores {
+            flex: 1 1 400px;
+            display: flex;
+            gap: 16px;
+            overflow-x: scroll;
+            margin-right: auto;
+        }
 
-        &.selected {
+        > button {
+            @include selectable-button;
+            padding: 4px;
+            aspect-ratio: 1;
+            border: 0;
+            border-radius: 4px;
+
+            &.selected {
+                > img {
+                    filter: invert(1);
+                }
+            }
             > img {
-                filter: invert(1);
+                height: 24px;
+                width: 24px;
             }
         }
-        > img {
-            height: 24px;
-            width: 24px;
-        }
-    }
-
-    .spacer {
-        margin-right: auto;
-        margin-left: -16px;
     }
 </style>
