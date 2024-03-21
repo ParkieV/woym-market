@@ -192,7 +192,7 @@ class YandexMarketAPI(BaseAPI):
                 new_df[['sku', 'attractive_price_threshold', 'moderately_attractive_price_threshold',
                         'your_price_for_buyers', 'min_general_markets_price', 'best_place_wm',
                         'min_price_without_market', 'best_place_im',
-                        'min_price_in_market']] = df.iloc[:, [0, 6, 7, 8, 11, 12, 13, 14, 15]]
+                        'min_price_in_market']] = df.iloc[:, [0, 6, 7, 10, 13, 14, 15, 16, 17]]
                 new_df.replace({'–': np.nan}, inplace=True)
                 new_df[['best_place_wm', 'best_place_im']] = new_df[['best_place_wm', 'best_place_im']].fillna('')
 
