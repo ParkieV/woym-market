@@ -37,7 +37,7 @@
                 min={0}
                 max={99}
                 readonly={!$userCanModify}
-                bind:value={data.settings.fby_sales_commission}
+                bind:value={data.settings.fbo_sales_commission}
             />
         </section>
         <section>

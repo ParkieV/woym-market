@@ -45,7 +45,7 @@ class OzonAPI(BaseAPI):
             attrs = offers_attributes.get(offer['sku'], None)
             offer.update(attrs)
             offer['name_of_shop'] = self.shop_name
-            offer['fby'] = offers_commissions.get(offer['sku'], None)
+            offer['fbo'] = offers_commissions.get(offer['sku'], None)
             offer['content_rating'] = offers_content_rating.get(offer['market_sku'], None)
             del offer['market_sku']
 

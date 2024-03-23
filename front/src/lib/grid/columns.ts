@@ -162,7 +162,7 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                     base: floatColumn
                 },
                 {
-                    key: "fby",
+                    key: "fbo",
                     header: "Цена за FBY",
                     base: floatColumn
                 },

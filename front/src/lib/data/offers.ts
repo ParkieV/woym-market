@@ -51,7 +51,7 @@ export type Offer = OfferBase & {
     discount_base_price: number | null;
     profit: number | null;
     margin: number | null;
-    fby: number | null;
+    fbo: number | null;
     minimum_group_price: number;
     remaining_stock: number;
     auto_min_price: number;
