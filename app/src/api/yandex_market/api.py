@@ -57,7 +57,7 @@ class YandexMarketAPI(BaseAPI):
                 'group_sellers_amount': 0,
                 'remaining_stock': stocks.get(offer['sku'], 0),
                 'name_of_shop': self._shop_name,
-                'fby': None
+                'fbo': None
                 # 'current_price': offers_prices.get(offer['sku'], None)
             }
             extended_offer.update(offer)

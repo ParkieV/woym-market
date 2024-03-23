@@ -149,7 +149,7 @@ class OfferOut(OfferChange):
     discount_base_price: float | None = Field(title='Цена до скидки (Текущая цена + 20%)')
     profit: float | None = Field(title='Прибыль (Текущая цена - закупка - FBY)')
     margin: float | None = Field(title='Окупаемость (Прибыль / закупка * 100)')
-    fby: float | None = Field(title='Цена за FBY')
+    fbo: float | None = Field(title='Цена за FBO')
 
     content_rating: float | None = Field(title='Контент рейтинг')
     price_index: str | None = Field(title='Индекс цены')

@@ -34,7 +34,7 @@ class Settings(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     user_id = Column(Integer, ForeignKey('users.id'))
     discount_purchase = Column(Float, default=20)
-    fby_sales_commission = Column(Float, default=19)
+    fbo_sales_commission = Column(Float, default=19)
     rate = Column(Float, default=10)
 
 
@@ -76,7 +76,7 @@ class Offer(Base):
     discount_base_price = Column(Float, nullable=True)
     profit = Column(Float, nullable=True)
     margin = Column(Float, nullable=True)
-    fby = Column(Float, nullable=True)
+    fbo = Column(Float, nullable=True)
 
     content_rating = Column(Float, nullable=True)
     price_index = Column(String, nullable=True)

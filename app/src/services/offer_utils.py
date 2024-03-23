@@ -7,7 +7,7 @@ from src.database.db import async_session
 from src.database.settings_db import get_markets
 
 
-def count_fby(data: pd.DataFrame, settings) -> pd.Series:
+def count_fbo(data: pd.DataFrame, settings) -> pd.Series:
     data = data.copy()
     # 19% - коммисия за продажу (дача, сад и огород, содовый инвентарь)
     # 1% - перевод денежных средств магазину
@@ -23,18 +23,18 @@ def count_fby(data: pd.DataFrame, settings) -> pd.Series:
         350 * 2
     )
 
-    data['fby'] = np.where(
+    data['fbo'] = np.where(
         data['market'] == 'ozon',
-        data['fby'],
-        data['current_price'] * (settings.fby_sales_commission / 100) + delivery_and_warehouse_processing_price + data['current_price'] * 0.01
+        data['fbo'],
+        data['current_price'] * (settings.fbo_sales_commission / 100) + delivery_and_warehouse_processing_price + data['current_price'] * 0.01
     )
-    return data['fby']
+    return data['fbo']
 
 
 async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
     data = data.copy()
 
-    data['fby'] = count_fby(data, settings)
+    data['fbo'] = count_fbo(data, settings)
     data['yandex_volume'] = data['yandex_length'] * data['yandex_width'] * data['yandex_height'] / 1000
     data['volume'] = data['self_length'] * data['self_width'] * data['self_height'] / 1000
     data['volume_difference'] = data['yandex_volume'] / data['volume']
@@ -47,7 +47,7 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
 
     data['market_discount_in_percent'] = 100 - data['your_price_for_buyers'] * 100 / data['current_price']
 
-    data['profit'] = data['current_price'] - data['fby'] - data['cost_price']
+    data['profit'] = data['current_price'] - data['fbo'] - data['cost_price']
     data['days_to_zero_profit'] = np.nan
 
     async with async_session() as session:
@@ -180,6 +180,6 @@ def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0, file_extension: 
 def round_values(data: pd.DataFrame) -> pd.DataFrame:
     df = data.copy()
 
-    df[['current_price', 'target_price', 'cost_price', 'total_price', 'discount_base_price', 'profit', 'margin', 'fby']] = df[['current_price', 'target_price', 'cost_price', 'total_price', 'discount_base_price', 'profit', 'margin', 'fby']].round()
+    df[['current_price', 'target_price', 'cost_price', 'total_price', 'discount_base_price', 'profit', 'margin', 'fbo']] = df[['current_price', 'target_price', 'cost_price', 'total_price', 'discount_base_price', 'profit', 'margin', 'fbo']].round()
 
     return df
