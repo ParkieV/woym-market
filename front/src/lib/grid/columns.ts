@@ -170,13 +170,13 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                     key: "total_price",
                     header: "Расчетная цена",
                     base: floatColumn,
-                    tooltip: "Закупка * коэф. ?+ мин. наценка"
+                    tooltip: "Себестоимость * коэф. ?+ мин. наценка"
                 },
                 {
                     key: "margin",
                     header: "Окупаемость",
                     base: percentColumn,
-                    tooltip: "Прибыль / закупка * 100"
+                    tooltip: "Прибыль / себестоимость * 100"
                 },
                 {
                     key: "moderately_attractive_price_threshold",
