@@ -7,7 +7,7 @@ export type Settings = {
     rate: number;
     /** Discount for common items in percent. */
     discount_purchase: number;
-    /** Fee for sale through FBY in percent. */
+    /** Fee for sale through FBO in percent. */
     fbo_sales_commission: number;
 };
 
