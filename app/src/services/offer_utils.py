@@ -39,9 +39,7 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
     data['volume'] = data['self_length'] * data['self_width'] * data['self_height'] / 1000
     data['volume_difference'] = data['yandex_volume'] / data['volume']
     data['cost_price'] = data['dollar_cost_price'] * settings.rate
-    data['total_price'] = np.where(data['cost_price'] > data['total_price_min_additional'],
-                                   data['cost_price'] * data['total_price_coeff'],
-                                   data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional'])
+    data['total_price'] = data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional']
 
     data = await calculate_price(data)
 
