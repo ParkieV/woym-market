@@ -231,11 +231,6 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
             base: intColumn
         },
         {
-            key: "can_be_delivered",
-            header: "Можно поставить",
-            base: new BooleanColumn()
-        },
-        {
             key: "content_rating",
             header: "Контент рейтинг",
             base: floatColumn
@@ -349,11 +344,6 @@ export function fboStocksColumns(): (Column | ColumnGroup)[] {
                             .map(x => Math.max(0, x.min_stock - x.current_stock))
                             .reduce((a, b) => a + b, 0);
                     }
-                },
-                {
-                    key: "can_be_delivered",
-                    header: "Можно поставить",
-                    base: new BooleanColumn()
                 }
             ]
         },
