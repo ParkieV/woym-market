@@ -130,6 +130,7 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
 
     df = pd.DataFrame([offer.model_dump() for offer in offers])
     df.fillna(np.nan, inplace=True)
+    df.drop('dollar_cost_price_updated_at', axis=1, inplace=True, errors='ignore')
 
     if df.empty:
         return
