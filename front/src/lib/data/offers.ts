@@ -1,5 +1,5 @@
-import { handleRequest } from "$lib";
-import { fetchAuthenticated } from "$lib/auth";
+import { fetchJSON, fetchPlain } from "$lib/fetch";
+import { showFetchModals } from "$lib/modal";
 
 /** Basic information about the offer. */
 export type OfferBase = {
@@ -72,20 +72,19 @@ export type Offer = OfferBase & {
 };
 
 export async function fetchOfferList(): Promise<Offer[]> {
-    let promise = fetchAuthenticated("data/offers");
-    await handleRequest(promise);
-    return await (await promise).json();
+    let offers = fetchJSON<Offer[]>("data/offers");
+    showFetchModals(offers.then(x => x.response));
+    return (await offers).data;
 }
 
 export async function patchOfferList(changed: Offer[]): Promise<boolean> {
-    let promise = fetchAuthenticated("data/offers", {
+    let response = fetchPlain("data/offers", {
         method: "PATCH",
         body: JSON.stringify(changed),
         headers: {
             "Content-Type": "application/json"
         }
     });
-    let ok = false;
-    await handleRequest(promise, { header: "Сохранение...", onSuccess: () => (ok = true) });
-    return ok;
+    showFetchModals(response, "Сохранение...");
+    return (await response).ok;
 }

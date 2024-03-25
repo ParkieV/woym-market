@@ -1,10 +1,10 @@
 <script lang="ts">
     import { downloadFile } from "$lib/util";
     import Window from "./Window.svelte";
-    import { handleRequest } from "$lib";
-    import { fetchAuthenticated } from "$lib/auth";
     import { onMount } from "svelte";
     import { getStoreNames, getStoreTypes } from "$lib/data/markets";
+    import { fetchPlain } from "$lib/fetch";
+    import { showFetchModals } from "$lib/modal";
 
     type Params = {
         export_type: "table" | "matrix-fbo-stocks" | "matrix-own-storage";
@@ -23,14 +23,11 @@
         }
         let url = "data/export?" + new URLSearchParams(data);
 
-        let promise = fetchAuthenticated(url);
-        handleRequest(promise, {
-            header: "Скачивание файла...",
-            errorHeader: "Ошибка экспорта",
-            onSuccess: async response => {
-                let blob = await response.blob();
-                downloadFile(blob, "report.xlsx");
-            }
+        let promise = fetchPlain(url);
+        showFetchModals(promise, "Скачивание файла...", "Ошибка экспорта");
+        promise.then(async response => {
+            let blob = await response.blob();
+            downloadFile(blob, "report.xlsx");
         });
 
         open = false;

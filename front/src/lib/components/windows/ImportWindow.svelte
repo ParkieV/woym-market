@@ -2,9 +2,9 @@
     import { uploadFile } from "$lib/util";
     import { createEventDispatcher, onMount } from "svelte";
     import Window from "./Window.svelte";
-    import { handleRequest } from "$lib";
-    import { fetchAuthenticated } from "$lib/auth";
     import { getStoreNames, getStoreTypes } from "$lib/data/markets";
+    import { fetchPlain } from "$lib/fetch";
+    import { showFetchModals } from "$lib/modal";
 
     type Params = {
         import_type: "table" | "sizes" | "prices" | "matrix-fbo-stocks" | "matrix-own-storage";
@@ -30,14 +30,13 @@
         }
         let url = "data/import?" + new URLSearchParams(data);
 
-        let promise = fetchAuthenticated(url, {
+        let promise = fetchPlain(url, {
             method: "POST",
             body: formData
         });
-        handleRequest(promise, {
-            header: "Отправка файла...",
-            errorHeader: "Ошибка импорта",
-            onSuccess: () => dispatch("import")
+        showFetchModals(promise, "Отправка файла...", "Ошибка импорта");
+        promise.then(response => {
+            if (response.ok) dispatch("import");
         });
 
         open = false;

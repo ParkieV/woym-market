@@ -23,8 +23,8 @@
         openModal(ConfirmationDialog, { header, text, showCancelButton: false });
     }
 
-    export function showLoadingModal<T>(promise: Promise<T>, header?: string) {
-        openModal(FetchDialog<T>, { header: header ?? "Загрузка...", promise });
+    export function showLoadingModal<T>(promise: Promise<T>, header: string) {
+        openModal(FetchDialog<T>, { header, promise });
     }
 </script>
 
