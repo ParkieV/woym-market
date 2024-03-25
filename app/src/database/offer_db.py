@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel
@@ -218,6 +220,13 @@ async def get_unique_skus(session: AsyncSession) -> list[str]:
 async def set_supplier_available(session: AsyncSession, skus: Iterable[str], value: bool) -> None:
     for sku in skus:
         stmp = update(Offer).where(Offer.sku.endswith(sku)).values(supplier_available=value)
+        await session.execute(stmp)
+        await session.commit()
+
+
+async def set_dollar_cost_price_updated_at(session: AsyncSession, skus: Iterable[str], value: datetime) -> None:
+    for sku in skus:
+        stmp = update(Offer).where(Offer.sku.endswith(sku)).values(dollar_cost_price_updated_at=value)
         await session.execute(stmp)
         await session.commit()
 

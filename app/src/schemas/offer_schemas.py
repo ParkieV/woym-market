@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 from abc import ABC
 from enum import Enum
@@ -105,7 +107,6 @@ class OfferChange(BaseOffer):
     self_height: float | None = Field(title='Высота')
 
     supplier_available: bool = Field(title='Наличие у поставщика')
-    can_be_delivered: bool = Field(title='Можно ли поставить товар')
 
     dollar_cost_price: float | None = Field(title='Закупка у. е.', default=0)
     total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену', default=200)
@@ -145,7 +146,8 @@ class OfferOut(OfferChange):
 
     # countable/editable values
     cost_price: float | None = Field(title='Себестоимость (Закупка у. е. * курс)')
-    total_price: float | None = Field(title='Расчетная цена (Закупка * коэф. ?+ мин. наценка)')
+    dollar_cost_price_updated_at: datetime | None = Field(title='Дата и время изменения стоимости закупки в y. e.')
+    total_price: float | None = Field(title='Расчетная цена (Закупка * коэф. + мин. наценка)')
     discount_base_price: float | None = Field(title='Цена до скидки (Текущая цена + 20%)')
     profit: float | None = Field(title='Прибыль (Текущая цена - закупка - FBY)')
     margin: float | None = Field(title='Окупаемость (Прибыль / закупка * 100)')

@@ -46,7 +46,6 @@ class OfferWithStocks(BaseModel):
     photo: str | None
     name_of_shop: str
     market: str
-    can_be_delivered: bool = False
     note_1: str
     note_2: str
     note_3: str
@@ -59,7 +58,6 @@ class OfferWithStocksUpdate(BaseModel):
     note_1: str = ''
     note_2: str = ''
     note_3: str = ''
-    can_be_delivered: bool = False
     hidden: bool
     stocks: list[OfferStockUpdate]
 
