@@ -1,7 +1,7 @@
 <script lang="ts">
     import { patchSettings } from "$lib/data/settings";
     import NumberInput from "./NumberInput.svelte";
-    import { userCanModify } from "$lib/user";
+    import { userCanModify } from "$lib/data/user";
     import type { PageData } from "./$types";
 
     export let data: PageData;

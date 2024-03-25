@@ -6,8 +6,8 @@
     } from "$lib/components/modal/Modals.svelte";
     import { fetchLogs } from "$lib/data/settings";
     import type { ChangeList } from "$lib/components/datagrid/changes";
-    import { createEventDispatcher, getContext, onMount } from "svelte";
-    import { userCanModify } from "$lib/user";
+    import { createEventDispatcher, onMount } from "svelte";
+    import { userCanModify } from "$lib/data/user";
 
     export let changes: ChangeList<T, K>;
     let updated_at: Date | null = null;

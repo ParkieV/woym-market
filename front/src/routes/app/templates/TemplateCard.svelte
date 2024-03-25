@@ -1,7 +1,7 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
     import type { Template } from "$lib/data/templates";
-    import { userCanModify } from "$lib/user";
+    import { userCanModify } from "$lib/data/user";
 
     export let template: Template;
 
