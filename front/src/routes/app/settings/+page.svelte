@@ -33,7 +33,7 @@
                 bind:value={data.settings.discount_purchase}
             />
             <NumberInput
-                label="Комиссия за продажу в FBY (%)"
+                label="Комиссия за продажу в FBO (%)"
                 min={0}
                 max={99}
                 readonly={!$userCanModify}

@@ -137,7 +137,7 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                     key: "profit",
                     header: "Прибыль",
                     base: floatColumn,
-                    tooltip: "Текущая цена - налог - FBY  - себестоимость"
+                    tooltip: "Текущая цена - налог - FBO  - себестоимость"
                 },
                 {
                     key: "total_price_coeff",
@@ -163,14 +163,14 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 },
                 {
                     key: "fbo",
-                    header: "Цена за FBY",
+                    header: "Цена за FBO",
                     base: floatColumn
                 },
                 {
                     key: "total_price",
                     header: "Расчетная цена",
                     base: floatColumn,
-                    tooltip: "Себестоимость * коэф. ?+ мин. наценка"
+                    tooltip: "Себестоимость * коэф. + мин. наценка"
                 },
                 {
                     key: "margin",
