@@ -1,4 +1,4 @@
-import { fetchAuthenticated } from "$lib/auth";
+import { fetchPlain } from "$lib/fetch";
 import type { GridState as AgGridState } from "ag-grid-enterprise";
 
 export const gridStateSources: (keyof AgGridState)[] = [
@@ -85,7 +85,7 @@ function getLocal(gridName: string): GridState | null {
 }
 
 async function getRemote(gridName: string): Promise<GridState | null> {
-    const response = await fetchAuthenticated(`settings/tables/${gridName}`);
+    const response = await fetchPlain(`settings/tables/${gridName}`);
     const string = await response.text();
     if (string === "null") return null;
     try {
@@ -100,7 +100,7 @@ function setLocal(gridName: string, state: GridState) {
 }
 
 async function setRemote(gridName: string, state: GridState) {
-    await fetchAuthenticated(`settings/tables/${gridName}`, {
+    await fetchPlain(`settings/tables/${gridName}`, {
         method: "PUT",
         body: state.toString(),
         headers: {

@@ -1,5 +1,5 @@
-import { handleRequest } from "$lib";
-import { fetchAuthenticated } from "$lib/auth";
+import { fetchJSON, fetchPlain } from "$lib/fetch";
+import { showFetchModals } from "$lib/modal";
 import type { Market } from "./markets";
 
 export type OwnStoragesInfo = {
@@ -28,9 +28,9 @@ export type OwnStorage = {
 };
 
 export async function fetchOwnStorages(): Promise<OwnStoragesInfo> {
-    let promise = fetchAuthenticated("stocks/own-storage");
-    let info = await handleRequest(promise, { onSuccess: async response => await response.json() });
-    return info as OwnStoragesInfo;
+    let promise = fetchJSON<OwnStoragesInfo>("stocks/own-storage");
+    showFetchModals(promise.then(x => x.response));
+    return (await promise).data;
 }
 
 export async function patchOwnStorages(storages: OwnStorage[]): Promise<boolean> {
@@ -40,15 +40,13 @@ export async function patchOwnStorages(storages: OwnStorage[]): Promise<boolean>
             value: x.own_storage.value
         };
     });
-
-    let promise = fetchAuthenticated("stocks/own-storage", {
+    let promise = fetchPlain("stocks/own-storage", {
         method: "PATCH",
         body: JSON.stringify(data),
         headers: {
             "Content-Type": "application/json"
         }
     });
-    let ok = false;
-    await handleRequest(promise, { header: "Сохранение...", onSuccess: () => (ok = true) });
-    return ok;
+    showFetchModals(promise, "Сохранение...");
+    return (await promise).ok;
 }

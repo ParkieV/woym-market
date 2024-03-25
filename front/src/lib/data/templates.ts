@@ -1,5 +1,5 @@
-import { handleRequest } from "$lib";
-import { fetchAuthenticated } from "$lib/auth";
+import { fetchJSON, fetchPlain } from "$lib/fetch";
+import { showFetchModals } from "$lib/modal";
 
 export type Template = {
     name: string;
@@ -20,28 +20,25 @@ export type Template = {
 };
 
 export async function fetchTemplates(): Promise<Template[]> {
-    let promise = fetchAuthenticated("data/pricing-schemes");
-    await handleRequest(promise);
-    let templates: Template[] = await (await promise).json();
+    let r = fetchJSON<Template[]>("data/pricing-schemes");
+    showFetchModals(r.then(x => x.response));
+    let templates: Template[] = (await r).data;
     templates.sort((a, b) => (a.name > b.name ? 1 : b.name > a.name ? -1 : 0));
     return templates;
 }
 
 export async function patchTemplates(templates: Template[]): Promise<boolean> {
-    let promises = templates.map(template => {
-        return fetchAuthenticated("data/pricing-schemes", {
-            method: "PATCH",
-            body: JSON.stringify(template),
-            headers: {
-                "Content-Type": "application/json"
-            }
-        });
-    });
+    let promise = Promise.all(templates.map(patchTemplate));
+    showFetchModals(promise, "Сохранение...");
+    return (await promise).every(r => r.ok);
+}
 
-    let ok = false;
-    await handleRequest(Promise.all(promises), {
-        header: "Сохранение...",
-        onSuccess: () => (ok = true)
+async function patchTemplate(template: Template): Promise<Response> {
+    return fetchPlain("data/pricing-schemes", {
+        method: "PATCH",
+        body: JSON.stringify(template),
+        headers: {
+            "Content-Type": "application/json"
+        }
     });
-    return ok;
 }

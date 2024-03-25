@@ -1,5 +1,5 @@
-import { handleRequest } from "$lib";
-import { fetchAuthenticated } from "$lib/auth";
+import { fetchJSON, fetchPlain } from "$lib/fetch";
+import { showFetchModals } from "$lib/modal";
 import type { Market } from "./markets";
 
 export type Settings = {
@@ -16,26 +16,21 @@ export type Logs = {
 };
 
 export async function fetchSettings(): Promise<Settings & { markets: Market[] }> {
-    let main_promise = fetchAuthenticated("settings");
-    let markets_promise = fetchAuthenticated("settings/markets");
+    let main_promise = fetchJSON<Settings>("settings");
+    let markets_promise = fetchJSON<Market[]>("settings/markets");
+    let promise = Promise.all([main_promise, markets_promise]);
 
-    let settings = await handleRequest(Promise.all([main_promise, markets_promise]), {
-        onSuccess: async ([main_response, markets_response]) => {
-            let [main_settings, markets] = await Promise.all([
-                main_response.json() as Promise<Settings>,
-                markets_response.json() as Promise<Market[]>
-            ]);
-            return {
-                ...main_settings,
-                markets
-            };
-        }
-    });
-    return settings!;
+    showFetchModals(promise.then(x => x.map(x => x.response)));
+
+    let [main_settings, markets] = await promise;
+    return {
+        ...main_settings.data,
+        markets: markets.data
+    };
 }
 
 export async function patchSettings(settings: Settings & { markets: Market[] }) {
-    let settings_promise = fetchAuthenticated("settings", {
+    let settings_promise = fetchPlain("settings", {
         method: "PATCH",
         body: JSON.stringify({
             discount_purchase: settings.discount_purchase,
@@ -47,7 +42,7 @@ export async function patchSettings(settings: Settings & { markets: Market[] }) 
         }
     });
     let market_promises = settings.markets.map(x => {
-        return fetchAuthenticated(`settings/markets/${x.id}`, {
+        return fetchPlain(`settings/markets/${x.id}`, {
             method: "PATCH",
             body: JSON.stringify({ tax: x.tax }),
             headers: {
@@ -56,9 +51,9 @@ export async function patchSettings(settings: Settings & { markets: Market[] }) 
         });
     });
     let promise = Promise.all([settings_promise, ...market_promises]);
-    await handleRequest(promise, { header: "Сохранение..." });
+    showFetchModals(promise, "Сохранение...");
 }
 
 export async function fetchLogs(): Promise<Logs> {
-    return await (await fetchAuthenticated("settings/logs")).json();
+    return fetchJSON<Logs>("settings/logs").then(x => x.data);
 }

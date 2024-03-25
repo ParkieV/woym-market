@@ -1,5 +1,5 @@
-import { handleRequest } from "$lib";
-import { fetchAuthenticated } from "$lib/auth";
+import { fetchJSON, type FetchInit } from "$lib/fetch";
+import { showFetchModals } from "$lib/modal";
 import { filterUnique } from "$lib/util";
 
 export type Market = {
@@ -10,15 +10,14 @@ export type Market = {
     long_term_storage_cost: number;
 };
 
-export async function getStores(): Promise<Market[]> {
-    let promise = fetchAuthenticated("settings/markets");
-    let markets = await handleRequest(promise, {
-        errorHeader: "Не удалось получить список магазинов",
-        onSuccess: async response => {
-            return (await response.json()) as Market[];
-        }
-    });
-    return markets!;
+export async function getStores(init?: FetchInit): Promise<Market[]> {
+    let promise = fetchJSON<Market[]>("settings/markets", init);
+    showFetchModals(
+        promise.then(x => x.response),
+        undefined,
+        "Не удалось получить список магазинов"
+    );
+    return (await promise).data;
 }
 
 export async function getStoreNames(): Promise<string[]> {

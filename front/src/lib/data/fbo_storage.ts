@@ -1,5 +1,5 @@
-import { handleRequest } from "$lib";
-import { fetchAuthenticated } from "$lib/auth";
+import { fetchJSON, fetchPlain } from "$lib/fetch";
+import { showFetchModals } from "$lib/modal";
 import type { OfferBase } from "./offers";
 
 export type FboStocks = OfferBase & {
@@ -17,20 +17,19 @@ export type FboStorage = {
 };
 
 export async function fetchFboStocks(): Promise<FboStocks[]> {
-    let promise = fetchAuthenticated("stocks/fbo");
-    await handleRequest(promise);
-    return await (await promise).json();
+    let promise = fetchJSON<FboStocks[]>("stocks/fbo");
+    showFetchModals(promise.then(x => x.response));
+    return (await promise).data;
 }
 
 export async function patchFboStocks(changed: FboStocks[]): Promise<boolean> {
-    let promise = fetchAuthenticated("stocks/fbo", {
+    let promise = fetchPlain("stocks/fbo", {
         method: "PATCH",
         body: JSON.stringify(changed),
         headers: {
             "Content-Type": "application/json"
         }
     });
-    let ok = false;
-    await handleRequest(promise, { header: "Сохранение...", onSuccess: () => (ok = true) });
-    return ok;
+    showFetchModals(promise, "Сохранение...");
+    return (await promise).ok;
 }
