@@ -137,7 +137,6 @@ async def import_offers_stocks(data, name_of_shop: str | None = None, market: st
                 'note_2': offer_series['note_2'],
                 'note_3': offer_series['note_3'],
                 'hidden': offer_series['hidden'],
-                'can_be_delivered': offer_series['can_be_delivered'],
                 'stocks': offer_stocks
             }
             to_update.append(offer_data)

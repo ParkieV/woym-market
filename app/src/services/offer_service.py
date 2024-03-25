@@ -237,6 +237,9 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
         await db.set_supplier_available(session, db_skus & import_skus, True)
         await db.set_supplier_available(session, db_skus - import_skus, False)
 
+        now = datetime.now()
+        await db.set_dollar_cost_price_updated_at(session, import_skus, now)
+
         await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
 
         await recalculate_values(session, settings)

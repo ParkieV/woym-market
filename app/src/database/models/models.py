@@ -69,6 +69,7 @@ class Offer(Base):
 
     # countable/editable values
     dollar_cost_price = Column(Float, nullable=True)
+    dollar_cost_price_updated_at = Column(DateTime, nullable=True, default=None)
     cost_price = Column(Float, nullable=True)
     total_price_coeff = Column(Float)
     total_price_min_additional = Column(Float)
@@ -84,7 +85,6 @@ class Offer(Base):
     volume_profitability_ratio = Column(Float, nullable=True, default=None)
     days_to_zero_profit = Column(Float, nullable=True, default=None)
     market_discount_in_percent = Column(Float, nullable=True, default=None)
-    can_be_delivered = Column(Boolean, default=False)
 
     attractive_price_threshold = Column(Float, nullable=True)
     moderately_attractive_price_threshold = Column(Float, nullable=True)
