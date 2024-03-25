@@ -1,7 +1,7 @@
 <script lang="ts">
     import TemplateCard from "./TemplateCard.svelte";
     import { patchTemplates } from "$lib/data/templates";
-    import { userCanModify } from "$lib/user";
+    import { userCanModify } from "$lib/data/user";
     import type { PageData } from "./$types";
 
     export let data: PageData;

@@ -1,6 +1,6 @@
 <script lang="ts" generics="T, K extends keyof T">
     import { getState as getGridState, gridStateSources, setState as setGridState } from "./state";
-    import { userCanModify } from "$lib/user";
+    import { userCanModify } from "$lib/data/user";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import { getColumns, type Column, type ColumnGroup } from "./columns";
     import { ChangeList } from "$lib/components/datagrid/changes";

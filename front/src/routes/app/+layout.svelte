@@ -3,10 +3,9 @@
     import Header from "$lib/components/sidebar/Header.svelte";
     import Link from "$lib/components/sidebar/Link.svelte";
     import Spacer from "$lib/components/sidebar/Spacer.svelte";
-    import { user } from "$lib/user";
+    import { user, fetchUser } from "$lib/data/user";
     import { onMount, setContext } from "svelte";
     import { writable } from "svelte/store";
-    import { fetchUser } from "$lib/user";
     import { page } from "$app/stores";
     import { BaseUrl } from "$lib";
 

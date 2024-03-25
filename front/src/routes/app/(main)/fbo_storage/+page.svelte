@@ -13,7 +13,7 @@
     import { getColumns } from "$lib/components/datagrid/columns";
     import Grid from "$lib/components/datagrid/Grid.svelte";
     import type { Writable } from "svelte/store";
-    import { userCanModify } from "$lib/user";
+    import { userCanModify } from "$lib/data/user";
     import { offerBaseFilter, type FilterParams } from "$lib/grid/filters";
 
     let data: FboStocks[] = [];
