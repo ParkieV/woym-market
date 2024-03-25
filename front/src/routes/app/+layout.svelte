@@ -3,11 +3,15 @@
     import Header from "$lib/components/sidebar/Header.svelte";
     import Link from "$lib/components/sidebar/Link.svelte";
     import Spacer from "$lib/components/sidebar/Spacer.svelte";
-    import { user, fetchUser } from "$lib/data/user";
-    import { onMount, setContext } from "svelte";
+    import { user } from "$lib/data/user";
+    import { setContext } from "svelte";
     import { writable } from "svelte/store";
     import { page } from "$app/stores";
     import { BaseUrl } from "$lib";
+    import type { LayoutData } from "./$types";
+
+    export let data: LayoutData;
+    $: $user = data.user;
 
     let collapsed = writable(true);
     setContext("collapsed", collapsed);
@@ -18,11 +22,6 @@
     $: is_dev_frontend = $page.url.hostname === "localhost" || $page.url.hostname.startsWith("dev");
     $: is_dev_backend = BaseUrl.includes("dev.oy-pro.ru");
     $: show_warning = is_dev_frontend && !is_dev_backend;
-
-    onMount(() => {
-        $user = undefined;
-        fetchUser();
-    });
 </script>
 
 <div id="wrapper" class:collapsed={$collapsed} class:warning={show_warning}>
