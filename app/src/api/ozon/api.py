@@ -184,9 +184,9 @@ class OzonAPI(BaseAPI):
             for offer in data['result']:
                 # TODO посчитать объем
                 result[offer['offer_id']] = {
-                    'yandex_height': offer['height'],
-                    'yandex_length': offer['depth'],
-                    'yandex_width': offer['width'],
+                    'yandex_height': offer['height'] / 1000 if offer['height'] else offer['height'],
+                    'yandex_length': offer['depth'] / 1000 if offer['depth'] else offer['depth'],
+                    'yandex_width': offer['width'] / 1000 if offer['width'] else offer['width'],
                     'yandex_weight': offer['weight'] / 1000 if offer['weight'] else offer['weight'],
                 }
 
