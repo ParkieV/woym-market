@@ -187,7 +187,7 @@ class OzonAPI(BaseAPI):
                     'yandex_height': offer['height'],
                     'yandex_length': offer['depth'],
                     'yandex_width': offer['width'],
-                    'yandex_weight': offer['weight'],
+                    'yandex_weight': offer['weight'] / 1000 if offer['weight'] else offer['weight'],
                 }
 
         return result
