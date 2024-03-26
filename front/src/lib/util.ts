@@ -47,3 +47,5 @@ export function filterUnique<T extends string | number | boolean | boolean | nul
 ) {
     return array.indexOf(value) === index;
 }
+
+export type DateString = `${number}-${number}-${number}T${number}:${number}:${number}.${number}`;

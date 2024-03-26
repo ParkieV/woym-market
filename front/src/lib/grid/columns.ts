@@ -15,7 +15,8 @@ import {
     intColumn,
     percentColumn,
     rubleColumn,
-    stringColumn
+    stringColumn,
+    DateColumn
 } from "$lib/components/datagrid/column_types";
 
 export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
@@ -222,6 +223,11 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                     key: "market_discount_in_percent",
                     header: "Скидка маркета в %",
                     base: floatColumn
+                },
+                {
+                    key: "dollar_cost_price_updated_at",
+                    header: "Дата обновления цены закупки (у. е.)",
+                    base: new DateColumn()
                 }
             ]
         },

@@ -1,5 +1,6 @@
 import type { ICellEditorComp, ICellRendererComp, ICellRendererFunc } from "ag-grid-enterprise";
 import { ImageCellRenderer, MyCellEditor } from "./cell";
+import type { DateString } from "$lib/util";
 
 export interface ColumnBase<T> {
     parser?: (s: string) => T | Error;
@@ -154,4 +155,13 @@ export class ComboboxColumn<V extends string | number> implements ColumnBase<V> 
 
 export class GroupColumn<T extends Object> implements ColumnBase<T> {
     cellRenderer = "agGroupCellRenderer";
+}
+
+export class DateColumn<T extends DateString | Date> implements ColumnBase<T> {
+    formatter(val: T | null | undefined) {
+        if (val === null || val === undefined) return "N/A";
+
+        let date = val instanceof Date ? val : new Date(val);
+        return date.toLocaleDateString("en-GB");
+    }
 }
