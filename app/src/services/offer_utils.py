@@ -45,14 +45,14 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
 
     data['market_discount_in_percent'] = 100 - data['your_price_for_buyers'] * 100 / data['current_price']
 
-    data['profit'] = data['current_price'] - data['fbo'] - data['cost_price']
+    data['profit'] = np.nan
     data['days_to_zero_profit'] = np.nan
 
     async with async_session() as session:
         for market in await get_markets(session):
             data['profit'] = np.where(
                 ((data['market'] == market.type) & (data['name_of_shop'] == market.name)),
-                data['profit'] * (1 - market.tax / 100),
+                data['current_price'] * (1 - market.tax / 100) - data['fbo'] - data['cost_price'],
                 data['profit']
             )
             data['days_to_zero_profit'] = np.where(
