@@ -146,7 +146,7 @@ class OfferOut(OfferChange):
 
     # countable/editable values
     cost_price: float | None = Field(title='Себестоимость (Закупка у. е. * курс)')
-    dollar_cost_price_updated_at: datetime | None = Field(title='Дата и время изменения стоимости закупки в y. e.')
+    dollar_cost_price_updated_at: datetime | None = Field(title='Дата изменения стоимости закупки в y. e.')
     total_price: float | None = Field(title='Расчетная цена (Закупка * коэф. + мин. наценка)')
     discount_base_price: float | None = Field(title='Цена до скидки (Текущая цена + 20%)')
     profit: float | None = Field(title='Прибыль (Текущая цена - закупка - FBY)')
