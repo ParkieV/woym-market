@@ -152,7 +152,8 @@ class OzonAPI(BaseAPI):
                         'market': 'ozon',
                         'discount_base_price': self.__str_to_float(offer['old_price']),
                         'price_index': self.__translate_price_index(price_index),
-                        'market_sku': offer['sku']
+                        'market_sku': offer['sku'],
+                        'your_price_for_buyers': self.__str_to_float(offer['marketing_price'])
                     })
 
                 except Exception as e:
