@@ -25,13 +25,13 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
         {
             header: "Габариты (Собственные)",
             children: [
-                { header: "Вес", key: "self_weight", base: floatColumn, editable: true },
-                { header: "Длина", key: "self_length", base: floatColumn, editable: true },
-                { header: "Ширина", key: "self_width", base: floatColumn, editable: true },
-                { header: "Высота", key: "self_height", base: floatColumn, editable: true },
+                { header: "Вес, кг", key: "self_weight", base: floatColumn, editable: true },
+                { header: "Длина, см", key: "self_length", base: floatColumn, editable: true },
+                { header: "Ширина, см", key: "self_width", base: floatColumn, editable: true },
+                { header: "Высота, см", key: "self_height", base: floatColumn, editable: true },
                 {
                     key: "volume",
-                    header: "Объём",
+                    header: "Объём, см³",
                     base: floatColumn,
                     tooltip: "Длина * ширина * высота / 1000"
                 }
@@ -40,19 +40,19 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
         {
             header: "Габариты (Маркет)",
             children: [
-                { header: "Вес", key: "yandex_weight", base: floatColumn },
-                { header: "Длина", key: "yandex_length", base: floatColumn },
-                { header: "Ширина", key: "yandex_width", base: floatColumn },
-                { header: "Высота", key: "yandex_height", base: floatColumn },
+                { header: "Вес, кг", key: "yandex_weight", base: floatColumn },
+                { header: "Длина, см", key: "yandex_length", base: floatColumn },
+                { header: "Ширина, см", key: "yandex_width", base: floatColumn },
+                { header: "Высота, см", key: "yandex_height", base: floatColumn },
                 {
                     key: "yandex_volume",
-                    header: "Объём",
+                    header: "Объём, см³",
                     base: floatColumn,
                     tooltip: "Длина * ширина * высота / 1000"
                 },
                 {
                     key: "volume_difference",
-                    header: "Разница объемов",
+                    header: "Разница объемов, см³",
                     base: floatColumn
                 }
             ]
@@ -84,7 +84,7 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "manual_min_price",
                     header: "Ручная мин. цена",
-                    base: floatColumn,
+                    base: rubleColumn,
                     editable: true
                 },
                 {
@@ -104,12 +104,12 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "your_price_for_buyers",
                     header: "Цена для покупателя",
-                    base: floatColumn
+                    base: rubleColumn
                 },
                 {
                     key: "current_price",
                     header: "Текущая цена",
-                    base: floatColumn
+                    base: rubleColumn
                 },
                 {
                     key: "dollar_cost_price",
@@ -120,24 +120,24 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "attractive_price_threshold",
                     header: "Порог для привлекательной цены",
-                    base: floatColumn
+                    base: rubleColumn
                 },
                 {
                     key: "total_price_min_additional",
                     header: "Мин. наценка на расчетную цену",
-                    base: floatColumn,
+                    base: rubleColumn,
                     editable: true
                 },
                 {
                     key: "discount_base_price",
                     header: "Цена до скидки",
-                    base: floatColumn,
+                    base: rubleColumn,
                     tooltip: "Цена + 20%"
                 },
                 {
                     key: "profit",
                     header: "Прибыль",
-                    base: floatColumn,
+                    base: rubleColumn,
                     tooltip: "Текущая цена - налог - FBO  - себестоимость"
                 },
                 {
@@ -149,7 +149,7 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "cost_price",
                     header: "Себестоимость",
-                    base: floatColumn,
+                    base: rubleColumn,
                     tooltip: "Закупка у. е. * курс"
                 },
                 {
@@ -160,17 +160,17 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "min_price_without_market",
                     header: "Цена площадки (без учета Маркета)",
-                    base: floatColumn
+                    base: rubleColumn
                 },
                 {
                     key: "fbo",
                     header: "Цена за FBO",
-                    base: floatColumn
+                    base: rubleColumn
                 },
                 {
                     key: "total_price",
                     header: "Расчетная цена",
-                    base: floatColumn,
+                    base: rubleColumn,
                     tooltip: "Себестоимость * коэф. + мин. наценка"
                 },
                 {
@@ -182,7 +182,7 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "moderately_attractive_price_threshold",
                     header: "Порог для умеренно привлекательной цены",
-                    base: floatColumn
+                    base: rubleColumn
                 },
                 {
                     key: "best_place_im",
@@ -192,21 +192,22 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "min_price_in_market",
                     header: "Цена площадки (на Маркете)",
-                    base: floatColumn
+                    base: rubleColumn
                 },
                 {
                     key: "min_general_markets_price",
                     header: "Минимальная цена в группе",
-                    base: floatColumn
+                    base: rubleColumn
                 },
                 {
                     key: "target_price",
                     header: "Целевая цена",
-                    base: floatColumn
+                    base: rubleColumn
                 },
                 {
                     key: "volume_profitability_ratio",
                     header: "Коэффициент прибыльности от объёма",
+                    tooltip: "Прибыль / объём",
                     base: floatColumn
                 },
                 {
@@ -222,6 +223,7 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "market_discount_in_percent",
                     header: "Скидка маркета в %",
+                    tooltip: "100 - \"цена для покупателей\" * 100 / \"текущая цена\"",
                     base: floatColumn
                 },
                 {
@@ -238,7 +240,7 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
         },
         {
             key: "content_rating",
-            header: "Контент рейтинг",
+            header: "Контент-рейтинг",
             base: floatColumn
         },
         {
