@@ -42,9 +42,10 @@ export async function patchSettings(settings: Settings & { markets: Market[] }) 
         }
     });
     let market_promises = settings.markets.map(x => {
+        const { tax, long_term_storage_cost } = x;
         return fetchPlain(`settings/markets/${x.id}`, {
             method: "PATCH",
-            body: JSON.stringify({ tax: x.tax }),
+            body: JSON.stringify({ tax, long_term_storage_cost }),
             headers: {
                 "Content-Type": "application/json"
             }
