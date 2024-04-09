@@ -155,9 +155,9 @@ class OfferOut(OfferChange):
 
     content_rating: float | None = Field(title='Контент рейтинг')
     price_index: str | None = Field(title='Индекс цены')
-    volume_profitability_ratio: float | None = Field(title='Коэффициент прибыльности от объёма')
+    volume_profitability_ratio: float | None = Field(title='Коэффициент прибыльности от объёма (Прибыль \ объём)')
     days_to_zero_profit: float | None = Field(title='Дней до нулевой прибыли')
-    market_discount_in_percent: float | None = Field(title='Скидка маркета в %')
+    market_discount_in_percent: float | None = Field(title='Скидка маркета в % (100-\"цена для покупателей\" * 100 \ \"текущая цена\")')
 
     attractive_price_threshold: float | None = Field(title='Порог для привлекательной цены')
     moderately_attractive_price_threshold: float | None = Field(title='Порог для умеренно привлекательной цены')
@@ -202,4 +202,3 @@ class ExportType(str, Enum):
     TABLE = 'table'
     FBO_STOCKS = 'matrix-fbo-stocks'
     OWN_STORAGE = 'matrix-own-storage'
-

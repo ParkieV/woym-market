@@ -84,7 +84,7 @@ async def setup_offers_data(current_user=Depends(require_staff)):
 
 
 @data_router.get('/export', dependencies=[Depends(require_staff)])
-async def export_offers(market: Market = Market.YANDEX, export_type: ExportType = ExportType.TABLE, name_of_shop: str | None = None):
+async def export_offers(market: Market, export_type: ExportType = ExportType.TABLE, name_of_shop: str | None = None):
     path = await service.export_data(market, export_type, name_of_shop)
     return FileResponse(path=path, filename='out.xlsx', media_type='multipart/form-data')
 
