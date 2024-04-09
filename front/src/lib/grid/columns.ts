@@ -52,7 +52,7 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 },
                 {
                     key: "volume_difference",
-                    header: "Разница объемов, раз",
+                    header: "Разница объемов",
                     base: floatColumn
                 }
             ]
