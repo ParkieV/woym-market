@@ -31,7 +31,7 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 { header: "Высота, см", key: "self_height", base: floatColumn, editable: true },
                 {
                     key: "volume",
-                    header: "Объём, см³",
+                    header: "Объём, л",
                     base: floatColumn,
                     tooltip: "Длина * ширина * высота / 1000"
                 }
@@ -46,13 +46,13 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 { header: "Высота, см", key: "yandex_height", base: floatColumn },
                 {
                     key: "yandex_volume",
-                    header: "Объём, см³",
+                    header: "Объём, л",
                     base: floatColumn,
                     tooltip: "Длина * ширина * высота / 1000"
                 },
                 {
                     key: "volume_difference",
-                    header: "Разница объемов, см³",
+                    header: "Разница объемов, раз",
                     base: floatColumn
                 }
             ]
