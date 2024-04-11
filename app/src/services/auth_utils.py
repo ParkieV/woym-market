@@ -65,12 +65,12 @@ def verify_access_token(token: str, credentials_exception):
         exp = datetime.fromtimestamp(payload.get('exp'))
 
         if now > exp:
-            raise HTTPException(440, 'Время сессии истекло.')
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, 'Время сессии истекло.')
 
         token_data = TokenData(id=str(id))
 
     except ExpiredSignatureError as e:
-        raise HTTPException(440, 'Время сессии истекло.')
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, 'Время сессии истекло.')
 
     except JWTError:
         raise credentials_exception
