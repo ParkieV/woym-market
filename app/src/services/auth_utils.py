@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from jose import JWTError, jwt
+from jose import JWTError, jwt, ExpiredSignatureError
 from fastapi import HTTPException, status
 
 # from database.admins_db import get_admin_by_email
@@ -43,7 +43,7 @@ async def auth_user(login: str, password: str) -> Users:
 
 async def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=10080)
+    expire = datetime.utcnow() + timedelta(days=7)
     to_encode.update({'exp': expire})
     encoded_jwt = jwt.encode(
         to_encode,
@@ -60,7 +60,18 @@ def verify_access_token(token: str, credentials_exception):
 
         if id is None:
             raise credentials_exception
+
+        now = datetime.now()
+        exp = datetime.fromtimestamp(payload.get('exp'))
+
+        if now > exp:
+            raise HTTPException(440, 'Время сессии истекло.')
+
         token_data = TokenData(id=str(id))
+
+    except ExpiredSignatureError as e:
+        raise HTTPException(440, 'Время сессии истекло.')
+
     except JWTError:
         raise credentials_exception
 
