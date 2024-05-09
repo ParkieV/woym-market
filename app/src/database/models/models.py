@@ -172,6 +172,8 @@ class OfferStock(Base):
     warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='CASCADE'))
     warehouse = relationship(Warehouse, uselist=False)
     current_stock = Column(Integer, default=0)
+    in_box = Column(Integer, default=1)
+    is_deliver_in_boxes = Column(Boolean, default=False)
     min_stock = Column(Integer, default=0)
     for_delivery = Column(Integer, default=0)
 

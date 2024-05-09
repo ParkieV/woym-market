@@ -19,11 +19,15 @@ class BaseOfferStock(BaseModel):
     current_stock: int = 0
     min_stock: int = 0
     for_delivery: int = 0
+    in_box: int = 1
+    is_deliver_in_boxes: bool = False
 
 
 class OfferStockUpdate(BaseModel):
     id: int
-    min_stock: int = 0
+    min_stock: int
+    in_box: int
+    is_deliver_in_boxes: bool
 
 
 class OfferStockCreate(BaseOfferStock):
@@ -49,6 +53,8 @@ class OfferWithStocks(BaseModel):
     note_1: str
     note_2: str
     note_3: str
+    supplier_available: bool
+    margin: float | None
     hidden: bool
     stocks: list[OfferStockWithWarehouseOut]
 
