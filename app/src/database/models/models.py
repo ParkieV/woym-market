@@ -85,6 +85,7 @@ class Offer(Base):
     volume_profitability_ratio = Column(Float, nullable=True, default=None)
     days_to_zero_profit = Column(Float, nullable=True, default=None)
     market_discount_in_percent = Column(Float, nullable=True, default=None)
+    auto_participation_in_promotions = Column(Boolean, default=False)
 
     attractive_price_threshold = Column(Float, nullable=True)
     moderately_attractive_price_threshold = Column(Float, nullable=True)

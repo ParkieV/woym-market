@@ -115,7 +115,8 @@ async def update_yandex_offers_price(session: AsyncSession):
             market=offer.market,
             name_of_shop=offer.name_of_shop,
             target_price=offer.target_price,
-            min_price=offer.manual_min_price if offer.use_manual_min_price else offer.total_price * offer.auto_min_price / 100
+            min_price=offer.manual_min_price if offer.use_manual_min_price else offer.total_price * offer.auto_min_price / 100,
+            auto_participation_in_promotions=offer.auto_participation_in_promotions
         )
         for offer in offers_db if offer.total_price is not None
     ]
