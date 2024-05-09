@@ -53,6 +53,8 @@ class OfferWithStocks(BaseModel):
     note_1: str
     note_2: str
     note_3: str
+    supplier_available: bool
+    margin: float | None
     hidden: bool
     stocks: list[OfferStockWithWarehouseOut]
 
