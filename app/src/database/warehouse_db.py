@@ -15,7 +15,8 @@ from fastapi.exceptions import HTTPException
 ModelSchema = TypeVar('ModelSchema', bound=Type[BaseModel])
 
 
-async def create_warehouse(session: AsyncSession, data: WarehouseCreate, model_schema: ModelSchema = WarehouseOut) -> ModelSchema:
+async def create_warehouse(session: AsyncSession, data: WarehouseCreate,
+                           model_schema: ModelSchema = WarehouseOut) -> ModelSchema:
     warehouse_db = Warehouse(**data.model_dump())
     session.add(warehouse_db)
     await session.commit()
@@ -28,26 +29,31 @@ async def get_warehouses(session: AsyncSession, model_schema: ModelSchema = Ware
     return [model_schema.model_validate(warehouse_db, from_attributes=True) for warehouse_db in result.scalars().all()]
 
 
-async def create_offer_stock(session: AsyncSession, data: OfferStockCreate, model_schema: ModelSchema = OfferStockOut) -> ModelSchema:
+async def create_offer_stock(session: AsyncSession, data: OfferStockCreate,
+                             model_schema: ModelSchema = OfferStockOut) -> ModelSchema:
     offer_stock_db = OfferStock(**data.model_dump())
     session.add(offer_stock_db)
     await session.commit()
     return model_schema.model_validate(offer_stock_db, from_attributes=True)
 
 
-async def get_offers_stocks(session: AsyncSession, model_schema: ModelSchema = OfferStockWithWarehouseOut) -> list[ModelSchema]:
-    query = select(OfferStock).where(OfferStock.offer_id==1).options(selectinload(OfferStock.warehouse))
+async def get_offers_stocks(session: AsyncSession, model_schema: ModelSchema = OfferStockWithWarehouseOut) -> list[
+    ModelSchema]:
+    query = select(OfferStock).where(OfferStock.offer_id == 1).options(selectinload(OfferStock.warehouse))
     result = await session.execute(query)
-    return [model_schema.model_validate(offer_stock_db, from_attributes=True) for offer_stock_db in result.scalars().all()]
+    return [model_schema.model_validate(offer_stock_db, from_attributes=True) for offer_stock_db in
+            result.scalars().all()]
 
 
-async def get_offer_stock_by_id(session: AsyncSession, _id: int, model_schema: ModelSchema = OfferStockOut) -> ModelSchema:
-    query = select(OfferStock).where(OfferStock.id==_id)
+async def get_offer_stock_by_id(session: AsyncSession, _id: int,
+                                model_schema: ModelSchema = OfferStockOut) -> ModelSchema:
+    query = select(OfferStock).where(OfferStock.id == _id)
     result = await session.execute(query)
     return model_schema.model_validate(result.scalar_one(), from_attributes=True)
 
 
-async def get_offers_with_stocks(session: AsyncSession, model_schema: ModelSchema = OfferWithStocks) -> list[ModelSchema]:
+async def get_offers_with_stocks(session: AsyncSession, model_schema: ModelSchema = OfferWithStocks) -> list[
+    ModelSchema]:
     query = (
         select(Offer)
         .options(subqueryload(Offer.stocks).subqueryload(OfferStock.warehouse))
@@ -57,22 +63,31 @@ async def get_offers_with_stocks(session: AsyncSession, model_schema: ModelSchem
     return [model_schema.model_validate(offer, from_attributes=True) for offer in result.scalars().all()]
 
 
+def count_delivery_items(in_stock: int, in_box: int, min_stock: int):
+    if min_stock < in_stock:
+        return 0
+    to_order_sht = min_stock - in_stock
+    ost = 1 if (to_order_sht % in_box) else 0
+    box_to_order = (to_order_sht // in_box) + ost
+    return box_to_order * in_box
+
+
 async def change_offer_with_stock(session: AsyncSession, data: list[OfferWithStocksUpdate]):
     for offer_with_stock in data:
         offer_data = offer_with_stock.model_dump()
         offer_data.pop('stocks')
 
-        stmp = update(Offer).where(Offer.id==offer_data['id']).values(**offer_data)
+        stmp = update(Offer).where(Offer.id == offer_data['id']).values(**offer_data)
         await session.execute(stmp)
 
         for stock in offer_with_stock.stocks:
-            stock_data = stock.model_dump()
-            
-            db_stock = await get_offer_stock_by_id(session, stock_data['id'])
-            for_delivery = stock_data['min_stock'] - db_stock.current_stock
-            for_delivery = 0 if for_delivery < 0 else for_delivery
+            db_stock: OfferStockOut = await get_offer_stock_by_id(session, stock.id)
 
-            stmp = update(OfferStock).where(OfferStock.id==stock_data['id']).values(for_delivery=for_delivery, **stock_data)
+            in_box = stock.in_box if stock.is_deliver_in_boxes else 1
+            for_delivery = count_delivery_items(db_stock.current_stock, in_box, stock.min_stock)
+
+            stock_data = stock.model_dump()
+            stmp = update(OfferStock).where(OfferStock.id == stock_data['id']).values(for_delivery=for_delivery, **stock_data)
             await session.execute(stmp)
 
     await session.commit()
@@ -83,7 +98,7 @@ async def update_or_create_warehouse(session: AsyncSession, data: WarehouseCreat
         session,
         Warehouse,
         data,
-        and_(Warehouse.market==data.market, Warehouse.name==data.name),
+        and_(Warehouse.market == data.market, Warehouse.name == data.name),
         WarehouseOut
     )
 
@@ -104,7 +119,7 @@ async def update_or_create_own_storage(session: AsyncSession, data: OwnStorageCr
         session,
         OwnStorage,
         data,
-        OwnStorage.sku==data.sku,
+        OwnStorage.sku == data.sku,
         OwnStorageOut
     )
 
@@ -116,7 +131,7 @@ async def get_own_storages(session: AsyncSession):
 
     for sku in skus_query.all():
         offers_query = await session.execute(
-            select(Offer, OwnStorage).where(Offer.sku == sku[0]).join(OwnStorage, OwnStorage.sku==Offer.sku)
+            select(Offer, OwnStorage).where(Offer.sku == sku[0]).join(OwnStorage, OwnStorage.sku == Offer.sku)
         )
 
         data = {
@@ -155,11 +170,11 @@ async def get_own_storages(session: AsyncSession):
 
 async def change_own_storages(session: AsyncSession, data: list[OwnStorageUpdate]):
     for storage in data:
-        stmp = update(OwnStorage).where(OwnStorage.id==storage.id).values(**storage.model_dump())
+        stmp = update(OwnStorage).where(OwnStorage.id == storage.id).values(**storage.model_dump())
         a = await session.execute(stmp)
 
     await session.commit()
-    
+
 
 async def get_or_create_offer_stocks(session: AsyncSession, data: OfferStockCreate):
     return await _get_or_create(
@@ -170,6 +185,7 @@ async def get_or_create_offer_stocks(session: AsyncSession, data: OfferStockCrea
              OfferStock.warehouse_id == data.warehouse_id),
         OfferStockOut
     )
+
 
 #
 # async def get_offer_stock_by(session: AsyncSession, offer_id: int, warehouse_name: str, warehouse_market: str):
@@ -189,7 +205,7 @@ async def get_warehouses_by_name_and_market(session: AsyncSession, data: list[li
     results = []
 
     for i in data:
-        query = select(Warehouse).where(and_(Warehouse.name==i[0], Warehouse.market==i[1]))
+        query = select(Warehouse).where(and_(Warehouse.name == i[0], Warehouse.market == i[1]))
         warehouse_db = (await session.execute(query)).scalar_one_or_none()
 
         if warehouse_db is None:
@@ -212,5 +228,3 @@ async def update_own_storages_by_sku(session: AsyncSession, data: list[dict]):
         await session.execute(stmp)
 
     await session.commit()
-
-
