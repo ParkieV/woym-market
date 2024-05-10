@@ -87,7 +87,7 @@ class OzonAPI(BaseAPI):
                     'offer_id': price.sku,
                     'price': str(price.target_price),
                     'currency_code': 'RUB',
-                    'auto_action_enabled': 'UNKNOWN',
+                    'auto_action_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
                     'price_strategy_enabled': 'UNKNOWN',
                     'min_price': str(price.min_price)
                 }

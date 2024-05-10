@@ -107,6 +107,7 @@ class OfferChange(BaseOffer):
     self_height: float | None = Field(title='Высота')
 
     supplier_available: bool = Field(title='Наличие у поставщика')
+    auto_participation_in_promotions: bool = Field(title='Автоучастие в акциях')
 
     dollar_cost_price: float | None = Field(title='Закупка у. е.', default=0)
     total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену', default=200)

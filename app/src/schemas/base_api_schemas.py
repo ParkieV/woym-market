@@ -60,6 +60,7 @@ class APIPriceChangeData:
     name_of_shop: str
     target_price: Union[int, float, None]
     min_price: float
+    auto_participation_in_promotions: bool
 
     def is_valid_data(self) -> bool:
         return isinstance(self.target_price, (float, int))

@@ -48,11 +48,17 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
     data['profit'] = np.nan
     data['days_to_zero_profit'] = np.nan
 
+    data['temp_profit_base'] = np.where(
+        data['your_price_for_buyers'].isna() | data['your_price_for_buyers'] is None,
+        data['current_price'],
+        data['your_price_for_buyers']
+    )
+
     async with async_session() as session:
         for market in await get_markets(session):
             data['profit'] = np.where(
                 ((data['market'] == market.type) & (data['name_of_shop'] == market.name)),
-                data['current_price'] * (1 - market.tax / 100) - data['fbo'] - data['cost_price'],
+                data['temp_profit_base'] * (1 - market.tax / 100) - data['fbo'] - data['cost_price'],
                 data['profit']
             )
             data['days_to_zero_profit'] = np.where(
@@ -60,6 +66,8 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
                 data['profit'] / (market.long_term_storage_cost or np.nan),
                 data['days_to_zero_profit']
             )
+
+    data.drop('temp_profit_base', axis=1, inplace=True)
 
     data['margin'] = data['profit'] / data['cost_price'] * 100
 
