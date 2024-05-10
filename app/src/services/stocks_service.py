@@ -220,3 +220,19 @@ async def import_own_storages(data, name_of_shop: str | None = None, market: str
         await db.update_own_storages_by_sku(session, data)
 
 
+async def export_yandex_supply():
+    pass
+
+
+async def export_ozon_supply():
+    pass
+
+
+@error_handler('Ошибка экспорта поставки.')
+async def export_supply():
+    pass
+
+
+
+
+
