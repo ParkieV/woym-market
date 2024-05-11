@@ -84,13 +84,13 @@ async def setup_offers_data(current_user=Depends(require_staff)):
 
 
 @data_router.get('/export', dependencies=[Depends(require_staff)])
-async def export_offers(market: Market, export_type: ExportType = ExportType.TABLE, name_of_shop: str | None = None):
-    path = await service.export_data(market, export_type, name_of_shop)
-    return FileResponse(path=path, filename='out.xlsx', media_type='multipart/form-data')
+async def export_offers(export_type: ExportType, market: Market | None = None, name_of_shop: str | None = None):
+    path, file_name = await service.export_data(market, export_type, name_of_shop)
+    return FileResponse(path=path, filename=file_name, media_type='multipart/form-data')
 
 
 @data_router.post('/import')
-async def import_offers(data: UploadFile = File(), market: Market = None, import_type: ImportType = ImportType.TABLE, name_of_shop: str | None = None, current_user=Depends(require_staff)):
+async def import_offers(import_type: ImportType, data: UploadFile = File(), market: Market | None = None, name_of_shop: str | None = None, current_user=Depends(require_staff)):
     content = await data.read()
     await service.import_data(content, market, import_type, name_of_shop, current_user.id, PurePath(data.filename).suffix)
     return {'status': 'OK'}

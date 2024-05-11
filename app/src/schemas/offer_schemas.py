@@ -203,3 +203,4 @@ class ExportType(str, Enum):
     TABLE = 'table'
     FBO_STOCKS = 'matrix-fbo-stocks'
     OWN_STORAGE = 'matrix-own-storage'
+    SUPPLY = 'supply'

@@ -18,7 +18,8 @@ from fastapi.exceptions import HTTPException
 from fastapi import status
 from datetime import datetime
 from src.services.base_utils import error_handler
-from src.services.stocks_service import export_stocks, export_own_storages, import_offers_stocks, import_own_storages
+from src.services.stocks_service import export_stocks, export_own_storages, import_offers_stocks, import_own_storages, \
+    export_supply
 
 api_wrapper = APIWrapper()
 
@@ -287,14 +288,16 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
 async def export_data(market: Market, export_type: ExportType, name_of_shop: str | None):
     match export_type:
         case ExportType.TABLE:
-            return await export_offers(name_of_shop, market)
+            return await export_offers(name_of_shop, market), 'out.xlsx'
 
         case ExportType.FBO_STOCKS:
-            return await export_stocks(name_of_shop, market)
+            return await export_stocks(name_of_shop, market), 'out.xlsx'
 
         case ExportType.OWN_STORAGE:
-            return await export_own_storages(name_of_shop, market)
+            return await export_own_storages(name_of_shop, market), 'out.xlsx'
 
+        case ExportType.SUPPLY:
+            return await export_supply(name_of_shop, market), 'supply.zip'
         case _:
             raise NotImplemented(f'Export type "{export_type}" not implemented yet')
 

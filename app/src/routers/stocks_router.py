@@ -37,6 +37,10 @@ async def setup_fbo_stocks():
     return {'status': 'OK'}
 
 
+@stocks_router.get('/test_supply')
+async def test_supply():
+    await service.export_supply()
+
 
 
 

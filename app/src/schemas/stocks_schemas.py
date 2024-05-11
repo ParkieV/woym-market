@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from src.schemas.settings_schemas import MarketOut
+from dataclasses import dataclass
 
 
 class BaseWarehouse(BaseModel):
@@ -105,3 +106,14 @@ class OfferStorage(BaseModel):
 class OwnStorages(BaseModel):
     markets: list[MarketOut]
     data: list[OfferStorage]
+
+
+@dataclass(frozen=True)
+class SupplyData:
+    sku: str
+    name: str
+    market: str
+    name_of_shop: str
+    for_delivery: int
+    warehouse_name: str
+

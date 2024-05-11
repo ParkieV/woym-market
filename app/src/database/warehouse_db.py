@@ -4,7 +4,7 @@ from sqlalchemy.orm import selectinload, subqueryload
 from src.database.utils import _update_or_create_object, _get_or_create
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
     OfferStockWithWarehouseOut, OfferWithStocksUpdate, OfferStockUpdate, OwnStorageCreate, OwnStorageOut, \
-    OwnStorageUpdate
+    OwnStorageUpdate, SupplyData
 from src.database.models.models import Warehouse, OfferStock, OwnStorage
 from pydantic import BaseModel
 from src.database.models.models import Offer
@@ -57,7 +57,6 @@ async def get_offers_with_stocks(session: AsyncSession, model_schema: ModelSchem
     query = (
         select(Offer)
         .options(subqueryload(Offer.stocks).subqueryload(OfferStock.warehouse))
-
     )
     result = await session.execute(query)
     return [model_schema.model_validate(offer, from_attributes=True) for offer in result.scalars().all()]
@@ -228,3 +227,29 @@ async def update_own_storages_by_sku(session: AsyncSession, data: list[dict]):
         await session.execute(stmp)
 
     await session.commit()
+
+
+async def get_supply_data(session: AsyncSession, market: str | None, name_of_shop: str | None):
+    query = (
+        select(Offer.sku, Offer.name, Offer.name_of_shop, Offer.market, OfferStock.for_delivery, Warehouse.name)
+        .join(Offer, OfferStock.offer_id == Offer.id)
+        .join(Warehouse, OfferStock.warehouse_id == Warehouse.id)
+    )
+    if market:
+        query = query.where(Offer.market == market)
+
+    if name_of_shop:
+        query = query.where(Offer.name_of_shop == name_of_shop)
+
+    result = await session.execute(query)
+    return [
+        SupplyData(
+            sku=i[0],
+            name=i[1],
+            name_of_shop=i[2],
+            market=i[3],
+            for_delivery=i[4],
+            warehouse_name=i[5]
+        )
+        for i in result.all()
+    ]

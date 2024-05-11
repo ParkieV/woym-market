@@ -12,6 +12,9 @@ from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStock
     OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate
 from src.services.base_utils import error_handler
 from datetime import datetime
+from pathlib import Path
+from shutil import make_archive
+
 
 api_wrapper = APIWrapper()
 
@@ -220,19 +223,67 @@ async def import_own_storages(data, name_of_shop: str | None = None, market: str
         await db.update_own_storages_by_sku(session, data)
 
 
-async def export_yandex_supply():
-    pass
+async def export_yandex_supply(df: pd.DataFrame, dir_path: Path) -> str:
+    ...
 
 
-async def export_ozon_supply():
-    pass
+async def export_ozon_supply(data: pd.DataFrame, dir_path: Path) -> str:
+    warehouses = set(data['warehouse_name'].values.tolist())
+
+    for warehouse_name in warehouses:
+        df = data[data['warehouse_name'] == warehouse_name]
+        df = df[['sku', 'name', 'for_delivery']]
+        df.rename({
+            'sku': 'артикул',
+            'name': 'имя (необязательно)',
+            'for_delivery': 'количество'
+        }, axis='columns', inplace=True)
+
+        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}.xls'
+        df.to_excel(file_path, index=False)
+
+
+market_handlers = {
+    'ozon': export_ozon_supply,
+    'yandex': export_yandex_supply
+}
 
 
 @error_handler('Ошибка экспорта поставки.')
-async def export_supply():
-    pass
+async def export_supply(name_of_shop: str | None = None, market: str | None = None):
+    async with async_session() as session:
+        rez = await db.get_supply_data(session, market, name_of_shop)
+        df = pd.DataFrame(rez)
 
+        # create zip archive/folder
+        zip_file_path = Path(f'data/{datetime.now()}')
+        zip_file_path.mkdir(parents=True)
 
+        for _market in set(df['market'].values.tolist()):
+
+            # create marketplace folder
+            market_file_path = zip_file_path / _market
+            market_file_path.mkdir()
+
+            for _shop in set(df['name_of_shop'].values.tolist()):
+
+                # create shop folder
+                shop_file_path = market_file_path / _shop
+                shop_file_path.mkdir()
+
+                handler = market_handlers.get(_market, None)
+
+                if handler is None:
+                    raise KeyError(f'Market \'{_market}\' not found in registered')
+
+                temp_df = df[(df['market'] == _market) & (df['name_of_shop'] == _shop)]
+
+                # create supply files in directory
+                await handler(temp_df, shop_file_path)
+
+        # archive created directory
+        response_file_path = make_archive('data/supply', root_dir=zip_file_path, format='zip')
+        return response_file_path
 
 
 
