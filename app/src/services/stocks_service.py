@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from logs import get_logger
@@ -255,8 +256,14 @@ async def export_supply(name_of_shop: str | None = None, market: str | None = No
         rez = await db.get_supply_data(session, market, name_of_shop)
         df = pd.DataFrame(rez)
 
+        df['for_delivery'] = np.where(
+            df['supplier_available'],
+            df['for_delivery'],
+            df[['for_delivery', 'own_storage_value']].min(axis=1)
+        )
+
         # create zip archive/folder
-        zip_file_path = Path(f'data/{datetime.now()}')
+        zip_file_path = Path(f'data/supply')
         zip_file_path.mkdir(parents=True)
 
         for _market in set(df['market'].values.tolist()):

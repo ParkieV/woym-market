@@ -116,4 +116,6 @@ class SupplyData:
     name_of_shop: str
     for_delivery: int
     warehouse_name: str
+    supplier_available: bool
+    own_storage_value: int | None
 
