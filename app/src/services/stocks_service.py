@@ -224,11 +224,11 @@ async def import_own_storages(data, name_of_shop: str | None = None, market: str
         await db.update_own_storages_by_sku(session, data)
 
 
-async def export_yandex_supply(df: pd.DataFrame, dir_path: Path) -> str:
+async def export_yandex_supply(df: pd.DataFrame, dir_path: Path):
     ...
 
 
-async def export_ozon_supply(data: pd.DataFrame, dir_path: Path) -> str:
+async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
     warehouses = set(data['warehouse_name'].values.tolist())
 
     for warehouse_name in warehouses:
@@ -240,7 +240,7 @@ async def export_ozon_supply(data: pd.DataFrame, dir_path: Path) -> str:
             'for_delivery': 'количество'
         }, axis='columns', inplace=True)
 
-        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}.xls'
+        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xls'
         df.to_excel(file_path, index=False)
 
 
