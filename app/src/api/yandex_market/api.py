@@ -128,7 +128,9 @@ class YandexMarketAPI(BaseAPI):
                     'photo': offer['pictures'][0] if len(offer['pictures']) > 0 else None,
                     'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,
                     'discount_base_price': offer['basicPrice']['value'] * 1.2 if 'basicPrice' in offer else None,
-                    'business_id': business_id
+                    'business_id': business_id,
+                    'barcodes': ', '.join(offer['barcodes']) if offer['barcodes'] else None
+
                 }
                 results.append(offer_data)
 

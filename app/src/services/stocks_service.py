@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from fastapi import HTTPException
+from starlette import status
 
 from logs import get_logger
 from src.api.wrapper import APIWrapper
@@ -224,8 +226,21 @@ async def import_own_storages(data, name_of_shop: str | None = None, market: str
         await db.update_own_storages_by_sku(session, data)
 
 
-async def export_yandex_supply(df: pd.DataFrame, dir_path: Path):
-    ...
+async def export_yandex_supply(data: pd.DataFrame, dir_path: Path):
+    warehouses = set(data['warehouse_name'].values.tolist())
+
+    for warehouse_name in warehouses:
+        df = data[data['warehouse_name'] == warehouse_name]
+        df = df[['sku', 'name', 'for_delivery', 'current_price', 'barcodes']]
+        df.rename({
+            'sku': 'Ваш SKU',
+            'name': 'Название товара',
+            'for_delivery': 'Количество товаров в поставке',
+            'current_price': 'Объявленная ценность одного товара, руб.',
+            'barcodes': 'Штрихкоды'
+        }, axis='columns', inplace=True)
+        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xls'
+        df.to_excel(file_path, index=False)
 
 
 async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
@@ -233,7 +248,7 @@ async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
 
     for warehouse_name in warehouses:
         df = data[data['warehouse_name'] == warehouse_name]
-        df = df[['sku', 'name', 'for_delivery']]
+        df = df[['sku', 'name', 'for_delivery', 'barcodes']]
         df.rename({
             'sku': 'артикул',
             'name': 'имя (необязательно)',
@@ -254,6 +269,10 @@ market_handlers = {
 async def export_supply(name_of_shop: str | None = None, market: str | None = None):
     async with async_session() as session:
         rez = await db.get_supply_data(session, market, name_of_shop)
+
+        if rez is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, 'No offers to supply')
+
         df = pd.DataFrame(rez)
 
         df['for_delivery'] = np.where(
@@ -264,19 +283,19 @@ async def export_supply(name_of_shop: str | None = None, market: str | None = No
 
         # create zip archive/folder
         zip_file_path = Path(f'data/supply')
-        zip_file_path.mkdir(parents=True)
+        zip_file_path.mkdir(parents=True, exist_ok=True)
 
         for _market in set(df['market'].values.tolist()):
 
             # create marketplace folder
             market_file_path = zip_file_path / _market
-            market_file_path.mkdir()
+            market_file_path.mkdir(exist_ok=True)
 
             for _shop in set(df['name_of_shop'].values.tolist()):
 
                 # create shop folder
                 shop_file_path = market_file_path / _shop
-                shop_file_path.mkdir()
+                shop_file_path.mkdir(exist_ok=True)
 
                 handler = market_handlers.get(_market, None)
 

@@ -32,6 +32,7 @@ class APIOffer:
     min_general_markets_price: float | None = None
     your_price_for_buyers: float | None = None
     fbo: float | None = None
+    barcodes: str | None = None
 
     content_rating: float | None = None
     price_index: float | None = None

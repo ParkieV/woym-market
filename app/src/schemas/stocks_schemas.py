@@ -118,4 +118,6 @@ class SupplyData:
     warehouse_name: str
     supplier_available: bool
     own_storage_value: int | None
+    barcodes: str | None
+    current_price: float | None
 

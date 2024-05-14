@@ -168,6 +168,7 @@ class OfferOut(OfferChange):
     min_price_in_market: float | None = Field(title='Цена площадки (на Маркете)')
     your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
     min_general_markets_price: float | None = Field(title='Лучшая цена среди всех площадок')
+    barcodes: str | None = Field(title='Штрихкоды')
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')

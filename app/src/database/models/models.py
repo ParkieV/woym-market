@@ -114,6 +114,8 @@ class Offer(Base):
     pricing_scheme_name = Column(String, ForeignKey('pricing_schemes.name', ondelete='RESTRICT'), nullable=False)
     pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
 
+    barcodes = Column(String, nullable=True, default=None)
+
     stocks = relationship('OfferStock')
 
 
