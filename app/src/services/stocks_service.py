@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from logs import get_logger
@@ -10,6 +11,7 @@ from src.database import warehouse_db as db
 from src.database import offer_db
 import src.services.offer_utils as utils
 from src.database.settings_db import get_markets
+from src.database.warehouse_db import get_general_order_data
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStockOut, OfferStockCreate, \
     OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate
@@ -259,6 +261,34 @@ async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
         df.to_excel(file_path, index=False)
 
 
+async def general_order_report(session: AsyncSession, dir_path: Path):
+    rez = await db.get_general_order_data(session)
+    df = pd.DataFrame(rez)
+    df['total_cost_price'] = df['cost_price'] * df['for_delivery']
+    df['total_volume'] = df['volume'] * df['for_delivery']
+    df['total_weight'] = df['self_weight'] + df['for_delivery']
+    total_row = ['Итого', np.nan, np.nan, np.nan, df['total_weight'].sum(), np.nan, df['total_volume'].sum(), np.nan,
+                           df['total_cost_price'].sum()]
+    df.loc[-1] = total_row
+    df.index = df.index + 1
+    df = df.sort_index()
+
+    df.rename({
+        'total_cost_price': 'Себестоимость',
+        'total_volume': 'Объем л',
+        'total_weight': 'Вес кг',
+        'sku': 'SKU',
+        'name': 'Наименование',
+        'for_delivery': 'Кол-во',
+        'cost_price': 'Себестоимост(одного)',
+        'self_weight': 'Вес(одного)',
+        'volume': 'Объем(одного)'
+    }, axis='columns', inplace=True)
+    file_path = dir_path / f'Заказ, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xls'
+
+    df.to_excel(file_path, index=False)
+
+
 market_handlers = {
     'ozon': export_ozon_supply,
     'yandex': export_yandex_supply
@@ -285,27 +315,29 @@ async def export_supply(name_of_shop: str | None = None, market: str | None = No
         zip_file_path = Path(f'data/supply')
         zip_file_path.mkdir(parents=True, exist_ok=True)
 
-        for _market in set(df['market'].values.tolist()):
+        # for _market in set(df['market'].values.tolist()):
+        #
+        #     # create marketplace folder
+        #     market_file_path = zip_file_path / _market
+        #     market_file_path.mkdir(exist_ok=True)
+        #
+        #     for _shop in set(df['name_of_shop'].values.tolist()):
+        #
+        #         # create shop folder
+        #         shop_file_path = market_file_path / _shop
+        #         shop_file_path.mkdir(exist_ok=True)
+        #
+        #         handler = market_handlers.get(_market, None)
+        #
+        #         if handler is None:
+        #             raise KeyError(f'Market \'{_market}\' not found in registered')
+        #
+        #         temp_df = df[(df['market'] == _market) & (df['name_of_shop'] == _shop)]
+        #
+        #         # create supply files in directory
+        #         await handler(temp_df, shop_file_path)
 
-            # create marketplace folder
-            market_file_path = zip_file_path / _market
-            market_file_path.mkdir(exist_ok=True)
-
-            for _shop in set(df['name_of_shop'].values.tolist()):
-
-                # create shop folder
-                shop_file_path = market_file_path / _shop
-                shop_file_path.mkdir(exist_ok=True)
-
-                handler = market_handlers.get(_market, None)
-
-                if handler is None:
-                    raise KeyError(f'Market \'{_market}\' not found in registered')
-
-                temp_df = df[(df['market'] == _market) & (df['name_of_shop'] == _shop)]
-
-                # create supply files in directory
-                await handler(temp_df, shop_file_path)
+        await general_order_report(session, zip_file_path)
 
         # archive created directory
         response_file_path = make_archive('data/supply', root_dir=zip_file_path, format='zip')

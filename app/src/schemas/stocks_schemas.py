@@ -121,3 +121,12 @@ class SupplyData:
     barcodes: str | None
     current_price: float | None
 
+
+@dataclass(frozen=True)
+class GeneralOrderData:
+    sku: str
+    name: str
+    volume: float | None
+    cost_price: float | None
+    self_weight: float | None
+    for_delivery: float | None

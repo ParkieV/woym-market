@@ -1,10 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_
+from sqlalchemy import select, update, delete, and_, func, text
 from sqlalchemy.orm import selectinload, subqueryload
 from src.database.utils import _update_or_create_object, _get_or_create
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
     OfferStockWithWarehouseOut, OfferWithStocksUpdate, OfferStockUpdate, OwnStorageCreate, OwnStorageOut, \
-    OwnStorageUpdate, SupplyData
+    OwnStorageUpdate, SupplyData, GeneralOrderData
 from src.database.models.models import Warehouse, OfferStock, OwnStorage
 from pydantic import BaseModel
 from src.database.models.models import Offer
@@ -258,3 +258,29 @@ async def get_supply_data(session: AsyncSession, market: str | None, name_of_sho
         )
         for i in result.all()
     ]
+
+
+async def get_general_order_data(session: AsyncSession, market: str | None = None, name_of_shop: str | None = None):
+    # query = (
+    #     select(Offer.sku, Offer.name, Offer.volume, Offer.cost_price, Offer.self_weight)
+    #     .join(OfferStock, OfferStock.offer_id == Offer.id)
+    # )
+    # offers_query = """SELECT offers.sku, offers.name, offers.volume, offers.cost_price, offers.self_weight, (SELECT SUM(offers_stocks.for_delivery) as amount FROM offers_stocks WHERE offers_stocks.offer_id = offers.id) FROM offers"""
+    offers_query = """
+    SELECT offers.sku, STRING_AGG(offers.name, ', '), AVG(offers.volume), AVG(offers.cost_price), AVG(self_weight) 
+    FROM offers GROUP BY offers.sku"""
+
+    for_delivery_query = """SELECT offers.sku, SUM(offers_stocks.for_delivery) FROM offers_stocks join offers on offers.id = offers_stocks.offer_id group by offers.sku"""
+    for_delivery_result = await session.execute(text(for_delivery_query))
+    delivery_amount_mapping = {i[0]: i[1] for i in for_delivery_result.all()}
+    offers_result = await session.execute(text(offers_query))
+
+    return [GeneralOrderData(
+        sku=i[0],
+        name=i[1],
+        volume=i[2],
+        cost_price=i[3],
+        self_weight=i[4],
+        for_delivery=delivery_amount_mapping.get(i[0], 0)
+    ) for i in offers_result.all()]
+
