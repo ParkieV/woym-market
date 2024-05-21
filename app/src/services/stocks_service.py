@@ -20,7 +20,6 @@ from datetime import datetime
 from pathlib import Path
 from shutil import make_archive
 
-
 api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
@@ -35,9 +34,9 @@ async def update_warehouses_and_stocks():
     async with async_session() as session:
         for warehouse in stocks:
             warehouse_db, _ = await db.update_or_create_warehouse(session, WarehouseCreate(
-                    name=warehouse.name,
-                    market=warehouse.market
-                ))
+                name=warehouse.name,
+                market=warehouse.market
+            ))
 
             for offer in await offer_db.get_offers(session, {'market': warehouse.market}):
                 stock, created = await db.get_or_create_offer_stocks(session, OfferStockCreate(
@@ -47,7 +46,9 @@ async def update_warehouses_and_stocks():
                 ))
 
             for offer_stock in warehouse.offers:
-                offer = await offer_db.get_offer(session, {'sku': offer_stock.sku, 'name_of_shop': offer_stock.name_of_shop, 'market': warehouse.market})
+                offer = await offer_db.get_offer(session,
+                                                 {'sku': offer_stock.sku, 'name_of_shop': offer_stock.name_of_shop,
+                                                  'market': warehouse.market})
 
                 offer_stock_create = OfferStockCreate(
                     current_stock=offer_stock.current_stock,
@@ -100,7 +101,8 @@ async def change_own_storages(data: list[OwnStorageUpdate]):
 
 
 @error_handler('Ошибка импорта остатков магазинов.')
-async def import_offers_stocks(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+async def import_offers_stocks(data, name_of_shop: str | None = None, market: str | None = None,
+                               file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df[['note_1', 'note_2', 'note_3']] = df[['note_1', 'note_2', 'note_3']].fillna('')
@@ -192,7 +194,8 @@ async def export_stocks(name_of_shop: str | None = None, market: str | None = No
 @error_handler('Ошибка экспорта собственных остатков.')
 async def export_own_storages(name_of_shop: str | None = None, market: str | None = None) -> str:
     data = await get_own_storages()
-    columns = ['sku', 'Название', 'Фото', 'Магазин', 'Маркетплейс', 'Примечание 1', 'Примечание 2', 'Примечание 3', 'Мои остатки']
+    columns = ['sku', 'Название', 'Фото', 'Магазин', 'Маркетплейс', 'Примечание 1', 'Примечание 2', 'Примечание 3',
+               'Мои остатки']
     aggregated_columns = ['name', 'photo', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']
 
     df = pd.DataFrame(data['data'])
@@ -216,7 +219,8 @@ async def export_own_storages(name_of_shop: str | None = None, market: str | Non
 
 
 @error_handler('Ошибка импорта собственных остатков.')
-async def import_own_storages(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+async def import_own_storages(data, name_of_shop: str | None = None, market: str | None = None,
+                              file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df.rename(columns={'Мои остатки': 'value'}, inplace=True)
@@ -266,9 +270,11 @@ async def general_order_report(session: AsyncSession, dir_path: Path):
     df = pd.DataFrame(rez)
     df['total_cost_price'] = df['cost_price'] * df['for_delivery']
     df['total_volume'] = df['volume'] * df['for_delivery']
-    df['total_weight'] = df['self_weight'] + df['for_delivery']
+    df['total_weight'] = df['self_weight'] * df['for_delivery']
+    df = df[['sku', 'name', 'for_delivery', 'self_weight', 'total_weight', 'volume', 'total_volume', 'cost_price', 'total_cost_price']]
+    df.fillna(0, inplace=True)
     total_row = ['Итого', np.nan, np.nan, np.nan, df['total_weight'].sum(), np.nan, df['total_volume'].sum(), np.nan,
-                           df['total_cost_price'].sum()]
+                 df['total_cost_price'].sum()]
     df.loc[-1] = total_row
     df.index = df.index + 1
     df = df.sort_index()
@@ -312,36 +318,33 @@ async def export_supply(name_of_shop: str | None = None, market: str | None = No
         )
 
         # create zip archive/folder
-        zip_file_path = Path(f'data/supply')
+        zip_file_path = Path(f'data/{datetime.now()}/Поставка')
         zip_file_path.mkdir(parents=True, exist_ok=True)
 
-        # for _market in set(df['market'].values.tolist()):
-        #
-        #     # create marketplace folder
-        #     market_file_path = zip_file_path / _market
-        #     market_file_path.mkdir(exist_ok=True)
-        #
-        #     for _shop in set(df['name_of_shop'].values.tolist()):
-        #
-        #         # create shop folder
-        #         shop_file_path = market_file_path / _shop
-        #         shop_file_path.mkdir(exist_ok=True)
-        #
-        #         handler = market_handlers.get(_market, None)
-        #
-        #         if handler is None:
-        #             raise KeyError(f'Market \'{_market}\' not found in registered')
-        #
-        #         temp_df = df[(df['market'] == _market) & (df['name_of_shop'] == _shop)]
-        #
-        #         # create supply files in directory
-        #         await handler(temp_df, shop_file_path)
+        for _market in set(df['market'].values.tolist()):
+
+            # create marketplace folder
+            market_file_path = zip_file_path / _market
+            market_file_path.mkdir(exist_ok=True)
+
+            for _shop in set(df['name_of_shop'].values.tolist()):
+
+                # create shop folder
+                shop_file_path = market_file_path / _shop
+                shop_file_path.mkdir(exist_ok=True)
+
+                handler = market_handlers.get(_market, None)
+
+                if handler is None:
+                    raise KeyError(f'Market \'{_market}\' not found in registered')
+
+                temp_df = df[(df['market'] == _market) & (df['name_of_shop'] == _shop)]
+
+                # create supply files in directory
+                await handler(temp_df, shop_file_path)
 
         await general_order_report(session, zip_file_path)
 
         # archive created directory
-        response_file_path = make_archive('data/supply', root_dir=zip_file_path, format='zip')
+        response_file_path = make_archive(str(zip_file_path), root_dir=zip_file_path, format='zip')
         return response_file_path
-
-
-
