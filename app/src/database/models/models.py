@@ -33,7 +33,6 @@ class Settings(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     user_id = Column(Integer, ForeignKey('users.id'))
-    discount_purchase = Column(Float, default=20)
     fbo_sales_commission = Column(Float, default=19)
     rate = Column(Float, default=10)
 
@@ -115,6 +114,8 @@ class Offer(Base):
     pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
 
     barcodes = Column(String, nullable=True, default=None)
+    use_promotion_price = Column(Boolean, default=False)
+    wholesale_dollar_cost_price = Column(Float, nullable=True)
 
     stocks = relationship('OfferStock')
 
@@ -190,6 +191,7 @@ class Market(Base):
     token = Column(String)
     entity_id = Column(Integer, nullable=True, default=None)
     type = Column(Enum(APITypes))
+    discount_purchase = Column(Float, default=20)
 
     tax = Column(Float, default=0)
     long_term_storage_cost = Column(Float, nullable=True, default=None)

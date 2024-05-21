@@ -109,7 +109,6 @@ class OfferChange(BaseOffer):
     supplier_available: bool = Field(title='Наличие у поставщика')
     auto_participation_in_promotions: bool = Field(title='Автоучастие в акциях')
 
-    dollar_cost_price: float | None = Field(title='Закупка у. е.', default=0)
     total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену', default=200)
     total_price_coeff: float = Field(title='Коэфициент расчетной цены', default=2.4)
 
@@ -145,6 +144,8 @@ class OfferOut(OfferChange):
     group_sellers_amount: int | None = Field(title='Количество продавцов в группе')
     business_id: int | None = Field(title='id бизнесса')
 
+    dollar_cost_price: float | None = Field(title='Закупка у. е.', default=0)
+
     # countable/editable values
     cost_price: float | None = Field(title='Себестоимость (Закупка у. е. * курс)')
     dollar_cost_price_updated_at: datetime | None = Field(title='Дата изменения стоимости закупки в y. e.')
@@ -169,6 +170,8 @@ class OfferOut(OfferChange):
     your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
     min_general_markets_price: float | None = Field(title='Лучшая цена среди всех площадок')
     barcodes: str | None = Field(title='Штрихкоды')
+    use_promotion_price: bool = Field(title='Акция')
+    wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.')
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')

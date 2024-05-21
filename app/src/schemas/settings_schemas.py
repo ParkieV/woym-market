@@ -13,13 +13,11 @@ class SettingsOut(BaseModel):
     id: int
     user_id: int
     rate: float
-    discount_purchase: float
     fbo_sales_commission: float
 
 
 class SettingsUpdate(BaseModel):
     rate: float
-    discount_purchase: float
     fbo_sales_commission: float = 19
 
 
@@ -64,11 +62,13 @@ class MarketOut(BaseModel):
     name: str
     tax: float = 0
     type: APITypes
+    discount_purchase: float
     long_term_storage_cost: float | None
 
 
 class MarketUpdate(BaseModel):
     tax: float = 0
+    discount_purchase: float
     long_term_storage_cost: float | None = None
 
 

@@ -6,6 +6,7 @@ from logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import offer_db as db
+from src.database.settings_db import get_markets
 import src.services.offer_utils as utils
 from src.schemas.base_api_schemas import APIPriceChangeData
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market, \
@@ -17,6 +18,8 @@ from src.database.settings_db import update_logs, get_user_settings
 from fastapi.exceptions import HTTPException
 from fastapi import status
 from datetime import datetime
+
+from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
 from src.services.stocks_service import export_stocks, export_own_storages, import_offers_stocks, import_own_storages, \
     export_supply
@@ -24,7 +27,6 @@ from src.services.stocks_service import export_stocks, export_own_storages, impo
 api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
-
 
 async def get_offers(filters: dict[str, Any] | None = None) -> list[OfferOut]:
     async with async_session() as session:
@@ -217,35 +219,32 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
 
     df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
 
-    df['dollar_cost_price'] = np.where(
-        np.isnan(df['discount_price']),
-        df['price'] * (1 - settings.discount_purchase / 100),
-        df['discount_price']
-    )
-    df.drop(['name', 'discount_price', 'price'], axis=1, inplace=True)
-
-    mapping_columns = []
-
-    if name_of_shop:
-        df['name_of_shop'] = name_of_shop
-        mapping_columns.append('name_of_shop')
-
-    if market:
-        df['market'] = market
-        mapping_columns.append('market')
+    df['use_promotion_price'] = df['discount_price'].notna()
+    df['wholesale_dollar_cost_price'] = df['price']
 
     async with async_session() as session:
-        db_skus = set([i.lstrip('0') for i in await db.get_unique_skus(session)])
-        import_skus = set(df['sku'].values.tolist())
+        for _market in await get_markets(session, MarketOut):
+            df = df.copy()
 
-        await db.set_supplier_available(session, db_skus & import_skus, True)
-        await db.set_supplier_available(session, db_skus - import_skus, False)
+            df['dollar_cost_price'] = np.where(
+                df['use_promotion_price'],
+                df['discount_price'],
+                df['wholesale_dollar_cost_price'] * (1 - _market.discount_purchase / 100)
+            )
+            df.drop(['name', 'discount_price', 'price'], axis=1, inplace=True)
+            df['market'] = _market.type
+            df['name_of_shop'] = _market.name
+            # Зависит от магазина
+            await db.update_offers(session, df, mapping_columns=['market', 'name_of_shop'], endswith_sku=True)
+
+            db_skus = set([i.lstrip('0') for i in await db.get_unique_skus(session)])
+            import_skus = set(df['sku'].values.tolist())
+
+            await db.set_supplier_available(session, db_skus & import_skus, True)
+            await db.set_supplier_available(session, db_skus - import_skus, False)
 
         now = datetime.now()
         await db.set_dollar_cost_price_updated_at(session, import_skus, now)
-
-        await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
-
         await recalculate_values(session, settings)
 
 
