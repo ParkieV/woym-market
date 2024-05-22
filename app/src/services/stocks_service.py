@@ -15,7 +15,7 @@ from src.database.warehouse_db import get_general_order_data
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStockOut, OfferStockCreate, \
     OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate
-from src.services.base_utils import error_handler
+from src.services.base_utils import error_handler, clean_up_files
 from datetime import datetime
 from pathlib import Path
 from shutil import make_archive
@@ -318,7 +318,7 @@ async def export_supply(name_of_shop: str | None = None, market: str | None = No
         )
 
         # create zip archive/folder
-        zip_file_path = Path(f'data/{datetime.now()}/Поставка')
+        zip_file_path = Path(f'data/Поставка')
         zip_file_path.mkdir(parents=True, exist_ok=True)
 
         for _market in set(df['market'].values.tolist()):
@@ -347,4 +347,7 @@ async def export_supply(name_of_shop: str | None = None, market: str | None = No
 
         # archive created directory
         response_file_path = make_archive(str(zip_file_path), root_dir=zip_file_path, format='zip')
+
+        # remove files and dirs
+        clean_up_files(str(zip_file_path))
         return response_file_path

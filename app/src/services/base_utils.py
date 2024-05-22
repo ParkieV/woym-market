@@ -1,7 +1,9 @@
+import shutil
 from functools import wraps
 from fastapi.exceptions import HTTPException
 from fastapi import status
 from logs import get_logger
+from pathlib import Path
 
 logger = get_logger(__name__)
 
@@ -25,3 +27,14 @@ def error_handler(default_message: str = 'Ошибка сервера'):
         return wrapped
 
     return wrapper
+
+
+def clean_up_files(file_path: str):
+    try:
+        path = Path(file_path)
+        if path.is_file():
+            path.unlink()
+        elif path.is_dir():
+            shutil.rmtree(path)
+    except Exception as e:
+        logger.exception(f'Cannot remove file or dir \'{file_path}\'', exc_info=True)

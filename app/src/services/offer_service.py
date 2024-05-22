@@ -296,7 +296,7 @@ async def export_data(market: Market, export_type: ExportType, name_of_shop: str
             return await export_own_storages(name_of_shop, market), 'out.xlsx'
 
         case ExportType.SUPPLY:
-            return await export_supply(name_of_shop, market), 'supply.zip'
+            return await export_supply(name_of_shop, market), 'Поставка.zip'
         case _:
             raise NotImplemented(f'Export type "{export_type}" not implemented yet')
 

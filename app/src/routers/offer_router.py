@@ -1,6 +1,8 @@
 from fastapi import APIRouter, File, Depends, UploadFile, status
 from fastapi.responses import FileResponse
 from pathlib import PurePath
+from starlette.background import BackgroundTask
+
 from src.dependencies.users import get_current_user, require_staff
 from src.schemas.offer_schemas import (
     OfferOut,
@@ -14,6 +16,7 @@ from src.schemas.offer_schemas import (
     PricingSchemeFieldChange, PricingSchemeChange
 )
 from src.services import offer_service as service
+from src.services.base_utils import clean_up_files
 
 data_router = APIRouter(
     prefix='/data',
@@ -86,7 +89,7 @@ async def setup_offers_data(current_user=Depends(require_staff)):
 @data_router.get('/export', dependencies=[Depends(require_staff)])
 async def export_offers(export_type: ExportType, market: Market | None = None, name_of_shop: str | None = None):
     path, file_name = await service.export_data(market, export_type, name_of_shop)
-    return FileResponse(path=path, filename=file_name, media_type='multipart/form-data')
+    return FileResponse(path=path, filename=file_name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, path))
 
 
 @data_router.post('/import')
