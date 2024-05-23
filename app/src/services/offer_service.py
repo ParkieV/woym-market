@@ -224,6 +224,12 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
 
     async with async_session() as session:
         for _market in await get_markets(session, MarketOut):
+            if name_of_shop is not None and name_of_shop != _market.name:
+                continue
+
+            if market is not None and _market.type != market:
+                continue
+
             df = df.copy()
 
             df['dollar_cost_price'] = np.where(
