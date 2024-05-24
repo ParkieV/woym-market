@@ -172,6 +172,7 @@ class OfferOut(OfferChange):
     barcodes: str | None = Field(title='Штрихкоды')
     use_promotion_price: bool = Field(title='Акция')
     wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.')
+    vendor_code: int | None = Field(title='Артикул')
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')

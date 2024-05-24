@@ -116,6 +116,7 @@ class Offer(Base):
     barcodes = Column(String, nullable=True, default=None)
     use_promotion_price = Column(Boolean, default=False)
     wholesale_dollar_cost_price = Column(Float, nullable=True)
+    vendor_code = Column(Integer, nullable=True, default=None)
 
     stocks = relationship('OfferStock')
 

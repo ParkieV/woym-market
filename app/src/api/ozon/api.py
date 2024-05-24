@@ -41,12 +41,16 @@ class OzonAPI(BaseAPI):
             [offer['market_sku'] for offer in offers if offer['market_sku'] > 0])
         offers_commissions = self._get_offers_commissions(offers_identifiers)
 
+        product_ids = {ident.offer_id: ident.product_id for ident in offers_identifiers}
+
         for offer in offers:
             attrs = offers_attributes.get(offer['sku'], None)
             offer.update(attrs)
             offer['name_of_shop'] = self.shop_name
             offer['fbo'] = offers_commissions.get(offer['sku'], None)
             offer['content_rating'] = offers_content_rating.get(offer['market_sku'], None)
+            # артикул - product_id
+            offer['vendor_code'] = product_ids.get(offer['sku'], None)
             del offer['market_sku']
 
         logger.info('Ozon offers collected')
@@ -259,6 +263,8 @@ class OzonAPI(BaseAPI):
         offers = self._get_offers_base_info(offers_identifiers)
 
         return {offer['market_sku']: offer['sku'] for offer in offers if offer['market_sku'] != 0}
+
+
 
     def _get_offers_commissions(self, data: list[OfferIdentifier]) -> dict[str, float]:
         chunk_size = 1000

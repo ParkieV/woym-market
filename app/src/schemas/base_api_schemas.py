@@ -36,6 +36,8 @@ class APIOffer:
 
     content_rating: float | None = None
     price_index: float | None = None
+    # артикул - product id
+    vendor_code: int | None = None
 
     market: str = 'yandex'
 
