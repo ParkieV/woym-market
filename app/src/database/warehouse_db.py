@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, and_, func, text
 from sqlalchemy.orm import selectinload, subqueryload
@@ -86,7 +88,8 @@ async def change_offer_with_stock(session: AsyncSession, data: list[OfferWithSto
             for_delivery = count_delivery_items(db_stock.current_stock, in_box, stock.min_stock)
 
             stock_data = stock.model_dump()
-            stmp = update(OfferStock).where(OfferStock.id == stock_data['id']).values(for_delivery=for_delivery, **stock_data)
+            stmp = update(OfferStock).where(OfferStock.id == stock_data['id']).values(for_delivery=for_delivery,
+                                                                                      **stock_data)
             await session.execute(stmp)
 
     await session.commit()
@@ -231,7 +234,8 @@ async def update_own_storages_by_sku(session: AsyncSession, data: list[dict]):
 
 async def get_supply_data(session: AsyncSession, market: str | None, name_of_shop: str | None):
     query = (
-        select(Offer.sku, Offer.name, Offer.name_of_shop, Offer.market, OfferStock.for_delivery, Warehouse.name, Offer.supplier_available, OwnStorage.value, Offer.barcodes, Offer.current_price)
+        select(Offer.sku, Offer.name, Offer.name_of_shop, Offer.market, OfferStock.for_delivery, Warehouse.name,
+               Offer.supplier_available, OwnStorage.value, Offer.barcodes, Offer.current_price)
         .join(Offer, OfferStock.offer_id == Offer.id)
         .join(Warehouse, OfferStock.warehouse_id == Warehouse.id)
         .join(OwnStorage, OwnStorage.sku == Offer.sku)
@@ -284,3 +288,18 @@ async def get_general_order_data(session: AsyncSession, market: str | None = Non
         for_delivery=delivery_amount_mapping.get(i[0], 0)
     ) for i in offers_result.all()]
 
+
+async def update_fbo_support_data(session: AsyncSession, data: list[dict], name_of_shop: str, warehouse_id: int):
+    now = datetime.now()
+    for stock in data:
+        sub_query = (
+            select(OfferStock.id)
+            .join(Offer, Offer.id == OfferStock.offer_id)
+            .where(OfferStock.warehouse_id == warehouse_id)
+            .where(Offer.sku == str(stock['sku']))
+        )
+
+        stmp = update(OfferStock).where(OfferStock.id.in_(sub_query)).values(**{'can_be_delivered': stock['can_be_delivered'], 'advice_from_the_store': stock['advice_from_the_store'], 'from_file_updated_at': now})
+        await session.execute(stmp)
+
+    await session.commit()

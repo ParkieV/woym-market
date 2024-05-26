@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 from src.schemas.settings_schemas import MarketOut
 from dataclasses import dataclass
@@ -20,6 +22,8 @@ class BaseOfferStock(BaseModel):
     current_stock: int = 0
     min_stock: int = 0
     for_delivery: int = 0
+    can_be_delivered: bool = False
+    advice_from_the_store: str = ''
     in_box: int = 1
     is_deliver_in_boxes: bool = False
 
@@ -38,6 +42,8 @@ class OfferStockCreate(BaseOfferStock):
 
 class OfferStockOut(BaseOfferStock):
     id: int
+    from_file_updated_at: datetime
+
 
 
 class OfferStockWithWarehouseOut(OfferStockOut):

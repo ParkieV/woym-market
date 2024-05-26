@@ -351,3 +351,20 @@ async def export_supply(name_of_shop: str | None = None, market: str | None = No
         # remove files and dirs
         clean_up_files(str(zip_file_path))
         return response_file_path
+
+
+
+async def import_fbo_data(data, name_of_shop: str | None, warehouse_id: int | None, file_extension: str) -> str:
+    df = utils.bytes_to_data_frame(data, file_extension=file_extension, header=1)
+    df.rename({
+        'Ваш SKU': 'sku',
+        'Можно ли поставить товар?': 'can_be_delivered',
+        'Совет': 'advice_from_the_store'
+    }, inplace=True, axis='columns')
+    df = df[['sku', 'can_be_delivered', 'advice_from_the_store']]
+    df['can_be_delivered'] = df['can_be_delivered'].replace({'да': True, 'нет': False})
+
+    async with async_session() as session:
+        await db.update_fbo_support_data(session, df.to_dict('records'), name_of_shop, warehouse_id)
+
+

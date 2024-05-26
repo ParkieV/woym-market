@@ -173,7 +173,7 @@ async def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: flo
     return data
 
 
-def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0, file_extension: str = 'xlsx') -> pd.DataFrame:
+def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0, file_extension: str = 'xlsx', header: int = 0) -> pd.DataFrame:
     io = BytesIO(data)
     pd_engine = {
         '.xlsx': 'openpyxl',
@@ -182,7 +182,7 @@ def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0, file_extension: 
     if file_extension not in pd_engine.keys():
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, f'Файлы с расширением "{file_extension}" не поддерживаются')
 
-    return pd.read_excel(io, engine=pd_engine[file_extension], sheet_name=sheet_name)
+    return pd.read_excel(io, engine=pd_engine[file_extension], sheet_name=sheet_name, header=header)
 
 
 def round_values(data: pd.DataFrame) -> pd.DataFrame:

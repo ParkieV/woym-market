@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends
+from pathlib import PurePath
+
+from fastapi import APIRouter, Depends, File, UploadFile
 from src.services import stocks_service as service
 from src.dependencies.users import get_current_user, require_staff
-from src.schemas.stocks_schemas import OfferWithStocksUpdate, OfferWithStocks, OwnStorageUpdate, OwnStorages
+from src.schemas.stocks_schemas import OfferWithStocksUpdate, OfferWithStocks, OwnStorageUpdate, OwnStorages, \
+    WarehouseOut
 
 stocks_router = APIRouter(
     prefix='/stocks',
@@ -31,15 +34,22 @@ async def change_fbo_stocks(data: list[OfferWithStocksUpdate]):
     return {'status': 'OK'}
 
 
+@stocks_router.get('/warehouses', response_model=list[WarehouseOut])
+async def get_warehouses():
+    return await service.get_warehouses()
+
+
 @stocks_router.post('/setup', dependencies=[Depends(require_staff)])
 async def setup_fbo_stocks():
     await service.update_warehouses_and_stocks()
     return {'status': 'OK'}
 
 
-@stocks_router.get('/test_supply')
-async def test_supply():
-    await service.export_supply()
+@stocks_router.post('/fbo/import')
+async def import_fbo_data(data: UploadFile = File(), market: str | None = None, warehouse: int | None = None):
+    content = await data.read()
+
+    await service.import_fbo_data(content, market, warehouse, PurePath(data.filename).suffix)
 
 
 
