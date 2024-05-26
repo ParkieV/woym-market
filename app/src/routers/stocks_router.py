@@ -45,11 +45,16 @@ async def setup_fbo_stocks():
     return {'status': 'OK'}
 
 
-@stocks_router.post('/fbo/import')
-async def import_fbo_data(data: UploadFile = File(), market: str | None = None, warehouse: int | None = None):
+@stocks_router.post('/fbo/import', dependencies=[Depends(require_staff)])
+async def import_fbo_data(data: UploadFile = File(), name_of_shop: str | None = None, warehouse_id: int | None = None):
     content = await data.read()
 
-    await service.import_fbo_data(content, market, warehouse, PurePath(data.filename).suffix)
+    await service.import_fbo_data(content, name_of_shop, warehouse_id, PurePath(data.filename).suffix)
+
+
+@stocks_router.get('/fbo/import/choices', dependencies=[Depends(require_staff)])
+async def get_choices_for_import_fbo_data():
+    return await service.get_choices_for_import_fbo_data()
 
 
 

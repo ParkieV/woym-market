@@ -19,6 +19,8 @@ from src.services.base_utils import error_handler, clean_up_files
 from datetime import datetime
 from pathlib import Path
 from shutil import make_archive
+from src.database import settings_db
+
 
 api_wrapper = APIWrapper()
 
@@ -368,3 +370,9 @@ async def import_fbo_data(data, name_of_shop: str | None, warehouse_id: int | No
         await db.update_fbo_support_data(session, df.to_dict('records'), name_of_shop, warehouse_id)
 
 
+async def get_choices_for_import_fbo_data() -> dict[str, list[dict]]:
+    async with async_session() as session:
+        warehouses = [{'id': i.id, 'name': i.name} for i in await db.get_warehouses(session)]
+        markets = [{'name': i.name} for i in await settings_db.get_markets(session)]
+
+        return {'markets': markets, 'warehouses': warehouses}
