@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 from src.schemas.settings_schemas import MarketOut
 from dataclasses import dataclass
 
@@ -42,7 +42,7 @@ class OfferStockCreate(BaseOfferStock):
 
 class OfferStockOut(BaseOfferStock):
     id: int
-    from_file_updated_at: datetime
+    from_file_updated_at: datetime | None
 
 
 
@@ -62,8 +62,44 @@ class OfferWithStocks(BaseModel):
     note_3: str
     supplier_available: bool
     margin: float | None
+    cost_price: float | None
+    profit: float | None
+    self_weight: float | None
     hidden: bool
     stocks: list[OfferStockWithWarehouseOut]
+
+    @property
+    def total_for_delivery(self) -> int:
+        return sum([i.for_delivery for i in self.stocks])
+
+    @computed_field
+    @property
+    def total_cost_price(self) -> float | None:
+        if self.cost_price is None:
+            return None
+        return self.cost_price * self.total_for_delivery
+
+    @computed_field
+    @property
+    def total_weight(self) -> float | None:
+        if self.self_weight is None:
+            return None
+        return self.self_weight * self.total_for_delivery
+
+    @computed_field
+    @property
+    def total_margin(self) -> float | None:
+        if self.margin is None:
+            return None
+        return self.margin * self.total_for_delivery
+
+    @computed_field
+    @property
+    def total_profit(self) -> float | None:
+        if self.profit is None:
+            return None
+        return self.profit * self.total_for_delivery
+
 
 
 class OfferWithStocksUpdate(BaseModel):
