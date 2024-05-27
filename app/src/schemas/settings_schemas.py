@@ -12,13 +12,11 @@ class LogsOut(BaseModel):
 class SettingsOut(BaseModel):
     id: int
     user_id: int
-    rate: float
-    fbo_sales_commission: float
+
 
 
 class SettingsUpdate(BaseModel):
-    rate: float
-    fbo_sales_commission: float = 19
+    pass
 
 
 class ColumnDataType(str, Enum):
@@ -64,12 +62,16 @@ class MarketOut(BaseModel):
     type: APITypes
     discount_purchase: float
     long_term_storage_cost: float | None
+    rate: float
+    fbo_sales_commission: float
 
 
 class MarketUpdate(BaseModel):
     tax: float = 0
     discount_purchase: float
     long_term_storage_cost: float | None = None
+    rate: float
+    fbo_sales_commission: float
 
 
 class MarketFullOut(MarketOut):

@@ -4,10 +4,10 @@ from io import BytesIO
 from fastapi import HTTPException, status
 from src.database.offer_db import get_pricing_schemes
 from src.database.db import async_session
-from src.database.settings_db import get_markets
+from src.schemas.settings_schemas import MarketOut
 
 
-def count_fbo(data: pd.DataFrame, settings) -> pd.Series:
+def count_fbo(data: pd.DataFrame, settings, market_settings: MarketOut) -> pd.Series:
     data = data.copy()
     # 19% - коммисия за продажу (дача, сад и огород, содовый инвентарь)
     # 1% - перевод денежных средств магазину
@@ -26,22 +26,22 @@ def count_fbo(data: pd.DataFrame, settings) -> pd.Series:
     data['fbo'] = np.where(
         data['market'] == 'ozon',
         data['fbo'],
-        data['current_price'] * (settings.fbo_sales_commission / 100) + delivery_and_warehouse_processing_price + data['current_price'] * 0.01
+        data['current_price'] * (market_settings.fbo_sales_commission / 100) + delivery_and_warehouse_processing_price + data['current_price'] * 0.01
     )
     return data['fbo']
 
 
-async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
+async def calculate_offers_values(data: pd.DataFrame, settings, market_settings: MarketOut) -> pd.DataFrame:
     data = data.copy()
 
-    data['fbo'] = count_fbo(data, settings)
+    data['fbo'] = count_fbo(data, settings, market_settings)
     data['yandex_volume'] = data['yandex_length'] * data['yandex_width'] * data['yandex_height'] / 1000
     data['volume'] = data['self_length'] * data['self_width'] * data['self_height'] / 1000
     data['volume_difference'] = data['yandex_volume'] / data['volume']
-    data['cost_price'] = data['dollar_cost_price'] * settings.rate
+    data['cost_price'] = data['dollar_cost_price'] * market_settings.rate
     data['total_price'] = data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional']
 
-    data = await calculate_price(data)
+    data = await calculate_price(data, market_settings)
 
     data['market_discount_in_percent'] = 100 - data['your_price_for_buyers'] * 100 / data['current_price']
 
@@ -54,18 +54,21 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
         data['your_price_for_buyers']
     )
 
-    async with async_session() as session:
-        for market in await get_markets(session):
-            data['profit'] = np.where(
-                ((data['market'] == market.type) & (data['name_of_shop'] == market.name)),
-                data['temp_profit_base'] * (1 - market.tax / 100) - data['fbo'] - data['cost_price'],
-                data['profit']
-            )
-            data['days_to_zero_profit'] = np.where(
-                ((data['market'] == market.type) & (data['name_of_shop'] == market.name)),
-                data['profit'] / (market.long_term_storage_cost or np.nan),
-                data['days_to_zero_profit']
-            )
+    data['profit'] = data['temp_profit_base'] * (1 - market_settings.tax / 100) - data['fbo'] - data['cost_price']
+    data['days_to_zero_profit'] = data['profit'] / (market_settings.long_term_storage_cost or np.nan)
+
+    # async with async_session() as session:
+    #     for market in await get_markets(session):
+            # data['profit'] = np.where(
+            #     ((data['market'] == market.type) & (data['name_of_shop'] == market.name)),
+            #     data['temp_profit_base'] * (1 - market.tax / 100) - data['fbo'] - data['cost_price'],
+            #     data['profit']
+            # )
+            # data['days_to_zero_profit'] = np.where(
+            #     ((data['market'] == market.type) & (data['name_of_shop'] == market.name)),
+            #     data['profit'] / (market.long_term_storage_cost or np.nan),
+            #     data['days_to_zero_profit']
+            # )
 
     data.drop('temp_profit_base', axis=1, inplace=True)
 
@@ -82,7 +85,7 @@ async def calculate_offers_values(data: pd.DataFrame, settings) -> pd.DataFrame:
     return data
 
 
-async def calculate_price(data: pd.DataFrame) -> pd.DataFrame:
+async def calculate_price(data: pd.DataFrame, market_settings: MarketOut) -> pd.DataFrame:
     data = data.copy()
     data['min_level'] = np.nan
 

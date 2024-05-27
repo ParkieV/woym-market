@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +26,7 @@ from src.services.stocks_service import export_stocks, export_own_storages, impo
 api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
+
 
 async def get_offers(filters: dict[str, Any] | None = None) -> list[OfferOut]:
     async with async_session() as session:
@@ -140,10 +140,13 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
     if df.empty:
         return
 
-    df = await utils.calculate_offers_values(df, settings)
-    df.drop('id', axis=1, inplace=True, errors='ignore')
+    # df = await utils.calculate_offers_values(df, settings)
 
-    await db.update_offers(session, df, mapping_columns=['sku', 'name_of_shop'])
+    for market in await get_markets(session):
+        df1 = await utils.calculate_offers_values(df[ ((df['name_of_shop'] == market.name) & (df['market'] == market.type))], settings, market)
+        df1.drop('id', axis=1, inplace=True, errors='ignore')
+
+        await db.update_offers(session, df1, mapping_columns=['sku', 'name_of_shop'])
 
 
 @error_handler('Ошибка импорта')

@@ -13,7 +13,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
 from datetime import datetime
 from .base import Base
-from ...api.factory import APITypes
+from src.api.factory import APITypes
 
 
 class Users(Base):
@@ -33,8 +33,6 @@ class Settings(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True)
     user_id = Column(Integer, ForeignKey('users.id'))
-    fbo_sales_commission = Column(Float, default=19)
-    rate = Column(Float, default=10)
 
 
 class Offer(Base):
@@ -199,6 +197,9 @@ class Market(Base):
 
     tax = Column(Float, default=0)
     long_term_storage_cost = Column(Float, nullable=True, default=None)
+    rate = Column(Float, default=10)
+    fbo_sales_commission = Column(Float, default=19)
+
 
 
 class OwnStorage(Base):
