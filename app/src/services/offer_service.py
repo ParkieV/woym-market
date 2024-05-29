@@ -143,8 +143,8 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
     # df = await utils.calculate_offers_values(df, settings)
 
     for market in await get_markets(session):
-        df1 = await utils.calculate_offers_values(df[ ((df['name_of_shop'] == market.name) & (df['market'] == market.type))], settings, market)
-        df1.drop('id', axis=1, inplace=True, errors='ignore')
+        df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], settings, market)
+        df1.drop(['id', 'your_promotion_price', 'difference_from_recommended_retail_price'], axis=1, inplace=True, errors='ignore')
 
         await db.update_offers(session, df1, mapping_columns=['sku', 'name_of_shop'])
 

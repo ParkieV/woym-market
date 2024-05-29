@@ -83,6 +83,8 @@ class Offer(Base):
     days_to_zero_profit = Column(Float, nullable=True, default=None)
     market_discount_in_percent = Column(Float, nullable=True, default=None)
     auto_participation_in_promotions = Column(Boolean, default=False)
+    recommended_retail_price = Column(Float, nullable=True, default=None)
+    stop_price = Column(Float, nullable=True, default=None)
 
     attractive_price_threshold = Column(Float, nullable=True)
     moderately_attractive_price_threshold = Column(Float, nullable=True)
@@ -199,7 +201,10 @@ class Market(Base):
     long_term_storage_cost = Column(Float, nullable=True, default=None)
     rate = Column(Float, default=10)
     fbo_sales_commission = Column(Float, default=19)
-
+    first_variable_for_recommended_retail_price = Column(Float, default=10)
+    second_variable_for_recommended_retail_price = Column(Float, default=10)
+    first_variable_for_stop_price = Column(Float, default=10)
+    second_variable_for_stop_price = Column(Float, default=10)
 
 
 class OwnStorage(Base):
@@ -233,6 +238,5 @@ class PricingSchemeField(Base):
 
     pricing_scheme_name = Column(String, ForeignKey("pricing_schemes.name", ondelete='CASCADE'))
     pricing_scheme = relationship(PricingScheme, uselist=False, back_populates='fields')
-
 
 

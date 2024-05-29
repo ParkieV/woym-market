@@ -64,6 +64,10 @@ class MarketOut(BaseModel):
     long_term_storage_cost: float | None
     rate: float
     fbo_sales_commission: float
+    first_variable_for_recommended_retail_price: float
+    second_variable_for_recommended_retail_price: float
+    first_variable_for_stop_price: float
+    second_variable_for_stop_price: float
 
 
 class MarketUpdate(BaseModel):
@@ -72,6 +76,10 @@ class MarketUpdate(BaseModel):
     long_term_storage_cost: float | None = None
     rate: float
     fbo_sales_commission: float
+    first_variable_for_recommended_retail_price: float
+    second_variable_for_recommended_retail_price: float
+    first_variable_for_stop_price: float
+    second_variable_for_stop_price: float
 
 
 class MarketFullOut(MarketOut):

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 from abc import ABC
 from enum import Enum
 
@@ -173,12 +173,32 @@ class OfferOut(OfferChange):
     use_promotion_price: bool = Field(title='Акция')
     wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.')
     vendor_code: int | None = Field(title='Артикул')
+    recommended_retail_price: float | None = Field(title='РРЦ')
+    stop_price: float | None = Field(title='Стоп цена')
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')
 
     class Config:
         orm_mode = True
+
+    @computed_field(title='Ваша цена по акции')
+    @property
+    def your_promotion_price(self) -> float | None:
+        match self.market:
+            case 'ozon':
+                return self.your_price_for_buyers
+            case 'yandex':
+                return self.current_price
+            case _:
+                return None
+
+    @computed_field(title='Разница с РРЦ')
+    @property
+    def difference_from_recommended_retail_price(self) -> float | None:
+        if all((self.recommended_retail_price, self.your_promotion_price)):
+            return self.recommended_retail_price - self.your_promotion_price
+        return None
 
 
 class OfferOutWithPriceScheme(OfferOut):
