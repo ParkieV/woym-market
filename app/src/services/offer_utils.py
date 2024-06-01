@@ -6,44 +6,9 @@ from src.database.offer_db import get_pricing_schemes
 from src.database.db import async_session
 from src.schemas.settings_schemas import MarketOut
 
-
-def count_fbo(data: pd.DataFrame, settings, market_settings: MarketOut) -> pd.Series:
-    data = data.copy()
-    # 19% - коммисия за продажу (дача, сад и огород, содовый инвентарь)
-    # 1% - перевод денежных средств магазину
-    # если dimensions_sum < 150 и вес < 25 кг, то 3% (20 <= x <= 60), иначе 350 - доставка внутри округа
-    # если dimensions_sum < 150 и вес < 25 кг, то 3% (20 <= x <= 60), иначе 350 - доставка внутри округа
-
-    # dimensions_sum = data['yandex_length'] + data['yandex_width'] + data['yandex_height']
-    # dimensions_sum.fillna(0, inplace=True)
-    #
-    # delivery_and_warehouse_processing_price = np.where(
-    #     (dimensions_sum < 150) | (data['yandex_weight'] < 25),
-    #     data['current_price'] * 0.06,
-    #     350 * 2
-    # )
-    #
-    # data['fbo'] = np.where(
-    #     data['market'] == 'ozon',
-    #     data['fbo'],
-    #     data['current_price'] * (market_settings.fbo_sales_commission / 100) + delivery_and_warehouse_processing_price + data['current_price'] * 0.01
-    # )
-    logistic_price = np.where(
-        data['volume'] > data['volume_threshold_for_additional_logistics'],
-        np.ceil(data['volume'] - data['volume_threshold_for_additional_logistics']) * data['cost_of_additional_logistics'],
-        0
-    )
-    logistic_price[np.isnan(logistic_price)] = 0
-
-    data['fbo'] = (data['current_price'] * (market_settings.fbo_sales_commission / 100)) + logistic_price
-
-    return data['fbo']
-
-
 async def calculate_offers_values(data: pd.DataFrame, settings, market_settings: MarketOut) -> pd.DataFrame:
     data = data.copy()
 
-    data['fbo'] = count_fbo(data, settings, market_settings)
     data['yandex_volume'] = data['yandex_length'] * data['yandex_width'] * data['yandex_height'] / 1000
     data['volume'] = data['self_length'] * data['self_width'] * data['self_height'] / 1000
     data['volume_difference'] = data['yandex_volume'] / data['volume']
@@ -53,6 +18,15 @@ async def calculate_offers_values(data: pd.DataFrame, settings, market_settings:
     data['stop_price'] = market_settings.first_variable_for_stop_price + data['wholesale_dollar_cost_price'] + market_settings.second_variable_for_stop_price * data['wholesale_dollar_cost_price']
 
     data = await calculate_price(data, market_settings)
+
+    data['logistic_price'] = np.where(
+        data['volume'] > market_settings.volume_threshold_for_additional_logistics,
+        np.ceil(data[
+                    'volume'] - market_settings.volume_threshold_for_additional_logistics) * market_settings.cost_of_additional_logistics_per_liter,
+        0
+    )
+    data['logistic_price'].fillna(0, inplace=True)
+    data['fbo'] = (data['current_price'] * (market_settings.fbo_sales_commission / 100)) + data['logistic_price']
 
     data['market_discount_in_percent'] = 100 - data['your_price_for_buyers'] * 100 / data['current_price']
 

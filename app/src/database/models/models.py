@@ -85,8 +85,6 @@ class Offer(Base):
     auto_participation_in_promotions = Column(Boolean, default=False)
     recommended_retail_price = Column(Float, nullable=True, default=None)
     stop_price = Column(Float, nullable=True, default=None)
-    volume_threshold_for_additional_logistics = Column(Float, default=10)
-    cost_of_additional_logistics_per_liter = Column(Float, default=100)
 
     attractive_price_threshold = Column(Float, nullable=True)
     moderately_attractive_price_threshold = Column(Float, nullable=True)
@@ -96,6 +94,7 @@ class Offer(Base):
     min_price_in_market = Column(Float, nullable=True)
     your_price_for_buyers = Column(Float, nullable=True)
     min_general_markets_price = Column(Float, nullable=True)
+    logistic_price = Column(Float, default=0)
 
     current_price = Column(Float, nullable=True)
     target_price = Column(Float, nullable=True, default=None)
@@ -208,6 +207,8 @@ class Market(Base):
     first_variable_for_stop_price = Column(Float, default=10)
     second_variable_for_stop_price = Column(Float, default=10)
     price_before_discount = Column(Float, default=20)
+    volume_threshold_for_additional_logistics = Column(Float, default=10)
+    cost_of_additional_logistics_per_liter = Column(Float, default=100)
 
 
 class OwnStorage(Base):

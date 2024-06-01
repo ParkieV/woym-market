@@ -68,6 +68,8 @@ class MarketOut(BaseModel):
     first_variable_for_stop_price: float
     second_variable_for_stop_price: float
     price_before_discount: float
+    volume_threshold_for_additional_logistics: float
+    cost_of_additional_logistics_per_liter: float
 
 
 class MarketUpdate(BaseModel):
@@ -81,6 +83,8 @@ class MarketUpdate(BaseModel):
     first_variable_for_stop_price: float
     second_variable_for_stop_price: float
     price_before_discount: float
+    volume_threshold_for_additional_logistics: float
+    cost_of_additional_logistics_per_liter: float
 
 
 class MarketFullOut(MarketOut):
