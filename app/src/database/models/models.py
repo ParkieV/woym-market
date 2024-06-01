@@ -205,6 +205,7 @@ class Market(Base):
     second_variable_for_recommended_retail_price = Column(Float, default=10)
     first_variable_for_stop_price = Column(Float, default=10)
     second_variable_for_stop_price = Column(Float, default=10)
+    price_before_discount = Column(Float, default=20)
 
 
 class OwnStorage(Base):
