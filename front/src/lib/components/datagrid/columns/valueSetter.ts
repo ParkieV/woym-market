@@ -1,6 +1,6 @@
 import type { ValueSetterFunc } from "ag-grid-enterprise";
 
-export function valueSetter<T extends Object>(field: string) {
+export default function valueSetter<T extends Object>(field: string) {
     return (({ data, oldValue, newValue }) => {
         if (newValue instanceof Error) return false;
         if (typeof oldValue === "string" && newValue === null) {

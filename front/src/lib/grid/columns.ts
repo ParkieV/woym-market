@@ -9,15 +9,15 @@ import {
     ComboboxColumn,
     GroupColumn,
     BooleanColumn,
+    StringColumn,
+    ImageColumn,
+    DateColumn,
     dollarColumn,
     floatColumn,
-    imageColumn,
     intColumn,
     percentColumn,
-    rubleColumn,
-    stringColumn,
-    DateColumn
-} from "$lib/components/datagrid/column_types";
+    rubleColumn
+} from "$lib/components/datagrid/columns/types";
 
 export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
     return [
@@ -155,7 +155,7 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "best_place_wm",
                     header: "Площадка с лучшей ценой (без учета Маркета)",
-                    base: stringColumn
+                    base: new StringColumn()
                 },
                 {
                     key: "min_price_without_market",
@@ -187,7 +187,7 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "best_place_im",
                     header: "Площадка с лучшей ценой (на Маркете)",
-                    base: stringColumn
+                    base: new StringColumn()
                 },
                 {
                     key: "min_price_in_market",
@@ -218,12 +218,12 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "price_index",
                     header: "Индекс цены",
-                    base: stringColumn
+                    base: new StringColumn()
                 },
                 {
                     key: "market_discount_in_percent",
                     header: "Скидка маркета в %",
-                    tooltip: "100 - \"цена для покупателей\" * 100 / \"текущая цена\"",
+                    tooltip: '100 - "цена для покупателей" * 100 / "текущая цена"',
                     base: floatColumn
                 },
                 {
@@ -260,7 +260,7 @@ export function ownStorageColumns(markets: Market[]): (Column | ColumnGroup)[] {
             key: `note_${i}`,
             valueGetter: ({ data }: { data: OwnStorage }) =>
                 data[`note_${i}`].filter(x => x !== "").join("; "),
-            base: stringColumn,
+            base: new StringColumn(),
             columnGroupShow: "closed"
         } as Column;
     });
@@ -292,7 +292,7 @@ export function ownStorageColumns(markets: Market[]): (Column | ColumnGroup)[] {
                 {
                     header: "Фото",
                     key: "photo",
-                    base: imageColumn,
+                    base: new ImageColumn(),
                     valueGetter: ({ data }: { data: OwnStorage }) => {
                         if (data.photo === undefined || data.photo.length === 0) return null;
                         let photo = data.photo
@@ -302,7 +302,7 @@ export function ownStorageColumns(markets: Market[]): (Column | ColumnGroup)[] {
                         return photo ?? null;
                     }
                 },
-                { header: "Название", key: "name.0", base: stringColumn },
+                { header: "Название", key: "name.0", base: new StringColumn() },
                 ...noteCols
             ]
         },
@@ -361,7 +361,7 @@ export function fboStocksColumns(): (Column | ColumnGroup)[] {
 
 export function fboStorageColumns(): (Column | ColumnGroup)[] {
     return [
-        { header: "Склад", key: "warehouse.name", base: stringColumn },
+        { header: "Склад", key: "warehouse.name", base: new StringColumn() },
         {
             header: "В наличии",
             key: "current_stock",
@@ -400,44 +400,44 @@ function baseOfferColumns(): (Column | ColumnGroup)[] {
             header: "Информация",
             children: [
                 {
-                    base: imageColumn,
+                    base: new ImageColumn(),
                     header: "Фото",
                     key: "photo"
                 },
                 {
-                    base: stringColumn,
+                    base: new StringColumn(),
                     header: "Название",
                     key: "name"
                 },
                 {
-                    base: stringColumn,
+                    base: new StringColumn(),
                     header: "Примечание 1",
                     key: "note_1",
                     editable: true,
                     columnGroupShow: "closed"
                 },
                 {
-                    base: stringColumn,
+                    base: new StringColumn(),
                     header: "Примечание 2",
                     key: "note_2",
                     editable: true,
                     columnGroupShow: "closed"
                 },
                 {
-                    base: stringColumn,
+                    base: new StringColumn(),
                     header: "Примечание 3",
                     key: "note_3",
                     editable: true,
                     columnGroupShow: "closed"
                 },
                 {
-                    base: stringColumn,
+                    base: new StringColumn(),
                     key: "market",
                     header: "Площадка",
                     columnGroupShow: "closed"
                 },
                 {
-                    base: stringColumn,
+                    base: new StringColumn(),
                     key: "name_of_shop",
                     header: "Название магазина",
                     columnGroupShow: "closed"

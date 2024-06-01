@@ -1,6 +1,7 @@
 import type { ColDef, ColGroupDef, ColumnGroupShowType, ValueGetterFunc } from "ag-grid-enterprise";
-import { imageColumn, type ColumnBase, NumberColumn } from "./column_types";
-import { valueSetter } from "./valueSetter";
+import type { ColumnBase } from "./types";
+import valueSetter from "./valueSetter";
+import ImageColumn from "./types/image";
 
 export type ColumnGroup = { header: string; children: Column[] };
 
@@ -63,7 +64,7 @@ export function getColumns(
             valueSetter: valueSetter(col.key)
         };
 
-        if (col.base === imageColumn) {
+        if (col.base instanceof ImageColumn) {
             colDef.onCellClicked = e => {
                 if (e.value) {
                     init.onPhotoClicked(e.value.toString());
@@ -86,9 +87,7 @@ export function getColumns(
 }
 
 function cellClass(ops: ColumnBase<any>, editable: boolean): string[] {
-    let classes = [];
+    let classes = ops.classes?.() ?? [];
     if (editable) classes.push("editable");
-    if (ops instanceof NumberColumn) classes.push("ag-right-aligned-cell");
-    if (ops === imageColumn) classes.push("product-photo-cell");
     return classes;
 }

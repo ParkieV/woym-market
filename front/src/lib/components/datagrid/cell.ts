@@ -1,8 +1,5 @@
-import type { ICellEditorComp, ICellRendererFunc } from "ag-grid-enterprise";
+import type { ICellEditorComp } from "ag-grid-enterprise";
 import Editor from "./Editor.svelte";
-
-export const ImageCellRenderer: ICellRendererFunc<string> = ({ value }) =>
-    value != null ? `<img src="${value}" />` : "";
 
 export function MyCellEditor<T>(): ICellEditorComp<any, T, any> {
     let container: HTMLDivElement;
@@ -15,13 +12,9 @@ export function MyCellEditor<T>(): ICellEditorComp<any, T, any> {
 
             editor = new Editor({ target: container, props: { params } });
         },
-        destroy() {
-            editor.$destroy();
-        },
-
+        destroy: () => editor.$destroy(),
         getGui: () => container,
         afterGuiAttached: () => editor.afterGuiAttached(),
-
         getValue: () => editor.getValue(),
         isCancelAfterEnd: () => editor.isCancelAfterEnd()
     };
