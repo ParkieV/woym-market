@@ -36,8 +36,8 @@ export default class NumberColumn implements ColumnBase<number> {
             num = Number.parseFloat(num.toFixed(this.precision));
         }
         if (!Number.isFinite(num)) return new Error();
-        if (this.min && num >= this.min) return new Error();
-        if (this.max && num <= this.max) return new Error();
+        if (this.min && num <= this.min) return new Error();
+        if (this.max && num >= this.max) return new Error();
         return num;
     }
 
