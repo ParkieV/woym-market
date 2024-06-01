@@ -1,5 +1,10 @@
 import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
-import { StringColumn, intColumn } from "$lib/components/datagrid/columns/types";
+import {
+    BooleanColumn,
+    DateColumn,
+    StringColumn,
+    intColumn
+} from "$lib/components/datagrid/columns/types";
 
 export default function fboWarehouseColumns(): (Column | ColumnGroup)[] {
     return [
@@ -26,6 +31,33 @@ export default function fboWarehouseColumns(): (Column | ColumnGroup)[] {
                     return 0;
                 }
             }
+        },
+        {
+            key: "from_file_updated_at",
+            header: "Дата последней загрузки",
+            base: new DateColumn()
+        },
+        {
+            key: "can_be_delivered",
+            header: "Возможна ли поставка",
+            base: new BooleanColumn()
+        },
+        {
+            key: "advice_from_the_store",
+            header: "Совет",
+            base: new StringColumn()
+        },
+        {
+            key: "in_box",
+            header: "В коробке",
+            base: intColumn,
+            editable: true
+        },
+        {
+            key: "is_deliver_in_boxes",
+            header: "Поставлять коробками",
+            base: new BooleanColumn(),
+            editable: true
         }
     ];
 }

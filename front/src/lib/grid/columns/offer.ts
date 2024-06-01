@@ -226,6 +226,48 @@ export default function offerColumns(templates: Template[]): (Column | ColumnGro
                     key: "dollar_cost_price_updated_at",
                     header: "Дата обновления цены закупки (у. е.)",
                     base: new DateColumn()
+                },
+                {
+                    key: "use_promotion_price",
+                    header: "Акция",
+                    base: new BooleanColumn()
+                },
+                {
+                    key: "wholesale_dollar_cost_price",
+                    header: "ОПТ у. е.",
+                    base: dollarColumn
+                },
+                {
+                    key: "vendor_code",
+                    header: "ID Артикул",
+                    base: intColumn
+                },
+                {
+                    key: "recommended_retail_price",
+                    header: "РРЦ",
+                    base: rubleColumn
+                },
+                {
+                    key: "stop_price",
+                    header: "Стоп цена",
+                    base: rubleColumn
+                },
+                {
+                    key: "difference_from_recommended_retail_price",
+                    header: "Разница с РРЦ",
+                    base: rubleColumn,
+                    editable: true
+                },
+                {
+                    key: "your_promotion_price",
+                    header: "Ваша цена по акции",
+                    base: rubleColumn
+                },
+                {
+                    key: "auto_participation_in_promotions",
+                    header: "Автоучастие в акциях",
+                    base: new BooleanColumn(),
+                    editable: true
                 }
             ]
         },
@@ -242,8 +284,7 @@ export default function offerColumns(templates: Template[]): (Column | ColumnGro
         {
             key: "supplier_available",
             header: "Наличие у поставщика",
-            base: new BooleanColumn(),
-            editable: true
+            base: new BooleanColumn()
         },
         { header: "Скрыт", key: "hidden", base: new BooleanColumn(), editable: true }
     ];

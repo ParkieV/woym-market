@@ -2,12 +2,76 @@ import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
 import type { ValueGetterParams } from "ag-grid-enterprise";
 import type { FboStocks } from "$lib/data/fbo_storage";
 
-import { BooleanColumn, intColumn } from "$lib/components/datagrid/columns/types";
-import baseOfferColumns from "../base";
+import {
+    BooleanColumn,
+    GroupColumn,
+    ImageColumn,
+    StringColumn,
+    floatColumn,
+    intColumn
+} from "$lib/components/datagrid/columns/types";
 
 export default function fboOffersColumns(): (Column | ColumnGroup)[] {
     return [
-        ...baseOfferColumns(),
+        {
+            base: new GroupColumn(),
+            header: "SKU",
+            key: "sku",
+            pinned: true
+        },
+        {
+            header: "Информация",
+            children: [
+                {
+                    base: new ImageColumn(),
+                    header: "Фото",
+                    key: "photo"
+                },
+                {
+                    base: new StringColumn(),
+                    header: "Название",
+                    key: "name"
+                },
+                {
+                    base: new StringColumn(),
+                    header: "Примечание 1",
+                    key: "note_1",
+                    editable: true,
+                    columnGroupShow: "closed"
+                },
+                {
+                    base: new StringColumn(),
+                    header: "Примечание 2",
+                    key: "note_2",
+                    editable: true,
+                    columnGroupShow: "closed"
+                },
+                {
+                    base: new StringColumn(),
+                    header: "Примечание 3",
+                    key: "note_3",
+                    editable: true,
+                    columnGroupShow: "closed"
+                },
+                {
+                    base: new StringColumn(),
+                    key: "market",
+                    header: "Площадка",
+                    columnGroupShow: "closed"
+                },
+                {
+                    base: new StringColumn(),
+                    key: "name_of_shop",
+                    header: "Название магазина",
+                    columnGroupShow: "closed"
+                },
+                {
+                    key: "total_weight",
+                    header: "Вес, кг",
+                    base: floatColumn
+                }
+            ]
+        },
         {
             header: "Остатки",
             children: [
@@ -41,6 +105,31 @@ export default function fboOffersColumns(): (Column | ColumnGroup)[] {
                             .map(x => Math.max(0, x.min_stock - x.current_stock))
                             .reduce((a, b) => a + b, 0);
                     }
+                },
+                {
+                    key: "supplier_available",
+                    header: "Наличие у поставщика",
+                    base: new BooleanColumn()
+                }
+            ]
+        },
+        {
+            header: "Ценообразование",
+            children: [
+                {
+                    key: "total_cost_price",
+                    header: "Стоимость",
+                    base: floatColumn
+                },
+                {
+                    key: "total_margin",
+                    header: "Окупаемость",
+                    base: floatColumn
+                },
+                {
+                    key: "total_profit",
+                    header: "Предполагаемая прибыль",
+                    base: floatColumn
                 }
             ]
         },
