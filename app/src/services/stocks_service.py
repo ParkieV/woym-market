@@ -355,7 +355,6 @@ async def export_supply(name_of_shop: str | None = None, market: str | None = No
         return response_file_path
 
 
-
 async def import_fbo_data(data, name_of_shop: str | None, warehouse_id: int | None, file_extension: str) -> str:
     df = utils.bytes_to_data_frame(data, file_extension=file_extension, header=1)
     df.rename({

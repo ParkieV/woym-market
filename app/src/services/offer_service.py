@@ -28,9 +28,9 @@ api_wrapper = APIWrapper()
 logger = get_logger(__name__)
 
 
-async def get_offers(filters: dict[str, Any] | None = None) -> list[OfferOut]:
+async def get_offers(filters: dict[str, Any] | None = None, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
     async with async_session() as session:
-        return await db.get_offers(session, filters)
+        return await db.get_offers(session, filters, offset=offset, limit=limit)
 
 
 @error_handler('Ошибка изменения товаров')
@@ -144,7 +144,7 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
 
     for market in await get_markets(session):
         df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], settings, market)
-        df1.drop(['id', 'your_promotion_price', 'difference_from_recommended_retail_price'], axis=1, inplace=True, errors='ignore')
+        df1.drop(['id', 'your_promotion_price', 'difference_from_recommended_retail_price', 'cost_of_additional_logistics'], axis=1, inplace=True, errors='ignore')
 
         await db.update_offers(session, df1, mapping_columns=['sku', 'name_of_shop'])
 

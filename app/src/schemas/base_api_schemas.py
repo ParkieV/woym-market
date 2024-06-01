@@ -10,8 +10,6 @@ class APIOffer:
     name: str
     name_of_shop: str
 
-    discount_base_price: float
-
     yandex_weight: float | None = None
     yandex_length: float | None = None
     yandex_width: float | None = None

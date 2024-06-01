@@ -14,7 +14,6 @@ class SettingsOut(BaseModel):
     user_id: int
 
 
-
 class SettingsUpdate(BaseModel):
     pass
 
@@ -68,6 +67,7 @@ class MarketOut(BaseModel):
     second_variable_for_recommended_retail_price: float
     first_variable_for_stop_price: float
     second_variable_for_stop_price: float
+    price_before_discount: float
 
 
 class MarketUpdate(BaseModel):
@@ -80,6 +80,7 @@ class MarketUpdate(BaseModel):
     second_variable_for_recommended_retail_price: float
     first_variable_for_stop_price: float
     second_variable_for_stop_price: float
+    price_before_discount: float
 
 
 class MarketFullOut(MarketOut):

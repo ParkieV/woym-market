@@ -14,20 +14,29 @@ def count_fbo(data: pd.DataFrame, settings, market_settings: MarketOut) -> pd.Se
     # если dimensions_sum < 150 и вес < 25 кг, то 3% (20 <= x <= 60), иначе 350 - доставка внутри округа
     # если dimensions_sum < 150 и вес < 25 кг, то 3% (20 <= x <= 60), иначе 350 - доставка внутри округа
 
-    dimensions_sum = data['yandex_length'] + data['yandex_width'] + data['yandex_height']
-    dimensions_sum.fillna(0, inplace=True)
-
-    delivery_and_warehouse_processing_price = np.where(
-        (dimensions_sum < 150) | (data['yandex_weight'] < 25),
-        data['current_price'] * 0.06,
-        350 * 2
+    # dimensions_sum = data['yandex_length'] + data['yandex_width'] + data['yandex_height']
+    # dimensions_sum.fillna(0, inplace=True)
+    #
+    # delivery_and_warehouse_processing_price = np.where(
+    #     (dimensions_sum < 150) | (data['yandex_weight'] < 25),
+    #     data['current_price'] * 0.06,
+    #     350 * 2
+    # )
+    #
+    # data['fbo'] = np.where(
+    #     data['market'] == 'ozon',
+    #     data['fbo'],
+    #     data['current_price'] * (market_settings.fbo_sales_commission / 100) + delivery_and_warehouse_processing_price + data['current_price'] * 0.01
+    # )
+    logistic_price = np.where(
+        data['volume'] > data['volume_threshold_for_additional_logistics'],
+        np.ceil(data['volume'] - data['volume_threshold_for_additional_logistics']) * data['cost_of_additional_logistics'],
+        0
     )
+    logistic_price[np.isnan(logistic_price)] = 0
 
-    data['fbo'] = np.where(
-        data['market'] == 'ozon',
-        data['fbo'],
-        data['current_price'] * (market_settings.fbo_sales_commission / 100) + delivery_and_warehouse_processing_price + data['current_price'] * 0.01
-    )
+    data['fbo'] = (data['current_price'] * (market_settings.fbo_sales_commission / 100)) + logistic_price
+
     return data['fbo']
 
 
@@ -59,19 +68,6 @@ async def calculate_offers_values(data: pd.DataFrame, settings, market_settings:
     data['profit'] = data['temp_profit_base'] * (1 - market_settings.tax / 100) - data['fbo'] - data['cost_price']
     data['days_to_zero_profit'] = data['profit'] / (market_settings.long_term_storage_cost or np.nan)
 
-    # async with async_session() as session:
-    #     for market in await get_markets(session):
-            # data['profit'] = np.where(
-            #     ((data['market'] == market.type) & (data['name_of_shop'] == market.name)),
-            #     data['temp_profit_base'] * (1 - market.tax / 100) - data['fbo'] - data['cost_price'],
-            #     data['profit']
-            # )
-            # data['days_to_zero_profit'] = np.where(
-            #     ((data['market'] == market.type) & (data['name_of_shop'] == market.name)),
-            #     data['profit'] / (market.long_term_storage_cost or np.nan),
-            #     data['days_to_zero_profit']
-            # )
-
     data.drop('temp_profit_base', axis=1, inplace=True)
 
     data['margin'] = data['profit'] / data['cost_price'] * 100
@@ -81,6 +77,8 @@ async def calculate_offers_values(data: pd.DataFrame, settings, market_settings:
         0,
         data['profit'] / data['volume']
     )
+
+    data['discount_base_price'] = data['current_price'] * (1.0 + market_settings.price_before_discount / 100)
 
     data = round_values(data)
 

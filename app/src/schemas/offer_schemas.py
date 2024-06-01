@@ -1,37 +1,9 @@
 from datetime import datetime
-
+import math
 from pydantic import BaseModel, Field, computed_field
 from abc import ABC
 from enum import Enum
 
-
-# class BasePricingScheme(BaseModel):
-#     name: str
-#     use_total_price: bool = False
-#     use_attractive_price_threshold: bool = False
-#     use_moderately_attractive_price_threshold: bool = False
-#     use_your_price_for_buyers: bool = False
-#     use_min_price_without_market: bool = False
-#     use_min_price_in_market: bool = False
-#     use_min_general_markets_price: bool = False
-#     n: float = 1
-#     m: float = 0
-#
-#     @staticmethod
-#     def active_fields(dump: dict):
-#         return [k.replace('use_', '', 1) for k, v in dump.items() if k.startswith('use_') and v == True]
-#
-#
-# class PricingSchemeCreate(BasePricingScheme):
-#     pass
-#
-#
-# class PricingSchemeOut(BasePricingScheme):
-#     id: int
-#
-#
-# class PricingSchemeChange(PricingSchemeOut):
-#     pass
 
 class PricingSchemeFieldCreate(BaseModel):
     key: str
@@ -106,7 +78,6 @@ class OfferChange(BaseOffer):
     self_width: float | None = Field(title='Ширина')
     self_height: float | None = Field(title='Высота')
 
-    supplier_available: bool = Field(title='Наличие у поставщика')
     auto_participation_in_promotions: bool = Field(title='Автоучастие в акциях')
 
     total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену', default=200)
@@ -169,12 +140,15 @@ class OfferOut(OfferChange):
     min_price_in_market: float | None = Field(title='Цена площадки (на Маркете)')
     your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
     min_general_markets_price: float | None = Field(title='Лучшая цена среди всех площадок')
+    supplier_available: bool = Field(title='Наличие у поставщика')
     barcodes: str | None = Field(title='Штрихкоды')
     use_promotion_price: bool = Field(title='Акция')
     wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.')
     vendor_code: int | None = Field(title='Артикул')
     recommended_retail_price: float | None = Field(title='РРЦ')
     stop_price: float | None = Field(title='Стоп цена')
+    volume_threshold_for_additional_logistics: float = Field(title='Порог для дополнительной логистики за литр')
+    cost_of_additional_logistics_per_liter: float = Field(title='Стоимость дополнительной логистики за литр')
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')
@@ -199,6 +173,17 @@ class OfferOut(OfferChange):
         if all((self.recommended_retail_price, self.your_promotion_price)):
             return self.recommended_retail_price - self.your_promotion_price
         return None
+
+    @computed_field(title='Стоимость дополнительной логистики 1 литра свыше N')
+    @property
+    def cost_of_additional_logistics(self) -> float | None:
+        if not all((self.volume, self.volume_threshold_for_additional_logistics, self.cost_of_additional_logistics_per_liter)):
+            return 0
+
+        if self.volume <= self.volume_threshold_for_additional_logistics:
+            return 0
+
+        return math.ceil(self.volume - self.volume_threshold_for_additional_logistics) * self.cost_of_additional_logistics_per_liter
 
 
 class OfferOutWithPriceScheme(OfferOut):
