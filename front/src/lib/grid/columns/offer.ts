@@ -1,16 +1,11 @@
-import type { ValueGetterParams } from "ag-grid-enterprise";
-import type { Column, ColumnGroup } from "../components/datagrid/columns";
+import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
 import type { Template } from "$lib/data/templates";
-import type { FboStocks } from "$lib/data/fbo_storage";
 import type { Offer } from "$lib/data/offers";
-import type { Market } from "$lib/data/markets";
-import type { OwnStorage } from "$lib/data/own_storage";
+
 import {
     ComboboxColumn,
-    GroupColumn,
     BooleanColumn,
     StringColumn,
-    ImageColumn,
     DateColumn,
     dollarColumn,
     floatColumn,
@@ -18,8 +13,9 @@ import {
     percentColumn,
     rubleColumn
 } from "$lib/components/datagrid/columns/types";
+import baseOfferColumns from "./base";
 
-export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
+export default function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
     return [
         ...baseOfferColumns(),
         {
@@ -250,199 +246,5 @@ export function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
             editable: true
         },
         { header: "Скрыт", key: "hidden", base: new BooleanColumn(), editable: true }
-    ];
-}
-
-export function ownStorageColumns(markets: Market[]): (Column | ColumnGroup)[] {
-    const noteCols = ([1, 2, 3] as const).map(i => {
-        return {
-            header: `Примечание ${i}`,
-            key: `note_${i}`,
-            valueGetter: ({ data }: { data: OwnStorage }) =>
-                data[`note_${i}`].filter(x => x !== "").join("; "),
-            base: new StringColumn(),
-            columnGroupShow: "closed"
-        } as Column;
-    });
-    const marketCols = markets.map(market => {
-        return {
-            header: `${market.name} (${market.type}), шт.`,
-            key: `shops-${market.id}`,
-            valueGetter: ({ data }: { data: OwnStorage }) => {
-                let stock = data.stocks.find(
-                    ({ market: type, name_of_shop }) =>
-                        market.type === type && market.name === name_of_shop
-                );
-                return stock?.value;
-            },
-            base: intColumn
-        } as Column;
-    });
-
-    return [
-        {
-            header: "SKU",
-            key: "sku",
-            base: new GroupColumn(),
-            pinned: true
-        },
-        {
-            header: "Информация",
-            children: [
-                {
-                    header: "Фото",
-                    key: "photo",
-                    base: new ImageColumn(),
-                    valueGetter: ({ data }: { data: OwnStorage }) => {
-                        if (data.photo === undefined || data.photo.length === 0) return null;
-                        let photo = data.photo
-                            .map(x => x ?? "")
-                            .filter(x => x !== "")
-                            .at(0);
-                        return photo ?? null;
-                    }
-                },
-                { header: "Название", key: "name.0", base: new StringColumn() },
-                ...noteCols
-            ]
-        },
-        {
-            header: "Мой склад",
-            key: "own_storage.value",
-            base: intColumn,
-            editable: true
-        },
-        ...marketCols
-    ];
-}
-
-export function fboStocksColumns(): (Column | ColumnGroup)[] {
-    return [
-        ...baseOfferColumns(),
-        {
-            header: "Остатки",
-            children: [
-                {
-                    header: "В наличии",
-                    key: "current_stock",
-                    base: intColumn,
-                    valueGetter: (params: ValueGetterParams<FboStocks>) => {
-                        if (!params.data) return 0;
-                        return params.data.stocks
-                            .map(x => x.current_stock)
-                            .reduce((a, b) => a + b, 0);
-                    }
-                },
-                {
-                    header: "Мин. остаток",
-                    key: "min_stock",
-                    base: intColumn,
-                    valueGetter: (params: ValueGetterParams<FboStocks>) => {
-                        if (!params.data) return 0;
-                        return params.data.stocks.map(x => x.min_stock).reduce((a, b) => a + b, 0);
-                    }
-                },
-                {
-                    header: "К поставке",
-                    key: "to_deliver",
-                    base: intColumn,
-                    valueGetter: (params: ValueGetterParams<FboStocks>) => {
-                        if (!params.data) return 0;
-                        return params.data.stocks
-                            .map(x => Math.max(0, x.min_stock - x.current_stock))
-                            .reduce((a, b) => a + b, 0);
-                    }
-                }
-            ]
-        },
-        { header: "Скрыт", key: "hidden", base: new BooleanColumn(), editable: true }
-    ];
-}
-
-export function fboStorageColumns(): (Column | ColumnGroup)[] {
-    return [
-        { header: "Склад", key: "warehouse.name", base: new StringColumn() },
-        {
-            header: "В наличии",
-            key: "current_stock",
-            base: intColumn
-        },
-        {
-            header: "Мин. остаток",
-            key: "min_stock",
-            base: intColumn,
-            editable: true
-        },
-        {
-            header: "К поставке",
-            key: "to_deliver",
-            base: intColumn,
-            valueGetter: params => {
-                if (params.data) {
-                    return Math.max(0, params.data.min_stock - params.data.current_stock);
-                } else {
-                    return 0;
-                }
-            }
-        }
-    ];
-}
-
-function baseOfferColumns(): (Column | ColumnGroup)[] {
-    return [
-        {
-            base: new GroupColumn(),
-            header: "SKU",
-            key: "sku",
-            pinned: true
-        },
-        {
-            header: "Информация",
-            children: [
-                {
-                    base: new ImageColumn(),
-                    header: "Фото",
-                    key: "photo"
-                },
-                {
-                    base: new StringColumn(),
-                    header: "Название",
-                    key: "name"
-                },
-                {
-                    base: new StringColumn(),
-                    header: "Примечание 1",
-                    key: "note_1",
-                    editable: true,
-                    columnGroupShow: "closed"
-                },
-                {
-                    base: new StringColumn(),
-                    header: "Примечание 2",
-                    key: "note_2",
-                    editable: true,
-                    columnGroupShow: "closed"
-                },
-                {
-                    base: new StringColumn(),
-                    header: "Примечание 3",
-                    key: "note_3",
-                    editable: true,
-                    columnGroupShow: "closed"
-                },
-                {
-                    base: new StringColumn(),
-                    key: "market",
-                    header: "Площадка",
-                    columnGroupShow: "closed"
-                },
-                {
-                    base: new StringColumn(),
-                    key: "name_of_shop",
-                    header: "Название магазина",
-                    columnGroupShow: "closed"
-                }
-            ]
-        }
     ];
 }

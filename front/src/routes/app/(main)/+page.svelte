@@ -6,7 +6,7 @@
     import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
     import Footer from "./Footer.svelte";
     import { fetchTemplates, type Template } from "$lib/data/templates";
-    import { offerColumns } from "$lib/grid/columns";
+    import offerColumns from "$lib/grid/columns/offer";
     import type { Writable } from "svelte/store";
     import { type FilterParams, offerBaseFilter } from "$lib/grid/filters";
 
