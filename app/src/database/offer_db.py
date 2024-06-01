@@ -26,11 +26,15 @@ def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
     return data
 
 
-async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None, model_schema: Type[BaseModel] = OfferOut) -> list[OfferOut]:
+async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None, model_schema: Type[BaseModel] = OfferOut, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
     query = select(Offer)
 
     if filters:
         query = query.filter_by(**filters)
+
+    query = query.offset(offset)
+    if limit:
+        query = query.limit(limit)
 
     offers = await session.execute(query)
     return [model_schema.model_validate(offer, from_attributes=True) for offer in offers.unique().scalars().all()]

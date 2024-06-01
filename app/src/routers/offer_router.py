@@ -25,8 +25,8 @@ data_router = APIRouter(
 
 
 @data_router.get('/offers', response_model=list[OfferOut], dependencies=[Depends(get_current_user)])
-async def get_offers():
-    return await service.get_offers()
+async def get_offers(offset: int = 0, limit: int | None = None):
+    return await service.get_offers(offset=offset, limit=limit)
 
 
 @data_router.patch('/offers', response_model=list[OfferOut])
