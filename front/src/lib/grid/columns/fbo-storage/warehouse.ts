@@ -2,6 +2,7 @@ import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
 import {
     BooleanColumn,
     DateColumn,
+    NumberColumn,
     StringColumn,
     intColumn
 } from "$lib/components/datagrid/columns/types";
@@ -26,7 +27,15 @@ export default function fboWarehouseColumns(): (Column | ColumnGroup)[] {
             base: intColumn,
             valueGetter: params => {
                 if (params.data) {
-                    return Math.max(0, params.data.min_stock - params.data.current_stock);
+                    let diff = Math.max(0, params.data.min_stock - params.data.current_stock);
+                    let { is_deliver_in_boxes, in_box } = params.data;
+                    if (is_deliver_in_boxes) {
+                        let boxes_remainder = 0;
+                        if (diff % in_box !== 0) boxes_remainder = 1;
+                        let boxes = Math.floor(diff / in_box) + boxes_remainder;
+                        return boxes * in_box;
+                    }
+                    return diff;
                 } else {
                     return 0;
                 }
@@ -50,7 +59,7 @@ export default function fboWarehouseColumns(): (Column | ColumnGroup)[] {
         {
             key: "in_box",
             header: "В коробке",
-            base: intColumn,
+            base: new NumberColumn({ precision: 0, min: 1 }),
             editable: true
         },
         {
