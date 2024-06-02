@@ -239,7 +239,7 @@ async def export_yandex_supply(data: pd.DataFrame, dir_path: Path):
 
     for warehouse_name in warehouses:
         df = data[data['warehouse_name'] == warehouse_name]
-        df = df[['sku', 'name', 'for_delivery', 'current_price', 'barcodes']]
+        df = df[['sku', 'name', 'barcodes', 'for_delivery', 'current_price']]
         df.rename({
             'sku': 'Ваш SKU',
             'name': 'Название товара',
@@ -247,8 +247,9 @@ async def export_yandex_supply(data: pd.DataFrame, dir_path: Path):
             'current_price': 'Объявленная ценность одного товара, руб.',
             'barcodes': 'Штрихкоды'
         }, axis='columns', inplace=True)
-        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xls'
-        df.to_excel(file_path, index=False)
+        df['НДС'] = 'VAT_20'
+        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xlsx'
+        df.to_excel(file_path, index=False, header=True, sheet_name='Поставка')
 
 
 async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
@@ -256,14 +257,14 @@ async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
 
     for warehouse_name in warehouses:
         df = data[data['warehouse_name'] == warehouse_name]
-        df = df[['sku', 'name', 'for_delivery', 'barcodes']]
+        df = df[['sku', 'name', 'for_delivery']]
         df.rename({
             'sku': 'артикул',
             'name': 'имя (необязательно)',
             'for_delivery': 'количество'
         }, axis='columns', inplace=True)
 
-        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xls'
+        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xlsx'
         df.to_excel(file_path, index=False)
 
 
@@ -328,8 +329,7 @@ async def export_supply(name_of_shop: str | None = None, market: str | None = No
             # create marketplace folder
             market_file_path = zip_file_path / _market
             market_file_path.mkdir(exist_ok=True)
-
-            for _shop in set(df['name_of_shop'].values.tolist()):
+            for _shop in set(df[df['market'] == _market]['name_of_shop'].values.tolist()):
 
                 # create shop folder
                 shop_file_path = market_file_path / _shop
