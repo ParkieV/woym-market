@@ -227,7 +227,7 @@ class PricingScheme(Base):
     market = Column(Enum(APITypes))
     m = Column(Float, default=0)
     n = Column(Float, default=1)
-    fields = relationship('PricingSchemeField', back_populates='pricing_scheme')
+    fields = relationship('PricingSchemeField', back_populates='pricing_scheme', order_by='PricingSchemeField.name.asc()')
     offers = relationship(Offer, back_populates='pricing_scheme')
 
 
