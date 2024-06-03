@@ -68,7 +68,7 @@ async def update_offers(user_id: int):
     start_time = datetime.now()
 
     async with async_session() as session:
-        await update_yandex_offers_price(session)
+        await update_offers_price(session)
         settings = await get_user_settings(session, user_id)
 
     mapping_fields = ['sku', 'name_of_shop', 'market']
@@ -109,7 +109,7 @@ async def delete_offers(offers: list[OfferDelete]):
         return await db.delete_offers(session, [offer.model_dump() for offer in offers])
 
 
-async def update_yandex_offers_price(session: AsyncSession):
+async def update_offers_price(session: AsyncSession):
     offers_db = await db.get_offers(session, {'auto_price_control': True})
 
     data = [
@@ -119,7 +119,9 @@ async def update_yandex_offers_price(session: AsyncSession):
             name_of_shop=offer.name_of_shop,
             target_price=offer.target_price,
             min_price=offer.manual_min_price if offer.use_manual_min_price else offer.total_price * offer.auto_min_price / 100,
-            auto_participation_in_promotions=offer.auto_participation_in_promotions
+            auto_participation_in_promotions=offer.auto_participation_in_promotions,
+            auto_min_price=offer.target_price * offer.auto_min_price / 100 if all((offer.target_price, offer.auto_min_price)) else None
+
         )
         for offer in offers_db if offer.total_price is not None
     ]

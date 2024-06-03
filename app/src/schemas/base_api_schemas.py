@@ -62,6 +62,7 @@ class APIPriceChangeData:
     target_price: Union[int, float, None]
     min_price: float
     auto_participation_in_promotions: bool
+    auto_min_price: float | None = None
 
     def is_valid_data(self) -> bool:
         return isinstance(self.target_price, (float, int))

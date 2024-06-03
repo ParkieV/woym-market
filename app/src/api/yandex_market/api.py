@@ -170,6 +170,8 @@ class YandexMarketAPI(BaseAPI):
                     )
             self.validate_response(response, body=body, raise_error=False)
 
+        self._set_cofinance_offers_price(data)
+
         logger.info('Yandex prices updated')
 
     async def _get_market_prices_report(self, business_id: int) -> dict[str, dict[str, Any]]:
@@ -300,3 +302,29 @@ class YandexMarketAPI(BaseAPI):
                 result[offer_price_info['offerId']] = offer_price_info['price']['value']
 
         return result
+
+    def _set_cofinance_offers_price(self, data: list[APIPriceChangeData]):
+        chunk_size = 500
+        business_id = self._get_business_id_by_campaign_id(self._entity_id)
+        valid_data = [i for i in data if i.auto_min_price is not None or i.auto_min_price != np.nan]
+
+        for i in range(0, len(data), chunk_size):
+
+            body = {
+                'offerMappings': [
+                    {
+                        'offer': {
+                            'offerId': price_data.sku,
+                            'cofinancePrice': price_data.auto_min_price
+                        }
+                    }
+                    for price_data in valid_data[i:i+chunk_size]
+                ]
+            }
+
+            response = self.session.post(
+                f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings/update',
+                headers=self.auth_headers,
+                json=body
+            )
+            self.validate_response(response, raise_error=False)
