@@ -4,10 +4,10 @@
     import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
     import { getContext, onMount } from "svelte";
     import Footer from "../Footer.svelte";
-    import { ownStorageColumns } from "$lib/grid/columns";
     import { fetchOwnStorages, patchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
     import type { Writable } from "svelte/store";
     import { ownStorageFilter, type FilterParams } from "$lib/grid/filters";
+    import ownStorageColumns from "$lib/grid/columns/own-storage";
 
     let data: OwnStorage[] = [];
     let changes = new ChangeList<OwnStorage, "sku">();

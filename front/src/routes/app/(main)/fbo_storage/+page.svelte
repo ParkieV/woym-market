@@ -8,13 +8,14 @@
     } from "$lib/data/fbo_storage";
     import type { GridOptions, IDetailCellRendererParams, GridApi } from "ag-grid-enterprise";
     import Footer from "../Footer.svelte";
-    import { fboStocksColumns, fboStorageColumns } from "$lib/grid/columns";
     import { getContext, onMount } from "svelte";
     import { getColumns } from "$lib/components/datagrid/columns";
     import Grid from "$lib/components/datagrid/Grid.svelte";
     import type { Writable } from "svelte/store";
     import { userCanModify } from "$lib/data/user";
     import { offerBaseFilter, type FilterParams } from "$lib/grid/filters";
+    import fboOffersColumns from "$lib/grid/columns/fbo-storage/offer";
+    import fboWarehouseColumns from "$lib/grid/columns/fbo-storage/warehouse";
 
     let data: FboStocks[] = [];
     let changes = new ChangeList<FboStocks, "id">();
@@ -22,8 +23,8 @@
     let filterParams = getContext<Writable<FilterParams>>("filterParams");
     $: filter = offerBaseFilter($filterParams);
 
-    const columns = fboStocksColumns();
-    const detailColumns = fboStorageColumns();
+    const columns = fboOffersColumns();
+    const detailColumns = fboWarehouseColumns();
 
     const options: GridOptions = {
         masterDetail: true,
