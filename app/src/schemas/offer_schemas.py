@@ -148,6 +148,7 @@ class OfferOut(OfferChange):
     recommended_retail_price: float | None = Field(title='РРЦ')
     stop_price: float | None = Field(title='Стоп цена')
     logistic_price: float | None = Field(title='Стоимость дополнительной логистики 1 литра')
+    your_promotion_price: float | None = Field(title='Ваша цена по акции')
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')
@@ -155,16 +156,6 @@ class OfferOut(OfferChange):
     class Config:
         orm_mode = True
 
-    @computed_field(title='Ваша цена по акции')
-    @property
-    def your_promotion_price(self) -> float | None:
-        match self.market:
-            case 'ozon':
-                return self.your_price_for_buyers
-            case 'yandex':
-                return self.current_price
-            case _:
-                return None
 
     @computed_field(title='Разница с РРЦ')
     @property

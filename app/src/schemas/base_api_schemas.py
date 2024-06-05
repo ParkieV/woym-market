@@ -31,6 +31,7 @@ class APIOffer:
     your_price_for_buyers: float | None = None
     fbo: float | None = None
     barcodes: str | None = None
+    your_promotion_price: float | None = None
 
     content_rating: float | None = None
     price_index: float | None = None

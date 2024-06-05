@@ -131,6 +131,7 @@ class YandexMarketAPI(BaseAPI):
                     'barcodes': ', '.join(offer['barcodes']) if offer['barcodes'] else None
 
                 }
+                offer_data['your_promotion_price'] = offer_data['current_price']
                 results.append(offer_data)
 
             page_token = data['result']['paging'].get('nextPageToken', None)
