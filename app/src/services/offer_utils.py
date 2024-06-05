@@ -33,16 +33,8 @@ async def calculate_offers_values(data: pd.DataFrame, settings, market_settings:
     data['profit'] = np.nan
     data['days_to_zero_profit'] = np.nan
 
-    data['temp_profit_base'] = np.where(
-        data['your_price_for_buyers'].isna() | data['your_price_for_buyers'] is None,
-        data['current_price'],
-        data['your_price_for_buyers']
-    )
-
-    data['profit'] = data['temp_profit_base'] * (1 - market_settings.tax / 100) - data['fbo'] - data['cost_price']
+    data['profit'] = data['your_promotion_price'] * (1 - market_settings.tax / 100) - data['fbo'] - data['cost_price']
     data['days_to_zero_profit'] = data['profit'] / (market_settings.long_term_storage_cost or np.nan)
-
-    data.drop('temp_profit_base', axis=1, inplace=True)
 
     data['margin'] = data['profit'] / data['cost_price'] * 100
 
