@@ -89,11 +89,14 @@ async def update_offers(user_id: int):
     to_update_df = pd.merge(yandex_offers_df, pd.DataFrame(to_update, columns=mapping_fields), how='inner')
     to_update_df[['best_place_wm', 'best_place_im', 'photo']] = to_update_df[['best_place_wm', 'best_place_im', 'photo']].astype('string')
     to_create_df = pd.merge(yandex_offers_df, pd.DataFrame(to_create, columns=mapping_fields), how='inner')
-    to_create_df = await utils.build_offers_data(to_create_df, settings, setup_mode=True)
+
     to_delete_df = pd.DataFrame(to_delete, columns=mapping_fields)
 
     async with async_session() as session:
-        await db.create_offers(session, to_create_df)
+        for market in await get_markets(session):
+            to_create_df_chunked = await utils.build_offers_data(to_create_df[((to_create_df['market'] == market.type) & (to_create_df['name_of_shop'] == market.name))], settings, market, setup_mode=True)
+            await db.create_offers(session, to_create_df_chunked)
+
         await db.update_offers(session, to_update_df, mapping_columns=['name_of_shop', 'market'])
         await db.delete_offers(session, to_delete_df)
         await recalculate_values(session, settings)

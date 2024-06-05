@@ -117,7 +117,7 @@ async def calculate_price(data: pd.DataFrame, market_settings: MarketOut) -> pd.
     return df
 
 
-async def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False, default_price_scheme_id: int = 1) -> pd.DataFrame:
+async def build_offers_data(data: pd.DataFrame, settings, market, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False, default_price_scheme_id: int = 1) -> pd.DataFrame:
     data = data.copy()
 
     if data.empty:
@@ -132,7 +132,7 @@ async def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: flo
             'Y0',
             'O0'
         )
-
+    data['wholesale_dollar_cost_price'] = np.nan
     data['total_price_coeff'] = total_price_coeff
     data['total_price_min_additional'] = total_price_min_additional
 
@@ -143,7 +143,7 @@ async def build_offers_data(data: pd.DataFrame, settings, total_price_coeff: flo
     data['use_manual_min_price'] = False
     data['auto_price_control'] = True
 
-    data = await calculate_offers_values(data, settings)
+    data = await calculate_offers_values(data, settings, market)
     data['auto_price_control'] = False
     data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']] = data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']].astype('string')
 

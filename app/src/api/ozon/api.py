@@ -39,15 +39,18 @@ class OzonAPI(BaseAPI):
         offers_attributes = self._get_offers_attributes(offers_identifiers)
         offers_content_rating = self._get_content_ratings(
             [offer['market_sku'] for offer in offers if offer['market_sku'] > 0])
-        offers_commissions = self._get_offers_commissions(offers_identifiers)
+        offers_prices = self._get_offers_prices(offers_identifiers)
 
         product_ids = {ident.offer_id: ident.product_id for ident in offers_identifiers}
 
         for offer in offers:
             attrs = offers_attributes.get(offer['sku'], None)
+            prices = offers_prices.get(offer['sku'], {})
+
             offer.update(attrs)
             offer['name_of_shop'] = self.shop_name
-            offer['fbo'] = offers_commissions.get(offer['sku'], None)
+            offer['fbo'] = prices.get('commissions', None)
+            offer['your_promotion_price'] = prices.get('marketing_seller_price', None)
             offer['content_rating'] = offers_content_rating.get(offer['market_sku'], None)
             # артикул - product_id
             offer['vendor_code'] = product_ids.get(offer['sku'], None)
@@ -263,9 +266,7 @@ class OzonAPI(BaseAPI):
 
         return {offer['market_sku']: offer['sku'] for offer in offers if offer['market_sku'] != 0}
 
-
-
-    def _get_offers_commissions(self, data: list[OfferIdentifier]) -> dict[str, float]:
+    def _get_offers_prices(self, data: list[OfferIdentifier]) -> dict[str, dict]:
         chunk_size = 1000
         result = dict()
 
@@ -279,8 +280,12 @@ class OzonAPI(BaseAPI):
             response = self.session.post('https://api-seller.ozon.ru/v4/product/info/prices', headers=self.auth_headers, json=body)
 
             data = self.validate_response(response, body=body)
-
+            
             for offer in data['result']['items']:
+                result[offer['offer_id']] = {
+                    'marketing_seller_price': self.__str_to_float(offer['price'].get('marketing_seller_price', None))
+                }
+                
                 try:
                     commissions = offer['commissions']
 
@@ -292,10 +297,12 @@ class OzonAPI(BaseAPI):
                         commissions['fbo_deliv_to_customer_amount'],
                     ])
 
-                    result[offer['offer_id']] = price * sales_percent / 100 + expenses
+                    result[offer['offer_id']]['commissions'] = price * sales_percent / 100 + expenses
+                    
                 except Exception as e:
                     logger.error(f'Error in get commission for offer with sku {offer["offer_id"]}', exc_info=True)
 
         return result
+
 
 

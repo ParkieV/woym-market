@@ -95,6 +95,7 @@ class Offer(Base):
     your_price_for_buyers = Column(Float, nullable=True)
     min_general_markets_price = Column(Float, nullable=True)
     logistic_price = Column(Float, default=0)
+    your_promotion_price = Column(Float, nullable=True, default=None)
 
     current_price = Column(Float, nullable=True)
     target_price = Column(Float, nullable=True, default=None)
