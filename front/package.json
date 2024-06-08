@@ -33,7 +33,7 @@
     "type": "module",
     "dependencies": {
         "@types/js-cookie": "^3.0.6",
-        "ag-grid-enterprise": "^31.0.3",
+        "ag-grid-enterprise": "^31.3.2",
         "js-cookie": "^3.0.5",
         "svelte-modals": "^1.3.0",
         "svelte-persisted-store": "^0.8.0"

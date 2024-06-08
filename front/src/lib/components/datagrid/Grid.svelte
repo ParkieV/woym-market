@@ -74,17 +74,6 @@
         };
 
         grid = createGrid(element, options);
-        // FIXME: remove after column sizing bug is solved in AG Grid (AG-10388)
-        if (initialState.columnSizing) {
-            grid.setColumnWidths(
-                initialState.columnSizing.columnSizingModel.map(x => {
-                    return {
-                        key: x.colId,
-                        newWidth: x.width ?? 200
-                    };
-                })
-            );
-        }
     });
 
     let element: HTMLElement;
