@@ -1,3 +1,4 @@
+import { GridDefinition } from "$lib/components/datagrid";
 import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
 import {
     BooleanColumn,
@@ -6,10 +7,29 @@ import {
     StringColumn,
     intColumn
 } from "$lib/components/datagrid/columns/types";
+import { BASE_GRID_OPTIONS } from "$lib/grid/base";
+import type { GridOptions } from "ag-grid-enterprise";
 
-export default function fboWarehouseColumns(): (Column | ColumnGroup)[] {
+export default function fboWarehouseGrid(): GridDefinition {
+    const options: GridOptions = {
+        ...BASE_GRID_OPTIONS,
+        rowHeight: 30,
+        autoSizeStrategy: { type: "fitCellContents" },
+        suppressMovableColumns: true
+    };
+    const definition = new GridDefinition(options, columns());
+    return definition;
+}
+
+function columns(): (Column | ColumnGroup)[] {
     return [
-        { header: "Склад", key: "warehouse.name", base: new StringColumn() },
+        {
+            header: "Склад",
+            key: "warehouse.name",
+            pinned: true,
+            selectionCheckbox: true,
+            base: new StringColumn()
+        },
         {
             header: "В наличии",
             key: "current_stock",

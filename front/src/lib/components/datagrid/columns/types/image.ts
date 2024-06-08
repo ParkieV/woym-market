@@ -7,5 +7,5 @@ export default class ImageColumn extends StringColumn implements ColumnBase<stri
         return value != null ? `<img src="${value}" />` : "";
     }
 
-    classes = () => ["product-photo-cell"];
+    classes = () => ["image"];
 }

@@ -1,63 +1,41 @@
 <script lang="ts">
-    import { ChangeList } from "$lib/components/datagrid/changes";
     import {
         fetchFboStocks,
         patchFboStocks,
         type FboStocks,
         type FboStorage
     } from "$lib/data/fbo_storage";
-    import type { GridOptions, IDetailCellRendererParams, GridApi } from "ag-grid-enterprise";
     import Footer from "../Footer.svelte";
     import { getContext, onMount } from "svelte";
-    import { getColumns } from "$lib/components/datagrid/columns";
-    import Grid from "$lib/components/datagrid/Grid.svelte";
+    import Grid from "$lib/grid/Grid.svelte";
     import type { Writable } from "svelte/store";
-    import { userCanModify } from "$lib/data/user";
     import { offerBaseFilter, type FilterParams } from "$lib/grid/filters";
-    import fboOffersColumns from "$lib/grid/columns/fbo-storage/offer";
-    import fboWarehouseColumns from "$lib/grid/columns/fbo-storage/warehouse";
+    import ChangesPlugin, { ChangeList } from "$lib/components/datagrid/plugins/changes";
+    import type { GridDefinition } from "$lib/components/datagrid";
+    import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
+    import fboOffersGrid from "./fbo-offer";
+    import StatePlugin from "$lib/components/datagrid/plugins/state";
+    import ReadonlyPlugin from "$lib/components/datagrid/plugins/readonly";
+    import ZoomPlugin from "$lib/components/datagrid/plugins/zoom";
+    import { userCanModify } from "$lib/data/user";
+    import ClassesPlugin from "$lib/components/datagrid/plugins/classes";
 
+    let definition: GridDefinition;
     let data: FboStocks[] = [];
+
     let changes = new ChangeList<FboStocks, "id">();
+    let innerChanges = new ChangeList<FboStorage, "id">();
 
     let filterParams = getContext<Writable<FilterParams>>("filterParams");
     $: filter = offerBaseFilter($filterParams);
 
-    const columns = fboOffersColumns();
-    const detailColumns = fboWarehouseColumns();
-
-    const options: GridOptions = {
-        masterDetail: true,
-        detailCellRendererParams: (params: { api: GridApi; data: FboStocks }) => {
-            let { api, data } = params;
-            return {
-                detailGridOptions: {
-                    columnDefs: getColumns(detailColumns, {
-                        onPhotoClicked: () => {},
-                        isRowChanged: () => false,
-                        readonly: !$userCanModify
-                    }),
-                    autoSizeStrategy: { type: "fitCellContents" },
-                    suppressMovableColumns: true,
-                    enableRangeSelection: true,
-                    enableRangeHandle: true,
-                    getContextMenuItems: () => ["cut", "copy", "paste"],
-                    onCellValueChanged: _ => {
-                        changes.add(data.id);
-                        changes = changes;
-                        api.redrawRows();
-                    }
-                },
-                getDetailRowData: params => {
-                    params.successCallback(params.data.stocks);
-                }
-            } satisfies Partial<IDetailCellRendererParams<FboStocks, FboStorage>>;
-        }
-    };
+    let selected_image: string | undefined = undefined;
 
     async function refreshData() {
         changes.clear();
         changes = changes;
+        innerChanges.clear();
+        innerChanges = innerChanges;
         data = await fetchFboStocks();
     }
 
@@ -70,17 +48,26 @@
     $refresh = refreshData;
 
     onMount(async () => {
+        definition = (
+            await fboOffersGrid(innerChanges, id => {
+                changes.add(id);
+                changes = changes;
+            })
+        )
+            .plugin(StatePlugin("fbo_storage"))
+            .plugin(ChangesPlugin("id", changes))
+            .plugin(ReadonlyPlugin(!$userCanModify))
+            .plugin(ZoomPlugin(href => (selected_image = href)))
+            .plugin(ClassesPlugin());
+
         data = await fetchFboStocks();
     });
 </script>
 
-<Grid
-    key="id"
-    grid_name="fbo_storage"
-    {columns}
-    bind:data
-    bind:changes
-    bind:filter
-    otherGridOptions={options}
-/>
+{#if selected_image}
+    <ImageWindow bind:src={selected_image} />
+{/if}
+{#if definition}
+    <Grid {definition} bind:data bind:filter />
+{/if}
 <Footer bind:changes on:reload={refreshData} on:save={save} />

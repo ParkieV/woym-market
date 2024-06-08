@@ -5,7 +5,7 @@
         showNotification
     } from "$lib/components/modal/Modals.svelte";
     import { fetchLogs } from "$lib/data/settings";
-    import type { ChangeList } from "$lib/components/datagrid/changes";
+    import type { ChangeList } from "$lib/components/datagrid/plugins/changes";
     import { createEventDispatcher, onMount } from "svelte";
     import { userCanModify } from "$lib/data/user";
 

@@ -1,7 +1,8 @@
+import { BASE_GRID_OPTIONS } from "$lib/grid/base";
+import { GridDefinition } from "$lib/components/datagrid";
 import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
 import type { Template } from "$lib/data/templates";
 import type { Offer } from "$lib/data/offers";
-
 import {
     ComboboxColumn,
     BooleanColumn,
@@ -11,13 +12,71 @@ import {
     floatColumn,
     intColumn,
     percentColumn,
-    rubleColumn
+    rubleColumn,
+    GroupColumn,
+    ImageColumn
 } from "$lib/components/datagrid/columns/types";
-import baseOfferColumns from "./base";
 
-export default function offerColumns(templates: Template[]): (Column | ColumnGroup)[] {
+export default function offerGrid(templates: Template[]): GridDefinition {
+    return new GridDefinition(BASE_GRID_OPTIONS, columns(templates));
+}
+
+function columns(templates: Template[]): (Column | ColumnGroup)[] {
     return [
-        ...baseOfferColumns(),
+        {
+            base: new GroupColumn(),
+            header: "SKU",
+            key: "sku",
+            pinned: true
+        },
+        {
+            header: "Информация",
+            children: [
+                {
+                    base: new ImageColumn(),
+                    header: "Фото",
+                    key: "photo"
+                },
+                {
+                    base: new StringColumn(),
+                    header: "Название",
+                    key: "name"
+                },
+                {
+                    base: new StringColumn(),
+                    header: "Примечание 1",
+                    key: "note_1",
+                    editable: true,
+                    columnGroupShow: "closed"
+                },
+                {
+                    base: new StringColumn(),
+                    header: "Примечание 2",
+                    key: "note_2",
+                    editable: true,
+                    columnGroupShow: "closed"
+                },
+                {
+                    base: new StringColumn(),
+                    header: "Примечание 3",
+                    key: "note_3",
+                    editable: true,
+                    columnGroupShow: "closed"
+                },
+                {
+                    base: new StringColumn(),
+                    key: "market",
+                    header: "Площадка",
+                    columnGroupShow: "closed"
+                },
+                {
+                    base: new StringColumn(),
+                    key: "name_of_shop",
+                    header: "Название магазина",
+                    columnGroupShow: "closed"
+                }
+            ]
+        },
         {
             header: "Габариты (Собственные)",
             children: [
