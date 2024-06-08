@@ -1,7 +1,8 @@
 import pytest
 from httpx import AsyncClient
 from starlette import status
-from conftest import pricing_schemes
+
+from tests.endpoints.offers.conftest import pricing_schemes
 
 
 class TestOffersEndpoints:

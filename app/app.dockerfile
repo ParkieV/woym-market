@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 python:3.10.5
+FROM python:3.10.5
 
 WORKDIR /app
 
@@ -8,4 +8,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["python3", "__main__.py"]
+CMD ["python3", "main.py"]
