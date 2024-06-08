@@ -2,7 +2,7 @@ import shutil
 from functools import wraps
 from fastapi.exceptions import HTTPException
 from fastapi import status
-from src.logs import get_logger
+from logs import get_logger
 from pathlib import Path
 
 logger = get_logger(__name__)

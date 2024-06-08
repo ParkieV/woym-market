@@ -5,7 +5,7 @@ import pandas as pd
 from fastapi import HTTPException
 from requests import Response
 from src.schemas.base_api_schemas import APIOffer, APIWarehouse, APIPriceChangeData
-from src.logs import get_logger
+from logs import get_logger
 
 logger = get_logger(__name__)
 

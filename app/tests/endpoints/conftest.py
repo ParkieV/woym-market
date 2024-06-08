@@ -1,12 +1,11 @@
 import asyncio
-from asyncio import get_event_loop
 from typing import AsyncGenerator
 import pytest
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from starlette import status
 
-from src.main import app
+from __main__ import app
 from src.database.db import Base
 from src.params.confing import config
 

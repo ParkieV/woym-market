@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import HTTPException, status
 from requests import Session
 
-from src.logs import get_logger
+from logs import get_logger
 from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS, WAREHOUSES
 import pandas as pd
 import numpy as np

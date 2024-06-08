@@ -4,7 +4,7 @@ from requests import Session
 from src.api.base_api import BaseAPI
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, WarehouseType
 from dataclasses import dataclass
-from src.logs import get_logger
+from logs import get_logger
 
 logger = get_logger(__name__)
 

@@ -18,8 +18,6 @@ import aioschedule
 from src.params.confing import config
 
 
-
-
 async def scheduler():
     aioschedule.every(60).minutes.do(update_data, 1)
 

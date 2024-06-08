@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from src.logs import get_logger
+from logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
