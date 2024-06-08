@@ -4,7 +4,7 @@ services:
   app:
     container_name: app
     restart: always
-    command: python3 __main__.py
+    command: python3 src/main.py
     env_file: .env
     build:
       context: ./app

@@ -10,7 +10,7 @@ class Config(BaseSettings):
     dbport: int
     reset_db: bool
     schedule_update: bool
-    yandex_token: str
+    mode: str
 
     @property
     def db_url(self) -> str:

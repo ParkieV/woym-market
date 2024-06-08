@@ -1,7 +1,7 @@
 from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from logs import get_logger
+from src.logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import offer_db as db

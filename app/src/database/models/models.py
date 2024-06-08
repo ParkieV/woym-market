@@ -1,3 +1,5 @@
+import enum
+
 from sqlalchemy import (
     Column,
     ForeignKey,
@@ -14,6 +16,7 @@ from sqlalchemy.sql.expression import text
 from datetime import datetime
 from .base import Base
 from src.api.factory import APITypes
+from ...schemas.base_api_schemas import WarehouseType
 
 
 class Users(Base):
@@ -161,6 +164,10 @@ class TableInfo(Base):
 #     offers = relationship(Offer, back_populates='pricing_scheme')
 
 
+
+
+
+
 class Warehouse(Base):
     __tablename__ = 'warehouses'
 
@@ -168,7 +175,8 @@ class Warehouse(Base):
 
     name = Column(String)
     market = Column(String)
-
+    parent_warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='SET NULL'), nullable=True, default=None)
+    warehouse_type = Column(String, default=WarehouseType.WAREHOUSE)
 
 class OfferStock(Base):
     __tablename__ = 'offers_stocks'

@@ -1,6 +1,6 @@
 from src.services.offer_service import update_offers
 from src.services.stocks_service import update_warehouses_and_stocks
-from logs import get_logger
+from src.logs import get_logger
 
 logger = get_logger(__name__)
 

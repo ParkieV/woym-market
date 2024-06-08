@@ -4,16 +4,15 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from logs import get_logger
+from src.logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
 from src.database import offer_db
 import src.services.offer_utils as utils
 from src.database.settings_db import get_markets
-from src.database.warehouse_db import get_general_order_data
 from src.schemas.offer_schemas import OfferOut
-from src.schemas.stocks_schemas import WarehouseCreate, WarehouseOut, OfferStockOut, OfferStockCreate, \
+from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, \
     OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate
 from src.services.base_utils import error_handler, clean_up_files
 from datetime import datetime
@@ -37,7 +36,8 @@ async def update_warehouses_and_stocks():
         for warehouse in stocks:
             warehouse_db, _ = await db.update_or_create_warehouse(session, WarehouseCreate(
                 name=warehouse.name,
-                market=warehouse.market
+                market=warehouse.market,
+                warehouse_type=warehouse.warehouse_type
             ))
 
             for offer in await offer_db.get_offers(session, {'market': warehouse.market}):
@@ -50,7 +50,9 @@ async def update_warehouses_and_stocks():
             for offer_stock in warehouse.offers:
                 offer = await offer_db.get_offer(session,
                                                  {'sku': offer_stock.sku, 'name_of_shop': offer_stock.name_of_shop,
-                                                  'market': warehouse.market})
+                                                  'market': warehouse.market}, allow_none=True)
+                if not offer:
+                    continue
 
                 offer_stock_create = OfferStockCreate(
                     current_stock=offer_stock.current_stock,

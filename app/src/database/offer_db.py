@@ -108,10 +108,15 @@ async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.D
     return result
 
 
-async def get_offer(session: AsyncSession, filters: dict, model_schema: Type[BaseOffer] = OfferOut):
+async def get_offer(session: AsyncSession, filters: dict, model_schema: Type[BaseOffer] = OfferOut, allow_none: bool = False) -> BaseOffer | None:
     query = select(Offer).filter_by(**filters)
-    result = await session.execute(query)
-    return model_schema.model_validate(result.scalar_one(), from_attributes=True)
+    result = (await session.execute(query)).scalar_one_or_none()
+
+    if result is None:
+        if allow_none:
+            return None
+        raise HTTPException(status.HTTP_404_NOT_FOUND, 'Offer not found')
+    return model_schema.model_validate(result, from_attributes=True)
 
 
 async def validate_pricing_scheme_field_data(session: AsyncSession, data: PricingSchemeFieldCreate | dict):

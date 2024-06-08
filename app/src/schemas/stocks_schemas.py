@@ -1,12 +1,21 @@
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, computed_field
+
+from src.schemas.base_api_schemas import WarehouseType
 from src.schemas.settings_schemas import MarketOut
 from dataclasses import dataclass
 
 
+class WarehouseTypes(str, Enum):
+    WAREHOUSE = 'warehouse'
+    CLUSTER = 'cluster'
+
+
 class BaseWarehouse(BaseModel):
     name: str
+    warehouse_type: WarehouseType
 
 
 class WarehouseCreate(BaseWarehouse):

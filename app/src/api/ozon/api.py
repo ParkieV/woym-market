@@ -1,9 +1,10 @@
+import json
 from typing import Any
 from requests import Session
 from src.api.base_api import BaseAPI
-from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData
+from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, WarehouseType
 from dataclasses import dataclass
-from logs import get_logger
+from src.logs import get_logger
 
 logger = get_logger(__name__)
 
@@ -83,7 +84,7 @@ class OzonAPI(BaseAPI):
             else:
                 temp[warehouse_stock['warehouse_name']]['offers'].append(stock)
 
-        return [APIWarehouse(**i) for i in temp.values()]
+        return [APIWarehouse(**i) for i in temp.values()] + self._get_clasters_info()
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 1000
@@ -304,5 +305,21 @@ class OzonAPI(BaseAPI):
 
         return result
 
+    def _get_clasters_info(self) -> list[APIWarehouse]:
+        url = 'https://seller-edu.ozon.ru/document-manager-api.kms/api/v2/seller-edu/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
 
+        response = self.session.get(url)
 
+        data = response.json()
+        content_json = json.loads(data['document']['contentJson'])
+        spoilers = [i for i in content_json['content'] if i['type'] == 'spoiler']
+        spoilers = spoilers[len(spoilers)//2:len(spoilers)+1]
+
+        clasters = []
+
+        for spoiler in spoilers:
+            claster_name = spoiler['attrs']['title']
+            warehouses = [i['content'][0]['content'][0]['text'] for i in spoiler['content'][0]['content']]
+            clasters.append(APIWarehouse(name=claster_name, market='ozon', offers=[], warehouse_type=WarehouseType.CLUSTER))
+
+        return clasters

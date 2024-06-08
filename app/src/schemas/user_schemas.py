@@ -16,9 +16,6 @@ class UserOut(BaseModel):
     created_at: datetime
     is_staff: bool
 
-    class Config:
-        orm_mode = True
-
 
 class Token(BaseModel):
     access_token: str

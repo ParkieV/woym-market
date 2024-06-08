@@ -1,7 +1,11 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Union
 
-import numpy as np
+
+class WarehouseType(str, Enum):
+    WAREHOUSE = 'warehouse'
+    CLUSTER = 'cluster'
 
 
 @dataclass(frozen=True)
@@ -53,6 +57,7 @@ class APIWarehouse:
     market: str
     name: str
     offers: list[APIWarehouseOffer]
+    warehouse_type: WarehouseType = WarehouseType.WAREHOUSE
 
 
 @dataclass

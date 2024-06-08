@@ -128,9 +128,9 @@ class OfferOut(OfferChange):
 
     content_rating: float | None = Field(title='Контент рейтинг')
     price_index: str | None = Field(title='Индекс цены')
-    volume_profitability_ratio: float | None = Field(title='Коэффициент прибыльности от объёма (Прибыль \ объём)')
+    volume_profitability_ratio: float | None = Field(title=r'Коэффициент прибыльности от объёма (Прибыль \ объём)')
     days_to_zero_profit: float | None = Field(title='Дней до нулевой прибыли')
-    market_discount_in_percent: float | None = Field(title='Скидка маркета в % (100-\"цена для покупателей\" * 100 \ \"текущая цена\")')
+    market_discount_in_percent: float | None = Field(title=r'Скидка маркета в % (100-"цена для покупателей" * 100 \ "текущая цена")')
 
     attractive_price_threshold: float | None = Field(title='Порог для привлекательной цены')
     moderately_attractive_price_threshold: float | None = Field(title='Порог для умеренно привлекательной цены')
@@ -152,10 +152,6 @@ class OfferOut(OfferChange):
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')
-
-    class Config:
-        orm_mode = True
-
 
     @computed_field(title='Разница с РРЦ')
     @property

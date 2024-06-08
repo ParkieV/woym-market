@@ -1,4 +1,6 @@
 import asyncio
+from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
@@ -16,7 +18,6 @@ import aioschedule
 from src.params.confing import config
 
 
-app: FastAPI = FastAPI(default_response_class=ORJSONResponse)
 
 
 async def scheduler():
@@ -32,10 +33,14 @@ async def to_startup():
         asyncio.create_task(scheduler())
 
 
-@app.on_event('startup')
-async def startup():
+@asynccontextmanager
+async def startup(app: FastAPI):
     db_create()
     await to_startup()
+    yield
+
+
+app: FastAPI = FastAPI(default_response_class=ORJSONResponse, lifespan=startup)
 
 
 origins = [

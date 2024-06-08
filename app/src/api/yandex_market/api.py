@@ -1,11 +1,10 @@
-from io import BytesIO
 import asyncio
 from typing import Any
 from fastapi import HTTPException, status
-from requests import Session, Response
+from requests import Session
 
-from logs import get_logger
-from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS, OFFERS_DETAIL, WAREHOUSES
+from src.logs import get_logger
+from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS, WAREHOUSES
 import pandas as pd
 import numpy as np
 from src.api.base_api import BaseAPI
@@ -240,7 +239,7 @@ class YandexMarketAPI(BaseAPI):
             warehouse = APIWarehouse(
                 market='yandex',
                 offers=offers,
-                name=warehouses[warehouse_id]['name']
+                name=warehouses[warehouse_id]['name'],
             )
             result.append(warehouse)
         return result

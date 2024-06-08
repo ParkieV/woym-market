@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+pythonpath = [
+    ".", "src"
+]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore:There is no current event loop",
+    "ignore:The event_loop fixture provided by pytest-asyncio has been redefined in",
+    "ignore:Unknown pytest.mark.first - is this a typo?"
+]
+env_files = [
+    "test.env"
+]
