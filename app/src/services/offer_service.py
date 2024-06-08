@@ -238,21 +238,21 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
             if market is not None and _market.type != market:
                 continue
 
-            df = df.copy()
+            chunked_df = df.copy()
 
-            df['dollar_cost_price'] = np.where(
-                df['use_promotion_price'],
-                df['discount_price'],
-                df['wholesale_dollar_cost_price'] * (1 - _market.discount_purchase / 100)
+            chunked_df['dollar_cost_price'] = np.where(
+                chunked_df['use_promotion_price'],
+                chunked_df['discount_price'],
+                chunked_df['wholesale_dollar_cost_price'] * (1 - _market.discount_purchase / 100)
             )
-            df.drop(['name', 'discount_price', 'price'], axis=1, inplace=True)
-            df['market'] = _market.type
-            df['name_of_shop'] = _market.name
+            chunked_df.drop(['name', 'discount_price', 'price'], axis=1, inplace=True)
+            chunked_df['market'] = _market.type
+            chunked_df['name_of_shop'] = _market.name
             # Зависит от магазина
-            await db.update_offers(session, df, mapping_columns=['market', 'name_of_shop'], endswith_sku=True)
+            await db.update_offers(session, chunked_df, mapping_columns=['market', 'name_of_shop'], endswith_sku=True)
 
             db_skus = set([i.lstrip('0') for i in await db.get_unique_skus(session)])
-            import_skus = set(df['sku'].values.tolist())
+            import_skus = set(chunked_df['sku'].values.tolist())
 
             await db.set_supplier_available(session, db_skus & import_skus, True)
             await db.set_supplier_available(session, db_skus - import_skus, False)
