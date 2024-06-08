@@ -43,7 +43,24 @@
             .plugin(ChangesPlugin("id", changes))
             .plugin(ReadonlyPlugin(!$userCanModify))
             .plugin(ZoomPlugin(href => (selected_image = href)))
-            .plugin(ClassesPlugin());
+            .plugin(
+                ClassesPlugin({
+                    warning: ({ colDef, data }) => {
+                        if (colDef.field !== "current_price") return false;
+                        return data.current_price !== data.target_price;
+                    },
+                    error: ({ colDef, data }) => {
+                        if (colDef.field === "your_promotion_price") {
+                            return data.stop_price > data.your_promotion_price;
+                        } else if (colDef.field === "target_price") {
+                            return data.stop_price > data.target_price;
+                        } else if (colDef.field === "current_price") {
+                            return data.stop_price > data.current_price;
+                        }
+                        return false;
+                    }
+                })
+            );
 
         refreshData();
     });
