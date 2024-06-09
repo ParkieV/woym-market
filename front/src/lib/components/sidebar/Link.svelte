@@ -20,6 +20,7 @@
     }}
     class:collapsed={$collapsed}
     class:current={$page.url.pathname == path}
+    title={$collapsed ? text : undefined}
 >
     <img src={icon} alt="" />
     {#if !$collapsed}
@@ -40,6 +41,7 @@
         background-color: transparent;
         border: 0;
         height: 48px;
+        cursor: pointer;
 
         &:hover {
             background-color: #4f6372;
