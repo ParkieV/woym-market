@@ -32,7 +32,7 @@
         <Link text="FBO остатки" icon="/package.svg" path="/app/fbo_storage" />
         <Spacer />
         <Link text="Шаблоны цен" icon="/math.svg" path="/app/templates" />
-        <Link text="Настройки" icon="/gear.svg" path="/app/settings" />
+        <Link text="Магазины" icon="/storefront.svg" path="/app/markets" />
         <Link text="Выход" icon="/sign-out.svg" path="/auth" on:click={logout} />
     </nav>
     {#if show_warning}
