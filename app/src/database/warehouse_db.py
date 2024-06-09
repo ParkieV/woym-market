@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_, func, text
+from sqlalchemy import select, update, delete, and_, func, text, bindparam
 from sqlalchemy.orm import selectinload, subqueryload
 from src.database.utils import _update_or_create_object, _get_or_create
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
@@ -114,6 +114,32 @@ async def update_or_create_offer_stock(session: AsyncSession, data: OfferStockCr
              OfferStock.warehouse_id == data.warehouse_id),
         OfferStockOut
     )
+
+
+async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[dict]):
+    for storage in storages:
+        if not storage['related_warehouses_name']:
+            continue
+
+        stmp = (
+            update(Warehouse).where(Warehouse.name.in_(storage['related_warehouses_name'])).where(Warehouse.market == 'ozon')
+            .values(parent_warehouse_id = (select(Warehouse.id).where(Warehouse.market == 'ozon').where(Warehouse.name == storage['name'])))
+                )
+        await session.execute(stmp)
+
+
+    stmp = text("""update offers_stocks as stock set current_stock = (
+            select sum(offers_stocks.current_stock) from offers_stocks
+            join warehouses on offers_stocks.warehouse_id = warehouses.id
+            where warehouses.parent_warehouse_id = cluster.id and offer_id = stock.offer_id
+            ) from warehouses as cluster
+            where cluster.warehouse_type = 'cluster' and stock.warehouse_id = cluster.id
+            """)
+    await session.execute(stmp)
+    stmp = update(OfferStock).where(OfferStock.current_stock == None).values(current_stock=0)
+    await session.execute(stmp)
+    await session.commit()
+
 
 
 async def update_or_create_own_storage(session: AsyncSession, data: OwnStorageCreate) -> (OwnStorageCreate, bool):
@@ -303,3 +329,17 @@ async def update_fbo_support_data(session: AsyncSession, data: list[dict], name_
         await session.execute(stmp)
 
     await session.commit()
+
+
+# async def update_clusters(session: AsyncSession):
+#     stocks_query = (
+#         select(OfferStock)
+#         .options(selectinload(OfferStock.warehouse))
+#         .where(Warehouse.market == 'ozon')
+#         .where(Warehouse.warehouse_type == 'cluster')
+#     )
+#     result = (await session.execute(stocks_query)).scalars()
+#
+#     for offer_stock in result:
+
+

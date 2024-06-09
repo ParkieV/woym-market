@@ -253,7 +253,7 @@ class OzonAPI(BaseAPI):
                 stock_data = {
                     'value': stock['free_to_sell_amount'],
                     'market_sku': stock['sku'],
-                    'warehouse_name': stock['warehouse_name']
+                    'warehouse_name': stock['warehouse_name'].replace('_', ' ').title()
                 }
                 result.append(stock_data)
 
@@ -319,7 +319,7 @@ class OzonAPI(BaseAPI):
 
         for spoiler in spoilers:
             claster_name = spoiler['attrs']['title']
-            warehouses = [i['content'][0]['content'][0]['text'] for i in spoiler['content'][0]['content']]
-            clasters.append(APIWarehouse(name=claster_name, market='ozon', offers=[], warehouse_type=WarehouseType.CLUSTER))
+            warehouses = [i['content'][0]['content'][0]['text'].replace('-', ' ').title().replace('Мо ', '').replace('Спб', '') for i in spoiler['content'][0]['content']]
+            clasters.append(APIWarehouse(name=claster_name, market='ozon', offers=[], warehouse_type=WarehouseType.CLUSTER, related_warehouses_name=warehouses))
 
         return clasters

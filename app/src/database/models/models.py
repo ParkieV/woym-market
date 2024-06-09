@@ -164,10 +164,6 @@ class TableInfo(Base):
 #     offers = relationship(Offer, back_populates='pricing_scheme')
 
 
-
-
-
-
 class Warehouse(Base):
     __tablename__ = 'warehouses'
 
@@ -176,7 +172,9 @@ class Warehouse(Base):
     name = Column(String)
     market = Column(String)
     parent_warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='SET NULL'), nullable=True, default=None)
+    related_warehouses = relationship('Warehouse', uselist=True)
     warehouse_type = Column(String, default=WarehouseType.WAREHOUSE)
+
 
 class OfferStock(Base):
     __tablename__ = 'offers_stocks'

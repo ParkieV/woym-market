@@ -58,6 +58,7 @@ class APIWarehouse:
     name: str
     offers: list[APIWarehouseOffer]
     warehouse_type: WarehouseType = WarehouseType.WAREHOUSE
+    related_warehouses_name: list[str] | None = None
 
 
 @dataclass
