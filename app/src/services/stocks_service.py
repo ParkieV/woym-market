@@ -41,7 +41,7 @@ async def update_warehouses_and_stocks():
             ))
 
             for offer in await offer_db.get_offers(session, {'market': warehouse.market}):
-                stock, created = await db.get_or_create_offer_stocks(session, OfferStockCreate(
+                await db.get_or_create_offer_stocks(session, OfferStockCreate(
                     current_stock=0,
                     warehouse_id=warehouse_db.id,
                     offer_id=offer.id
@@ -68,7 +68,6 @@ async def update_warehouses_and_stocks():
 
     _time = datetime.now() - start_time
     logger.info(f'Warehouses and stocks updated completed in {_time}')
-
 
 
 async def get_warehouses():

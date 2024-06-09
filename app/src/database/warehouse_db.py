@@ -105,15 +105,23 @@ async def update_or_create_warehouse(session: AsyncSession, data: WarehouseCreat
     )
 
 
-async def update_or_create_offer_stock(session: AsyncSession, data: OfferStockCreate) -> (OfferStockOut, bool):
-    return await _update_or_create_object(
-        session,
-        OfferStock,
-        data,
-        and_(OfferStock.offer_id == data.offer_id,
-             OfferStock.warehouse_id == data.warehouse_id),
-        OfferStockOut
-    )
+async def update_or_create_offer_stock(session: AsyncSession, data: OfferStockCreate):
+    query = select(OfferStock).where(
+        and_(OfferStock.offer_id == data.offer_id, OfferStock.warehouse_id == data.warehouse_id)).distinct()
+    result = await session.execute(query)
+    object_db = result.scalar_one_or_none()
+
+    if object_db is None:
+        object_db = OfferStock(**data.model_dump())
+        session.add(object_db)
+    else:
+        stmp = (
+            update(OfferStock)
+            .where(and_(OfferStock.offer_id == data.offer_id, OfferStock.warehouse_id == data.warehouse_id))
+            .values(**data.model_dump())
+        )
+        await session.execute(stmp)
+    await session.commit()
 
 
 async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[dict]):
@@ -122,11 +130,12 @@ async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[
             continue
 
         stmp = (
-            update(Warehouse).where(Warehouse.name.in_(storage['related_warehouses_name'])).where(Warehouse.market == 'ozon')
-            .values(parent_warehouse_id = (select(Warehouse.id).where(Warehouse.market == 'ozon').where(Warehouse.name == storage['name'])))
-                )
+            update(Warehouse).where(Warehouse.name.in_(storage['related_warehouses_name'])).where(
+                Warehouse.market == 'ozon')
+            .values(parent_warehouse_id=(
+                select(Warehouse.id).where(Warehouse.market == 'ozon').where(Warehouse.name == storage['name'])))
+        )
         await session.execute(stmp)
-
 
     stmp = text("""update offers_stocks as stock set current_stock = (
             select sum(offers_stocks.current_stock) from offers_stocks
@@ -136,20 +145,30 @@ async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[
             where cluster.warehouse_type = 'cluster' and stock.warehouse_id = cluster.id
             """)
     await session.execute(stmp)
-    stmp = update(OfferStock).options(selectinload(OfferStock.warehouse)).where(Warehouse.warehouse_type=='cluster').where(OfferStock.current_stock == None).values(current_stock=0)
+
+    stmp = update(OfferStock).options(selectinload(OfferStock.warehouse)).where(
+        Warehouse.warehouse_type == 'cluster').where(OfferStock.current_stock == None).values(current_stock=0)
+
     await session.execute(stmp)
     await session.commit()
 
 
+async def update_or_create_own_storage(session: AsyncSession, data: OwnStorageCreate):
+    query = select(OwnStorage).where(OwnStorage.sku == data.sku).distinct()
+    result = await session.execute(query)
+    object_db = result.scalar_one_or_none()
 
-async def update_or_create_own_storage(session: AsyncSession, data: OwnStorageCreate) -> (OwnStorageCreate, bool):
-    return await _update_or_create_object(
-        session,
-        OwnStorage,
-        data,
-        OwnStorage.sku == data.sku,
-        OwnStorageOut
-    )
+    if object_db is None:
+        object_db = OwnStorage(**data.model_dump())
+        session.add(object_db)
+    else:
+        stmp = (
+            update(OwnStorage)
+            .where(OwnStorage.sku == data.sku)
+            .values(**data.model_dump())
+        )
+        await session.execute(stmp)
+    await session.commit()
 
 
 async def get_own_storages(session: AsyncSession):
@@ -325,11 +344,12 @@ async def update_fbo_support_data(session: AsyncSession, data: list[dict], name_
             .where(Offer.sku == str(stock['sku']))
         )
 
-        stmp = update(OfferStock).where(OfferStock.id.in_(sub_query)).values(**{'can_be_delivered': stock['can_be_delivered'], 'advice_from_the_store': stock['advice_from_the_store'], 'from_file_updated_at': now})
+        stmp = update(OfferStock).where(OfferStock.id.in_(sub_query)).values(
+            **{'can_be_delivered': stock['can_be_delivered'], 'advice_from_the_store': stock['advice_from_the_store'],
+               'from_file_updated_at': now})
         await session.execute(stmp)
 
     await session.commit()
-
 
 # async def update_clusters(session: AsyncSession):
 #     stocks_query = (
@@ -341,5 +361,3 @@ async def update_fbo_support_data(session: AsyncSession, data: list[dict], name_
 #     result = (await session.execute(stocks_query)).scalars()
 #
 #     for offer_stock in result:
-
-
