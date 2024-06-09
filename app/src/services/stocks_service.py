@@ -33,33 +33,33 @@ async def update_warehouses_and_stocks():
     stocks = await api_wrapper.get_stocks()
 
     async with async_session() as session:
-        # for warehouse in stocks:
-        #     warehouse_db, _ = await db.update_or_create_warehouse(session, WarehouseCreate(
-        #         name=warehouse.name,
-        #         market=warehouse.market,
-        #         warehouse_type=warehouse.warehouse_type
-        #     ))
-        #
-        #     for offer in await offer_db.get_offers(session, {'market': warehouse.market}):
-        #         stock, created = await db.get_or_create_offer_stocks(session, OfferStockCreate(
-        #             current_stock=0,
-        #             warehouse_id=warehouse_db.id,
-        #             offer_id=offer.id
-        #         ))
-        #
-        #     for offer_stock in warehouse.offers:
-        #         offer = await offer_db.get_offer(session,
-        #                                          {'sku': offer_stock.sku, 'name_of_shop': offer_stock.name_of_shop,
-        #                                           'market': warehouse.market}, allow_none=True)
-        #         if not offer:
-        #             continue
-        #
-        #         offer_stock_create = OfferStockCreate(
-        #             current_stock=offer_stock.current_stock,
-        #             warehouse_id=warehouse_db.id,
-        #             offer_id=offer.id
-        #         )
-        #         await db.update_or_create_offer_stock(session, offer_stock_create)
+        for warehouse in stocks:
+            warehouse_db, _ = await db.update_or_create_warehouse(session, WarehouseCreate(
+                name=warehouse.name,
+                market=warehouse.market,
+                warehouse_type=warehouse.warehouse_type
+            ))
+
+            for offer in await offer_db.get_offers(session, {'market': warehouse.market}):
+                stock, created = await db.get_or_create_offer_stocks(session, OfferStockCreate(
+                    current_stock=0,
+                    warehouse_id=warehouse_db.id,
+                    offer_id=offer.id
+                ))
+
+            for offer_stock in warehouse.offers:
+                offer = await offer_db.get_offer(session,
+                                                 {'sku': offer_stock.sku, 'name_of_shop': offer_stock.name_of_shop,
+                                                  'market': warehouse.market}, allow_none=True)
+                if not offer:
+                    continue
+
+                offer_stock_create = OfferStockCreate(
+                    current_stock=offer_stock.current_stock,
+                    warehouse_id=warehouse_db.id,
+                    offer_id=offer.id
+                )
+                await db.update_or_create_offer_stock(session, offer_stock_create)
 
         await db.relate_warehouses_with_clusters(session, [{'name': i.name, 'related_warehouses_name': i.related_warehouses_name} for i in stocks])
 

@@ -136,7 +136,7 @@ async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[
             where cluster.warehouse_type = 'cluster' and stock.warehouse_id = cluster.id
             """)
     await session.execute(stmp)
-    stmp = update(OfferStock).where(OfferStock.current_stock == None).values(current_stock=0)
+    stmp = update(OfferStock).options(selectinload(OfferStock.warehouse)).where(Warehouse.warehouse_type=='cluster').where(OfferStock.current_stock == None).values(current_stock=0)
     await session.execute(stmp)
     await session.commit()
 
