@@ -3,7 +3,7 @@ import pandas as pd
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
-
+import openpyxl
 from logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
@@ -253,7 +253,13 @@ async def export_yandex_supply(data: pd.DataFrame, dir_path: Path):
         }, axis='columns', inplace=True)
         df['НДС'] = 'VAT_20'
         file_path = dir_path / f'Склад {warehouse_name}, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xlsx'
-        df.to_excel(file_path, index=False, header=True, sheet_name='Поставка')
+        df.to_excel(file_path, index=False, header=True, sheet_name='Поставка', startrow=1)
+
+        wb = openpyxl.load_workbook(file_path)
+        ws = wb.active
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(df.columns))
+        ws.cell(1, 1, value='Данные для поставки')
+        wb.save(file_path)
 
 
 async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
