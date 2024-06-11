@@ -7,7 +7,7 @@
     } from "$lib/components/datagrid/filters/OptionsFilter.svelte";
     import Search from "$lib/components/datagrid/filters/Search.svelte";
     import TernaryFilter from "$lib/components/datagrid/filters/TernaryFilter.svelte";
-    import type { Offer } from "$lib/data/offers";
+    import type { FboStocks } from "$lib/data/fbo_storage";
 
     export let markets: {
         id: number;
@@ -23,12 +23,12 @@
         .map(({ name }) => ({ name, selected: true }));
     const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"];
 
-    const market_filter = (offer: Offer, opts: Option[]) =>
-        opts.every(({ name, selected }) => selected || name !== offer.name_of_shop);
-    const hidden_filter = (offer: Offer) => !offer.hidden;
-    const available_filter = (offer: Offer) => offer.supplier_available;
+    const market_filter = (storage: FboStocks, opts: Option[]) =>
+        opts.every(({ name, selected }) => selected || name !== storage.name_of_shop);
+    const hidden_filter = (storage: FboStocks) => !storage.hidden;
+    const available_filter = (storage: FboStocks) => storage.supplier_available;
 
-    export let filter: Filter<Offer>;
+    export let filter: Filter<FboStocks>;
 </script>
 
 <menu>

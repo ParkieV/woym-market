@@ -9,7 +9,6 @@
     import { getContext, onMount } from "svelte";
     import Grid from "$lib/grid/Grid.svelte";
     import type { Writable } from "svelte/store";
-    import { offerBaseFilter, type FilterParams } from "$lib/grid/filters";
     import ChangesPlugin, { ChangeList } from "$lib/components/datagrid/plugins/changes";
     import type { GridDefinition } from "$lib/components/datagrid";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
@@ -19,15 +18,17 @@
     import ZoomPlugin from "$lib/components/datagrid/plugins/zoom";
     import { userCanModify } from "$lib/data/user";
     import ClassesPlugin from "$lib/components/datagrid/plugins/classes";
+    import type { Filter } from "$lib/components/datagrid/filters";
+    import Toolbar from "./Toolbar.svelte";
+    import type { PageData } from "./$types";
+
+    export let data: PageData;
 
     let definition: GridDefinition;
-    let data: FboStocks[] = [];
+    let stocks: FboStocks[] = [];
 
     let changes = new ChangeList<FboStocks, "id">();
     let innerChanges = new ChangeList<FboStorage, "id">();
-
-    let filterParams = getContext<Writable<FilterParams>>("filterParams");
-    $: filter = offerBaseFilter($filterParams);
 
     let selected_image: string | undefined = undefined;
 
@@ -36,11 +37,11 @@
         changes = changes;
         innerChanges.clear();
         innerChanges = innerChanges;
-        data = await fetchFboStocks();
+        stocks = await fetchFboStocks();
     }
 
     async function save() {
-        let ok = await patchFboStocks(data.filter(x => changes.isChanged(x.id)));
+        let ok = await patchFboStocks(stocks.filter(x => changes.isChanged(x.id)));
         if (ok) await refreshData();
     }
 
@@ -60,14 +61,18 @@
             .plugin(ZoomPlugin(href => (selected_image = href)))
             .plugin(ClassesPlugin());
 
-        data = await fetchFboStocks();
+        stocks = await fetchFboStocks();
     });
+
+    let filter: Filter<FboStocks>;
 </script>
 
 {#if selected_image}
     <ImageWindow bind:src={selected_image} />
 {/if}
+
+<Toolbar bind:filter markets={data.options} />
 {#if definition}
-    <Grid {definition} bind:data bind:filter />
+    <Grid {definition} bind:data={stocks} bind:filter />
 {/if}
 <Footer bind:changes on:reload={refreshData} on:save={save} />

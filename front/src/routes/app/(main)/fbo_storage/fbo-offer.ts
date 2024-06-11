@@ -9,7 +9,7 @@ import {
     floatColumn,
     intColumn
 } from "$lib/components/datagrid/columns/types";
-import { BASE_GRID_OPTIONS } from "../../../../lib/grid/base";
+import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import { GridDefinition } from "$lib/components/datagrid";
 import fboWarehouseGrid from "./fbo-warehouse";
 import ChangesPlugin, { ChangeList } from "$lib/components/datagrid/plugins/changes";

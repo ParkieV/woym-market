@@ -47,20 +47,3 @@
     border-radius: 4px;
     height: 32px;
 }
-
-@mixin selectable-button {
-    @include button;
-
-    &.selected {
-        color: white;
-        background-color: #3b5897;
-    }
-
-    &:hover {
-        background-color: #e1e1e4;
-
-        &.selected {
-            background-color: #2f4880;
-        }
-    }
-}

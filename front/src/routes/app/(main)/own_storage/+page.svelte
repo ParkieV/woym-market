@@ -4,7 +4,6 @@
     import Footer from "../Footer.svelte";
     import { fetchOwnStorages, patchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
     import type { Writable } from "svelte/store";
-    import { ownStorageFilter, type FilterParams } from "$lib/grid/filters";
     import ownStorageGrid from "./grid";
     import type { GridDefinition } from "$lib/components/datagrid";
     import ChangesPlugin, { ChangeList } from "$lib/components/datagrid/plugins/changes";
@@ -14,22 +13,24 @@
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import { userCanModify } from "$lib/data/user";
     import ClassesPlugin from "$lib/components/datagrid/plugins/classes";
+    import type { Filter } from "$lib/components/datagrid/filters";
+    import Toolbar from "./Toolbar.svelte";
+    import type { PageData } from "./$types";
+
+    export let data: PageData;
 
     let definition: GridDefinition;
-    let data: OwnStorage[] = [];
+    let storage: OwnStorage[] = [];
     let changes = new ChangeList<OwnStorage, "sku">();
 
     let refresh = getContext<Writable<() => {}>>("refresh");
     $refresh = refreshData;
 
-    let filterParams = getContext<Writable<FilterParams>>("filterParams");
-    $: filter = ownStorageFilter($filterParams);
-
     let selected_image: string | undefined = undefined;
 
     onMount(async () => {
         let info = await fetchOwnStorages();
-        data = info.data;
+        storage = info.data;
 
         definition = ownStorageGrid(info.markets)
             .plugin(StatePlugin("own_storage"))
@@ -40,21 +41,25 @@
     });
 
     async function save() {
-        let ok = await patchOwnStorages(data.filter(x => changes.isChanged(x.sku)));
+        let ok = await patchOwnStorages(storage.filter(x => changes.isChanged(x.sku)));
         if (ok) await refreshData();
     }
 
     async function refreshData() {
         changes.clear();
         changes = changes;
-        data = (await fetchOwnStorages()).data;
+        storage = (await fetchOwnStorages()).data;
     }
+
+    let filter: Filter<OwnStorage>;
 </script>
 
 {#if selected_image}
     <ImageWindow bind:src={selected_image} />
 {/if}
+
+<Toolbar bind:filter markets={data.options} />
 {#if definition}
-    <Grid {definition} bind:data bind:filter />
+    <Grid {definition} bind:data={storage} bind:filter />
 {/if}
 <Footer bind:changes on:reload={refreshData} on:save={save} />
