@@ -1,0 +1,40 @@
+@use "mixins.scss" as *;
+@mixin filter-btn {
+    @include button;
+
+    &.enabled {
+        color: white;
+        background-color: #3b5897;
+    }
+
+    &:hover {
+        background-color: #e1e1e4;
+
+        &.enabled {
+            background-color: #2f4880;
+        }
+    }
+}
+
+@mixin ternary-btn {
+    @include filter-btn();
+    &.true {
+        color: white;
+        background-color: #3b9743;
+    }
+    &.false {
+        color: white;
+        background-color: #a81e1e;
+    }
+
+    &:hover {
+        &.true {
+            color: white;
+            background-color: #2d7533;
+        }
+        &.false {
+            color: white;
+            background-color: #881818;
+        }
+    }
+}

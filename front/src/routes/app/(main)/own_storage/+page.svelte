@@ -1,43 +1,65 @@
 <script lang="ts">
-    import Grid from "$lib/components/datagrid/Grid.svelte";
-    import { ChangeList } from "$lib/components/datagrid/changes";
-    import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
+    import Grid from "$lib/grid/Grid.svelte";
     import { getContext, onMount } from "svelte";
     import Footer from "../Footer.svelte";
     import { fetchOwnStorages, patchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
     import type { Writable } from "svelte/store";
-    import { ownStorageFilter, type FilterParams } from "$lib/grid/filters";
-    import ownStorageColumns from "$lib/grid/columns/own-storage";
+    import ownStorageGrid from "./grid";
+    import type { GridDefinition } from "$lib/components/datagrid";
+    import ChangesPlugin, { ChangeList } from "$lib/components/datagrid/plugins/changes";
+    import StatePlugin from "$lib/components/datagrid/plugins/state";
+    import ReadonlyPlugin from "$lib/components/datagrid/plugins/readonly";
+    import ZoomPlugin from "$lib/components/datagrid/plugins/zoom";
+    import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
+    import { userCanModify } from "$lib/data/user";
+    import ClassesPlugin from "$lib/components/datagrid/plugins/classes";
+    import type { Filter } from "$lib/components/datagrid/filters";
+    import Toolbar from "./Toolbar.svelte";
+    import type { PageData } from "./$types";
 
-    let data: OwnStorage[] = [];
+    export let data: PageData;
+
+    let definition: GridDefinition;
+    let storage: OwnStorage[] = [];
     let changes = new ChangeList<OwnStorage, "sku">();
-    let columns: (Column | ColumnGroup)[] = [];
 
     let refresh = getContext<Writable<() => {}>>("refresh");
     $refresh = refreshData;
 
-    let filterParams = getContext<Writable<FilterParams>>("filterParams");
-    $: filter = ownStorageFilter($filterParams);
+    let selected_image: string | undefined = undefined;
 
     onMount(async () => {
         let info = await fetchOwnStorages();
-        columns = ownStorageColumns(info.markets);
-        data = info.data;
+        storage = info.data;
+
+        definition = ownStorageGrid(info.markets)
+            .plugin(StatePlugin("own_storage"))
+            .plugin(ChangesPlugin("sku", changes))
+            .plugin(ReadonlyPlugin(!$userCanModify))
+            .plugin(ZoomPlugin(href => (selected_image = href)))
+            .plugin(ClassesPlugin());
     });
 
     async function save() {
-        let ok = await patchOwnStorages(data.filter(x => changes.isChanged(x.sku)));
+        let ok = await patchOwnStorages(storage.filter(x => changes.isChanged(x.sku)));
         if (ok) await refreshData();
     }
 
     async function refreshData() {
         changes.clear();
         changes = changes;
-        data = (await fetchOwnStorages()).data;
+        storage = (await fetchOwnStorages()).data;
     }
+
+    let filter: Filter<OwnStorage>;
 </script>
 
-{#if columns.length !== 0}
-    <Grid grid_name="own_storage" key="sku" {columns} bind:data bind:changes {filter} />
+{#if selected_image}
+    <ImageWindow bind:src={selected_image} />
+{/if}
+
+<Toolbar bind:filter markets={data.options} />
+{#if definition}
+    <Grid {definition} bind:data={storage} bind:filter />
 {/if}
 <Footer bind:changes on:reload={refreshData} on:save={save} />

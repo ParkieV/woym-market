@@ -35,6 +35,7 @@
         }
         > button {
             width: 48px;
+            cursor: pointer;
         }
     }
 

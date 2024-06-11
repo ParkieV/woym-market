@@ -4,6 +4,9 @@ import type { OfferBase } from "./offers";
 
 export type FboStocks = OfferBase & {
     stocks: FboStorage[];
+    name_of_shop: string;
+    supplier_available: boolean;
+    hidden: boolean;
 };
 
 export type FboStorage = {

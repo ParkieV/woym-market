@@ -38,7 +38,7 @@ button {
     opacity: 0 !important;
 }
 
-.ag-cell {
+#wrapper .ag-cell {
     display: flex;
     align-items: center;
 
@@ -46,33 +46,38 @@ button {
         justify-content: end;
     }
 
-    #wrapper &.changed {
+    &.changed {
         text-decoration: underline;
         background-color: hsl(51, 100%, 72%);
     }
-}
 
-.product-photo-cell {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    &.editable:not(:hover) {
+        background-color: hsl(180, 26%, 91%);
+    }
 
-    > span {
+    &.image {
         display: flex;
         justify-content: center;
         align-items: center;
+
+        > span {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        img {
+            object-fit: contain;
+            max-width: 75px;
+            max-height: 75px;
+        }
     }
 
-    img {
-        object-fit: contain;
-        max-width: 75px;
-        max-height: 75px;
+    &.warning {
+        background-color: hsl(56, 89%, 63%);
     }
-}
-
-:not(:hover) {
-    .editable {
-        background-color: hsl(180, 26%, 91%);
+    &.error {
+        background-color: hsl(0, 86%, 46%);
     }
 }
 

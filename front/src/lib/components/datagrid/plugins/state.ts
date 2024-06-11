@@ -1,7 +1,25 @@
 import { fetchPlain } from "$lib/fetch";
 import type { GridState as AgGridState } from "ag-grid-enterprise";
+import type { GridPlugin } from "..";
 
-export const gridStateSources: (keyof AgGridState)[] = [
+/** Preserves grid state in LocalStorage and remote server. */
+export default function StatePlugin(key: string): GridPlugin {
+    return async ({ options: opts }) => {
+        let func = opts.onStateUpdated;
+        opts.onStateUpdated = arg => {
+            for (const source of gridStateSources) {
+                if (arg.sources.includes(source)) {
+                    setState(key, arg.state);
+                    break;
+                }
+            }
+            func?.(arg);
+        };
+        opts.initialState = await getState(key);
+    };
+}
+
+const gridStateSources: (keyof AgGridState)[] = [
     "columnOrder",
     "columnGroup",
     "columnPinning",
@@ -9,7 +27,7 @@ export const gridStateSources: (keyof AgGridState)[] = [
     "sort"
 ];
 
-export async function getState(gridName: string): Promise<AgGridState> {
+async function getState(gridName: string): Promise<AgGridState> {
     let local = getLocal(gridName);
     let remote = await getRemote(gridName);
 
@@ -24,7 +42,7 @@ export async function getState(gridName: string): Promise<AgGridState> {
     }
 }
 
-export async function setState(gridName: string, state: AgGridState) {
+async function setState(gridName: string, state: AgGridState) {
     let _state: GridState = new GridState(state);
     setLocal(gridName, _state);
     scheduleSetRemote(gridName, _state);

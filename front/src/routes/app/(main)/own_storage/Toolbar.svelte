@@ -1,13 +1,11 @@
 <script lang="ts">
     import type { Filter } from "$lib/components/datagrid/filters";
-    import BinaryFilter from "$lib/components/datagrid/filters/BinaryFilter.svelte";
     import FilterGroup from "$lib/components/datagrid/filters/FilterGroup.svelte";
     import OptionsFilter, {
         type Option
     } from "$lib/components/datagrid/filters/OptionsFilter.svelte";
     import Search from "$lib/components/datagrid/filters/Search.svelte";
-    import TernaryFilter from "$lib/components/datagrid/filters/TernaryFilter.svelte";
-    import type { Offer } from "$lib/data/offers";
+    import type { OwnStorage } from "$lib/data/own_storage";
 
     export let markets: {
         id: number;
@@ -23,32 +21,26 @@
         .map(({ name }) => ({ name, selected: true }));
     const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"];
 
-    const market_filter = (offer: Offer, opts: Option[]) =>
-        opts.every(({ name, selected }) => selected || name !== offer.name_of_shop);
-    const hidden_filter = (offer: Offer) => !offer.hidden;
-    const available_filter = (offer: Offer) => offer.supplier_available;
+    const market_filter = (storage: OwnStorage, opts: Option[]) =>
+        storage.name_of_shop.some(shop =>
+            opts
+                .filter(x => x.selected)
+                .map(x => x.name)
+                .includes(shop)
+        );
 
-    export let filter: Filter<Offer>;
+    export let filter: Filter<OwnStorage>;
 </script>
 
 <menu>
     <FilterGroup bind:filter>
         <div class="stores">
-            <OptionsFilter filter={market_filter} image={"/yandex.svg"} bind:options={yandex} />
-            <OptionsFilter filter={market_filter} image={"/ozon.svg"} bind:options={ozon} />
+            <FilterGroup kind="or">
+                <OptionsFilter filter={market_filter} image={"/yandex.svg"} bind:options={yandex} />
+                <OptionsFilter filter={market_filter} image={"/ozon.svg"} bind:options={ozon} />
+            </FilterGroup>
         </div>
         <Search placeholder="Поиск..." fields={SEARCH_FIELDS} />
-        <TernaryFilter
-            filter={available_filter}
-            image={"/package.svg"}
-            alt="Наличие у поставщика"
-        />
-        <BinaryFilter
-            filter={hidden_filter}
-            mode="disable"
-            image={"/eye-slash.svg"}
-            alt="Отображать скрытые"
-        />
     </FilterGroup>
 </menu>
 

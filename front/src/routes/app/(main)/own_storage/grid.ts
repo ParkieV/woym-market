@@ -7,8 +7,14 @@ import {
     ImageColumn,
     intColumn
 } from "$lib/components/datagrid/columns/types";
+import { GridDefinition } from "$lib/components/datagrid";
+import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 
-export default function ownStorageColumns(markets: Market[]): (Column | ColumnGroup)[] {
+export default function ownStorageGrid(markets: Market[]): GridDefinition {
+    return new GridDefinition(BASE_GRID_OPTIONS, columns(markets));
+}
+
+function columns(markets: Market[]): (Column | ColumnGroup)[] {
     const noteCols = ([1, 2, 3] as const).map(i => {
         return {
             header: `Примечание ${i}`,

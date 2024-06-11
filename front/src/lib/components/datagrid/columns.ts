@@ -1,49 +1,67 @@
-import type { ColDef, ColGroupDef, ColumnGroupShowType, ValueGetterFunc } from "ag-grid-enterprise";
-import type { ColumnBase } from "./types";
-import valueSetter from "./valueSetter";
-import ImageColumn from "./types/image";
+import type {
+    ColDef,
+    ColDefField,
+    ColGroupDef,
+    ColumnGroupShowType,
+    ValueGetterFunc
+} from "ag-grid-enterprise";
+import type { ColumnBase } from "./columns/types";
+import valueSetter from "./columns/valueSetter";
 
 export type ColumnGroup = { header: string; children: Column[] };
 
-export type Column = {
-    base: ColumnBase<any>;
+export type Column<T = any> = {
+    base: ColumnBase<T>;
     header: string;
     key: string;
     editable?: boolean;
     tooltip?: string;
     pinned?: boolean;
+    selectionCheckbox?: boolean;
     columnGroupShow?: ColumnGroupShowType;
     valueGetter?: ValueGetterFunc;
 };
 
-export function getColumns(
-    columns: (Column | ColumnGroup)[],
-    init: {
-        onPhotoClicked: (url: string) => void;
-        isRowChanged: (row: any) => boolean;
-        readonly: boolean;
-    }
-): ColDef[] {
+/** {@link ColDef} with preserved translation source. */
+export type MyColDef<T = any> = ColDef<T> & {
+    source: Column;
+};
+
+/** {@link ColGroupDef} with preserved translation source. */
+export type MyColGroupDef<T = any> = ColGroupDef<T> & {
+    source: ColumnGroup;
+    children: (MyColDef<T> | MyColGroupDef<T>)[];
+};
+
+export function getColumns<T>(
+    columns: (Column<T> | ColumnGroup)[]
+): (MyColDef<T> | MyColGroupDef<T>)[] {
     let colDefs = columns.map(col => {
         if ("children" in col) {
             return {
                 headerName: col.header,
-                children: getColumns(col.children, init),
+                children: getColumns<T>(col.children),
+                source: col,
                 marryChildren: true
-            } satisfies ColGroupDef;
+            } satisfies MyColGroupDef<T>;
         }
 
-        let editable = init.readonly ? false : col.editable === true;
+        let editable = col.editable === true;
 
-        let colDef: ColDef = {
-            field: col.key,
+        let colDef: MyColDef<T> = {
+            source: col,
+            field: col.key as ColDefField<T>,
             headerName: col.header,
             editable,
-            cellClass: cellClass(col.base, editable),
+            cellClass: col.base.classes,
+            valueGetter: col.valueGetter,
             wrapHeaderText: true,
             columnGroupShow: col.columnGroupShow,
             headerTooltip: col.tooltip,
-            valueGetter: col.valueGetter
+
+            checkboxSelection: col.selectionCheckbox,
+            headerCheckboxSelection: col.selectionCheckbox,
+            headerCheckboxSelectionFilteredOnly: true
         };
 
         const { parser, formatter } = col.base;
@@ -64,30 +82,15 @@ export function getColumns(
             valueSetter: valueSetter(col.key)
         };
 
-        if (col.base instanceof ImageColumn) {
-            colDef.onCellClicked = e => {
-                if (e.value) {
-                    init.onPhotoClicked(e.value.toString());
-                }
-            };
-        }
-
         if (col.pinned) {
             colDef = {
                 ...colDef,
                 lockPosition: "left",
-                pinned: "left",
-                cellClass: e => (e.data && init.isRowChanged(e.data) ? "changed" : [])
+                pinned: "left"
             };
         }
         return colDef;
     });
 
     return colDefs;
-}
-
-function cellClass(ops: ColumnBase<any>, editable: boolean): string[] {
-    let classes = ops.classes?.() ?? [];
-    if (editable) classes.push("editable");
-    return classes;
 }
