@@ -1,6 +1,6 @@
 <script lang="ts">
     import ExportWindow from "$lib/components/windows/ExportWindow.svelte";
-    import ImportWindow from "$lib/components/windows/ImportWindow.svelte";
+    import ImportWindow from "$lib/import/ImportWindow.svelte";
     import { userCanModify } from "$lib/data/user";
     import { createEventDispatcher } from "svelte";
 
