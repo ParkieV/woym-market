@@ -1,22 +1,25 @@
 import { fetchPlain } from "$lib/fetch";
 import type { GridState as AgGridState } from "ag-grid-enterprise";
-import type { GridPlugin } from "..";
+import type { GridPlugin } from ".";
+import type { MyGridOptions } from "..";
 
 /** Preserves grid state in LocalStorage and remote server. */
-export default function StatePlugin(key: string): GridPlugin {
-    return async ({ options: opts }) => {
+export default class StatePlugin<T> implements GridPlugin<T> {
+    constructor(private key: string) {}
+
+    async init(opts: MyGridOptions<T>): Promise<void> {
         let func = opts.onStateUpdated;
         opts.onStateUpdated = arg => {
             for (const source of gridStateSources) {
                 if (arg.sources.includes(source)) {
-                    setState(key, arg.state);
+                    setState(this.key, arg.state);
                     break;
                 }
             }
             func?.(arg);
         };
-        opts.initialState = await getState(key);
-    };
+        opts.initialState = await getState(this.key);
+    }
 }
 
 const gridStateSources: (keyof AgGridState)[] = [

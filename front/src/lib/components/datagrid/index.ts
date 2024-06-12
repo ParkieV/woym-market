@@ -1,4 +1,4 @@
-import type { GridOptions } from "ag-grid-enterprise";
+import { createGrid, type GridApi, type GridOptions } from "ag-grid-enterprise";
 import {
     getColumns,
     type Column,
@@ -6,11 +6,12 @@ import {
     type MyColDef,
     type MyColGroupDef
 } from "./columns";
+import type { GridPlugin } from "./plugins";
 
 /** Grid definition used to create Grid component. */
 export class GridDefinition<T = any> {
     public options: MyGridOptions<T>;
-    private plugins: GridPlugin[] = [];
+    public plugins: GridPlugin<T>[] = [];
 
     constructor(options: GridOptions, columns: (Column | ColumnGroup)[]) {
         this.options = {
@@ -20,26 +21,19 @@ export class GridDefinition<T = any> {
     }
 
     /** Register plugin. */
-    public plugin(plugin: GridPlugin): GridDefinition {
+    public plugin(plugin: GridPlugin<T>): GridDefinition<T> {
         this.plugins.push(plugin);
         return this;
     }
 
-    /** Applies all registered plugins */
-    public async build(): Promise<GridOptions<T>> {
+    /** Applies all registered plugins and creates a grid instance. */
+    public async build(element: HTMLElement): Promise<GridApi<T>> {
         for (const plugin of this.plugins) {
-            await plugin(this);
+            await plugin.init?.(this.options);
         }
-        return this.options;
+        return createGrid(element, this.options);
     }
 }
-
-/**
- * Plugin for the grid.
- *
- * Basically a function that modifies {@link GridDefinition}.
- * */
-export type GridPlugin = (def: GridDefinition) => Promise<void> | void;
 
 /** {@link GridOptions} with preserved translation source. */
 export type MyGridOptions<T> = GridOptions<T> & {

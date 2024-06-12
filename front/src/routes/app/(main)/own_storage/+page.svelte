@@ -33,11 +33,11 @@
         storage = info.data;
 
         definition = ownStorageGrid(info.markets)
-            .plugin(StatePlugin("own_storage"))
-            .plugin(ChangesPlugin("sku", changes))
-            .plugin(ReadonlyPlugin(!$userCanModify))
-            .plugin(ZoomPlugin(href => (selected_image = href)))
-            .plugin(ClassesPlugin());
+            .plugin(new StatePlugin("own_storage"))
+            .plugin(new ChangesPlugin("sku", changes))
+            .plugin(new ReadonlyPlugin(!$userCanModify))
+            .plugin(new ZoomPlugin(href => (selected_image = href)))
+            .plugin(new ClassesPlugin());
     });
 
     async function save() {

@@ -1,15 +1,17 @@
-import type { ColDef, ColGroupDef } from "ag-grid-enterprise";
-import type { GridDefinition, GridPlugin } from "..";
+import type { GridPlugin } from ".";
+import type { MyGridOptions } from "..";
+import type { MyColDef, MyColGroupDef } from "../columns";
 
-/** Makes the whole grid readonly. */
-export default function ReadonlyPlugin(enable: boolean): GridPlugin {
-    if (!enable) return () => {};
-    return (grid: GridDefinition) => {
-        if (grid.options.columnDefs) {
-            apply(grid.options.columnDefs);
-        }
+/** Applies class rules to grid. */
+export default class ReadonlyPlugin<T> implements GridPlugin<T> {
+    constructor(private enable: boolean) {}
 
-        function apply(cols: (ColDef | ColGroupDef)[]) {
+    init(opts: MyGridOptions<T>): void | Promise<void> {
+        if (!this.enable) return;
+
+        apply(opts.columnDefs);
+
+        function apply(cols: (MyColDef<T> | MyColGroupDef<T>)[]) {
             for (const col of cols) {
                 if ("children" in col) {
                     apply(col.children);
@@ -18,5 +20,5 @@ export default function ReadonlyPlugin(enable: boolean): GridPlugin {
                 }
             }
         }
-    };
+    }
 }

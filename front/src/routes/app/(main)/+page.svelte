@@ -43,12 +43,12 @@
         let templates: Template[] = await fetchTemplates();
 
         definition = offerGrid(templates)
-            .plugin(StatePlugin("offers"))
-            .plugin(ChangesPlugin("id", changes))
-            .plugin(ReadonlyPlugin(!$userCanModify))
-            .plugin(ZoomPlugin(href => (selected_image = href)))
+            .plugin(new StatePlugin("offers"))
+            .plugin(new ChangesPlugin("id", changes))
+            .plugin(new ReadonlyPlugin(!$userCanModify))
+            .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(
-                ClassesPlugin({
+                new ClassesPlugin({
                     warning: ({ colDef, data }) => {
                         if (colDef.field !== "current_price") return false;
                         return data.current_price !== data.target_price;

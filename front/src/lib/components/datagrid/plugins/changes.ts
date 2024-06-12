@@ -1,15 +1,18 @@
-import type { GridDefinition, GridPlugin } from "..";
+import type { GridPlugin } from ".";
+import type { MyGridOptions } from "..";
 
 /**
  * Modifies provided grid options to enable change monitoring.
  *
  * Changed cells will have `changed` class applied.
  * */
-export default function ChangesPlugin<T, K extends keyof T>(
-    key: K,
-    changes: ChangeList<T, K>
-): GridPlugin {
-    return ({ options: opts }) => {
+export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T> {
+    constructor(
+        private key: K,
+        private changes: ChangeList<T, K>
+    ) {}
+
+    init(opts: MyGridOptions<T>): void | Promise<void> {
         for (const col of opts.columnDefs) {
             if (!("children" in col)) {
                 if (col.pinned) {
@@ -18,16 +21,16 @@ export default function ChangesPlugin<T, K extends keyof T>(
                     }
                     col.cellClassRules.changed = ({ data }) => {
                         if (!data) return false;
-                        return changes.isChanged(data[key]);
+                        return this.changes.isChanged(data[this.key]);
                     };
                 }
             }
         }
         opts.onCellValueChanged = e => {
-            changes.add(e.data[key]);
+            this.changes.add(e.data[this.key]);
             e.api.refreshCells({ rowNodes: [e.node] });
         };
-    };
+    }
 }
 
 // TODO: check which properties were changed.

@@ -1,10 +1,10 @@
-<script lang="ts" generics="T, K extends keyof T">
+<script lang="ts" generics="T">
     import type { GridDefinition } from "../components/datagrid";
-    import { createGrid, type GridApi } from "ag-grid-enterprise";
+    import { type GridApi } from "ag-grid-enterprise";
     import { onMount } from "svelte";
 
-    /** Grid deifinition. */
-    export let definition: GridDefinition;
+    /** Grid definition. */
+    export let definition: GridDefinition<T>;
 
     /** Data to display in the table. */
     export let data: T[];
@@ -26,7 +26,9 @@
         grid.showLoadingOverlay();
     }
 
-    onMount(async () => (grid = createGrid(element, await definition.build())));
+    onMount(async () => {
+        grid = await definition.build(element);
+    });
 
     let element: HTMLElement;
 </script>

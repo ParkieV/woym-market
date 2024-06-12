@@ -55,11 +55,11 @@
                 changes = changes;
             })
         )
-            .plugin(StatePlugin("fbo_storage"))
-            .plugin(ChangesPlugin("id", changes))
-            .plugin(ReadonlyPlugin(!$userCanModify))
-            .plugin(ZoomPlugin(href => (selected_image = href)))
-            .plugin(ClassesPlugin());
+            .plugin(new StatePlugin("fbo_storage"))
+            .plugin(new ChangesPlugin("id", changes))
+            .plugin(new ReadonlyPlugin(!$userCanModify))
+            .plugin(new ZoomPlugin(href => (selected_image = href)))
+            .plugin(new ClassesPlugin());
 
         stocks = await fetchFboStocks();
     });

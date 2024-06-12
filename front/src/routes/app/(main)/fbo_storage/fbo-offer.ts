@@ -21,12 +21,17 @@ export default async function fboOffersGrid(
     changes: ChangeList<FboStorage, "id">,
     onChanged: (id: number) => void
 ): Promise<GridDefinition> {
-    const detailGridOptions = await fboWarehouseGrid()
-        .plugin(ChangesPlugin("id", changes))
-        .plugin(ReadonlyPlugin(!userCanModify))
-        .plugin(ClassesPlugin())
-        .build();
+    const detailGridDef = fboWarehouseGrid()
+        .plugin(new ChangesPlugin("id", changes))
+        .plugin(new ReadonlyPlugin(!userCanModify))
+        .plugin(new ClassesPlugin());
 
+    const detailGridOptions = detailGridDef.options;
+    for (const plugin of detailGridDef.plugins) {
+        plugin.init?.(detailGridOptions);
+    }
+
+    // TODO: should be a plugin
     let func = detailGridOptions.onCellValueChanged;
 
     return new GridDefinition(
