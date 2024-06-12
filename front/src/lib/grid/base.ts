@@ -7,6 +7,12 @@ export const BASE_GRID_OPTIONS: GridOptions = {
     tooltipShowDelay: 500,
     enableRangeSelection: true,
     enableRangeHandle: true,
+    suppressRowClickSelection: true,
+
     getContextMenuItems: () => ["cut", "copy", "paste"],
-    suppressRowClickSelection: true
+    localeText: {
+        cut: "Вырезать",
+        copy: "Копировать",
+        paste: "Вставить"
+    }
 };
