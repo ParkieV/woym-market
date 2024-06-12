@@ -7,6 +7,7 @@ import {
     StringColumn,
     intColumn
 } from "$lib/components/datagrid/columns/types";
+import type { FboStorage } from "$lib/data/fbo_storage";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import type { GridOptions } from "ag-grid-enterprise";
 
@@ -28,7 +29,15 @@ function columns(): (Column | ColumnGroup)[] {
             key: "warehouse.name",
             pinned: true,
             selectionCheckbox: true,
-            base: new StringColumn()
+            base: {
+                cellRenderer: ({ data, value }) => {
+                    const url = "/graph.svg";
+                    const style = "height: 16px; margin: 0 1px -3px 0;";
+                    const img = `<img style=\"${style}\" src=\"${url}\" />`;
+                    if (data.warehouse.warehouse_type === "cluster") return `${img} ${value}`;
+                    else return `${value}`;
+                }
+            }
         },
         {
             header: "В наличии",

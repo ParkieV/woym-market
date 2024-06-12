@@ -16,6 +16,7 @@ export type FboStorage = {
     warehouse: {
         id: number;
         name: string;
+        warehouse_type: "warehouse" | "cluster";
     };
 };
 
