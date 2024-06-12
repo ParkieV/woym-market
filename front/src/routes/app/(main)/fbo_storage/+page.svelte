@@ -9,19 +9,22 @@
     import { getContext, onMount, setContext } from "svelte";
     import Grid from "$lib/grid/Grid.svelte";
     import { writable, type Writable } from "svelte/store";
-    import ChangesPlugin, { ChangeList } from "$lib/datagrid/plugins/changes";
     import type { GridDefinition } from "$lib/datagrid";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import fboOffersGrid from "./fbo-offer";
-    import StatePlugin from "$lib/datagrid/plugins/state";
-    import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
-    import ZoomPlugin from "$lib/datagrid/plugins/zoom";
     import { userCanModify } from "$lib/data/user";
-    import ClassesPlugin from "$lib/datagrid/plugins/classes";
     import type { Filter } from "$lib/datagrid/filters";
     import Toolbar from "./Toolbar.svelte";
     import type { PageData } from "./$types";
+    import fboWarehouseGrid from "./fbo-warehouse";
+
+    import ChangesPlugin, { ChangeList } from "$lib/datagrid/plugins/changes";
+    import StatePlugin from "$lib/datagrid/plugins/state";
+    import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
+    import ZoomPlugin from "$lib/datagrid/plugins/zoom";
+    import ClassesPlugin from "$lib/datagrid/plugins/classes";
     import RowSelectionPlugin from "$lib/datagrid/plugins/row-selection";
+    import DetailGridPlugin from "$lib/datagrid/plugins/detail";
 
     export let data: PageData;
 
@@ -56,22 +59,34 @@
     $refresh = refreshData;
 
     onMount(async () => {
-        definition = (
-            await fboOffersGrid(
-                innerChanges,
-                id => {
-                    changes.add(id);
-                    changes = changes;
-                },
-                selectedStorage
+        const detail = fboWarehouseGrid()
+            .plugin(
+                new ChangesPlugin("id", innerChanges, ({ data }) => {
+                    let stock = stocks.find(x => x.stocks.some(s => s.id === data.id));
+                    console.log(stock);
+                    if (stock) {
+                        changes.add(stock.id);
+                        changes = changes;
+                    }
+                })
             )
-        )
+            .plugin(new ReadonlyPlugin(!$userCanModify))
+            .plugin(new ClassesPlugin())
+            .plugin(
+                new RowSelectionPlugin(selectedStorage, {
+                    key: ({ warehouse }) => warehouse.id,
+                    sync: true
+                })
+            );
+
+        definition = fboOffersGrid()
             .plugin(new StatePlugin("fbo_storage"))
             .plugin(new ChangesPlugin("id", changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
             .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(new ClassesPlugin())
-            .plugin(new RowSelectionPlugin(selectedStocks));
+            .plugin(new RowSelectionPlugin(selectedStocks))
+            .plugin(new DetailGridPlugin(detail, data => data.stocks));
 
         stocks = await fetchFboStocks();
     });

@@ -1,3 +1,4 @@
+import type { FboStorage } from "$lib/data/fbo_storage";
 import { GridDefinition } from "$lib/datagrid";
 import type { Column, ColumnGroup } from "$lib/datagrid/columns";
 import {
@@ -10,7 +11,7 @@ import {
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import type { GridOptions } from "ag-grid-enterprise";
 
-export default function fboWarehouseGrid(): GridDefinition {
+export default function fboWarehouseGrid(): GridDefinition<FboStorage> {
     const options: GridOptions = {
         ...BASE_GRID_OPTIONS,
         rowHeight: 30,

@@ -1,6 +1,6 @@
 import type { Column, ColumnGroup } from "$lib/datagrid/columns";
-import type { GridApi, IDetailCellRendererParams, ValueGetterParams } from "ag-grid-enterprise";
-import type { FboStocks, FboStorage } from "$lib/data/fbo_storage";
+import type { ValueGetterParams } from "ag-grid-enterprise";
+import type { FboStocks } from "$lib/data/fbo_storage";
 import {
     BooleanColumn,
     GroupColumn,
@@ -11,56 +11,9 @@ import {
 } from "$lib/datagrid/columns/types";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import { GridDefinition } from "$lib/datagrid";
-import fboWarehouseGrid from "./fbo-warehouse";
-import ChangesPlugin, { ChangeList } from "$lib/datagrid/plugins/changes";
-import ClassesPlugin from "$lib/datagrid/plugins/classes";
-import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
-import { userCanModify } from "$lib/data/user";
-import RowSelectionPlugin from "$lib/datagrid/plugins/row-selection";
-import type { Writable } from "svelte/store";
 
-export default async function fboOffersGrid(
-    changes: ChangeList<FboStorage, "id">,
-    onChanged: (id: number) => void,
-    selectedStorage: Writable<Map<number, FboStorage>>
-): Promise<GridDefinition> {
-    const detailGridDef = fboWarehouseGrid()
-        .plugin(new ChangesPlugin("id", changes))
-        .plugin(new ReadonlyPlugin(!userCanModify))
-        .plugin(new ClassesPlugin())
-        .plugin(
-            new RowSelectionPlugin(selectedStorage, {
-                key: ({ warehouse }) => warehouse.id,
-                sync: true
-            })
-        );
-
-    const detailGridOptions = detailGridDef.options;
-    for (const plugin of detailGridDef.plugins) {
-        plugin.init?.(detailGridOptions);
-    }
-
-    // TODO: should be a plugin
-    let func = detailGridOptions.onCellValueChanged;
-
-    return new GridDefinition(
-        {
-            ...BASE_GRID_OPTIONS,
-            masterDetail: true,
-            detailCellRendererParams: (master: { api: GridApi; data: FboStocks }) => {
-                detailGridOptions.onCellValueChanged = args => {
-                    onChanged(master.data.id);
-                    func?.(args);
-                    master.api.refreshCells();
-                };
-                return {
-                    detailGridOptions,
-                    getDetailRowData: params => params.successCallback(params.data.stocks)
-                } satisfies Partial<IDetailCellRendererParams<FboStocks, FboStorage>>;
-            }
-        },
-        columns()
-    );
+export default function fboOffersGrid(): GridDefinition<FboStocks> {
+    return new GridDefinition(BASE_GRID_OPTIONS, columns());
 }
 
 function columns(): (Column | ColumnGroup)[] {

@@ -1,3 +1,4 @@
+import type { CellValueChangedEvent } from "ag-grid-enterprise";
 import type { GridPlugin } from ".";
 import type { MyGridOptions } from "..";
 
@@ -9,7 +10,8 @@ import type { MyGridOptions } from "..";
 export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T> {
     constructor(
         private key: K,
-        private changes: ChangeList<T, K>
+        private changes: ChangeList<T, K>,
+        private onChange?: (e: CellValueChangedEvent<T, K>) => void | Promise<void>
     ) {}
 
     init(opts: MyGridOptions<T>): void | Promise<void> {
@@ -26,9 +28,13 @@ export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T
                 }
             }
         }
+
+        let func = opts.onCellValueChanged;
         opts.onCellValueChanged = e => {
             this.changes.add(e.data[this.key]);
             e.api.refreshCells({ rowNodes: [e.node] });
+            this.onChange?.(e);
+            func?.(e);
         };
     }
 }

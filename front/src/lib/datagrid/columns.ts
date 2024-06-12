@@ -8,7 +8,7 @@ import type {
 import type { ColumnBase } from "./columns/types";
 import valueSetter from "./columns/valueSetter";
 
-export type ColumnGroup = { header: string; children: Column[] };
+export type ColumnGroup<T = any> = { header: string; children: Column<T>[] };
 
 export type Column<T = any> = {
     base: ColumnBase<T>;
