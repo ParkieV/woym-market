@@ -17,7 +17,6 @@ export type Column<T = any> = {
     editable?: boolean;
     tooltip?: string;
     pinned?: boolean;
-    selectionCheckbox?: boolean;
     columnGroupShow?: ColumnGroupShowType;
     valueGetter?: ValueGetterFunc;
 };
@@ -57,11 +56,7 @@ export function getColumns<T>(
             valueGetter: col.valueGetter,
             wrapHeaderText: true,
             columnGroupShow: col.columnGroupShow,
-            headerTooltip: col.tooltip,
-
-            checkboxSelection: col.selectionCheckbox,
-            headerCheckboxSelection: col.selectionCheckbox,
-            headerCheckboxSelectionFilteredOnly: true
+            headerTooltip: col.tooltip
         };
 
         const { parser, formatter } = col.base;

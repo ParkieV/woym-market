@@ -6,9 +6,9 @@
         type FboStorage
     } from "$lib/data/fbo_storage";
     import Footer from "../Footer.svelte";
-    import { getContext, onMount } from "svelte";
+    import { getContext, onMount, setContext } from "svelte";
     import Grid from "$lib/grid/Grid.svelte";
-    import type { Writable } from "svelte/store";
+    import { writable, type Writable } from "svelte/store";
     import ChangesPlugin, { ChangeList } from "$lib/datagrid/plugins/changes";
     import type { GridDefinition } from "$lib/datagrid";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
@@ -21,6 +21,7 @@
     import type { Filter } from "$lib/datagrid/filters";
     import Toolbar from "./Toolbar.svelte";
     import type { PageData } from "./$types";
+    import RowSelectionPlugin from "$lib/datagrid/plugins/row-selection";
 
     export let data: PageData;
 
@@ -31,6 +32,12 @@
     let innerChanges = new ChangeList<FboStorage, "id">();
 
     let selected_image: string | undefined = undefined;
+
+    let selectedStocks = writable(new Set<FboStocks>());
+    setContext("selectedStocks", selectedStocks);
+
+    let selectedStorage = writable(new Set<FboStorage>());
+    setContext("selectedStorage", selectedStorage);
 
     async function refreshData() {
         changes.clear();
@@ -50,16 +57,21 @@
 
     onMount(async () => {
         definition = (
-            await fboOffersGrid(innerChanges, id => {
-                changes.add(id);
-                changes = changes;
-            })
+            await fboOffersGrid(
+                innerChanges,
+                id => {
+                    changes.add(id);
+                    changes = changes;
+                },
+                selectedStorage
+            )
         )
             .plugin(new StatePlugin("fbo_storage"))
             .plugin(new ChangesPlugin("id", changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
             .plugin(new ZoomPlugin(href => (selected_image = href)))
-            .plugin(new ClassesPlugin());
+            .plugin(new ClassesPlugin())
+            .plugin(new RowSelectionPlugin(selectedStocks));
 
         stocks = await fetchFboStocks();
     });

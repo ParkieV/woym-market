@@ -8,6 +8,5 @@ export const BASE_GRID_OPTIONS: GridOptions = {
     enableRangeSelection: true,
     enableRangeHandle: true,
     getContextMenuItems: () => ["cut", "copy", "paste"],
-    rowSelection: "multiple",
     suppressRowClickSelection: true
 };

@@ -7,7 +7,6 @@ import {
     StringColumn,
     intColumn
 } from "$lib/datagrid/columns/types";
-import type { FboStorage } from "$lib/data/fbo_storage";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import type { GridOptions } from "ag-grid-enterprise";
 
@@ -28,7 +27,6 @@ function columns(): (Column | ColumnGroup)[] {
             header: "Склад",
             key: "warehouse.name",
             pinned: true,
-            selectionCheckbox: true,
             base: {
                 cellRenderer: ({ data, value }) => {
                     const url = "/graph.svg";

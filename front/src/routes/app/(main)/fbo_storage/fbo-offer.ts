@@ -16,15 +16,19 @@ import ChangesPlugin, { ChangeList } from "$lib/datagrid/plugins/changes";
 import ClassesPlugin from "$lib/datagrid/plugins/classes";
 import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
 import { userCanModify } from "$lib/data/user";
+import RowSelectionPlugin from "$lib/datagrid/plugins/row-selection";
+import type { Writable } from "svelte/store";
 
 export default async function fboOffersGrid(
     changes: ChangeList<FboStorage, "id">,
-    onChanged: (id: number) => void
+    onChanged: (id: number) => void,
+    selectedStorage: Writable<Set<FboStorage>>
 ): Promise<GridDefinition> {
     const detailGridDef = fboWarehouseGrid()
         .plugin(new ChangesPlugin("id", changes))
         .plugin(new ReadonlyPlugin(!userCanModify))
-        .plugin(new ClassesPlugin());
+        .plugin(new ClassesPlugin())
+        .plugin(new RowSelectionPlugin(selectedStorage));
 
     const detailGridOptions = detailGridDef.options;
     for (const plugin of detailGridDef.plugins) {
@@ -47,7 +51,6 @@ export default async function fboOffersGrid(
                 return {
                     detailGridOptions,
                     getDetailRowData: params => params.successCallback(params.data.stocks)
-                    // refreshStrategy: "nothing"
                 } satisfies Partial<IDetailCellRendererParams<FboStocks, FboStorage>>;
             }
         },
@@ -61,8 +64,7 @@ function columns(): (Column | ColumnGroup)[] {
             base: new GroupColumn(),
             header: "SKU",
             key: "sku",
-            pinned: true,
-            selectionCheckbox: true
+            pinned: true
         },
         {
             header: "Информация",
