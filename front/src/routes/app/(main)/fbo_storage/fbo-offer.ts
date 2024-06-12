@@ -22,13 +22,18 @@ import type { Writable } from "svelte/store";
 export default async function fboOffersGrid(
     changes: ChangeList<FboStorage, "id">,
     onChanged: (id: number) => void,
-    selectedStorage: Writable<Set<FboStorage>>
+    selectedStorage: Writable<Map<number, FboStorage>>
 ): Promise<GridDefinition> {
     const detailGridDef = fboWarehouseGrid()
         .plugin(new ChangesPlugin("id", changes))
         .plugin(new ReadonlyPlugin(!userCanModify))
         .plugin(new ClassesPlugin())
-        .plugin(new RowSelectionPlugin(selectedStorage));
+        .plugin(
+            new RowSelectionPlugin(selectedStorage, {
+                key: ({ warehouse }) => warehouse.id,
+                sync: true
+            })
+        );
 
     const detailGridOptions = detailGridDef.options;
     for (const plugin of detailGridDef.plugins) {

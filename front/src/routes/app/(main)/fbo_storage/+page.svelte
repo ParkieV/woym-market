@@ -33,10 +33,10 @@
 
     let selected_image: string | undefined = undefined;
 
-    let selectedStocks = writable(new Set<FboStocks>());
+    let selectedStocks = writable(new Map<FboStocks, FboStocks>());
     setContext("selectedStocks", selectedStocks);
 
-    let selectedStorage = writable(new Set<FboStorage>());
+    let selectedStorage = writable(new Map<number, FboStorage>());
     setContext("selectedStorage", selectedStorage);
 
     async function refreshData() {
