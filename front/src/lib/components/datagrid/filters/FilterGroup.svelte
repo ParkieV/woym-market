@@ -4,7 +4,8 @@
     export class FilterGroup<T> {
         constructor(
             public kind: "and" | "or",
-            public invert: boolean
+            public invert: boolean,
+            public extend: boolean
         ) {}
 
         private filters = new Map<Filter<T> | FilterGroup<T>, FilterMetadata>();
@@ -43,12 +44,13 @@
 
     export let kind: "and" | "or" = "and";
     export let invert: boolean = false;
+    export let extend: boolean = true;
 
     let parent = getContext<Writable<FilterGroup<T>> | undefined>(FILTER_KEY);
-    let current = writable(new FilterGroup<T>(kind, invert));
+    let current = writable(new FilterGroup<T>(kind, invert, extend));
     setContext(FILTER_KEY, current);
 
-    $: if ($parent !== undefined) {
+    $: if ($parent !== undefined && $current.extend) {
         $parent.set($current, { apply: true, invert });
         $parent = $parent;
     }
