@@ -1,6 +1,6 @@
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
-import { GridDefinition } from "$lib/components/datagrid";
-import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
+import { GridDefinition } from "$lib/datagrid";
+import type { Column, ColumnGroup } from "$lib/datagrid/columns";
 import type { Template } from "$lib/data/templates";
 import type { Offer } from "$lib/data/offers";
 import {
@@ -15,7 +15,7 @@ import {
     rubleColumn,
     GroupColumn,
     ImageColumn
-} from "$lib/components/datagrid/columns/types";
+} from "$lib/datagrid/columns/types";
 
 export default function offerGrid(templates: Template[]): GridDefinition {
     return new GridDefinition(BASE_GRID_OPTIONS, columns(templates));

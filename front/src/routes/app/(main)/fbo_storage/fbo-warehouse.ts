@@ -1,12 +1,12 @@
-import { GridDefinition } from "$lib/components/datagrid";
-import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
+import { GridDefinition } from "$lib/datagrid";
+import type { Column, ColumnGroup } from "$lib/datagrid/columns";
 import {
     BooleanColumn,
     DateColumn,
     NumberColumn,
     StringColumn,
     intColumn
-} from "$lib/components/datagrid/columns/types";
+} from "$lib/datagrid/columns/types";
 import type { FboStorage } from "$lib/data/fbo_storage";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import type { GridOptions } from "ag-grid-enterprise";

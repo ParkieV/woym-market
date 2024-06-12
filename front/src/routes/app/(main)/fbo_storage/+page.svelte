@@ -9,16 +9,16 @@
     import { getContext, onMount } from "svelte";
     import Grid from "$lib/grid/Grid.svelte";
     import type { Writable } from "svelte/store";
-    import ChangesPlugin, { ChangeList } from "$lib/components/datagrid/plugins/changes";
-    import type { GridDefinition } from "$lib/components/datagrid";
+    import ChangesPlugin, { ChangeList } from "$lib/datagrid/plugins/changes";
+    import type { GridDefinition } from "$lib/datagrid";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import fboOffersGrid from "./fbo-offer";
-    import StatePlugin from "$lib/components/datagrid/plugins/state";
-    import ReadonlyPlugin from "$lib/components/datagrid/plugins/readonly";
-    import ZoomPlugin from "$lib/components/datagrid/plugins/zoom";
+    import StatePlugin from "$lib/datagrid/plugins/state";
+    import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
+    import ZoomPlugin from "$lib/datagrid/plugins/zoom";
     import { userCanModify } from "$lib/data/user";
-    import ClassesPlugin from "$lib/components/datagrid/plugins/classes";
-    import type { Filter } from "$lib/components/datagrid/filters";
+    import ClassesPlugin from "$lib/datagrid/plugins/classes";
+    import type { Filter } from "$lib/datagrid/filters";
     import Toolbar from "./Toolbar.svelte";
     import type { PageData } from "./$types";
 

@@ -1,12 +1,10 @@
 <script lang="ts">
-    import type { Filter } from "$lib/components/datagrid/filters";
-    import BinaryFilter from "$lib/components/datagrid/filters/BinaryFilter.svelte";
-    import FilterGroup from "$lib/components/datagrid/filters/FilterGroup.svelte";
-    import OptionsFilter, {
-        type Option
-    } from "$lib/components/datagrid/filters/OptionsFilter.svelte";
-    import Search from "$lib/components/datagrid/filters/Search.svelte";
-    import TernaryFilter from "$lib/components/datagrid/filters/TernaryFilter.svelte";
+    import type { Filter } from "$lib/datagrid/filters";
+    import BinaryFilter from "$lib/datagrid/filters/BinaryFilter.svelte";
+    import FilterGroup from "$lib/datagrid/filters/FilterGroup.svelte";
+    import OptionsFilter, { type Option } from "$lib/datagrid/filters/OptionsFilter.svelte";
+    import Search from "$lib/datagrid/filters/Search.svelte";
+    import TernaryFilter from "$lib/datagrid/filters/TernaryFilter.svelte";
     import type { Offer } from "$lib/data/offers";
 
     export let markets: {

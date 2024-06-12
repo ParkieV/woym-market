@@ -1,5 +1,5 @@
 <script lang="ts" generics="T">
-    import type { GridDefinition } from "../components/datagrid";
+    import type { GridDefinition } from "$lib/datagrid";
     import { type GridApi } from "ag-grid-enterprise";
     import { onMount } from "svelte";
 

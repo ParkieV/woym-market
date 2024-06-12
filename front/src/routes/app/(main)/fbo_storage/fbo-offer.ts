@@ -1,4 +1,4 @@
-import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
+import type { Column, ColumnGroup } from "$lib/datagrid/columns";
 import type { GridApi, IDetailCellRendererParams, ValueGetterParams } from "ag-grid-enterprise";
 import type { FboStocks, FboStorage } from "$lib/data/fbo_storage";
 import {
@@ -8,13 +8,13 @@ import {
     StringColumn,
     floatColumn,
     intColumn
-} from "$lib/components/datagrid/columns/types";
+} from "$lib/datagrid/columns/types";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
-import { GridDefinition } from "$lib/components/datagrid";
+import { GridDefinition } from "$lib/datagrid";
 import fboWarehouseGrid from "./fbo-warehouse";
-import ChangesPlugin, { ChangeList } from "$lib/components/datagrid/plugins/changes";
-import ClassesPlugin from "$lib/components/datagrid/plugins/classes";
-import ReadonlyPlugin from "$lib/components/datagrid/plugins/readonly";
+import ChangesPlugin, { ChangeList } from "$lib/datagrid/plugins/changes";
+import ClassesPlugin from "$lib/datagrid/plugins/classes";
+import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
 import { userCanModify } from "$lib/data/user";
 
 export default async function fboOffersGrid(
