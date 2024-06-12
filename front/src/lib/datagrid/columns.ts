@@ -56,7 +56,8 @@ export function getColumns<T>(
             valueGetter: col.valueGetter,
             wrapHeaderText: true,
             columnGroupShow: col.columnGroupShow,
-            headerTooltip: col.tooltip
+            headerTooltip: col.tooltip,
+            suppressHeaderMenuButton: true
         };
 
         const { parser, formatter } = col.base;
