@@ -27,6 +27,7 @@
     import ClassesPlugin from "$lib/datagrid/plugins/classes";
     import RowSelectionPlugin from "$lib/datagrid/plugins/row-selection";
     import DetailGridPlugin from "$lib/datagrid/plugins/detail";
+    import FilterPlugin from "$lib/datagrid/plugins/filter";
 
     export let data: PageData;
     let stocks: FboStocks[] = [];
@@ -55,9 +56,16 @@
     onMount(async () => (stocks = await fetchFboStocks()));
 
     let filter: Filter<FboStocks>;
+    let filterStore = writable<Filter<FboStocks>>();
+    $: $filterStore = filter;
+
+    let storage_filter: Filter<FboStorage>;
+    let storageFilterStore = writable<Filter<FboStorage>>();
+    $: $storageFilterStore = storage_filter;
 
     const definition = (() => {
         const detail = fboWarehouseGrid()
+            .plugin(new FilterPlugin(storageFilterStore))
             .plugin(
                 new ChangesPlugin("id", innerChanges, ({ data }) => {
                     let stock = stocks.find(x => x.stocks.some(s => s.id === data.id));
@@ -77,6 +85,7 @@
             );
 
         return fboOffersGrid(changes, innerChanges)
+            .plugin(new FilterPlugin(filterStore))
             .plugin(new StatePlugin("fbo_storage"))
             .plugin(new ChangesPlugin("id", changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
@@ -91,8 +100,8 @@
     <ImageWindow bind:src={selected_image} />
 {/if}
 
-<Toolbar bind:filter markets={data.options} />
+<Toolbar bind:filter bind:storage_filter markets={data.options} />
 {#if browser}
-    <Grid {definition} bind:data={stocks} bind:filter />
+    <Grid {definition} bind:data={stocks} />
 {/if}
 <Footer bind:changes on:reload={refreshData} on:save={save} />

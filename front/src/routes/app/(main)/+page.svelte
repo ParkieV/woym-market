@@ -4,7 +4,7 @@
     import { type Offer, fetchOfferList, patchOfferList } from "$lib/data/offers";
     import Footer from "./Footer.svelte";
     import { fetchTemplates, type Template } from "$lib/data/templates";
-    import type { Writable } from "svelte/store";
+    import { writable, type Writable } from "svelte/store";
     import type { GridDefinition } from "$lib/datagrid";
     import offerGrid from "./grid";
     import StatePlugin from "$lib/datagrid/plugins/state";
@@ -17,6 +17,7 @@
     import Toolbar from "./Toolbar.svelte";
     import type { PageData } from "./$types";
     import type { Filter } from "$lib/datagrid/filters";
+    import FilterPlugin from "$lib/datagrid/plugins/filter";
 
     export let data: PageData;
 
@@ -43,6 +44,7 @@
         let templates: Template[] = await fetchTemplates();
 
         definition = offerGrid(templates)
+            .plugin(new FilterPlugin(filterStore))
             .plugin(new StatePlugin("offers"))
             .plugin(new ChangesPlugin("id", changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
@@ -70,6 +72,9 @@
     });
 
     let filter: Filter<Offer>;
+    let filterStore = writable<Filter<Offer>>();
+    $: $filterStore = filter;
+
     let selected_image: string | undefined = undefined;
 </script>
 
@@ -79,6 +84,6 @@
 
 <Toolbar bind:filter markets={data.options} />
 {#if definition}
-    <Grid {definition} bind:data={offers} bind:filter />
+    <Grid {definition} bind:data={offers} />
 {/if}
 <Footer bind:changes on:reload={refreshData} on:save={save} />

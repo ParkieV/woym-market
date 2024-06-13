@@ -9,16 +9,6 @@
     /** Data to display in the table. */
     export let data: T[];
 
-    /** Filter function for rows. */
-    export let filter: (value: T) => boolean = () => true;
-
-    $: if (grid) {
-        filter;
-        grid.setGridOption("doesExternalFilterPass", e => filter(e.data!));
-        grid.setGridOption("isExternalFilterPresent", () => true);
-        grid.onFilterChanged();
-    }
-
     let grid: GridApi;
     $: if (grid && data.length != 0) {
         grid.setGridOption("rowData", data);
