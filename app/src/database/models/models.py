@@ -174,6 +174,8 @@ class Warehouse(Base):
     parent_warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='SET NULL'), nullable=True, default=None)
     related_warehouses = relationship('Warehouse', uselist=True)
     warehouse_type = Column(String, default=WarehouseType.WAREHOUSE)
+    from_file_updated_at = Column(DateTime(timezone=True), nullable=True, default=None)
+
 
 
 class OfferStock(Base):
@@ -184,7 +186,6 @@ class OfferStock(Base):
     offer_id = Column(Integer, ForeignKey('offers.id', ondelete='CASCADE'))
     warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='CASCADE'))
     warehouse = relationship(Warehouse, uselist=False)
-    from_file_updated_at = Column(DateTime(timezone=True), nullable=True, default=None)
     can_be_delivered = Column(Boolean, default=False)
     advice_from_the_store = Column(String, default='')
     current_stock = Column(Integer, default=0)
