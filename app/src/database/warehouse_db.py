@@ -345,8 +345,9 @@ async def update_fbo_support_data(session: AsyncSession, data: list[dict], name_
         )
 
         stmp = update(OfferStock).where(OfferStock.id.in_(sub_query)).values(
-            **{'can_be_delivered': stock['can_be_delivered'], 'advice_from_the_store': stock['advice_from_the_store'],
-               'from_file_updated_at': now})
+            **{'can_be_delivered': stock['can_be_delivered'], 'advice_from_the_store': stock['advice_from_the_store']})
+        await session.execute(stmp)
+        stmp = update(Warehouse).where(Warehouse.id == warehouse_id).values(from_file_updated_at=now)
         await session.execute(stmp)
 
     await session.commit()

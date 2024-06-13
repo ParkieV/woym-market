@@ -25,6 +25,7 @@ class WarehouseCreate(BaseWarehouse):
 class WarehouseOut(BaseWarehouse):
     id: int
     market: str
+    from_file_updated_at: datetime | None
 
 
 class BaseOfferStock(BaseModel):
@@ -51,7 +52,6 @@ class OfferStockCreate(BaseOfferStock):
 
 class OfferStockOut(BaseOfferStock):
     id: int
-    from_file_updated_at: datetime | None
 
 
 
