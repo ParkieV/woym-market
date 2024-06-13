@@ -1,5 +1,9 @@
-import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
-import type { GridApi, IDetailCellRendererParams, ValueGetterParams } from "ag-grid-enterprise";
+import type { Column, ColumnGroup } from "$lib/datagrid/columns";
+import type {
+    GetContextMenuItems,
+    GetContextMenuItemsParams,
+    ValueGetterParams
+} from "ag-grid-enterprise";
 import type { FboStocks, FboStorage } from "$lib/data/fbo_storage";
 import {
     BooleanColumn,
@@ -8,46 +12,33 @@ import {
     StringColumn,
     floatColumn,
     intColumn
-} from "$lib/components/datagrid/columns/types";
+} from "$lib/datagrid/columns/types";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
-import { GridDefinition } from "$lib/components/datagrid";
-import fboWarehouseGrid from "./fbo-warehouse";
-import ChangesPlugin, { ChangeList } from "$lib/components/datagrid/plugins/changes";
-import ClassesPlugin from "$lib/components/datagrid/plugins/classes";
-import ReadonlyPlugin from "$lib/components/datagrid/plugins/readonly";
+import { GridDefinition } from "$lib/datagrid";
+import { get } from "svelte/store";
 import { userCanModify } from "$lib/data/user";
+import type { ChangeList } from "$lib/datagrid/plugins/changes";
+import { selectedContextMenuItems, selectedStocks, selectedStorage } from "./selected";
 
-export default async function fboOffersGrid(
-    changes: ChangeList<FboStorage, "id">,
-    onChanged: (id: number) => void
-): Promise<GridDefinition> {
-    const detailGridOptions = await fboWarehouseGrid()
-        .plugin(ChangesPlugin("id", changes))
-        .plugin(ReadonlyPlugin(!userCanModify))
-        .plugin(ClassesPlugin())
-        .build();
+export default function fboOffersGrid(
+    changes: ChangeList<FboStocks, "id">,
+    innerChanges: ChangeList<FboStorage, "id">
+): GridDefinition<FboStocks> {
+    return new GridDefinition({ ...BASE_GRID_OPTIONS, getContextMenuItems }, columns());
 
-    let func = detailGridOptions.onCellValueChanged;
-
-    return new GridDefinition(
-        {
-            ...BASE_GRID_OPTIONS,
-            masterDetail: true,
-            detailCellRendererParams: (master: { api: GridApi; data: FboStocks }) => {
-                detailGridOptions.onCellValueChanged = args => {
-                    onChanged(master.data.id);
-                    func?.(args);
-                    master.api.refreshCells();
-                };
-                return {
-                    detailGridOptions,
-                    getDetailRowData: params => params.successCallback(params.data.stocks)
-                    // refreshStrategy: "nothing"
-                } satisfies Partial<IDetailCellRendererParams<FboStocks, FboStorage>>;
-            }
-        },
-        columns()
-    );
+    function getContextMenuItems(): ReturnType<GetContextMenuItems<FboStocks>> {
+        if (!get(userCanModify)) {
+            return ["copy"];
+        } else {
+            return [
+                "cut",
+                "copy",
+                "paste",
+                "separator",
+                ...selectedContextMenuItems(changes, innerChanges)
+            ];
+        }
+    }
 }
 
 function columns(): (Column | ColumnGroup)[] {
@@ -56,8 +47,7 @@ function columns(): (Column | ColumnGroup)[] {
             base: new GroupColumn(),
             header: "SKU",
             key: "sku",
-            pinned: true,
-            selectionCheckbox: true
+            pinned: true
         },
         {
             header: "Информация",

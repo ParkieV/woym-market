@@ -1,13 +1,8 @@
-import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
+import type { Column, ColumnGroup } from "$lib/datagrid/columns";
 import type { Market } from "$lib/data/markets";
 import type { OwnStorage } from "$lib/data/own_storage";
-import {
-    GroupColumn,
-    StringColumn,
-    ImageColumn,
-    intColumn
-} from "$lib/components/datagrid/columns/types";
-import { GridDefinition } from "$lib/components/datagrid";
+import { GroupColumn, StringColumn, ImageColumn, intColumn } from "$lib/datagrid/columns/types";
+import { GridDefinition } from "$lib/datagrid";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 
 export default function ownStorageGrid(markets: Market[]): GridDefinition {

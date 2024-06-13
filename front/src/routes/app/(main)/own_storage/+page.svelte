@@ -3,19 +3,20 @@
     import { getContext, onMount } from "svelte";
     import Footer from "../Footer.svelte";
     import { fetchOwnStorages, patchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
-    import type { Writable } from "svelte/store";
+    import { writable, type Writable } from "svelte/store";
     import ownStorageGrid from "./grid";
-    import type { GridDefinition } from "$lib/components/datagrid";
-    import ChangesPlugin, { ChangeList } from "$lib/components/datagrid/plugins/changes";
-    import StatePlugin from "$lib/components/datagrid/plugins/state";
-    import ReadonlyPlugin from "$lib/components/datagrid/plugins/readonly";
-    import ZoomPlugin from "$lib/components/datagrid/plugins/zoom";
+    import type { GridDefinition } from "$lib/datagrid";
+    import ChangesPlugin, { ChangeList } from "$lib/datagrid/plugins/changes";
+    import StatePlugin from "$lib/datagrid/plugins/state";
+    import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
+    import ZoomPlugin from "$lib/datagrid/plugins/zoom";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import { userCanModify } from "$lib/data/user";
-    import ClassesPlugin from "$lib/components/datagrid/plugins/classes";
-    import type { Filter } from "$lib/components/datagrid/filters";
+    import ClassesPlugin from "$lib/datagrid/plugins/classes";
+    import type { Filter } from "$lib/datagrid/filters";
     import Toolbar from "./Toolbar.svelte";
     import type { PageData } from "./$types";
+    import FilterPlugin from "$lib/datagrid/plugins/filter";
 
     export let data: PageData;
 
@@ -33,11 +34,12 @@
         storage = info.data;
 
         definition = ownStorageGrid(info.markets)
-            .plugin(StatePlugin("own_storage"))
-            .plugin(ChangesPlugin("sku", changes))
-            .plugin(ReadonlyPlugin(!$userCanModify))
-            .plugin(ZoomPlugin(href => (selected_image = href)))
-            .plugin(ClassesPlugin());
+            .plugin(new FilterPlugin(filterStore))
+            .plugin(new StatePlugin("own_storage"))
+            .plugin(new ChangesPlugin("sku", changes))
+            .plugin(new ReadonlyPlugin(!$userCanModify))
+            .plugin(new ZoomPlugin(href => (selected_image = href)))
+            .plugin(new ClassesPlugin());
     });
 
     async function save() {
@@ -52,6 +54,8 @@
     }
 
     let filter: Filter<OwnStorage>;
+    let filterStore = writable<Filter<OwnStorage>>();
+    $: $filterStore = filter;
 </script>
 
 {#if selected_image}
@@ -60,6 +64,6 @@
 
 <Toolbar bind:filter markets={data.options} />
 {#if definition}
-    <Grid {definition} bind:data={storage} bind:filter />
+    <Grid {definition} bind:data={storage} />
 {/if}
 <Footer bind:changes on:reload={refreshData} on:save={save} />

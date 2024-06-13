@@ -16,11 +16,12 @@ export type FboStorage = {
     warehouse: {
         id: number;
         name: string;
+        warehouse_type: "warehouse" | "cluster";
     };
 };
 
-export async function fetchFboStocks(): Promise<FboStocks[]> {
-    let promise = fetchJSON<FboStocks[]>("stocks/fbo");
+export async function fetchFboStocks(fetch_?: typeof fetch): Promise<FboStocks[]> {
+    let promise = fetchJSON<FboStocks[]>("stocks/fbo", { fetch: fetch_ });
     showFetchModals(promise.then(x => x.response));
     return (await promise).data;
 }

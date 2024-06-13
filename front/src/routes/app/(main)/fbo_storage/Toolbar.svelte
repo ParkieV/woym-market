@@ -1,13 +1,12 @@
 <script lang="ts">
-    import type { Filter } from "$lib/components/datagrid/filters";
-    import BinaryFilter from "$lib/components/datagrid/filters/BinaryFilter.svelte";
-    import FilterGroup from "$lib/components/datagrid/filters/FilterGroup.svelte";
-    import OptionsFilter, {
-        type Option
-    } from "$lib/components/datagrid/filters/OptionsFilter.svelte";
-    import Search from "$lib/components/datagrid/filters/Search.svelte";
-    import TernaryFilter from "$lib/components/datagrid/filters/TernaryFilter.svelte";
-    import type { FboStocks } from "$lib/data/fbo_storage";
+    import type { Filter } from "$lib/datagrid/filters";
+    import BinaryFilter from "$lib/datagrid/filters/BinaryFilter.svelte";
+    import FilterGroup from "$lib/datagrid/filters/FilterGroup.svelte";
+    import OptionsFilter, { type Option } from "$lib/datagrid/filters/OptionsFilter.svelte";
+    import Search from "$lib/datagrid/filters/Search.svelte";
+    import TernaryFilter from "$lib/datagrid/filters/TernaryFilter.svelte";
+    import type { FboStocks, FboStorage } from "$lib/data/fbo_storage";
+    import { selectedStorage } from "./selected";
 
     export let markets: {
         id: number;
@@ -25,10 +24,12 @@
 
     const market_filter = (storage: FboStocks, opts: Option[]) =>
         opts.every(({ name, selected }) => selected || name !== storage.name_of_shop);
+    const selected_filter = (storage: FboStorage) => $selectedStorage.has(storage.warehouse.id);
     const hidden_filter = (storage: FboStocks) => !storage.hidden;
     const available_filter = (storage: FboStocks) => storage.supplier_available;
 
     export let filter: Filter<FboStocks>;
+    export let storage_filter: Filter<FboStorage>;
 </script>
 
 <menu>
@@ -38,6 +39,13 @@
             <OptionsFilter filter={market_filter} image={"/ozon.svg"} bind:options={ozon} />
         </div>
         <Search placeholder="Поиск..." fields={SEARCH_FIELDS} />
+        <FilterGroup extend={false} bind:filter={storage_filter}>
+            <BinaryFilter
+                filter={selected_filter}
+                image={"/list-checks.svg"}
+                alt="Скрывать неотмеченные склады"
+            />
+        </FilterGroup>
         <TernaryFilter
             filter={available_filter}
             image={"/package.svg"}

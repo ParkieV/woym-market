@@ -1,10 +1,8 @@
 <script lang="ts">
-    import type { Filter } from "$lib/components/datagrid/filters";
-    import FilterGroup from "$lib/components/datagrid/filters/FilterGroup.svelte";
-    import OptionsFilter, {
-        type Option
-    } from "$lib/components/datagrid/filters/OptionsFilter.svelte";
-    import Search from "$lib/components/datagrid/filters/Search.svelte";
+    import type { Filter } from "$lib/datagrid/filters";
+    import FilterGroup from "$lib/datagrid/filters/FilterGroup.svelte";
+    import OptionsFilter, { type Option } from "$lib/datagrid/filters/OptionsFilter.svelte";
+    import Search from "$lib/datagrid/filters/Search.svelte";
     import type { OwnStorage } from "$lib/data/own_storage";
 
     export let markets: {

@@ -1,16 +1,17 @@
-import { GridDefinition } from "$lib/components/datagrid";
-import type { Column, ColumnGroup } from "$lib/components/datagrid/columns";
+import type { FboStorage } from "$lib/data/fbo_storage";
+import { GridDefinition } from "$lib/datagrid";
+import type { Column, ColumnGroup } from "$lib/datagrid/columns";
 import {
     BooleanColumn,
     DateColumn,
     NumberColumn,
     StringColumn,
     intColumn
-} from "$lib/components/datagrid/columns/types";
+} from "$lib/datagrid/columns/types";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import type { GridOptions } from "ag-grid-enterprise";
 
-export default function fboWarehouseGrid(): GridDefinition {
+export default function fboWarehouseGrid(): GridDefinition<FboStorage> {
     const options: GridOptions = {
         ...BASE_GRID_OPTIONS,
         rowHeight: 30,
@@ -27,8 +28,15 @@ function columns(): (Column | ColumnGroup)[] {
             header: "Склад",
             key: "warehouse.name",
             pinned: true,
-            selectionCheckbox: true,
-            base: new StringColumn()
+            base: {
+                cellRenderer: ({ data, value }) => {
+                    const url = "/graph.svg";
+                    const style = "height: 16px; margin: 0 1px -3px 0;";
+                    const img = `<img style=\"${style}\" src=\"${url}\" />`;
+                    if (data.warehouse.warehouse_type === "cluster") return `${img} ${value}`;
+                    else return `${value}`;
+                }
+            }
         },
         {
             header: "В наличии",

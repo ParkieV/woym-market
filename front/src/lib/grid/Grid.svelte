@@ -1,23 +1,13 @@
-<script lang="ts" generics="T, K extends keyof T">
-    import type { GridDefinition } from "../components/datagrid";
-    import { createGrid, type GridApi } from "ag-grid-enterprise";
+<script lang="ts" generics="T">
+    import type { GridDefinition } from "$lib/datagrid";
+    import { type GridApi } from "ag-grid-enterprise";
     import { onMount } from "svelte";
 
-    /** Grid deifinition. */
-    export let definition: GridDefinition;
+    /** Grid definition. */
+    export let definition: GridDefinition<T>;
 
     /** Data to display in the table. */
     export let data: T[];
-
-    /** Filter function for rows. */
-    export let filter: (value: T) => boolean = () => true;
-
-    $: if (grid) {
-        filter;
-        grid.setGridOption("doesExternalFilterPass", e => filter(e.data!));
-        grid.setGridOption("isExternalFilterPresent", () => true);
-        grid.onFilterChanged();
-    }
 
     let grid: GridApi;
     $: if (grid && data.length != 0) {
@@ -26,7 +16,9 @@
         grid.showLoadingOverlay();
     }
 
-    onMount(async () => (grid = createGrid(element, await definition.build())));
+    onMount(async () => {
+        grid = await definition.build(element);
+    });
 
     let element: HTMLElement;
 </script>

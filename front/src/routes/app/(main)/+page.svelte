@@ -4,19 +4,20 @@
     import { type Offer, fetchOfferList, patchOfferList } from "$lib/data/offers";
     import Footer from "./Footer.svelte";
     import { fetchTemplates, type Template } from "$lib/data/templates";
-    import type { Writable } from "svelte/store";
-    import type { GridDefinition } from "$lib/components/datagrid";
+    import { writable, type Writable } from "svelte/store";
+    import type { GridDefinition } from "$lib/datagrid";
     import offerGrid from "./grid";
-    import StatePlugin from "$lib/components/datagrid/plugins/state";
-    import ChangesPlugin, { ChangeList } from "$lib/components/datagrid/plugins/changes";
+    import StatePlugin from "$lib/datagrid/plugins/state";
+    import ChangesPlugin, { ChangeList } from "$lib/datagrid/plugins/changes";
     import { userCanModify } from "$lib/data/user";
-    import ReadonlyPlugin from "$lib/components/datagrid/plugins/readonly";
-    import ZoomPlugin from "$lib/components/datagrid/plugins/zoom";
+    import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
+    import ZoomPlugin from "$lib/datagrid/plugins/zoom";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
-    import ClassesPlugin from "$lib/components/datagrid/plugins/classes";
+    import ClassesPlugin from "$lib/datagrid/plugins/classes";
     import Toolbar from "./Toolbar.svelte";
     import type { PageData } from "./$types";
-    import type { Filter } from "$lib/components/datagrid/filters";
+    import type { Filter } from "$lib/datagrid/filters";
+    import FilterPlugin from "$lib/datagrid/plugins/filter";
 
     export let data: PageData;
 
@@ -43,12 +44,13 @@
         let templates: Template[] = await fetchTemplates();
 
         definition = offerGrid(templates)
-            .plugin(StatePlugin("offers"))
-            .plugin(ChangesPlugin("id", changes))
-            .plugin(ReadonlyPlugin(!$userCanModify))
-            .plugin(ZoomPlugin(href => (selected_image = href)))
+            .plugin(new FilterPlugin(filterStore))
+            .plugin(new StatePlugin("offers"))
+            .plugin(new ChangesPlugin("id", changes))
+            .plugin(new ReadonlyPlugin(!$userCanModify))
+            .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(
-                ClassesPlugin({
+                new ClassesPlugin({
                     warning: ({ colDef, data }) => {
                         if (colDef.field !== "current_price") return false;
                         return data.current_price !== data.target_price;
@@ -70,6 +72,9 @@
     });
 
     let filter: Filter<Offer>;
+    let filterStore = writable<Filter<Offer>>();
+    $: $filterStore = filter;
+
     let selected_image: string | undefined = undefined;
 </script>
 
@@ -79,6 +84,6 @@
 
 <Toolbar bind:filter markets={data.options} />
 {#if definition}
-    <Grid {definition} bind:data={offers} bind:filter />
+    <Grid {definition} bind:data={offers} />
 {/if}
 <Footer bind:changes on:reload={refreshData} on:save={save} />

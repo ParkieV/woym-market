@@ -8,7 +8,7 @@ import type {
 import type { ColumnBase } from "./columns/types";
 import valueSetter from "./columns/valueSetter";
 
-export type ColumnGroup = { header: string; children: Column[] };
+export type ColumnGroup<T = any> = { header: string; children: Column<T>[] };
 
 export type Column<T = any> = {
     base: ColumnBase<T>;
@@ -17,7 +17,6 @@ export type Column<T = any> = {
     editable?: boolean;
     tooltip?: string;
     pinned?: boolean;
-    selectionCheckbox?: boolean;
     columnGroupShow?: ColumnGroupShowType;
     valueGetter?: ValueGetterFunc;
 };
@@ -58,10 +57,7 @@ export function getColumns<T>(
             wrapHeaderText: true,
             columnGroupShow: col.columnGroupShow,
             headerTooltip: col.tooltip,
-
-            checkboxSelection: col.selectionCheckbox,
-            headerCheckboxSelection: col.selectionCheckbox,
-            headerCheckboxSelectionFilteredOnly: true
+            suppressHeaderMenuButton: true
         };
 
         const { parser, formatter } = col.base;

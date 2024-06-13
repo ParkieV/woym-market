@@ -59,9 +59,12 @@ export async function patchStore(store: Market) {
     await promise;
 }
 
-export async function getStoreNames(): Promise<string[]> {
+export async function getStoreNames(type?: string): Promise<string[]> {
     let stores = await getStores();
-    return stores.map(x => x.name).filter(filterUnique);
+    return stores
+        .filter(x => type === undefined || x.type === type)
+        .map(x => x.name)
+        .filter(filterUnique);
 }
 
 export async function getStoreTypes(): Promise<string[]> {
