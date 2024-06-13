@@ -1,7 +1,7 @@
 /**
  * Converts a numeric value to a corresponding word form.
  * @param value - The numeric value to be converted.
- * @param words - An array of three strings representing the word forms for singular, plural, and special cases.
+ * @param words - An array of three strings representing the word forms for singular, plural ending in 2-5 except 11-19, and other plurals.
  * @returns The word corresponding to the numeric value based on the provided rules.
  */
 export function num_word(value: number, words: [string, string, string]) {

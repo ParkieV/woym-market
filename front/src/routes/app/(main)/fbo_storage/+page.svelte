@@ -17,6 +17,8 @@
     import Toolbar from "./Toolbar.svelte";
     import type { PageData } from "./$types";
     import fboWarehouseGrid from "./fbo-warehouse";
+    import { browser } from "$app/environment";
+    import { selectedStocks, selectedStorage } from "./selected";
 
     import ChangesPlugin, { ChangeList } from "$lib/datagrid/plugins/changes";
     import StatePlugin from "$lib/datagrid/plugins/state";
@@ -27,20 +29,12 @@
     import DetailGridPlugin from "$lib/datagrid/plugins/detail";
 
     export let data: PageData;
-
-    let definition: GridDefinition;
     let stocks: FboStocks[] = [];
 
     let changes = new ChangeList<FboStocks, "id">();
     let innerChanges = new ChangeList<FboStorage, "id">();
 
     let selected_image: string | undefined = undefined;
-
-    let selectedStocks = writable(new Map<FboStocks, FboStocks>());
-    setContext("selectedStocks", selectedStocks);
-
-    let selectedStorage = writable(new Map<number, FboStorage>());
-    setContext("selectedStorage", selectedStorage);
 
     async function refreshData() {
         changes.clear();
@@ -58,12 +52,15 @@
     let refresh = getContext<Writable<() => {}>>("refresh");
     $refresh = refreshData;
 
-    onMount(async () => {
+    onMount(async () => (stocks = await fetchFboStocks()));
+
+    let filter: Filter<FboStocks>;
+
+    const definition = (() => {
         const detail = fboWarehouseGrid()
             .plugin(
                 new ChangesPlugin("id", innerChanges, ({ data }) => {
                     let stock = stocks.find(x => x.stocks.some(s => s.id === data.id));
-                    console.log(stock);
                     if (stock) {
                         changes.add(stock.id);
                         changes = changes;
@@ -79,7 +76,7 @@
                 })
             );
 
-        definition = fboOffersGrid()
+        return fboOffersGrid(changes, innerChanges)
             .plugin(new StatePlugin("fbo_storage"))
             .plugin(new ChangesPlugin("id", changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
@@ -87,11 +84,7 @@
             .plugin(new ClassesPlugin())
             .plugin(new RowSelectionPlugin(selectedStocks))
             .plugin(new DetailGridPlugin(detail, data => data.stocks));
-
-        stocks = await fetchFboStocks();
-    });
-
-    let filter: Filter<FboStocks>;
+    })();
 </script>
 
 {#if selected_image}
@@ -99,7 +92,7 @@
 {/if}
 
 <Toolbar bind:filter markets={data.options} />
-{#if definition}
+{#if browser}
     <Grid {definition} bind:data={stocks} bind:filter />
 {/if}
 <Footer bind:changes on:reload={refreshData} on:save={save} />

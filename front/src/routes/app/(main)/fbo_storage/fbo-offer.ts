@@ -1,6 +1,10 @@
 import type { Column, ColumnGroup } from "$lib/datagrid/columns";
-import type { ValueGetterParams } from "ag-grid-enterprise";
-import type { FboStocks } from "$lib/data/fbo_storage";
+import type {
+    GetContextMenuItems,
+    GetContextMenuItemsParams,
+    ValueGetterParams
+} from "ag-grid-enterprise";
+import type { FboStocks, FboStorage } from "$lib/data/fbo_storage";
 import {
     BooleanColumn,
     GroupColumn,
@@ -11,9 +15,30 @@ import {
 } from "$lib/datagrid/columns/types";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import { GridDefinition } from "$lib/datagrid";
+import { get } from "svelte/store";
+import { userCanModify } from "$lib/data/user";
+import type { ChangeList } from "$lib/datagrid/plugins/changes";
+import { selectedContextMenuItems, selectedStocks, selectedStorage } from "./selected";
 
-export default function fboOffersGrid(): GridDefinition<FboStocks> {
-    return new GridDefinition(BASE_GRID_OPTIONS, columns());
+export default function fboOffersGrid(
+    changes: ChangeList<FboStocks, "id">,
+    innerChanges: ChangeList<FboStorage, "id">
+): GridDefinition<FboStocks> {
+    return new GridDefinition({ ...BASE_GRID_OPTIONS, getContextMenuItems }, columns());
+
+    function getContextMenuItems(): ReturnType<GetContextMenuItems<FboStocks>> {
+        if (!get(userCanModify)) {
+            return ["copy"];
+        } else {
+            return [
+                "cut",
+                "copy",
+                "paste",
+                "separator",
+                ...selectedContextMenuItems(changes, innerChanges)
+            ];
+        }
+    }
 }
 
 function columns(): (Column | ColumnGroup)[] {
