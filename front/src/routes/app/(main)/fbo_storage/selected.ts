@@ -15,8 +15,15 @@ export function selectedContextMenuItems(
 ): MenuItemDef[] {
     return [
         {
+            name: "Поставка",
+            icon: icon("/package.svg"),
+            tooltip: "Экспортировать файл поставки",
+            disabled: get(selectedStocks).size === 0 || get(selectedStorage).size === 0,
+            action: () => alert("Not implemented")
+        },
+        {
             name: "Мин. остаток",
-            icon: '<img src="/arrow-line-down.svg" style="width: 16px;" />',
+            icon: icon("/arrow-line-down.svg"),
             tooltip: "Установить минимальный остаток у выделенных складов и товаров.",
             disabled: get(selectedStocks).size === 0 || get(selectedStorage).size === 0,
             action: ({ api }) => {
@@ -31,6 +38,8 @@ export function selectedContextMenuItems(
         }
     ];
 }
+
+const icon = (src: string) => `<img src="${src}" style="width: 16px; margin-bottom: -3px;" />`;
 
 export let selectedDisplayInfo = derived(
     [selectedStocks, selectedStorage],
