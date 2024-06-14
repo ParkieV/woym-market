@@ -315,9 +315,9 @@ market_handlers = {
 
 
 @error_handler('Ошибка экспорта поставки.')
-async def export_supply(name_of_shop: str | None = None, market: str | None = None):
+async def export_supply(warehouses: list[int] | None = None, offers: list[int] | None = None, name_of_shop: str | None = None, market: str | None = None):
     async with async_session() as session:
-        rez = await db.get_supply_data(session, market, name_of_shop)
+        rez = await db.get_supply_data(session, warehouses, offers, market, name_of_shop)
 
         if rez is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, 'No offers to supply')

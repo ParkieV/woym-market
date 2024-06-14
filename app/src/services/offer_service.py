@@ -301,16 +301,14 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
 async def export_data(market: Market, export_type: ExportType, name_of_shop: str | None):
     match export_type:
         case ExportType.TABLE:
-            return await export_offers(name_of_shop, market), 'out.xlsx'
+            return await export_offers(name_of_shop, market)
 
         case ExportType.FBO_STOCKS:
-            return await export_stocks(name_of_shop, market), 'out.xlsx'
+            return await export_stocks(name_of_shop, market)
 
         case ExportType.OWN_STORAGE:
-            return await export_own_storages(name_of_shop, market), 'out.xlsx'
+            return await export_own_storages(name_of_shop, market)
 
-        case ExportType.SUPPLY:
-            return await export_supply(name_of_shop, market), 'Поставка.zip'
         case _:
             raise NotImplemented(f'Export type "{export_type}" not implemented yet')
 
