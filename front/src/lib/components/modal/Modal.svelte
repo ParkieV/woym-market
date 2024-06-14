@@ -9,7 +9,9 @@
 </script>
 
 <dialog bind:this={dialog} on:close={() => (open = false)}>
-    <slot />
+    {#if open}
+        <slot />
+    {/if}
 </dialog>
 
 <style lang="scss">
