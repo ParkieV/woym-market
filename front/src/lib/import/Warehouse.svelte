@@ -1,9 +1,9 @@
 <script lang="ts">
     import { getStoreNames } from "$lib/data/markets";
-    import { fetchJSON } from "$lib/fetch";
     import { onMount } from "svelte";
     import type WarehouseImport from "./warehouse";
     import SelectionBox from "$lib/components/SelectionBox.svelte";
+    import { getWarehouses, type Warehouse } from "$lib/data/warehouse";
 
     export let data: WarehouseImport;
 
@@ -12,12 +12,12 @@
 
     onMount(() => {
         shops = getStoreNames("yandex");
-        warehouses = fetchJSON<{ warehouses: Warehouse[] }>("stocks/fbo/import/choices").then(
-            x => x.data.warehouses
+        warehouses = getWarehouses().then(warehouse =>
+            warehouse
+                .filter(({ market }) => market === "yandex")
+                .sort((a, b) => a.name.localeCompare(b.name))
         );
     });
-
-    type Warehouse = { id: number; name: string };
 </script>
 
 <label>
@@ -34,7 +34,20 @@
 <section>
     <span>Склад</span>
     <SelectionBox bind:selectedId={data.warehouse_id} data={warehouses} let:value>
-        <span>{value.name}</span>
+        <li
+            title={`${value.name}, ${
+                value.from_file_updated_at
+                    ? new Date(value.from_file_updated_at).toLocaleString()
+                    : "не загружался"
+            }`}
+        >
+            <div>{value.name}</div>
+            {#if value.from_file_updated_at !== null}
+                <span>
+                    {new Date(value.from_file_updated_at).toLocaleDateString()}
+                </span>
+            {/if}
+        </li>
     </SelectionBox>
 </section>
 
@@ -46,6 +59,26 @@
         display: contents;
         > span {
             @include underline();
+        }
+    }
+
+    li {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        list-style: none;
+        width: 100%;
+        > div {
+            font-size: 14px;
+            &:first-child {
+                flex: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            &:last-child {
+                flex: 0 0 content;
+            }
         }
     }
 </style>
