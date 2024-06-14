@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from logs import get_logger
@@ -19,13 +19,15 @@ from fastapi import status
 from datetime import datetime
 
 from src.schemas.settings_schemas import MarketOut
-from src.services.base_utils import error_handler
+from src.services.base_utils import error_handler, HandlersFactory, import_handler_factory, export_handler_factory
 from src.services.stocks_service import export_stocks, export_own_storages, import_offers_stocks, import_own_storages, \
     export_supply
 
 api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
+
+
 
 
 async def get_offers(filters: dict[str, Any] | None = None, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
@@ -39,13 +41,11 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
         return offers_data
 
     async with async_session() as session:
-        settings = await get_user_settings(session, user_id)
-
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
         [await db.check_pricing_schemes_exists(session, i) for i in changes['pricing_scheme_name'].values.tolist()]
 
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'])
-        await recalculate_values(session, settings, which=changes[['sku', 'name_of_shop', 'market']])
+        await recalculate_values(session, which=changes[['sku', 'name_of_shop', 'market']])
         return await db.get_offers_by(session, changes[['sku', 'name_of_shop', 'market']])
 
 
@@ -55,9 +55,8 @@ async def setup_offers_data(user_id: int):
     async with async_session() as session:
         await db.check_pricing_schemes_exists(session, 'Y0')
         await db.check_pricing_schemes_exists(session, 'O0')
-        settings = await get_user_settings(session, user_id)
 
-        data = await utils.build_offers_data(yandex_offers_df, setup_mode=True, settings=settings)
+        data = await utils.build_offers_data(yandex_offers_df, setup_mode=True)
 
         offers_db = await db.create_offers(session, data)
         return offers_db
@@ -69,7 +68,6 @@ async def update_offers(user_id: int):
 
     async with async_session() as session:
         await update_offers_price(session)
-        settings = await get_user_settings(session, user_id)
 
     mapping_fields = ['sku', 'name_of_shop', 'market']
 
@@ -94,12 +92,12 @@ async def update_offers(user_id: int):
 
     async with async_session() as session:
         for market in await get_markets(session):
-            to_create_df_chunked = await utils.build_offers_data(to_create_df[((to_create_df['market'] == market.type) & (to_create_df['name_of_shop'] == market.name))], settings, market, setup_mode=True)
+            to_create_df_chunked = await utils.build_offers_data(to_create_df[((to_create_df['market'] == market.type) & (to_create_df['name_of_shop'] == market.name))], market, setup_mode=True)
             await db.create_offers(session, to_create_df_chunked)
 
         await db.update_offers(session, to_update_df, mapping_columns=['name_of_shop', 'market'])
         await db.delete_offers(session, to_delete_df)
-        await recalculate_values(session, settings)
+        await recalculate_values(session)
 
         await update_logs(session, user_id, {'updated_at': datetime.now()})
 
@@ -131,7 +129,7 @@ async def update_offers_price(session: AsyncSession):
     await api_wrapper.change_prices(data)
 
 
-async def recalculate_values(session: AsyncSession, settings, which=None):
+async def recalculate_values(session: AsyncSession, which=None):
     if which is None:
         offers = await db.get_offers(session, model_schema=OfferOut)
     else:
@@ -145,41 +143,16 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
     if df.empty:
         return
 
-    # df = await utils.calculate_offers_values(df, settings)
 
     for market in await get_markets(session):
-        df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], settings, market)
+        df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], market)
         df1.drop(['id', 'your_promotion_price', 'difference_from_recommended_retail_price'], axis=1, inplace=True, errors='ignore')
 
         await db.update_offers(session, df1, mapping_columns=['sku', 'name_of_shop'])
 
 
-@error_handler('Ошибка импорта')
-async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None, user_id: int, file_extension: str = 'xlsx') -> None:
-    async with async_session() as session:
-        settings = await get_user_settings(session, user_id)
-
-    match import_type:
-        case ImportType.TABLE:
-            return await import_offers(data, settings, name_of_shop, market, file_extension)
-
-        case ImportType.SIZES:
-            return await import_sizes(data, settings, name_of_shop, market, file_extension)
-
-        case ImportType.PRICES:
-            return await import_prices(data, settings, name_of_shop, market, file_extension)
-
-        case ImportType.FBO_STOCKS:
-            return await import_offers_stocks(data, name_of_shop, market, file_extension)
-
-        case ImportType.OWN_STORAGE:
-            return await import_own_storages(data, name_of_shop, market, file_extension)
-
-        case _:
-            raise NotImplemented(f'Import type "{import_type}" not implemented yet')
-
-
-async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+@import_handler_factory.register(ImportType.TABLE)
+async def import_offers(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     required_fields = {'sku', 'market', 'name_of_shop'}
 
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
@@ -214,10 +187,11 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
             print(e)
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
 
-        await recalculate_values(session, settings, df[['sku', 'name_of_shop', 'market']])
+        await recalculate_values(session, df[['sku', 'name_of_shop', 'market']])
 
 
-async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+@import_handler_factory.register(ImportType.PRICES)
+async def import_prices(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.drop(df.columns[[3, 4, 6, 7]], axis=1, inplace=True, errors='ignore')
     df.drop([i for i in range(8)], axis=0, inplace=True, errors='ignore')
@@ -259,10 +233,11 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
 
         now = datetime.now()
         await db.set_dollar_cost_price_updated_at(session, import_skus, now)
-        await recalculate_values(session, settings)
+        await recalculate_values(session)
 
 
-async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+@import_handler_factory.register(ImportType.SIZES)
+async def import_sizes(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, 'Список товаров', file_extension)
     df.drop([0, 1], axis=0, inplace=True, errors='ignore')
     df: pd.DataFrame = df[df.columns[[2, 13, 14]]]
@@ -294,27 +269,15 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
             print(e)
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
 
-        await recalculate_values(session, settings)
+        await recalculate_values(session)
 
 
 @error_handler('Ошибка экспорта')
-async def export_data(market: Market, export_type: ExportType, name_of_shop: str | None):
-    match export_type:
-        case ExportType.TABLE:
-            return await export_offers(name_of_shop, market), 'out.xlsx'
-
-        case ExportType.FBO_STOCKS:
-            return await export_stocks(name_of_shop, market), 'out.xlsx'
-
-        case ExportType.OWN_STORAGE:
-            return await export_own_storages(name_of_shop, market), 'out.xlsx'
-
-        case ExportType.SUPPLY:
-            return await export_supply(name_of_shop, market), 'Поставка.zip'
-        case _:
-            raise NotImplemented(f'Export type "{export_type}" not implemented yet')
+async def export_data(market: Market, export_type: ExportType, name_of_shop: str | None) -> str:
+    return await export_handler_factory(export_type, market=market, name_of_shop=name_of_shop)
 
 
+@export_handler_factory.register(ExportType.TABLE)
 async def export_offers(name_of_shop: str | None = None, market: str | None = None) -> str:
     filters = {}
 
@@ -348,10 +311,8 @@ async def create_pricing_scheme(data: PricingSchemeCreate) -> PricingSchemeOut:
 @error_handler('Не удалось обновить данные')
 async def change_pricing_scheme(user_id: int, data: PricingSchemeChange):
     async with async_session() as session:
-        settings = await get_user_settings(session, user_id)
-
         await db.change_pricing_scheme(session, data)
-        await recalculate_values(session, settings, which=[{'pricing_scheme_name': data.name}])
+        await recalculate_values(session, which=[{'pricing_scheme_name': data.name}])
 
 
 async def delete_pricing_scheme(names: list[str]):
