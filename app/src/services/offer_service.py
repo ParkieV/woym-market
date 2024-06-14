@@ -169,12 +169,6 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
         case ImportType.PRICES:
             return await import_prices(data, settings, name_of_shop, market, file_extension)
 
-        case ImportType.FBO_STOCKS:
-            return await import_offers_stocks(data, name_of_shop, market, file_extension)
-
-        case ImportType.OWN_STORAGE:
-            return await import_own_storages(data, name_of_shop, market, file_extension)
-
         case _:
             raise NotImplemented(f'Import type "{import_type}" not implemented yet')
 
@@ -295,22 +289,6 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
 
         await recalculate_values(session, settings)
-
-
-@error_handler('Ошибка экспорта')
-async def export_data(market: Market, export_type: ExportType, name_of_shop: str | None):
-    match export_type:
-        case ExportType.TABLE:
-            return await export_offers(name_of_shop, market)
-
-        case ExportType.FBO_STOCKS:
-            return await export_stocks(name_of_shop, market)
-
-        case ExportType.OWN_STORAGE:
-            return await export_own_storages(name_of_shop, market)
-
-        case _:
-            raise NotImplemented(f'Export type "{export_type}" not implemented yet')
 
 
 async def export_offers(name_of_shop: str | None = None, market: str | None = None) -> str:

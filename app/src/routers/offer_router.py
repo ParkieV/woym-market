@@ -80,15 +80,15 @@ async def delete_pricing_schemes_fields(ids: list[int]):
     return {'status': 'OK'}
 
 
-@data_router.post('/setup')
+@data_router.post('/setup', tags=['Debug'])
 async def setup_offers_data(current_user=Depends(require_staff)):
     await service.setup_offers_data(current_user.id)
     return {'status': 'OK'}
 
 
-@data_router.post('/export', dependencies=[Depends(require_staff)], tags=['Export'])
-async def export_offers(export_type: ExportType, market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
-    path = Path(await service.export_data(market, export_type, name_of_shop))
+@data_router.post('/export', dependencies=[Depends(require_staff)], tags=['Export', 'Offers'])
+async def export_offers(market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
+    path = Path(await service.export_offers(market, name_of_shop))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 

@@ -319,7 +319,7 @@ async def export_supply(warehouses: list[int] | None = None, offers: list[int] |
     async with async_session() as session:
         rez = await db.get_supply_data(session, warehouses, offers, market, name_of_shop)
 
-        if rez is None:
+        if not rez:
             raise HTTPException(status.HTTP_404_NOT_FOUND, 'No offers to supply')
 
         df = pd.DataFrame(rez)

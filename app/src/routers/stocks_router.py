@@ -27,6 +27,19 @@ async def change_own_storages(data: list[OwnStorageUpdate]):
     return {'status': 'OK'}
 
 
+@stocks_router.post('/own-storage/export', dependencies=[Depends(require_staff)], tags=['Own storage', 'Export'])
+async def export_own_storage(name_of_shop: str | None = Body(None), market: str | None = Body(None)):
+    path = Path(await service.export_own_storages(name_of_shop, market))
+    return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
+
+
+@stocks_router.post('/own-storage/import', dependencies=[Depends(require_staff)], tags=['Own storage', 'Import'])
+async def import_own_storage(data: UploadFile = File(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
+    content = await data.read()
+    await service.import_own_storages(content, name_of_shop, market, PurePath(data.filename).suffix)
+    return {'status': 'OK'}
+
+
 @stocks_router.get('/fbo', response_model=list[OfferWithStocks], dependencies=[Depends(get_current_user)], tags=['FBO'])
 async def get_fbo_stocks():
     return await service.get_offers_with_stocks()
@@ -38,7 +51,7 @@ async def change_fbo_stocks(data: list[OfferWithStocksUpdate]):
     return {'status': 'OK'}
 
 
-@stocks_router.get('/warehouses', response_model=list[WarehouseOut])
+@stocks_router.get('/warehouses', response_model=list[WarehouseOut], tags=['Warehouses'])
 async def get_warehouses():
     return await service.get_warehouses()
 
@@ -49,11 +62,25 @@ async def setup_fbo_stocks():
     return {'status': 'OK'}
 
 
-@stocks_router.post('/fbo/import', dependencies=[Depends(require_staff)], tags=['Import'])
-async def import_fbo_data(data: UploadFile = File(), name_of_shop: str | None = Body(None), warehouse_id: int | None = Body(None)):
+@stocks_router.post('/fbo/additions/import', dependencies=[Depends(require_staff)], tags=['FBO', 'Import'])
+async def import_fbo_additions_data(data: UploadFile = File(), name_of_shop: str | None = Body(None), warehouse_id: int | None = Body(None)):
     content = await data.read()
     await service.import_fbo_data(content, name_of_shop, warehouse_id, PurePath(data.filename).suffix)
     return {'status': 'OK'}
+
+
+@stocks_router.post('/fbo/import',  dependencies=[Depends(require_staff)], tags=['FBO', 'Import'])
+async def import_fbo(data: UploadFile = File(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
+    content = await data.read()
+    await service.import_offers_stocks(content, name_of_shop, market, PurePath(data.filename).suffix)
+    return {'status': 'OK'}
+
+
+@stocks_router.post('/fbo/export', dependencies=[Depends(require_staff)], tags=['FBO', 'Export'])
+async def export_fbo_stocks(name_of_shop: str | None = Body(None), market: str | None = Body(None)):
+    path = Path(await service.export_stocks(name_of_shop, market))
+    return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
+
 
 
 @stocks_router.post('/supply/export', dependencies=[Depends(require_staff)], tags=['Export'])
