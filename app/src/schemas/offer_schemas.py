@@ -182,7 +182,6 @@ class ImportType(str, Enum):
     TABLE = 'table'
     FBO_STOCKS = 'matrix-fbo-stocks'
     OWN_STORAGE = 'matrix-own-storage'
-    FBO_EXTERNAl_DATA = 'fbo-external-data'
 
 
 class ExportType(str, Enum):

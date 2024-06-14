@@ -6,7 +6,7 @@ from src.database.offer_db import get_pricing_schemes
 from src.database.db import async_session
 from src.schemas.settings_schemas import MarketOut
 
-async def calculate_offers_values(data: pd.DataFrame, market_settings: MarketOut) -> pd.DataFrame:
+async def calculate_offers_values(data: pd.DataFrame, settings, market_settings: MarketOut) -> pd.DataFrame:
     data = data.copy()
 
     data['yandex_volume'] = data['yandex_length'] * data['yandex_width'] * data['yandex_height'] / 1000
@@ -109,7 +109,7 @@ async def calculate_price(data: pd.DataFrame, market_settings: MarketOut) -> pd.
     return df
 
 
-async def build_offers_data(data: pd.DataFrame, market, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False, default_price_scheme_id: int = 1) -> pd.DataFrame:
+async def build_offers_data(data: pd.DataFrame, settings, market, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False, default_price_scheme_id: int = 1) -> pd.DataFrame:
     data = data.copy()
 
     if data.empty:
@@ -135,7 +135,7 @@ async def build_offers_data(data: pd.DataFrame, market, total_price_coeff: float
     data['use_manual_min_price'] = False
     data['auto_price_control'] = True
 
-    data = await calculate_offers_values(data, market)
+    data = await calculate_offers_values(data, settings, market)
     data['auto_price_control'] = False
     data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']] = data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']].astype('string')
 

@@ -1,10 +1,6 @@
-from typing import Callable
-
-from fastapi import APIRouter, File, Depends, UploadFile, status, Body, Form
+from fastapi import APIRouter, File, Depends, UploadFile, status
 from fastapi.responses import FileResponse
-from pathlib import PurePath, Path
-
-from pydantic import BaseModel
+from pathlib import PurePath
 from starlette.background import BackgroundTask
 
 from src.dependencies.users import get_current_user, require_staff
@@ -20,13 +16,12 @@ from src.schemas.offer_schemas import (
     PricingSchemeFieldChange, PricingSchemeChange
 )
 from src.services import offer_service as service
-from src.services.base_utils import clean_up_files, import_handler_factory, export_handler_factory
+from src.services.base_utils import clean_up_files
 
 data_router = APIRouter(
     prefix='/data',
     tags=['Data']
 )
-
 
 
 @data_router.get('/offers', response_model=list[OfferOut])
@@ -91,25 +86,18 @@ async def setup_offers_data(current_user=Depends(require_staff)):
     return {'status': 'OK'}
 
 
-class BodyDTO(BaseModel):
-    market: Market | None = Form(None)
-    name_of_shop: str | None = Form(None)
-    warehouses: list[int] | None = Form(None)
-    offers: list[int] | None = Form(None)
-    warehouse_id: int | None = Form(None)
-
-
-@data_router.post('/export', dependencies=[Depends(require_staff)])
-async def export_offers(export_type: ExportType, data: BodyDTO = Depends()):
-    path = Path(await export_handler_factory(export_type, **data.model_dump()))
-    return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, path))
+@data_router.get('/export', dependencies=[Depends(require_staff)])
+async def export_offers(export_type: ExportType, market: Market | None = None, name_of_shop: str | None = None):
+    path, file_name = await service.export_data(market, export_type, name_of_shop)
+    return FileResponse(path=path, filename=file_name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, path))
 
 
 @data_router.post('/import')
-async def import_offers(import_type: ImportType, data: BodyDTO = Depends(), file: UploadFile = File(...), current_user=Depends(require_staff)):
-    content = await file.read()
-    await import_handler_factory(import_type, data=content, user_id=current_user.id, file_extension=PurePath(file.filename).suffix, **data.model_dump())
+async def import_offers(import_type: ImportType, data: UploadFile = File(), market: Market | None = None, name_of_shop: str | None = None, current_user=Depends(require_staff)):
+    content = await data.read()
+    await service.import_data(content, market, import_type, name_of_shop, current_user.id, PurePath(data.filename).suffix)
     return {'status': 'OK'}
+
 
 
 

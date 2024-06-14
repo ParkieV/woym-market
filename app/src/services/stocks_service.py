@@ -11,15 +11,14 @@ from src.database import warehouse_db as db
 from src.database import offer_db
 import src.services.offer_utils as utils
 from src.database.settings_db import get_markets
-from src.schemas.offer_schemas import OfferOut, ExportType, ImportType
+from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, \
     OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate
-from src.services.base_utils import error_handler, clean_up_files, export_handler_factory
+from src.services.base_utils import error_handler, clean_up_files
 from datetime import datetime
 from pathlib import Path
 from shutil import make_archive
 from src.database import settings_db
-from src.services.base_utils import import_handler_factory
 
 
 api_wrapper = APIWrapper()
@@ -162,7 +161,6 @@ async def import_offers_stocks(data, name_of_shop: str | None = None, market: st
 
 
 @error_handler('Ошибка экспорта остатков магазинов.')
-@export_handler_factory.register(ExportType.FBO_STOCKS)
 async def export_stocks(name_of_shop: str | None = None, market: str | None = None) -> str:
     offers_with_stocks = await get_offers_with_stocks()
     warehouses = await get_warehouses()
@@ -200,7 +198,6 @@ async def export_stocks(name_of_shop: str | None = None, market: str | None = No
 
 
 @error_handler('Ошибка экспорта собственных остатков.')
-@export_handler_factory.register(ExportType.OWN_STORAGE)
 async def export_own_storages(name_of_shop: str | None = None, market: str | None = None) -> str:
     data = await get_own_storages()
     columns = ['sku', 'Название', 'Фото', 'Магазин', 'Маркетплейс', 'Примечание 1', 'Примечание 2', 'Примечание 3',
@@ -318,10 +315,9 @@ market_handlers = {
 
 
 @error_handler('Ошибка экспорта поставки.')
-@export_handler_factory.register(ExportType.SUPPLY)
-async def export_supply(warehouses: list[int], offers: list[int], name_of_shop: str | None = None, market: str | None = None):
+async def export_supply(name_of_shop: str | None = None, market: str | None = None):
     async with async_session() as session:
-        rez = await db.get_supply_data(session, market, name_of_shop, offers, warehouses)
+        rez = await db.get_supply_data(session, market, name_of_shop)
 
         if rez is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, 'No offers to supply')
@@ -369,7 +365,6 @@ async def export_supply(warehouses: list[int], offers: list[int], name_of_shop: 
         return response_file_path
 
 
-@import_handler_factory.register(ImportType.FBO_EXTERNAl_DATA)
 async def import_fbo_data(data, name_of_shop: str | None, warehouse_id: int | None, file_extension: str) -> str:
     df = utils.bytes_to_data_frame(data, file_extension=file_extension, header=1)
     df.rename({

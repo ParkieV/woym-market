@@ -74,7 +74,6 @@ class OfferWithStocks(BaseModel):
     cost_price: float | None
     profit: float | None
     self_weight: float | None
-    volume: float | None
     hidden: bool
     stocks: list[OfferStockWithWarehouseOut]
 
@@ -102,13 +101,6 @@ class OfferWithStocks(BaseModel):
         if self.margin is None:
             return None
         return self.margin * self.total_for_delivery
-
-    @computed_field
-    @property
-    def total_volume(self) -> float | None:
-        if self.volume is None:
-            return None
-        return self.volume * self.total_for_delivery
 
     @computed_field
     @property

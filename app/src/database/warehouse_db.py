@@ -277,7 +277,7 @@ async def update_own_storages_by_sku(session: AsyncSession, data: list[dict]):
     await session.commit()
 
 
-async def get_supply_data(session: AsyncSession, market: str | None, name_of_shop: str | None, offers_id: list[int] | None = None, warehouses_id: list[int] | None = None) -> list[WarehouseOut]:
+async def get_supply_data(session: AsyncSession, market: str | None, name_of_shop: str | None):
     query = (
         select(Offer.sku, Offer.name, Offer.name_of_shop, Offer.market, OfferStock.for_delivery, Warehouse.name,
                Offer.supplier_available, OwnStorage.value, Offer.barcodes, Offer.current_price)
@@ -290,12 +290,6 @@ async def get_supply_data(session: AsyncSession, market: str | None, name_of_sho
 
     if name_of_shop:
         query = query.where(Offer.name_of_shop == name_of_shop)
-
-    if warehouses_id:
-        query = query.where(Warehouse.id.in_(warehouses_id))
-
-    if offers_id:
-        query = query.where(Offer.id.in_(offers_id))
 
     result = await session.execute(query)
     return [
