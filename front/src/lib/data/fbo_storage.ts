@@ -6,7 +6,11 @@ export type FboStocks = OfferBase & {
     stocks: FboStorage[];
     name_of_shop: string;
     supplier_available: boolean;
-    hidden: boolean;
+    volume: number;
+    margin: number;
+    self_weight: number;
+    cost_price: number;
+    profit: number;
 };
 
 export type FboStorage = {
@@ -18,6 +22,8 @@ export type FboStorage = {
         name: string;
         warehouse_type: "warehouse" | "cluster";
     };
+    in_box: number;
+    is_deliver_in_boxes: number;
 };
 
 export async function fetchFboStocks(fetch_?: typeof fetch): Promise<FboStocks[]> {

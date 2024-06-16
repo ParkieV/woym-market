@@ -1,9 +1,5 @@
 import type { Column, ColumnGroup } from "$lib/datagrid/columns";
-import type {
-    GetContextMenuItems,
-    GetContextMenuItemsParams,
-    ValueGetterParams
-} from "ag-grid-enterprise";
+import type { GetContextMenuItems, ValueGetterParams } from "ag-grid-enterprise";
 import type { FboStocks, FboStorage } from "$lib/data/fbo_storage";
 import {
     BooleanColumn,
@@ -11,14 +7,16 @@ import {
     ImageColumn,
     StringColumn,
     floatColumn,
-    intColumn
+    intColumn,
+    percentColumn,
+    rubleColumn
 } from "$lib/datagrid/columns/types";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import { GridDefinition } from "$lib/datagrid";
 import { get } from "svelte/store";
 import { userCanModify } from "$lib/data/user";
 import type { ChangeList } from "$lib/datagrid/plugins/changes";
-import { selectedContextMenuItems, selectedStocks, selectedStorage } from "./selected";
+import { selectedContextMenuItems } from "./selected";
 import { calcToDeliver } from "./fbo-warehouse";
 
 export default function fboOffersGrid(
@@ -97,9 +95,16 @@ function columns(): (Column | ColumnGroup)[] {
                     columnGroupShow: "closed"
                 },
                 {
-                    key: "total_weight",
+                    base: floatColumn,
+                    key: "self_weight",
                     header: "Вес, кг",
-                    base: floatColumn
+                    valueGetter: e => e.data.self_weight * e.getValue("to_deliver")
+                },
+                {
+                    base: floatColumn,
+                    key: "volume",
+                    header: "Объём, л",
+                    valueGetter: e => e.data.volume * e.getValue("to_deliver")
                 }
             ]
         },
@@ -149,19 +154,21 @@ function columns(): (Column | ColumnGroup)[] {
             header: "Ценообразование",
             children: [
                 {
-                    key: "total_cost_price",
+                    key: "cost_price",
                     header: "Стоимость",
-                    base: floatColumn
+                    base: rubleColumn,
+                    valueGetter: e => e.data.cost_price * e.getValue("to_deliver")
                 },
                 {
-                    key: "total_margin",
+                    key: "margin",
                     header: "Окупаемость",
-                    base: floatColumn
+                    base: percentColumn
                 },
                 {
-                    key: "total_profit",
+                    key: "profit",
                     header: "Предполагаемая прибыль",
-                    base: floatColumn
+                    base: floatColumn,
+                    valueGetter: e => e.data.profit * e.getValue("to_deliver")
                 }
             ]
         },
