@@ -19,6 +19,7 @@ import { get } from "svelte/store";
 import { userCanModify } from "$lib/data/user";
 import type { ChangeList } from "$lib/datagrid/plugins/changes";
 import { selectedContextMenuItems, selectedStocks, selectedStorage } from "./selected";
+import { calcToDeliver } from "./fbo-warehouse";
 
 export default function fboOffersGrid(
     changes: ChangeList<FboStocks, "id">,
@@ -131,9 +132,10 @@ function columns(): (Column | ColumnGroup)[] {
                     base: intColumn,
                     valueGetter: (params: ValueGetterParams<FboStocks>) => {
                         if (!params.data) return 0;
-                        return params.data.stocks
-                            .map(x => Math.max(0, x.min_stock - x.current_stock))
-                            .reduce((a, b) => a + b, 0);
+                        return params.data.stocks.reduce(
+                            (sum, storage) => sum + calcToDeliver(storage),
+                            0
+                        );
                     }
                 },
                 {

@@ -55,15 +55,7 @@ function columns(): (Column | ColumnGroup)[] {
             base: intColumn,
             valueGetter: params => {
                 if (params.data) {
-                    let diff = Math.max(0, params.data.min_stock - params.data.current_stock);
-                    let { is_deliver_in_boxes, in_box } = params.data;
-                    if (is_deliver_in_boxes) {
-                        let boxes_remainder = 0;
-                        if (diff % in_box !== 0) boxes_remainder = 1;
-                        let boxes = Math.floor(diff / in_box) + boxes_remainder;
-                        return boxes * in_box;
-                    }
-                    return diff;
+                    return calcToDeliver(params.data);
                 } else {
                     return 0;
                 }
@@ -97,4 +89,20 @@ function columns(): (Column | ColumnGroup)[] {
             editable: true
         }
     ];
+}
+
+export function calcToDeliver({
+    min_stock,
+    current_stock,
+    is_deliver_in_boxes,
+    in_box
+}: FboStorage): number {
+    let diff = Math.max(0, min_stock - current_stock);
+    if (is_deliver_in_boxes) {
+        let boxes_remainder = 0;
+        if (diff % in_box !== 0) boxes_remainder = 1;
+        let boxes = Math.floor(diff / in_box) + boxes_remainder;
+        return boxes * in_box;
+    }
+    return diff;
 }
