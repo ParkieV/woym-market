@@ -17,7 +17,7 @@ import {
     ImageColumn
 } from "$lib/datagrid/columns/types";
 
-export default function offerGrid(templates: Template[]): GridDefinition {
+export default function offerGrid(templates: Template[]): GridDefinition<Offer> {
     return new GridDefinition(BASE_GRID_OPTIONS, columns(templates));
 }
 

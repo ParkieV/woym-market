@@ -6,12 +6,11 @@
         type FboStorage
     } from "$lib/data/fbo_storage";
     import Footer from "../Footer.svelte";
-    import { getContext, onMount, setContext } from "svelte";
+    import { getContext, onMount } from "svelte";
     import Grid from "$lib/grid/Grid.svelte";
     import { writable, type Writable } from "svelte/store";
-    import type { GridDefinition } from "$lib/datagrid";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
-    import fboOffersGrid from "./fbo-offer";
+    import fboOffersGrid, { calcStocksToDeliver } from "./fbo-offer";
     import { userCanModify } from "$lib/data/user";
     import type { Filter } from "$lib/datagrid/filters";
     import Toolbar from "./Toolbar.svelte";
@@ -28,6 +27,7 @@
     import RowSelectionPlugin from "$lib/datagrid/plugins/row-selection";
     import DetailGridPlugin from "$lib/datagrid/plugins/detail";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
+    import { SummaryPlugin } from "$lib/datagrid/plugins/summary";
 
     export let data: PageData;
     let stocks: FboStocks[] = [];
@@ -84,7 +84,7 @@
                 })
             );
 
-        return fboOffersGrid(changes, innerChanges)
+        const master = fboOffersGrid(changes, innerChanges)
             .plugin(new FilterPlugin(filterStore))
             .plugin(new StatePlugin("fbo_storage"))
             .plugin(new ChangesPlugin("id", changes))
@@ -92,7 +92,27 @@
             .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(new ClassesPlugin())
             .plugin(new RowSelectionPlugin(selectedStocks))
-            .plugin(new DetailGridPlugin(detail, data => data.stocks));
+            .plugin(new DetailGridPlugin(detail, data => data.stocks))
+            .plugin(
+                new SummaryPlugin<FboStocks>({
+                    sku: () => "Итого",
+                    volume: ({ rows }) =>
+                        rows.reduce((sum, row) => sum + row.volume * calcStocksToDeliver(row), 0),
+                    self_weight: ({ rows }) =>
+                        rows.reduce(
+                            (sum, row) => sum + row.self_weight * calcStocksToDeliver(row),
+                            0
+                        ),
+                    cost_price: ({ rows }) =>
+                        rows.reduce(
+                            (sum, row) => sum + row.cost_price * calcStocksToDeliver(row),
+                            0
+                        ),
+                    profit: ({ rows }) =>
+                        rows.reduce((sum, row) => sum + row.profit * calcStocksToDeliver(row), 0)
+                })
+            );
+        return master;
     })();
 </script>
 

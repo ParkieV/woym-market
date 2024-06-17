@@ -22,6 +22,7 @@ export default class DetailGridPlugin<TData, TDetail> implements GridPlugin<TDat
                     ...this.detail.options,
                     onCellValueChanged: e => {
                         func?.(e);
+                        api.dispatchEvent({ type: "refreshSummary" });
                         api.refreshCells({ force: true });
                     }
                 },

@@ -175,3 +175,7 @@ function columns(): (Column | ColumnGroup)[] {
         { header: "Скрыт", key: "hidden", base: new BooleanColumn(), editable: true }
     ];
 }
+
+export function calcStocksToDeliver(stock: FboStocks) {
+    return stock.stocks.reduce((sum, storage) => sum + calcToDeliver(storage), 0);
+}
