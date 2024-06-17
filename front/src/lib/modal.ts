@@ -23,7 +23,14 @@ export async function showFetchModals<R extends Response | Response[]>(
         } else if (response.status >= 500 && response.status <= 599) {
             showNotification("Ошибка сервера", "Не удалось достичь сервера.");
         } else if (response.status >= 400 && response.status <= 499) {
-            showNotification(errorHeader ?? "Ошибка", (await response.json()).detail);
+            showNotification(errorHeader ?? "Ошибка", printError((await response.json()).detail));
+        }
+
+        function printError(detail: unknown): string {
+            if (detail === undefined || detail === null) return "";
+            if (typeof detail === "string") return detail.toString();
+            console.error(detail);
+            return "Неожиданная ошибка";
         }
     }
 }

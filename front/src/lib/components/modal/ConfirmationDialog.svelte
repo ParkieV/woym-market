@@ -24,7 +24,9 @@
     <Modal open={isOpen}>
         <div>
             <h1>{header}</h1>
-            <span>{text}</span>
+            {#if text}
+                <span>{text}</span>
+            {/if}
             <footer>
                 {#if showCancelButton}
                     <button class="cancel" on:click={cancel}>Отмена</button>
