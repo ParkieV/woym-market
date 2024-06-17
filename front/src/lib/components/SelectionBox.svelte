@@ -1,6 +1,4 @@
 <script lang="ts" generics="T extends { id: number }">
-    import { onMount } from "svelte";
-
     export let selectedId: number | null = null;
     export let data: T[] | Promise<T[]>;
     let container: HTMLDivElement;

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { getStoreNames, getStoreTypes } from "$lib/data/markets";
     import { onMount } from "svelte";
-    import type SimpleImport from "./simple";
+    import type { SimpleImport } from ".";
 
     export let data: SimpleImport;
 
@@ -16,7 +16,7 @@
 
 <label>
     <span>Маркет</span>
-    <select bind:value={data.market}>
+    <select bind:value={data.props.market}>
         <option value={null}>Все</option>
         {#await markets then markets}
             {#each markets as market}
@@ -27,7 +27,7 @@
 </label>
 <label>
     <span>Магазин</span>
-    <select bind:value={data.name_of_shop}>
+    <select bind:value={data.props.name_of_shop}>
         <option value={null}>Все</option>
         {#await shops then shops}
             {#each shops as shop}

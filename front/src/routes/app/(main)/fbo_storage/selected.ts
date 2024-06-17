@@ -15,13 +15,6 @@ export function selectedContextMenuItems(
 ): MenuItemDef[] {
     return [
         {
-            name: "Поставка",
-            icon: icon("/package.svg"),
-            tooltip: "Экспортировать файл поставки",
-            disabled: get(selectedStocks).size === 0 || get(selectedStorage).size === 0,
-            action: () => alert("Not implemented")
-        },
-        {
             name: "Мин. остаток",
             icon: icon("/arrow-line-down.svg"),
             tooltip: "Установить минимальный остаток у выделенных складов и товаров.",

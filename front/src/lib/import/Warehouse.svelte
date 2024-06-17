@@ -1,11 +1,11 @@
 <script lang="ts">
     import { getStoreNames } from "$lib/data/markets";
     import { onMount } from "svelte";
-    import type WarehouseImport from "./warehouse";
     import SelectionBox from "$lib/components/SelectionBox.svelte";
     import { getWarehouses, type Warehouse } from "$lib/data/warehouse";
+    import type { FboAdditionsImport } from ".";
 
-    export let data: WarehouseImport;
+    export let data: FboAdditionsImport;
 
     let shops: Promise<string[]> = Promise.resolve([]);
     let warehouses: Promise<Warehouse[]> = Promise.resolve([]);
@@ -22,7 +22,7 @@
 
 <label>
     <span>Магазин</span>
-    <select bind:value={data.name_of_shop}>
+    <select bind:value={data.props.name_of_shop}>
         <option value={null} disabled>Не выбрано</option>
         {#await shops then shops}
             {#each shops as shop}
@@ -33,7 +33,7 @@
 </label>
 <section>
     <span>Склад</span>
-    <SelectionBox bind:selectedId={data.warehouse_id} data={warehouses} let:value>
+    <SelectionBox bind:selectedId={data.props.warehouse_id} data={warehouses} let:value>
         <li
             title={`${value.name}, ${
                 value.from_file_updated_at

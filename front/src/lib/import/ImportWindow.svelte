@@ -1,36 +1,20 @@
 <script lang="ts">
     import { createEventDispatcher, onMount } from "svelte";
     import Window from "../components/windows/Window.svelte";
-    import { getStoreNames, getStoreTypes } from "$lib/data/markets";
-    import Import from ".";
-    import SimpleImport from "./simple";
-    import WarehouseImport from "./warehouse";
+    import { Import, SimpleImport, FboAdditionsImport } from ".";
     import Simple from "./Simple.svelte";
     import Warehouse from "./Warehouse.svelte";
 
     export let open: boolean;
-    let data: Import = new SimpleImport();
+
+    let data: Import | null = null;
+    $: if (!open) data = null;
 
     const ok = async () => {
+        if (data === null) return;
         let { ok } = await data.import();
         if (ok) dispatch("import");
         open = false;
-    };
-
-    const change = () => {
-        let newData: Import;
-        if (SimpleImport.matchKind(data.kind)) {
-            newData = new SimpleImport();
-        } else if (WarehouseImport.matchKind(data.kind)) {
-            newData = new WarehouseImport();
-        } else {
-            throw new Error("Необработанный вид импорта.");
-        }
-
-        if (data.constructor !== newData.constructor) {
-            newData.kind = data.kind;
-            data = newData;
-        }
     };
 
     let dispatch = createEventDispatcher<{ import: void }>();
@@ -41,24 +25,25 @@
     <div>
         <label>
             <span>Вид</span>
-            <select bind:value={data.kind} on:change={change}>
-                <option value="table">Таблица</option>
-                <option value="sizes">Размеры</option>
-                <option value="prices">Цены</option>
-                <option value="matrix-fbo-stocks">FBO остатки</option>
-                <option value="matrix-own-storage">Свои остатки</option>
-                <option value="fbo-yandex">FBO Яндекс</option>
+            <select bind:value={data}>
+                <option value={null} disabled>Не выбрано</option>
+                <option value={new SimpleImport("data/import", "table")}>Таблица</option>
+                <option value={new SimpleImport("data/import", "sizes")}>Размеры</option>
+                <option value={new SimpleImport("data/import", "prices")}>Цены</option>
+                <option value={new SimpleImport("stocks/own-storage/import")}>Мои остатки</option>
+                <option value={new SimpleImport("stocks/fbo/import")}>FBO остатки</option>
+                <option value={new FboAdditionsImport()}>FBO Яндекс</option>
             </select>
         </label>
         {#if data instanceof SimpleImport}
             <Simple bind:data />
-        {:else if data instanceof WarehouseImport}
+        {:else if data instanceof FboAdditionsImport}
             <Warehouse bind:data />
         {/if}
     </div>
     <svelte:fragment slot="footer">
         <button class="cancel" on:click={() => (open = false)}>Отмена</button>
-        <button class="confirm" on:click={ok} disabled={!data.valid}>Ок</button>
+        <button class="confirm" on:click={ok} disabled={!data || !data.valid}>Ок</button>
     </svelte:fragment>
 </Window>
 
