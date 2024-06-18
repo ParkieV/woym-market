@@ -193,7 +193,7 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     key: "profit",
                     header: "Прибыль",
                     base: rubleColumn,
-                    tooltip: "Текущая цена - налог - FBO  - себестоимость"
+                    tooltip: "Ваша цена по акции - налог - FBO - себестоимость"
                 },
                 {
                     key: "total_price_coeff",
@@ -220,6 +220,7 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "fbo",
                     header: "Цена за FBO",
+                    tooltip: "Комиссия за продажу в FBO (%) + Цена доп. логистики за превышение порога хранения",
                     base: rubleColumn
                 },
                 {
