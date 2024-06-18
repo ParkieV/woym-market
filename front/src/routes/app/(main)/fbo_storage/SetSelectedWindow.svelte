@@ -14,8 +14,8 @@
 
     export let grid: GridApi<FboStocks>;
 
-    export let changes: ChangeList<FboStocks, "id">;
-    export let innerChanges: ChangeList<FboStorage, "id">;
+    export let changes: Writable<ChangeList<FboStocks, "id">>;
+    export let innerChanges: Writable<ChangeList<FboStorage, "id">>;
 
     export let selectedStocks: Writable<Map<FboStocks, FboStocks>>;
     export let selectedStorage: Writable<Map<number, FboStorage>>;
@@ -25,15 +25,17 @@
 
         grid.forEachNode(node => {
             if (node.data === undefined || !$selectedStocks.has(node.data)) return;
-            changes.add(node.data.id);
+            $changes.add(node.data.id);
             for (const stock of node.data.stocks) {
                 if ($selectedStorage.has(stock.warehouse.id)) {
                     changedStocks.add(node);
-                    innerChanges.add(stock.id);
+                    $innerChanges.add(stock.id);
                     stock.min_stock = target;
                 }
             }
             refreshDetail(node);
+            $changes = $changes;
+            $innerChanges = $innerChanges;
         });
         grid.refreshCells({ rowNodes: Array.from(changedStocks) });
         isOpen = false;

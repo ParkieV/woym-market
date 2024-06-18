@@ -3,15 +3,15 @@ import type { ChangeList } from "$lib/datagrid/plugins/changes";
 import { num_word } from "$lib/util";
 import type { MenuItemDef } from "ag-grid-enterprise";
 import { openModal } from "svelte-modals";
-import { derived, get, writable } from "svelte/store";
+import { derived, get, writable, type Writable } from "svelte/store";
 import SetSelectedWindow from "./SetSelectedWindow.svelte";
 
 export let selectedStocks = writable(new Map<FboStocks, FboStocks>());
 export let selectedStorage = writable(new Map<number, FboStorage>());
 
 export function selectedContextMenuItems(
-    changes: ChangeList<FboStocks, "id">,
-    innerChanges: ChangeList<FboStorage, "id">
+    changes: Writable<ChangeList<FboStocks, "id">>,
+    innerChanges: Writable<ChangeList<FboStorage, "id">>
 ): MenuItemDef[] {
     return [
         {

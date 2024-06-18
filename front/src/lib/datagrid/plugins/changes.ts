@@ -1,6 +1,7 @@
 import type { CellValueChangedEvent } from "ag-grid-enterprise";
 import type { GridPlugin } from ".";
 import type { MyGridOptions } from "..";
+import { get, type Writable } from "svelte/store";
 
 /**
  * Modifies provided grid options to enable change monitoring.
@@ -10,7 +11,7 @@ import type { MyGridOptions } from "..";
 export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T> {
     constructor(
         private key: K,
-        private changes: ChangeList<T, K>,
+        private changes: Writable<ChangeList<T, K>>,
         private onChange?: (e: CellValueChangedEvent<T, K>) => void | Promise<void>
     ) {}
 
@@ -23,7 +24,7 @@ export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T
                     }
                     col.cellClassRules.changed = ({ data }) => {
                         if (!data) return false;
-                        return this.changes.isChanged(data[this.key]);
+                        return get(this.changes).isChanged(data[this.key]);
                     };
                 }
             }
@@ -31,7 +32,10 @@ export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T
 
         let func = opts.onCellValueChanged;
         opts.onCellValueChanged = e => {
-            this.changes.add(e.data[this.key]);
+            this.changes.update(changes => {
+                changes.add(e.data[this.key]);
+                return changes;
+            });
             e.api.refreshCells({ rowNodes: [e.node] });
             this.onChange?.(e);
             func?.(e);

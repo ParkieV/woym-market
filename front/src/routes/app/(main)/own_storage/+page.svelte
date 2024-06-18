@@ -22,7 +22,7 @@
 
     let definition: GridDefinition;
     let storage: OwnStorage[] = [];
-    let changes = new ChangeList<OwnStorage, "sku">();
+    let changes = writable(new ChangeList<OwnStorage, "sku">());
 
     let refresh = getContext<Writable<() => {}>>("refresh");
     $refresh = refreshData;
@@ -43,13 +43,13 @@
     });
 
     async function save() {
-        let ok = await patchOwnStorages(storage.filter(x => changes.isChanged(x.sku)));
+        let ok = await patchOwnStorages(storage.filter(x => $changes.isChanged(x.sku)));
         if (ok) await refreshData();
     }
 
     async function refreshData() {
-        changes.clear();
-        changes = changes;
+        $changes.clear();
+        $changes = $changes;
         storage = (await fetchOwnStorages()).data;
     }
 
@@ -66,4 +66,4 @@
 {#if definition}
     <Grid {definition} bind:data={storage} />
 {/if}
-<Footer bind:changes on:reload={refreshData} on:save={save} />
+<Footer bind:changes={$changes} on:reload={refreshData} on:save={save} />

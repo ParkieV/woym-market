@@ -220,7 +220,8 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "fbo",
                     header: "Цена за FBO",
-                    tooltip: "Комиссия за продажу в FBO (%) + Цена доп. логистики за превышение порога хранения",
+                    tooltip:
+                        "Комиссия за продажу в FBO (%) + Цена доп. логистики за превышение порога хранения",
                     base: rubleColumn
                 },
                 {

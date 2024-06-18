@@ -13,15 +13,15 @@ import {
 } from "$lib/datagrid/columns/types";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import { GridDefinition } from "$lib/datagrid";
-import { get } from "svelte/store";
+import { get, type Writable } from "svelte/store";
 import { userCanModify } from "$lib/data/user";
 import type { ChangeList } from "$lib/datagrid/plugins/changes";
 import { selectedContextMenuItems } from "./selected";
 import { calcToDeliver } from "./fbo-warehouse";
 
 export default function fboOffersGrid(
-    changes: ChangeList<FboStocks, "id">,
-    innerChanges: ChangeList<FboStorage, "id">
+    changes: Writable<ChangeList<FboStocks, "id">>,
+    innerChanges: Writable<ChangeList<FboStorage, "id">>
 ): GridDefinition<FboStocks> {
     return new GridDefinition({ ...BASE_GRID_OPTIONS, getContextMenuItems }, columns());
 

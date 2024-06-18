@@ -23,17 +23,17 @@
 
     let definition: GridDefinition<Offer>;
     let offers: Offer[] = [];
-    let changes = new ChangeList<Offer, "id">();
+    let changes = writable(new ChangeList<Offer, "id">());
 
     /** Refreshes data displayed in the grid. */
     async function refreshData() {
-        changes.clear();
-        changes = changes;
+        $changes.clear();
+        $changes = $changes;
         offers = await fetchOfferList();
     }
 
     async function save() {
-        let ok = await patchOfferList(offers.filter(x => changes.isChanged(x.id)));
+        let ok = await patchOfferList(offers.filter(x => $changes.isChanged(x.id)));
         if (ok) await refreshData();
     }
 
@@ -86,4 +86,4 @@
 {#if definition}
     <Grid {definition} bind:data={offers} />
 {/if}
-<Footer bind:changes on:reload={refreshData} on:save={save} />
+<Footer bind:changes={$changes} on:reload={refreshData} on:save={save} />

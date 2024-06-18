@@ -32,21 +32,21 @@
     export let data: PageData;
     let stocks: FboStocks[] = [];
 
-    let changes = new ChangeList<FboStocks, "id">();
-    let innerChanges = new ChangeList<FboStorage, "id">();
+    let changes = writable(new ChangeList<FboStocks, "id">());
+    let innerChanges = writable(new ChangeList<FboStorage, "id">());
 
     let selected_image: string | undefined = undefined;
 
     async function refreshData() {
-        changes.clear();
-        changes = changes;
-        innerChanges.clear();
-        innerChanges = innerChanges;
+        $changes.clear();
+        $changes = $changes;
+        $innerChanges.clear();
+        $innerChanges = $innerChanges;
         stocks = await fetchFboStocks();
     }
 
     async function save() {
-        let ok = await patchFboStocks(stocks.filter(x => changes.isChanged(x.id)));
+        let ok = await patchFboStocks(stocks.filter(x => $changes.isChanged(x.id)));
         if (ok) await refreshData();
     }
 
@@ -70,8 +70,8 @@
                 new ChangesPlugin("id", innerChanges, ({ data }) => {
                     let stock = stocks.find(x => x.stocks.some(s => s.id === data.id));
                     if (stock) {
-                        changes.add(stock.id);
-                        changes = changes;
+                        $changes.add(stock.id);
+                        $changes = $changes;
                     }
                 })
             )
@@ -124,4 +124,4 @@
 {#if browser}
     <Grid {definition} bind:data={stocks} />
 {/if}
-<Footer bind:changes on:reload={refreshData} on:save={save} />
+<Footer bind:changes={$changes} on:reload={refreshData} on:save={save} />
