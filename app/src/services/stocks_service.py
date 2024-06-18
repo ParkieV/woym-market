@@ -278,14 +278,17 @@ async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
         df.to_excel(file_path, index=False)
 
 
-async def general_order_report(session: AsyncSession, dir_path: Path):
-    rez = await db.get_general_order_data(session)
+async def general_order_report(session: AsyncSession, dir_path: Path, warehouses: list[int] | None = None, offers: list[int] | None = None, name_of_shop: str | None = None, market: str | None = None):
+    rez = await db.get_general_order_data(session, warehouses, offers, name_of_shop, market)
     df = pd.DataFrame(rez)
     df['total_cost_price'] = df['cost_price'] * df['for_delivery']
     df['total_volume'] = df['volume'] * df['for_delivery']
     df['total_weight'] = df['self_weight'] * df['for_delivery']
+
     df = df[['sku', 'name', 'for_delivery', 'self_weight', 'total_weight', 'volume', 'total_volume', 'cost_price', 'total_cost_price']]
     df.fillna(0, inplace=True)
+    df = df[df['for_delivery'] > 0]
+
     total_row = ['Итого', np.nan, np.nan, np.nan, df['total_weight'].sum(), np.nan, df['total_volume'].sum(), np.nan,
                  df['total_cost_price'].sum()]
     df.loc[-1] = total_row
@@ -324,11 +327,15 @@ async def export_supply(warehouses: list[int] | None = None, offers: list[int] |
 
         df = pd.DataFrame(rez)
 
+
         df['for_delivery'] = np.where(
             df['supplier_available'],
             df['for_delivery'],
             df[['for_delivery', 'own_storage_value']].min(axis=1)
         )
+
+        df = df[df['for_delivery'] > 0]
+
 
         # create zip archive/folder
         zip_file_path = Path(f'data/Поставка')
@@ -355,7 +362,7 @@ async def export_supply(warehouses: list[int] | None = None, offers: list[int] |
                 # create supply files in directory
                 await handler(temp_df, shop_file_path)
 
-        await general_order_report(session, zip_file_path)
+        await general_order_report(session, zip_file_path, warehouses, offers, name_of_shop, market)
 
         # archive created directory
         response_file_path = make_archive(str(zip_file_path), root_dir=zip_file_path, format='zip')

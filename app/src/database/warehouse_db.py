@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_, func, text, bindparam
+from sqlalchemy import select, update, delete, and_, func, text, bindparam, literal_column
 from sqlalchemy.orm import selectinload, subqueryload
 from src.database.utils import _update_or_create_object, _get_or_create
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
@@ -315,20 +315,33 @@ async def get_supply_data(session: AsyncSession, warehouses: list[int] | None = 
     ]
 
 
-async def get_general_order_data(session: AsyncSession, market: str | None = None, name_of_shop: str | None = None):
+async def get_general_order_data(session: AsyncSession, warehouses: list[int] | None = None, offers: list[int] | None = None, name_of_shop: str | None = None, market: str | None = None):
     # query = (
     #     select(Offer.sku, Offer.name, Offer.volume, Offer.cost_price, Offer.self_weight)
     #     .join(OfferStock, OfferStock.offer_id == Offer.id)
     # )
     # offers_query = """SELECT offers.sku, offers.name, offers.volume, offers.cost_price, offers.self_weight, (SELECT SUM(offers_stocks.for_delivery) as amount FROM offers_stocks WHERE offers_stocks.offer_id = offers.id) FROM offers"""
-    offers_query = """
-    SELECT offers.sku, STRING_AGG(offers.name, ', '), AVG(offers.volume), AVG(offers.cost_price), AVG(self_weight) 
-    FROM offers GROUP BY offers.sku"""
+    # offers_query = """
+    # SELECT offers.sku, STRING_AGG(offers.name, ', '), AVG(offers.volume), AVG(offers.cost_price), AVG(self_weight)
+    # FROM offers GROUP BY offers.sku"""
+    offers_query = select(Offer.sku, func.string_agg(Offer.name, literal_column("','")), func.avg(Offer.volume), func.avg(Offer.cost_price), func.avg(Offer.self_weight)).join(OfferStock, OfferStock.offer_id == Offer.id).group_by(Offer.sku)
+
+    if name_of_shop:
+        offers_query = offers_query.where(Offer.name_of_shop == name_of_shop)
+
+    if market:
+        offers_query = offers_query.where(Offer.market == market)
+
+    if warehouses:
+        offers_query = offers_query.where(OfferStock.warehouse_id.in_(warehouses))
+
+    if offers:
+        offers_query = offers_query.where(Offer.id.in_(offers))
 
     for_delivery_query = """SELECT offers.sku, SUM(offers_stocks.for_delivery) FROM offers_stocks join offers on offers.id = offers_stocks.offer_id group by offers.sku"""
     for_delivery_result = await session.execute(text(for_delivery_query))
     delivery_amount_mapping = {i[0]: i[1] for i in for_delivery_result.all()}
-    offers_result = await session.execute(text(offers_query))
+    offers_result = await session.execute(offers_query)
 
     return [GeneralOrderData(
         sku=i[0],

@@ -11,7 +11,7 @@ def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
     formatter = logging.Formatter(f"%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s")
 
     logger.addHandler(get_file_handler(f'logs/{name}.log', formatter, level))
-    logger.addHandler(get_stram_handler(formatter, level))
+    # logger.addHandler(get_stram_handler(formatter, level))
 
     return logger
 
