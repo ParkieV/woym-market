@@ -3,5 +3,9 @@
     import "../app.scss";
 </script>
 
+<svelte:head>
+    <title>mp-auto-price</title>
+</svelte:head>
+
 <Modals />
 <slot />
