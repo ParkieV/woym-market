@@ -88,7 +88,7 @@ async def setup_offers_data(current_user=Depends(require_staff)):
 
 @data_router.post('/export', dependencies=[Depends(require_staff)], tags=['Export', 'Offers'])
 async def export_offers(market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
-    path = Path(await service.export_offers(market, name_of_shop))
+    path = Path(await service.export_offers(name_of_shop, market))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 
