@@ -345,7 +345,8 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
         {
             key: "supplier_available",
             header: "Наличие у поставщика",
-            base: new BooleanColumn()
+            base: new BooleanColumn(),
+            editable: true
         },
         { header: "Скрыт", key: "hidden", base: new BooleanColumn(), editable: true }
     ];
