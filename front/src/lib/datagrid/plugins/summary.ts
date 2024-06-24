@@ -73,7 +73,18 @@ export class SummaryPlugin<T> implements GridPlugin<T> {
                 };
 
                 if (col.cellClassRules) {
-                    col.cellClassRules.editable = () => false;
+                    let editable = col.cellClassRules.editable;
+                    col.cellClassRules.editable = e => {
+                        if (e.node.isRowPinned()) {
+                            return false;
+                        } else {
+                            if (typeof editable === "string") {
+                                throw new Error("string cellClassRule is not supported");
+                            } else {
+                                return editable(e);
+                            }
+                        }
+                    };
                 }
             }
         }
