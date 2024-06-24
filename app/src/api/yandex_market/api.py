@@ -327,4 +327,5 @@ class YandexMarketAPI(BaseAPI):
                 headers=self.auth_headers,
                 json=body
             )
-            self.validate_response(response, raise_error=False)
+            self.validate_response(response, raise_error=False, body=body)
+

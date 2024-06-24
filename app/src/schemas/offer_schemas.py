@@ -92,6 +92,7 @@ class OfferChange(BaseOffer):
     manual_min_price: float | None = Field(None, title='Ручная мин. цена')
     auto_price_control: bool = Field(False, title='Авто контроль цен')
     pricing_scheme_name: str = Field(title='Id схемы ценообразования')
+    supplier_available: bool = Field(title='Наличие у поставщика')
 
     hidden: bool = Field(False, title='Скрыт')
 
@@ -140,7 +141,6 @@ class OfferOut(OfferChange):
     min_price_in_market: float | None = Field(title='Цена площадки (на Маркете)')
     your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
     min_general_markets_price: float | None = Field(title='Лучшая цена среди всех площадок')
-    supplier_available: bool = Field(title='Наличие у поставщика')
     barcodes: str | None = Field(title='Штрихкоды')
     use_promotion_price: bool = Field(title='Акция')
     wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.')

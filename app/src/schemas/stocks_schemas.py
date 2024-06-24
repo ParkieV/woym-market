@@ -124,6 +124,7 @@ class OfferWithStocksUpdate(BaseModel):
     note_1: str = ''
     note_2: str = ''
     note_3: str = ''
+    supplier_available: bool
     hidden: bool
     stocks: list[OfferStockUpdate]
 
