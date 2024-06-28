@@ -306,7 +306,7 @@ class YandexMarketAPI(BaseAPI):
     def _set_cofinance_offers_price(self, data: list[APIPriceChangeData]):
         chunk_size = 500
         business_id = self._get_business_id_by_campaign_id(self._entity_id)
-        valid_data = [i for i in data if i.auto_min_price is not None or i.auto_min_price != np.nan]
+        valid_data = [i for i in data if i.auto_min_price is not None and i.auto_min_price != np.nan]
 
         for i in range(0, len(data), chunk_size):
 
@@ -315,7 +315,10 @@ class YandexMarketAPI(BaseAPI):
                     {
                         'offer': {
                             'offerId': price_data.sku,
-                            'cofinancePrice': price_data.auto_min_price
+                            'cofinancePrice': {
+                                'value': int(price_data.auto_min_price),
+                                'currencyId': 'RUR'
+                            }
                         }
                     }
                     for price_data in valid_data[i:i+chunk_size]
