@@ -1,8 +1,9 @@
 import asyncio
+from io import BytesIO
 from typing import Any
 from fastapi import HTTPException, status
 from requests import Session
-
+import openpyxl
 from logs import get_logger
 from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS, WAREHOUSES
 import pandas as pd
@@ -56,6 +57,7 @@ class YandexMarketAPI(BaseAPI):
                 'group_sellers_amount': 0,
                 'remaining_stock': stocks.get(offer['sku'], 0),
                 'name_of_shop': self._shop_name,
+                'best_place_im_link': report_line.get('best_place_im_link', None),
                 'fbo': None
                 # 'current_price': offers_prices.get(offer['sku'], None)
             }
@@ -187,8 +189,17 @@ class YandexMarketAPI(BaseAPI):
             response = self.session.get(f'https://api.partner.market.yandex.ru/reports/info/{report_id}',
                                         headers=self.auth_headers)
             data = response.json()
-
             if data['result']['status'] == 'DONE':
+
+                output = BytesIO()
+                response = self.session.get(data['result']['file'])
+                output.write(response.content)
+
+                wb = openpyxl.load_workbook(output)
+                ws = wb.active
+                links = [row[16].hyperlink.target if row[16].hyperlink else None for row in ws.rows]
+                links_series = pd.Series(links)[1:].reset_index(drop=True)
+
                 df = self._download_report(data['result']['file'])
                 df.drop([0, 1, 2, 3], inplace=True)
                 new_df = pd.DataFrame()
@@ -197,6 +208,7 @@ class YandexMarketAPI(BaseAPI):
                         'min_price_without_market', 'best_place_im',
                         'min_price_in_market']] = df.iloc[:, [0, 6, 7, 10, 13, 14, 15, 16, 17]]
                 new_df.replace({'–': np.nan}, inplace=True)
+                new_df['best_place_im_link'] = links_series
                 new_df[['best_place_wm', 'best_place_im']] = new_df[['best_place_wm', 'best_place_im']].fillna('')
 
                 result = new_df.to_dict('records')
@@ -209,10 +221,14 @@ class YandexMarketAPI(BaseAPI):
                         'min_price_without_market': i['min_price_without_market'],
                         'best_place_im': str(i['best_place_im']).replace(' • FBY', '').replace(' • FBS', ''),
                         'min_price_in_market': i['min_price_in_market'],
-                        'your_price_for_buyers': i['your_price_for_buyers']
+                        'your_price_for_buyers': i['your_price_for_buyers'],
+                        'best_place_im_link': i['best_place_im_link']
                     }
                     for i in result
                 }
+
+                # get hyperlinks to best market price
+
                 return result
 
             elif data['result']['status'] == 'FAILED':

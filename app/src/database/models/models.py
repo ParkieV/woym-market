@@ -94,6 +94,7 @@ class Offer(Base):
     best_place_wm = Column(String, nullable=True)
     min_price_without_market = Column(Float, nullable=True)
     best_place_im = Column(String, nullable=True)
+    best_place_im_link = Column(String, nullable=True, default=None)
     min_price_in_market = Column(Float, nullable=True)
     your_price_for_buyers = Column(Float, nullable=True)
     min_general_markets_price = Column(Float, nullable=True)

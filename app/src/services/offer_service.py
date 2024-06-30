@@ -1,4 +1,10 @@
 from typing import Any
+
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen.canvas import Canvas
+from reportlab.platypus import ListFlowable, Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from logs import get_logger
@@ -20,8 +26,7 @@ from datetime import datetime
 
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
-from src.services.stocks_service import export_stocks, export_own_storages, import_offers_stocks, import_own_storages, \
-    export_supply
+
 
 api_wrapper = APIWrapper()
 
@@ -355,5 +360,22 @@ async def delete_pricing_scheme_fields(ids: list[int]) -> None:
         await db.delete_pricing_scheme_fields(session, ids)
 
 
+async def create_violators_file(market: Market | None = None, name_of_shop: str | None = None) -> str:
+    async with async_session() as session:
+        violators = await db.get_violators(session, market=market, name_of_shop=name_of_shop)
 
+        styles = getSampleStyleSheet()
+        styles['Normal'].fontName = 'DejaVuSerif'
+        pdfmetrics.registerFont(TTFont('DejaVuSerif', 'src/DejaVuSerif.ttf', 'UTF-8'))
+
+        if len(violators):
+            f = [
+                Paragraph(f'{i+1}. SKU: {violator.sku}, Маркетплейс: {violator.market}, Магазин: {violator.name_of_shop}, Цена: {round(violator.price)}, РРЦ: {round(violator.recommended_retail_price)}', style=ParagraphStyle('ParStyles', fontName='DejaVuSerif', leading=20))
+                for i, violator in enumerate(violators)]
+        else:
+            f = [Paragraph('Нарушителей не найдено.', style=ParagraphStyle('ParStyles', fontName='DejaVuSerif', leading=20))]
+        canvas = SimpleDocTemplate("data/violators.pdf", )
+        canvas.build(f)
+
+        return "data/violators.pdf"
 

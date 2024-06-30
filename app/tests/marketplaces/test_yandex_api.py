@@ -13,5 +13,11 @@ from tests.marketplaces.conftest import BaseMarketplaceAPITest
 )
 @pytest.mark.usefixtures('api')
 class TestYandexMarketAPI(BaseMarketplaceAPITest):
-    pass
+
+
+    async def test_get_market_prices_report(self, api: YandexMarketAPI):
+        _id = api._get_business_id_by_campaign_id(api._entity_id)
+        result = await api._get_market_prices_report(_id)
+
+        assert result
 

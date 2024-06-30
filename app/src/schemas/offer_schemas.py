@@ -3,6 +3,8 @@ import math
 from pydantic import BaseModel, Field, computed_field
 from abc import ABC
 from enum import Enum
+from urllib.parse import urlparse
+from urllib.parse import parse_qs
 
 
 class PricingSchemeFieldCreate(BaseModel):
@@ -139,6 +141,7 @@ class OfferOut(OfferChange):
     min_price_without_market: float | None = Field(title='Цена площадки (без учета Маркета)')
     best_place_im: str | None = Field(title='Площадка с лучшей ценой (на Маркете)')
     min_price_in_market: float | None = Field(title='Цена площадки (на Маркете)')
+    best_place_im_link: str | None = Field(title='Ссылка на магазин с лучшей ценой', exclude=True)
     your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
     min_general_markets_price: float | None = Field(title='Лучшая цена среди всех площадок')
     barcodes: str | None = Field(title='Штрихкоды')
@@ -159,6 +162,26 @@ class OfferOut(OfferChange):
         if all((self.recommended_retail_price, self.your_promotion_price)):
             return self.recommended_retail_price - self.your_promotion_price
         return None
+
+    @property
+    def violator_sku(self) -> str:
+        parsed_url = urlparse(self.best_place_im_link)
+        captured = parse_qs(parsed_url.query)
+        if 'sku' in captured:
+            return ', '.join(captured['sku'])
+        return 'Не найден'
+
+
+    @computed_field()
+    @property
+    def violator(self) -> str:
+        if not all((self.recommended_retail_price, self.min_price_in_market)):
+            return ''
+
+        if self.recommended_retail_price > self.min_price_in_market:
+            return f'SKU: {self.violator_sku}, Маркетплейс: {self.market}, Магазин: {self.best_place_im}, Цена: {round(self.min_price_in_market)}, РРЦ: {round(self.recommended_retail_price)}'
+
+        return ''
 
 
 class OfferOutWithPriceScheme(OfferOut):
@@ -184,3 +207,20 @@ class ImportType(str, Enum):
 
 class ExportType(str, Enum):
     TABLE = 'table'
+
+
+class ViolatorDTO(BaseModel):
+    market: str
+    name_of_shop: str
+    price: float
+    recommended_retail_price: float
+    link: str
+
+    @computed_field()
+    @property
+    def sku(self) -> str:
+        parsed_url = urlparse(self.link)
+        captured = parse_qs(parsed_url.query)
+        if 'sku' in captured:
+            return ', '.join(captured['sku'])
+        return 'Не найден'
