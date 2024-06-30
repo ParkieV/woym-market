@@ -99,6 +99,13 @@ async def import_offers(import_type: ImportType = Body(), data: UploadFile = Fil
     return {'status': 'OK'}
 
 
+@data_router.post('/violators/export', dependencies=[Depends(require_staff)], tags=['Offers', 'Export'])
+async def export_violators(market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
+    path = Path(await service.create_violators_file(market, name_of_shop))
+    return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data',
+                        background=BackgroundTask(clean_up_files, str(path)))
+
+
 
 
 

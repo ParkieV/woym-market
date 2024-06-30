@@ -8,7 +8,7 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload
 
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, BaseOffer, \
-    PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange
+    PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
 from .models.models import Offer, PricingScheme, PricingSchemeField
 from typing import Iterable, Any, Type
 from fastapi.exceptions import HTTPException
@@ -238,4 +238,23 @@ async def set_dollar_cost_price_updated_at(session: AsyncSession, skus: Iterable
         stmp = update(Offer).where(Offer.sku.endswith(sku)).values(dollar_cost_price_updated_at=value)
         await session.execute(stmp)
         await session.commit()
+
+
+async def get_violators(session: AsyncSession, market: str | None = None, name_of_shop: str | None = None) -> list[ViolatorDTO]:
+    query = select(Offer.best_place_im, Offer.market, Offer.min_price_in_market, Offer.recommended_retail_price, Offer.best_place_im_link).where(Offer.recommended_retail_price > Offer.min_price_in_market)
+
+    if market:
+        query = query.where(Offer.market == market)
+
+    if name_of_shop:
+        query = query.where(Offer.name_of_shop == name_of_shop)
+
+    result = (await session.execute(query)).fetchall()
+    return [ViolatorDTO(
+        name_of_shop=i[0],
+        market=i[1],
+        price=i[2],
+        recommended_retail_price=i[3],
+        link=i[4]
+    ) for i in result]
 
