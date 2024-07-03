@@ -42,6 +42,7 @@ class APIOffer:
     price_index: float | None = None
     # артикул - product id
     vendor_code: int | None = None
+    search_words: str | None = None
 
     market: str = 'yandex'
 
@@ -71,6 +72,7 @@ class APIPriceChangeData:
     min_price: float
     auto_participation_in_promotions: bool
     auto_min_price: float | None = None
+    search_words: str | None = None
 
     def is_valid_data(self) -> bool:
         return isinstance(self.target_price, (float, int))

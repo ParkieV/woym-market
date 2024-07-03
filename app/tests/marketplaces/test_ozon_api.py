@@ -14,4 +14,12 @@ from tests.marketplaces.conftest import BaseMarketplaceAPITest
 )
 @pytest.mark.usefixtures('api')
 class TestOzonAPI(BaseMarketplaceAPITest):
-    pass
+
+    async def test_get_offers_attributes(self, api: OzonAPI):
+        idents = api._get_offers_identifiers()
+        attributes = api._get_offers_attributes(idents)
+        assert isinstance(attributes, dict)
+
+
+    # async def test_set_search_words(self, api: OzonAPI):
+    #     await api._set_search_words([('28165', 'секатор; сучкорез')])
