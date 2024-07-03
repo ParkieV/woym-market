@@ -126,7 +126,7 @@ async def update_offers(user_id: int):
         to_update_price_df = pd.merge(merge_result, to_update_price_df, on=mapping_fields)
 
         # Обновление цен
-        await update_offers_price(to_update_price_df)
+        await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True])
         settings = await get_user_settings(session, user_id)
 
         # Создание новых товаров
