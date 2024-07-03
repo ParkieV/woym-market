@@ -95,6 +95,7 @@ class OfferChange(BaseOffer):
     auto_price_control: bool = Field(False, title='Авто контроль цен')
     pricing_scheme_name: str = Field(title='Id схемы ценообразования')
     supplier_available: bool = Field(title='Наличие у поставщика')
+    search_words: str | None = Field(title='Поисковые слова')
 
     hidden: bool = Field(False, title='Скрыт')
 
@@ -152,6 +153,7 @@ class OfferOut(OfferChange):
     stop_price: float | None = Field(title='Стоп цена')
     logistic_price: float | None = Field(title='Стоимость дополнительной логистики 1 литра')
     your_promotion_price: float | None = Field(title='Ваша цена по акции')
+    search_words_changed: bool = Field(title='Поисковое слово изменено пользователем')
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')

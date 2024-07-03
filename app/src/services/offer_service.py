@@ -32,6 +32,8 @@ api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
 
+CONTROL_CHANGES = ['search_words']
+
 
 async def get_offers(filters: dict[str, Any] | None = None, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
     async with async_session() as session:
@@ -40,6 +42,8 @@ async def get_offers(filters: dict[str, Any] | None = None, offset: int = 0, lim
 
 @error_handler('Ошибка изменения товаров')
 async def change_offers(offers_data: list[OfferChange], user_id: int):
+    mapping_fields = ['sku', 'name_of_shop', 'market']
+
     if not offers_data:
         return offers_data
 
@@ -49,9 +53,23 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
         [await db.check_pricing_schemes_exists(session, i) for i in changes['pricing_scheme_name'].values.tolist()]
 
+        offers_db = await db.get_offers_by(session, changes[mapping_fields].to_dict('records'))
+        offers_db_df = pd.DataFrame([i.model_dump() for i in offers_db])[changes.columns.values]
+
+        if len(offers_db_df) != len(changes):
+            logger.info('')
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Неудалось обновить товары')
+
+        merge_result = pd.merge(offers_db_df[mapping_fields + CONTROL_CHANGES], changes[mapping_fields + CONTROL_CHANGES], on=mapping_fields)
+        for field in CONTROL_CHANGES:
+            merge_result[f'{field}_changed'] = ~merge_result[f'{field}_x'].eq(merge_result[f'{field}_y'])
+            merge_result.drop([f'{field}_x', f'{field}_y'], axis='columns', inplace=True)
+
+        changes = pd.merge(changes, merge_result, on=mapping_fields)
+
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'])
-        await recalculate_values(session, settings, which=changes[['sku', 'name_of_shop', 'market']])
-        return await db.get_offers_by(session, changes[['sku', 'name_of_shop', 'market']])
+        await recalculate_values(session, settings, which=changes[mapping_fields])
+        return await db.get_offers_by(session, changes[mapping_fields])
 
 
 async def setup_offers_data(user_id: int):
@@ -72,17 +90,12 @@ async def update_offers(user_id: int):
     logger.info('Start update offers')
     start_time = datetime.now()
 
-    async with async_session() as session:
-        await update_offers_price(session)
-        settings = await get_user_settings(session, user_id)
-
-    mapping_fields = ['sku', 'name_of_shop', 'market']
-
     yandex_offers = await api_wrapper.get_offers_list()
     db_offers = await get_offers()
-
     offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
     yandex_offers_df = pd.DataFrame(yandex_offers)
+
+    mapping_fields = ['sku', 'name_of_shop', 'market']
 
     offers_db_identifiers = set([tuple(i.values()) for i in offers_df[mapping_fields].to_dict('records')])
     yandex_offers_identifiers = set([tuple(i.values()) for i in yandex_offers_df[mapping_fields].to_dict('records')])
@@ -98,9 +111,32 @@ async def update_offers(user_id: int):
     to_delete_df = pd.DataFrame(to_delete, columns=mapping_fields)
 
     async with async_session() as session:
+        to_update_price_df = offers_df.copy()
+        merge_result = pd.merge(to_update_price_df[mapping_fields + CONTROL_CHANGES + [f'{i}_changed' for i in CONTROL_CHANGES]], yandex_offers_df[mapping_fields + CONTROL_CHANGES], on=mapping_fields)
+
+        # Логика для двухсторонней синхронизации полей (наши изменения в приоритете)
+        for column in CONTROL_CHANGES:
+            merge_result[column] = np.where(
+                merge_result[f'{column}_changed'],
+                merge_result[f'{column}_x'],
+                merge_result[f'{column}_y']
+            )
+            merge_result.drop([f'{column}_x', f'{column}_y'], axis='columns', inplace=True)
+        to_update_price_df.drop(CONTROL_CHANGES + [f'{i}_changed' for i in CONTROL_CHANGES], axis='columns', inplace=True)
+        to_update_price_df = pd.merge(merge_result, to_update_price_df, on=mapping_fields)
+
+        # Обновление цен
+        await update_offers_price(to_update_price_df)
+        settings = await get_user_settings(session, user_id)
+
+        # Создание новых товаров
         for market in await get_markets(session):
             to_create_df_chunked = await utils.build_offers_data(to_create_df[((to_create_df['market'] == market.type) & (to_create_df['name_of_shop'] == market.name))], settings, market, setup_mode=True)
             await db.create_offers(session, to_create_df_chunked)
+
+        # Снять галочки с измененных полей
+        for column in CONTROL_CHANGES:
+            to_update_df[f'{column}_changed'] = False
 
         await db.update_offers(session, to_update_df, mapping_columns=['name_of_shop', 'market'])
         await db.delete_offers(session, to_delete_df)
@@ -117,21 +153,29 @@ async def delete_offers(offers: list[OfferDelete]):
         return await db.delete_offers(session, [offer.model_dump() for offer in offers])
 
 
-async def update_offers_price(session: AsyncSession):
-    offers_db = await db.get_offers(session, {'auto_price_control': True})
+async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
+    data = []
+
+    if isinstance(offers, pd.DataFrame):
+        data = offers.to_dict('records')
+    elif isinstance(offers, list):
+        data = [i.model_dump() for i in offers]
+
+    if not len(data):
+        logger.warning('Price update list is empty')
 
     data = [
         APIPriceChangeData(
-            sku=offer.sku,
-            market=offer.market,
-            name_of_shop=offer.name_of_shop,
-            target_price=offer.target_price,
-            min_price=offer.manual_min_price if offer.use_manual_min_price else offer.total_price * offer.auto_min_price / 100,
-            auto_participation_in_promotions=offer.auto_participation_in_promotions,
-            auto_min_price=offer.target_price * offer.auto_min_price / 100 if all((offer.target_price, offer.auto_min_price)) else None
-
+            sku=offer_data['sku'],
+            market=offer_data['market'],
+            name_of_shop=offer_data['name_of_shop'],
+            target_price=offer_data['target_price'],
+            min_price=offer_data['manual_min_price'] if offer_data['use_manual_min_price'] else offer_data['total_price'] * offer_data['auto_min_price'] / 100,
+            auto_participation_in_promotions=offer_data['auto_participation_in_promotions'],
+            auto_min_price=offer_data['target_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['target_price'], offer_data['auto_min_price'])) else None,
+            search_words=offer_data['search_words']
         )
-        for offer in offers_db if offer.total_price is not None
+        for offer_data in data if offer_data['total_price'] is not None
     ]
     await api_wrapper.change_prices(data)
 
@@ -154,7 +198,7 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
 
     for market in await get_markets(session):
         df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], settings, market)
-        df1.drop(['id', 'your_promotion_price', 'difference_from_recommended_retail_price'], axis=1, inplace=True, errors='ignore')
+        df1.drop(set(df1.columns) - set(OfferOut.fields()), axis=1, inplace=True, errors='ignore')
 
         await db.update_offers(session, df1, mapping_columns=['sku', 'name_of_shop'])
 

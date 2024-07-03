@@ -33,6 +33,7 @@ async def update_warehouses_and_stocks():
     stocks = await api_wrapper.get_stocks()
 
     async with async_session() as session:
+
         for warehouse in stocks:
             warehouse_db, _ = await db.update_or_create_warehouse(session, WarehouseCreate(
                 name=warehouse.name,
