@@ -91,6 +91,9 @@ class OzonAPI(BaseAPI):
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 1000
 
+        if not len(data):
+            return
+
         for i in range(0, len(data), chunk_size):
             post_data = [
                 {
@@ -338,6 +341,10 @@ class OzonAPI(BaseAPI):
 
     async def _set_search_words(self, data: list[tuple[str, str]]):
         attribute_id = 22336
+
+        if not len(data):
+            return
+
         body = {
             'items': [
                 {
