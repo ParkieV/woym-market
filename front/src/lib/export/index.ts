@@ -47,7 +47,6 @@ export class SimpleExport extends Export {
         let data: Record<string, string> = {};
         if (this.market) data.market = this.market;
         if (this.name_of_shop) data.name_of_shop = this.name_of_shop;
-        console.log(data);
         return JSON.stringify(data);
     }
 
@@ -59,12 +58,6 @@ export class SimpleExport extends Export {
         return true;
     }
 }
-
-export type SimpleExportProps = {
-    url: string;
-    market: string | null;
-    name_of_shop: string | null;
-};
 
 export class SupplyExport extends Export {
     public name_of_shop: string | null = null;
@@ -84,6 +77,28 @@ export class SupplyExport extends Export {
 
     protected get defaultFileName() {
         return "Поставка.zip";
+    }
+
+    public get valid(): boolean {
+        return true;
+    }
+}
+
+export class ViolatorsExport extends Export {
+    public name_of_shop: string | null = null;
+
+    protected get url(): string {
+        return "data/violators/export";
+    }
+
+    protected get body(): string {
+        let data: Record<string, string> = {};
+        if (this.name_of_shop) data.name_of_shop = this.name_of_shop;
+        return JSON.stringify(data);
+    }
+
+    protected get defaultFileName() {
+        return "Нарушители.pdf";
     }
 
     public get valid(): boolean {
