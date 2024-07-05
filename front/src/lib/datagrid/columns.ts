@@ -85,6 +85,7 @@ export function getColumns<T>(
                 pinned: "left"
             };
         }
+        col.base.apply?.(colDef);
         return colDef;
     });
 

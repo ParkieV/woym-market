@@ -64,6 +64,18 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     columnGroupShow: "closed"
                 },
                 {
+                    base: new StringColumn({
+                        kind: "agLargeTextCellEditor",
+                        cols: 100,
+                        rows: 5,
+                        maxLength: 500
+                    }),
+                    header: "Поисковые слова",
+                    key: "search_words",
+                    editable: true,
+                    columnGroupShow: "closed"
+                },
+                {
                     base: new StringColumn(),
                     key: "market",
                     header: "Площадка",

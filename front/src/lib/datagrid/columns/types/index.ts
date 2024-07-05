@@ -13,6 +13,7 @@ import BooleanColumn from "./boolean";
 import ComboboxColumn from "./combobox";
 import DateColumn from "./date";
 import GroupColumn from "./group";
+import type { MyColDef } from "$lib/datagrid/columns";
 
 export {
     StringColumn,
@@ -33,6 +34,9 @@ export {
 export interface ColumnBase<T> {
     parser?: (s: string) => T | Error;
     formatter?: (val: T | null | undefined) => string;
+
+    /** Modifies provided column definition. */
+    apply?: (col: MyColDef<T>) => void;
 
     cellRenderer?: string | ICellRendererFunc<T> | ICellRendererComp<T>;
     cellEditor?: string | (() => ICellEditorComp<any, T>);
