@@ -3,10 +3,9 @@ from typing import Any
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import ListFlowable, Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from src.params.confing import config
 from logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
@@ -177,6 +176,10 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
         )
         for offer_data in data if offer_data['total_price'] is not None
     ]
+
+    if config.is_dev:
+        return
+
     await api_wrapper.change_prices(data)
 
 
