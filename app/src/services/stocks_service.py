@@ -282,10 +282,10 @@ async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
 async def general_order_report(session: AsyncSession, dir_path: Path, warehouses: list[int] | None = None, offers: list[int] | None = None, name_of_shop: str | None = None, market: str | None = None):
     rez = await db.get_general_order_data(session, warehouses, offers, name_of_shop, market)
     df = pd.DataFrame(rez)
+    df['for_delivery'] = df['for_delivery'].astype('float')
     df['total_cost_price'] = df['cost_price'] * df['for_delivery']
     df['total_volume'] = df['volume'] * df['for_delivery']
     df['total_weight'] = df['self_weight'] * df['for_delivery']
-
     df = df[['sku', 'name', 'for_delivery', 'self_weight', 'total_weight', 'volume', 'total_volume', 'cost_price', 'total_cost_price']]
     df.fillna(0, inplace=True)
     df = df[df['for_delivery'] > 0]
