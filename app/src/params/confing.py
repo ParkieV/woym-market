@@ -13,6 +13,10 @@ class Config(BaseSettings):
     mode: str
 
     @property
+    def is_dev(self) -> bool:
+        return self.mode == "DEV"
+
+    @property
     def db_url(self) -> str:
         return f'postgresql+asyncpg://{self.dbuser}:{self.dbpassword}@{self.dbhost}:{self.dbport}/{self.dbname}'
 
