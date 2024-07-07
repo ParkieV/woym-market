@@ -316,41 +316,49 @@ async def get_supply_data(session: AsyncSession, warehouses: list[int] | None = 
 
 
 async def get_general_order_data(session: AsyncSession, warehouses: list[int] | None = None, offers: list[int] | None = None, name_of_shop: str | None = None, market: str | None = None):
-    # query = (
-    #     select(Offer.sku, Offer.name, Offer.volume, Offer.cost_price, Offer.self_weight)
-    #     .join(OfferStock, OfferStock.offer_id == Offer.id)
-    # )
-    # offers_query = """SELECT offers.sku, offers.name, offers.volume, offers.cost_price, offers.self_weight, (SELECT SUM(offers_stocks.for_delivery) as amount FROM offers_stocks WHERE offers_stocks.offer_id = offers.id) FROM offers"""
-    # offers_query = """
-    # SELECT offers.sku, STRING_AGG(offers.name, ', '), AVG(offers.volume), AVG(offers.cost_price), AVG(self_weight)
-    # FROM offers GROUP BY offers.sku"""
-    offers_query = select(Offer.sku, func.string_agg(Offer.name, literal_column("','")), func.avg(Offer.volume), func.avg(Offer.cost_price), func.avg(Offer.self_weight)).join(OfferStock, OfferStock.offer_id == Offer.id).group_by(Offer.sku)
-
-    if name_of_shop:
-        offers_query = offers_query.where(Offer.name_of_shop == name_of_shop)
-
-    if market:
-        offers_query = offers_query.where(Offer.market == market)
+    for_delivery_query = select(func.sum(OfferStock.for_delivery)).where(OfferStock.offer_id == Offer.id)
 
     if warehouses:
-        offers_query = offers_query.where(OfferStock.warehouse_id.in_(warehouses))
+        for_delivery_query = for_delivery_query.where(OfferStock.warehouse_id.in_(warehouses))
+
+    tb = select(
+        Offer.sku,
+        Offer.name,
+        Offer.volume,
+        Offer.cost_price,
+        Offer.self_weight,
+        for_delivery_query.label('for_delivery'),
+    )
+
+    if market:
+        tb = tb.where(Offer.market == market)
+
+    if name_of_shop:
+        tb = tb.where(Offer.name_of_shop == name_of_shop)
 
     if offers:
-        offers_query = offers_query.where(Offer.id.in_(offers))
+        tb = tb.where(Offer.id.in_(offers))
 
-    for_delivery_query = """SELECT offers.sku, SUM(offers_stocks.for_delivery) FROM offers_stocks join offers on offers.id = offers_stocks.offer_id group by offers.sku"""
-    for_delivery_result = await session.execute(text(for_delivery_query))
-    delivery_amount_mapping = {i[0]: i[1] for i in for_delivery_result.all()}
-    offers_result = await session.execute(offers_query)
+    query = select(
+        tb.c.sku,
+        func.string_agg(tb.c.name, literal_column("','")),
+        func.avg(tb.c.volume),
+        func.avg(tb.c.cost_price),
+        func.avg(tb.c.self_weight),
+        func.sum(tb.c.for_delivery)
+    ).group_by(tb.c.sku)
 
-    return [GeneralOrderData(
+    result = (await session.execute(query)).all()
+
+    dt = [GeneralOrderData(
         sku=i[0],
         name=i[1],
         volume=i[2],
         cost_price=i[3],
         self_weight=i[4],
-        for_delivery=delivery_amount_mapping.get(i[0], 0)
-    ) for i in offers_result.all()]
+        for_delivery=i[5]
+    ) for i in result]
+    return dt
 
 
 async def update_fbo_support_data(session: AsyncSession, data: list[dict], name_of_shop: str, warehouse_id: int):
