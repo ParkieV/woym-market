@@ -13,7 +13,7 @@ import src.services.offer_utils as utils
 from src.database.settings_db import get_markets
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, \
-    OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate
+    OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate, WarehouseOut
 from src.services.base_utils import error_handler, clean_up_files
 from datetime import datetime
 from pathlib import Path
@@ -393,3 +393,9 @@ async def get_choices_for_import_fbo_data() -> dict[str, list[dict]]:
         markets = [{'name': i.name} for i in await settings_db.get_markets(session)]
 
         return {'markets': markets, 'warehouses': warehouses}
+
+
+async def get_warehouse(warehouse_id: int) -> WarehouseOut | None:
+    async with async_session() as session:
+        return await db.get_warehouse(session, warehouse_id)
+

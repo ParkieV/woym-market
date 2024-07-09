@@ -51,9 +51,14 @@ async def change_fbo_stocks(data: list[OfferWithStocksUpdate]):
     return {'status': 'OK'}
 
 
-@stocks_router.get('/warehouses', response_model=list[WarehouseOut], tags=['Warehouses'])
-async def get_warehouses():
+@stocks_router.get('/warehouses', response_model=list[WarehouseOut], tags=['Warehouses'], dependencies=[Depends(get_current_user)])
+async def get_warehouses_list():
     return await service.get_warehouses()
+
+
+@stocks_router.get('/warehouses/{warehouse_id}', response_model=WarehouseOut | None, tags=['Warehouses'], dependencies=[Depends(get_current_user)])
+async def get_warehouse(warehouse_id: int):
+    return await service.get_warehouse(warehouse_id)
 
 
 @stocks_router.post('/setup', dependencies=[Depends(require_staff)])

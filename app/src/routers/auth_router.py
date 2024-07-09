@@ -9,10 +9,10 @@ auth_router = APIRouter(
 )
 
 
-@auth_router.post('/registration', response_model=UserOut, status_code=status.HTTP_201_CREATED)
-async def route_registration(user_reg: UserCreate):
-    new_user = await registration_user(user_reg.login, user_reg.password, user_reg.is_staff)
-    return new_user
+# @auth_router.post('/registration', response_model=UserOut, status_code=status.HTTP_201_CREATED)
+# async def route_registration(user_reg: UserCreate):
+#     new_user = await registration_user(user_reg.login, user_reg.password, user_reg.is_staff)
+#     return new_user
 
 
 @auth_router.post('/login', response_model=Token)
