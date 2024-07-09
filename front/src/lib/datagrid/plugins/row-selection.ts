@@ -2,32 +2,29 @@ import { get, type Writable } from "svelte/store";
 import type { GridPlugin } from ".";
 import type { MyGridOptions } from "..";
 import type { MyColDef, MyColGroupDef } from "../columns";
+import type { Selection } from "$lib/selection";
 
 /**
  * Plugin to enable and manage row selection via checkbox.
  * */
-export default class RowSelectionPlugin<T, K = T> implements GridPlugin<T> {
+export default class RowSelectionPlugin<T, K> implements GridPlugin<T> {
     constructor(
-        private selected: Writable<Map<K, T>>,
-        private options?: {
-            key?: (val: T) => K;
+        private selection: Selection<T, K>,
+        private options: {
+            key: (val: T) => K;
             checkbox?: boolean;
             sync?: boolean;
         }
     ) {}
 
     init(opts: MyGridOptions<T>): void | Promise<void> {
-        let {
-            checkbox = true,
-            key = (v: T) => v as unknown as K,
-            sync = false
-        } = this.options ?? {};
+        let { checkbox = true, key, sync = false } = this.options ?? {};
 
         opts.rowSelection = "multiple";
 
         let func = opts.onRowSelected;
         opts.onRowSelected = e => {
-            let selected = get(this.selected);
+            let selected = get(this.selection.selected);
             e.api.forEachNode(node => {
                 if (node.data === undefined) return;
                 if (!!node.isSelected()) {
@@ -36,7 +33,7 @@ export default class RowSelectionPlugin<T, K = T> implements GridPlugin<T> {
                     selected.delete(key(node.data));
                 }
             });
-            this.selected.set(selected);
+            this.selection.selected.set(selected);
             func?.(e);
         };
 
@@ -50,10 +47,10 @@ export default class RowSelectionPlugin<T, K = T> implements GridPlugin<T> {
                 });
             };
             if (sync) {
-                const unsubscribe = this.selected.subscribe(callback);
+                const unsubscribe = this.selection.selected.subscribe(callback);
                 e.api.addEventListener("gridPreDestroyed", () => unsubscribe());
             } else {
-                callback(get(this.selected));
+                callback(get(this.selection.selected));
             }
 
             func2?.(e);

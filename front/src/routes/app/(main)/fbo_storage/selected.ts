@@ -3,27 +3,27 @@ import type { ChangeList } from "$lib/datagrid/plugins/changes";
 import { num_word } from "$lib/util";
 import type { MenuItemDef } from "ag-grid-enterprise";
 import { openModal } from "svelte-modals";
-import { derived, get, writable, type Writable } from "svelte/store";
+import { derived, get, writable } from "svelte/store";
 import SetSelectedWindow from "./SetSelectedWindow.svelte";
-
-export let selectedStocks = writable(new Map<FboStocks, FboStocks>());
-export let selectedStorage = writable(new Map<number, FboStorage>());
+import { fboOffersSelection, fboStorageSelection } from "../state";
 
 export function selectedContextMenuItems(
-    changes: Writable<ChangeList<FboStocks, "id">>,
-    innerChanges: Writable<ChangeList<FboStorage, "id">>
+    changes: ChangeList<FboStocks, "id">,
+    innerChanges: ChangeList<FboStorage, "id">
 ): MenuItemDef[] {
     return [
         {
             name: "Мин. остаток",
             icon: icon("/arrow-line-down.svg"),
             tooltip: "Установить минимальный остаток у выделенных складов и товаров.",
-            disabled: get(selectedStocks).size === 0 || get(selectedStorage).size === 0,
+            disabled:
+                get(fboOffersSelection.filtered).size === 0 ||
+                get(fboStorageSelection.filtered).size === 0,
             action: ({ api }) => {
                 openModal(SetSelectedWindow, {
                     grid: api,
-                    selectedStocks,
-                    selectedStorage,
+                    selectedStocks: fboOffersSelection.filtered,
+                    selectedStorage: fboStorageSelection.filtered,
                     changes,
                     innerChanges
                 });
@@ -35,7 +35,7 @@ export function selectedContextMenuItems(
 const icon = (src: string) => `<img src="${src}" style="width: 16px; margin-bottom: -3px;" />`;
 
 export let selectedDisplayInfo = derived(
-    [selectedStocks, selectedStorage],
+    [fboOffersSelection.filtered, fboStorageSelection.filtered],
     ([selectedStocks, selectedStorage]) => {
         let stocks =
             selectedStocks.size !== 0

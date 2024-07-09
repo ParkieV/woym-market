@@ -6,7 +6,8 @@
     import Search from "$lib/datagrid/filters/Search.svelte";
     import TernaryFilter from "$lib/datagrid/filters/TernaryFilter.svelte";
     import type { FboStocks, FboStorage } from "$lib/data/fbo_storage";
-    import { selectedStorage } from "./selected";
+    import { get, type Writable } from "svelte/store";
+    import { fboStorageSelection } from "../state";
 
     export let markets: {
         id: number;
@@ -24,22 +25,23 @@
 
     const market_filter = (storage: FboStocks, opts: Option[]) =>
         opts.every(({ name, selected }) => selected || name !== storage.name_of_shop);
-    const selected_filter = (storage: FboStorage) => $selectedStorage.has(storage.warehouse.id);
+    const selected_filter = (storage: FboStorage) =>
+        get(fboStorageSelection.selected).has(storage.warehouse.id);
     const hidden_filter = (storage: FboStocks) => !storage.hidden;
     const available_filter = (storage: FboStocks) => storage.supplier_available;
 
-    export let filter: Filter<FboStocks>;
-    export let storage_filter: Filter<FboStorage>;
+    export let filter: Writable<Filter<FboStocks>>;
+    export let storage_filter: Writable<Filter<FboStorage>>;
 </script>
 
 <menu>
-    <FilterGroup bind:filter>
+    <FilterGroup bind:filter={$filter}>
         <div class="stores">
             <OptionsFilter filter={market_filter} image={"/yandex.svg"} bind:options={yandex} />
             <OptionsFilter filter={market_filter} image={"/ozon.svg"} bind:options={ozon} />
         </div>
         <Search placeholder="Поиск..." fields={SEARCH_FIELDS} />
-        <FilterGroup extend={false} bind:filter={storage_filter}>
+        <FilterGroup extend={false} bind:filter={$storage_filter}>
             <BinaryFilter
                 filter={selected_filter}
                 image={"/list-checks.svg"}

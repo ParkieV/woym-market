@@ -1,14 +1,9 @@
 <script lang="ts">
-    import { writable, type Writable } from "svelte/store";
     import Menu from "./Menu.svelte";
-    import { setContext } from "svelte";
-
-    let refresh = writable(() => {});
-    setContext("refresh", refresh); // FIXME: better solution is needed
 </script>
 
 <main>
-    <Menu on:import={$refresh} />
+    <Menu />
     <slot />
 </main>
 

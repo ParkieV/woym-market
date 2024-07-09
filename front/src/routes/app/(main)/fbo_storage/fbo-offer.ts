@@ -20,8 +20,8 @@ import { selectedContextMenuItems } from "./selected";
 import { calcToDeliver } from "./fbo-warehouse";
 
 export default function fboOffersGrid(
-    changes: Writable<ChangeList<FboStocks, "id">>,
-    innerChanges: Writable<ChangeList<FboStorage, "id">>
+    changes: ChangeList<FboStocks, "id">,
+    innerChanges: ChangeList<FboStorage, "id">
 ): GridDefinition<FboStocks> {
     return new GridDefinition({ ...BASE_GRID_OPTIONS, getContextMenuItems }, columns());
 

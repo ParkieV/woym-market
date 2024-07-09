@@ -1,7 +1,7 @@
 import type { CellValueChangedEvent } from "ag-grid-enterprise";
 import type { GridPlugin } from ".";
 import type { MyGridOptions } from "..";
-import { get, type Writable } from "svelte/store";
+import { derived, get, writable, type Readable, type Writable } from "svelte/store";
 
 /**
  * Modifies provided grid options to enable change monitoring.
@@ -11,7 +11,7 @@ import { get, type Writable } from "svelte/store";
 export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T> {
     constructor(
         private key: K,
-        private changes: Writable<ChangeList<T, K>>,
+        private changes: ChangeList<T, K>,
         private onChange?: (e: CellValueChangedEvent<T, K>) => void | Promise<void>
     ) {}
 
@@ -32,10 +32,7 @@ export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T
 
         let func = opts.onCellValueChanged;
         opts.onCellValueChanged = e => {
-            this.changes.update(changes => {
-                changes.add(e.data[this.key]);
-                return changes;
-            });
+            this.changes.add(e.data[this.key]);
             e.api.refreshCells({ rowNodes: [e.node] });
             this.onChange?.(e);
             func?.(e);
@@ -44,16 +41,28 @@ export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T
 }
 
 // TODO: check which properties were changed.
-export class ChangeList<T, KEY extends keyof T> {
-    private changes: Set<T[KEY]> = new Set();
+export class ChangeList<T, KEY extends keyof T> implements Readable<ChangeListInfo<T[KEY]>> {
+    private changes: Writable<Set<T[KEY]>> = writable(new Set());
 
     /** Mark value with key as changed. */
     public add(key: T[KEY]) {
-        this.changes.add(key);
+        this.changes.update(x => (x.add(key), x));
     }
 
+    /** Reset list of changes. */
+    public clear() {
+        this.changes.update(x => (x.clear(), x));
+    }
+
+    public subscribe = derived([this.changes], ([changes]) => new ChangeListInfo(changes))
+        .subscribe;
+}
+
+export class ChangeListInfo<V> {
+    constructor(private changes: Set<V>) {}
+
     /** Returns `true` if entry with provided key has any changes. */
-    public isChanged(key: T[KEY]): boolean {
+    public isChanged(key: V): boolean {
         return this.changes.has(key);
     }
 
@@ -65,10 +74,5 @@ export class ChangeList<T, KEY extends keyof T> {
     /** Returns number of changed offers. */
     public get count(): number {
         return this.changes.size;
-    }
-
-    /** Reset list of changes. */
-    public clear() {
-        this.changes.clear();
     }
 }

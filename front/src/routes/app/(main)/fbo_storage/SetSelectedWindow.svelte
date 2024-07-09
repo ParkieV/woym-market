@@ -1,8 +1,7 @@
-<script lang="ts" generics="T">
+<script lang="ts">
     import { selectedDisplayInfo } from "./selected";
-
     import type { ChangeList } from "$lib/datagrid/plugins/changes";
-    import type { Writable } from "svelte/store";
+    import type { Readable } from "svelte/store";
     import type { FboStocks, FboStorage } from "$lib/data/fbo_storage";
     import type { GridApi, IRowNode } from "ag-grid-enterprise";
     import Window from "$lib/components/windows/Window.svelte";
@@ -14,28 +13,26 @@
 
     export let grid: GridApi<FboStocks>;
 
-    export let changes: Writable<ChangeList<FboStocks, "id">>;
-    export let innerChanges: Writable<ChangeList<FboStorage, "id">>;
+    export let changes: ChangeList<FboStocks, "id">;
+    export let innerChanges: ChangeList<FboStorage, "id">;
 
-    export let selectedStocks: Writable<Map<FboStocks, FboStocks>>;
-    export let selectedStorage: Writable<Map<number, FboStorage>>;
+    export let selectedStocks: Readable<Map<number, FboStocks>>;
+    export let selectedStorage: Readable<Map<number, FboStorage>>;
 
     function ok() {
         let changedStocks = new Set<IRowNode<FboStocks>>();
 
         grid.forEachNode(node => {
-            if (node.data === undefined || !$selectedStocks.has(node.data)) return;
-            $changes.add(node.data.id);
+            if (node.data === undefined || !$selectedStocks.has(node.data.id)) return;
+            changes.add(node.data.id);
             for (const stock of node.data.stocks) {
                 if ($selectedStorage.has(stock.warehouse.id)) {
                     changedStocks.add(node);
-                    $innerChanges.add(stock.id);
+                    innerChanges.add(stock.id);
                     stock.min_stock = target;
                 }
             }
             refreshDetail(node);
-            $changes = $changes;
-            $innerChanges = $innerChanges;
         });
         grid.refreshCells({ rowNodes: Array.from(changedStocks) });
         isOpen = false;

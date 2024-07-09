@@ -2,17 +2,20 @@
     import ExportWindow from "$lib/export/ExportWindow.svelte";
     import ImportWindow from "$lib/import/ImportWindow.svelte";
     import { userCanModify } from "$lib/data/user";
-    import { createEventDispatcher } from "svelte";
+    import { page } from "$app/stores";
+    import type { GridState } from "$lib/state";
 
     let import_open = false;
     let export_open = false;
 
-    let dispatch = createEventDispatcher<{ import: void }>();
+    const reload = () => {
+        ($page.data["state"] as GridState<any, any>)?.forceReload();
+    };
 </script>
 
 <ExportWindow bind:open={export_open} />
 {#if $userCanModify}
-    <ImportWindow bind:open={import_open} on:import={() => dispatch("import")} />
+    <ImportWindow bind:open={import_open} on:import={reload} />
 {/if}
 <menu>
     <button on:click={() => (export_open = true)}>Экспорт</button>

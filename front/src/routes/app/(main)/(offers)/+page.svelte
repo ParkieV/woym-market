@@ -1,14 +1,14 @@
 <script lang="ts">
     import Grid from "$lib/grid/Grid.svelte";
-    import { getContext, onMount } from "svelte";
-    import { type Offer, fetchOfferList, patchOfferList } from "$lib/data/offers";
-    import Footer from "./Footer.svelte";
+    import { onMount } from "svelte";
+    import { type Offer, patchOfferList } from "$lib/data/offers";
+    import Footer from "../Footer.svelte";
     import { fetchTemplates, type Template } from "$lib/data/templates";
-    import { writable, type Writable } from "svelte/store";
+    import { writable, get } from "svelte/store";
     import type { GridDefinition } from "$lib/datagrid";
     import offerGrid from "./grid";
     import StatePlugin from "$lib/datagrid/plugins/state";
-    import ChangesPlugin, { ChangeList } from "$lib/datagrid/plugins/changes";
+    import ChangesPlugin from "$lib/datagrid/plugins/changes";
     import { userCanModify } from "$lib/data/user";
     import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
     import ZoomPlugin from "$lib/datagrid/plugins/zoom";
@@ -18,27 +18,20 @@
     import type { PageData } from "./$types";
     import type { Filter } from "$lib/datagrid/filters";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
+    import { offersState } from "../state";
+
+    onMount(() => offersState.load());
 
     export let data: PageData;
 
     let definition: GridDefinition<Offer>;
-    let offers: Offer[] = [];
-    let changes = writable(new ChangeList<Offer, "id">());
-
-    /** Refreshes data displayed in the grid. */
-    async function refreshData() {
-        $changes.clear();
-        $changes = $changes;
-        offers = await fetchOfferList();
-    }
 
     async function save() {
-        let ok = await patchOfferList(offers.filter(x => $changes.isChanged(x.id)));
-        if (ok) await refreshData();
+        let ok = await patchOfferList(
+            get(offersState).filter(x => get(offersState.changes).isChanged(x.id))
+        );
+        if (ok) await offersState.forceReload();
     }
-
-    let refresh = getContext<Writable<() => {}>>("refresh");
-    $refresh = refreshData;
 
     onMount(async () => {
         let templates: Template[] = await fetchTemplates();
@@ -46,7 +39,7 @@
         definition = offerGrid(templates)
             .plugin(new FilterPlugin(filterStore))
             .plugin(new StatePlugin("offers"))
-            .plugin(new ChangesPlugin("id", changes))
+            .plugin(new ChangesPlugin("id", offersState.changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
             .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(
@@ -67,8 +60,6 @@
                     }
                 })
             );
-
-        refreshData();
     });
 
     let filter: Filter<Offer>;
@@ -82,8 +73,13 @@
     <ImageWindow bind:src={selected_image} />
 {/if}
 
-<Toolbar bind:filter markets={data.options} />
+<Toolbar bind:filter markets={data.markets} />
 {#if definition}
-    <Grid {definition} bind:data={offers} />
+    <Grid {definition} bind:data={$offersState} />
 {/if}
-<Footer bind:changes={$changes} on:reload={refreshData} on:save={save} />
+<Footer
+    changes={offersState.changes}
+    on:save={save}
+    on:reload={() => offersState.forceReload()}
+    on:cancel={() => offersState.cancel()}
+/>

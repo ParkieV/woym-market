@@ -1,12 +1,12 @@
 <script lang="ts">
     import Grid from "$lib/grid/Grid.svelte";
-    import { getContext, onMount } from "svelte";
+    import { onMount } from "svelte";
     import Footer from "../Footer.svelte";
-    import { fetchOwnStorages, patchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
-    import { writable, type Writable } from "svelte/store";
+    import { patchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
+    import { get, writable } from "svelte/store";
     import ownStorageGrid from "./grid";
     import type { GridDefinition } from "$lib/datagrid";
-    import ChangesPlugin, { ChangeList } from "$lib/datagrid/plugins/changes";
+    import ChangesPlugin from "$lib/datagrid/plugins/changes";
     import StatePlugin from "$lib/datagrid/plugins/state";
     import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
     import ZoomPlugin from "$lib/datagrid/plugins/zoom";
@@ -17,40 +17,31 @@
     import Toolbar from "./Toolbar.svelte";
     import type { PageData } from "./$types";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
+    import { ownStorageState } from "../state";
+
+    onMount(() => ownStorageState.load());
 
     export let data: PageData;
 
     let definition: GridDefinition;
-    let storage: OwnStorage[] = [];
-    let changes = writable(new ChangeList<OwnStorage, "sku">());
-
-    let refresh = getContext<Writable<() => {}>>("refresh");
-    $refresh = refreshData;
 
     let selected_image: string | undefined = undefined;
 
     onMount(async () => {
-        let info = await fetchOwnStorages();
-        storage = info.data;
-
-        definition = ownStorageGrid(info.markets)
+        definition = ownStorageGrid(data.markets)
             .plugin(new FilterPlugin(filterStore))
             .plugin(new StatePlugin("own_storage"))
-            .plugin(new ChangesPlugin("sku", changes))
+            .plugin(new ChangesPlugin("sku", ownStorageState.changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
             .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(new ClassesPlugin());
     });
 
     async function save() {
-        let ok = await patchOwnStorages(storage.filter(x => $changes.isChanged(x.sku)));
-        if (ok) await refreshData();
-    }
-
-    async function refreshData() {
-        $changes.clear();
-        $changes = $changes;
-        storage = (await fetchOwnStorages()).data;
+        let ok = await patchOwnStorages(
+            get(ownStorageState).filter(x => get(ownStorageState.changes).isChanged(x.sku))
+        );
+        if (ok) await ownStorageState.forceReload();
     }
 
     let filter: Filter<OwnStorage>;
@@ -62,8 +53,13 @@
     <ImageWindow bind:src={selected_image} />
 {/if}
 
-<Toolbar bind:filter markets={data.options} />
+<Toolbar bind:filter markets={data.markets} />
 {#if definition}
-    <Grid {definition} bind:data={storage} />
+    <Grid {definition} bind:data={$ownStorageState} />
 {/if}
-<Footer bind:changes={$changes} on:reload={refreshData} on:save={save} />
+<Footer
+    changes={ownStorageState.changes}
+    on:save={save}
+    on:reload={() => ownStorageState.forceReload()}
+    on:cancel={() => ownStorageState.cancel()}
+/>
