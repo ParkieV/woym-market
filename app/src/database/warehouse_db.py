@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_, func, text, bindparam, literal_column
+from sqlalchemy import select, update, delete, and_, func, text, bindparam, literal_column, Select
 from sqlalchemy.orm import selectinload, subqueryload
 from src.database.utils import _update_or_create_object, _get_or_create
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
@@ -277,10 +277,11 @@ async def update_own_storages_by_sku(session: AsyncSession, data: list[dict]):
     await session.commit()
 
 
+
 async def get_supply_data(session: AsyncSession, warehouses: list[int] | None = None, offers: list[int] | None = None, market: str | None = None, name_of_shop: str | None = None):
     query = (
-        select(Offer.sku, Offer.name, Offer.name_of_shop, Offer.market, OfferStock.for_delivery, Warehouse.name,
-               Offer.supplier_available, OwnStorage.value, Offer.barcodes, Offer.current_price)
+        select(Offer.sku, Offer.name, Offer.name_of_shop, Offer.market, OfferStock.for_delivery, Warehouse.name.label('warehouse_name'),
+               Offer.supplier_available, OwnStorage.value.label('own_storage_value'), Offer.barcodes, Offer.current_price)
         .join(Offer, OfferStock.offer_id == Offer.id)
         .join(Warehouse, OfferStock.warehouse_id == Warehouse.id)
         .join(OwnStorage, OwnStorage.sku == Offer.sku)
@@ -379,13 +380,15 @@ async def update_fbo_support_data(session: AsyncSession, data: list[dict], name_
 
     await session.commit()
 
-# async def update_clusters(session: AsyncSession):
-#     stocks_query = (
-#         select(OfferStock)
-#         .options(selectinload(OfferStock.warehouse))
-#         .where(Warehouse.market == 'ozon')
-#         .where(Warehouse.warehouse_type == 'cluster')
-#     )
-#     result = (await session.execute(stocks_query)).scalars()
-#
-#     for offer_stock in result:
+
+async def get_warehouse(session: AsyncSession, warehouse_id: int, model_schema: Type[ModelSchema] = WarehouseOut, allow_none: bool = True) -> WarehouseOut | None:
+    query = select(Warehouse).where(Warehouse.id == warehouse_id)
+    result = (await session.execute(query)).scalar_one_or_none()
+
+    if not result:
+        if allow_none:
+            return None
+
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Warehouse with id - {warehouse_id} not found")
+
+    return model_schema.model_validate(result, from_attributes=True)

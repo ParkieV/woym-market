@@ -11,6 +11,7 @@ services:
       dockerfile: app.dockerfile
     depends_on:
       - db
+      - redis
     volumes:
       - /logs:/app/logs
     ports:
@@ -51,3 +52,12 @@ services:
       - ./db-data:/var/lib/postgresql/data
     ports:
       - 5432:5432
+
+  redis:
+    image: redis
+    restart: unless-stopped
+    volumes:
+      - ./redis/data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    expose:
+      - 6379

@@ -1,6 +1,7 @@
 from pathlib import PurePath, Path
 
 from fastapi import APIRouter, Depends, File, UploadFile, Body
+from fastapi_cache.decorator import cache
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
@@ -17,6 +18,7 @@ stocks_router = APIRouter(
 
 
 @stocks_router.get('/own-storage', dependencies=[Depends(get_current_user)], response_model=OwnStorages, tags=['Own storage'])
+@cache(60*5)
 async def get_own_storages():
     return await service.get_own_storages()
 
@@ -41,6 +43,7 @@ async def import_own_storage(data: UploadFile = File(), name_of_shop: str | None
 
 
 @stocks_router.get('/fbo', response_model=list[OfferWithStocks], dependencies=[Depends(get_current_user)], tags=['FBO'])
+@cache(60*5)
 async def get_fbo_stocks():
     return await service.get_offers_with_stocks()
 
@@ -51,9 +54,14 @@ async def change_fbo_stocks(data: list[OfferWithStocksUpdate]):
     return {'status': 'OK'}
 
 
-@stocks_router.get('/warehouses', response_model=list[WarehouseOut], tags=['Warehouses'])
-async def get_warehouses():
+@stocks_router.get('/warehouses', response_model=list[WarehouseOut], tags=['Warehouses'], dependencies=[Depends(get_current_user)])
+async def get_warehouses_list():
     return await service.get_warehouses()
+
+
+@stocks_router.get('/warehouses/{warehouse_id}', response_model=WarehouseOut | None, tags=['Warehouses'], dependencies=[Depends(get_current_user)])
+async def get_warehouse(warehouse_id: int):
+    return await service.get_warehouse(warehouse_id)
 
 
 @stocks_router.post('/setup', dependencies=[Depends(require_staff)])

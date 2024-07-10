@@ -5,7 +5,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-
+from redis import asyncio as aioredis
 from scheduls import update_data
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
@@ -13,6 +13,8 @@ from src.routers.offer_router import data_router
 from src.routers.debug_router import debug_router
 from src.routers.stocks_router import stocks_router
 from src.routers.settings_router import settings_router
+from fastapi_cache.backends.redis import RedisBackend
+from fastapi_cache import FastAPICache
 from src.database.db import db_create
 import aioschedule
 from src.params.confing import config
@@ -32,9 +34,11 @@ async def to_startup():
 
 
 @asynccontextmanager
-async def startup(app: FastAPI):
+async def startup(_: FastAPI):
     db_create()
     await to_startup()
+    redis = aioredis.from_url('redis://localhost:6379', decode_responses=True)
+    FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
     yield
 
 
