@@ -303,7 +303,8 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "use_promotion_price",
                     header: "Акция",
-                    base: new BooleanColumn()
+                    base: new BooleanColumn(),
+                    editable: true
                 },
                 {
                     key: "wholesale_dollar_cost_price",
