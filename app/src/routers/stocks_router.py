@@ -1,6 +1,7 @@
 from pathlib import PurePath, Path
 
 from fastapi import APIRouter, Depends, File, UploadFile, Body
+from fastapi_cache.decorator import cache
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
@@ -17,6 +18,7 @@ stocks_router = APIRouter(
 
 
 @stocks_router.get('/own-storage', dependencies=[Depends(get_current_user)], response_model=OwnStorages, tags=['Own storage'])
+@cache(60*5)
 async def get_own_storages():
     return await service.get_own_storages()
 
@@ -41,6 +43,7 @@ async def import_own_storage(data: UploadFile = File(), name_of_shop: str | None
 
 
 @stocks_router.get('/fbo', response_model=list[OfferWithStocks], dependencies=[Depends(get_current_user)], tags=['FBO'])
+@cache(60*5)
 async def get_fbo_stocks():
     return await service.get_offers_with_stocks()
 

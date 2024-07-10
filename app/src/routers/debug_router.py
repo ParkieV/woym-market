@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 from src.schemas.offer_schemas import OfferDelete
 from src.services import offer_service, settings_service
 from src.dependencies.users import get_current_user, require_staff
@@ -17,8 +17,9 @@ async def delete_offers(offers: list[OfferDelete]):
 
 
 @debug_router.post('/offers/force-update')
-async def force_update(current_user=Depends(require_staff)):
-    await offer_service.update_offers(current_user.id)
+async def force_update(background: BackgroundTasks, current_user=Depends(require_staff)):
+    background.add_task(offer_service.update_offers, current_user.id)
+    # await offer_service.update_offers(current_user.id)
     return {'status': 'OK'}
 
 
