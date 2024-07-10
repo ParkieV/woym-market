@@ -37,7 +37,7 @@ async def to_startup():
 async def startup(_: FastAPI):
     db_create()
     await to_startup()
-    redis = aioredis.from_url('redis://localhost:6379', decode_responses=True)
+    redis = aioredis.from_url('redis://redis:6379', decode_responses=True)
     FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
     yield
 
