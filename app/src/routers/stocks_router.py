@@ -1,6 +1,6 @@
 from pathlib import PurePath, Path
 
-from fastapi import APIRouter, Depends, File, UploadFile, Body
+from fastapi import APIRouter, Depends, File, UploadFile, Body, BackgroundTasks
 from fastapi_cache.decorator import cache
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
@@ -18,7 +18,6 @@ stocks_router = APIRouter(
 
 
 @stocks_router.get('/own-storage', dependencies=[Depends(get_current_user)], response_model=OwnStorages, tags=['Own storage'])
-@cache(60*5)
 async def get_own_storages():
     return await service.get_own_storages()
 
@@ -26,6 +25,12 @@ async def get_own_storages():
 @stocks_router.patch('/own-storage', dependencies=[Depends(require_staff)], tags=['Own storage'])
 async def change_own_storages(data: list[OwnStorageUpdate]):
     await service.change_own_storages(data)
+    return {'status': 'OK'}
+
+
+@stocks_router.post('/own-storage/setup', tags=['Own storage'])
+async def set_up_own_storages(background: BackgroundTasks):
+    background.add_task(service.create_own_storages)
     return {'status': 'OK'}
 
 

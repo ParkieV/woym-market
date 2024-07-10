@@ -28,6 +28,7 @@ logger = get_logger(__name__)
 
 async def update_warehouses_and_stocks():
     logger.info('Start update warehouses and stocks')
+
     start_time = datetime.now()
 
     stocks = await api_wrapper.get_stocks()
@@ -64,8 +65,8 @@ async def update_warehouses_and_stocks():
 
         await db.relate_warehouses_with_clusters(session, [{'name': i.name, 'related_warehouses_name': i.related_warehouses_name} for i in stocks])
 
-        for sku in await offer_db.get_unique_skus(session):
-            await db.update_or_create_own_storage(session, OwnStorageCreate(sku=sku))
+        # for sku in await offer_db.get_unique_skus(session):
+        #     await db.update_or_create_own_storage(session, OwnStorageCreate(sku=sku))
 
     _time = datetime.now() - start_time
     logger.info(f'Warehouses and stocks updated completed in {_time}')
@@ -398,4 +399,13 @@ async def get_choices_for_import_fbo_data() -> dict[str, list[dict]]:
 async def get_warehouse(warehouse_id: int) -> WarehouseOut | None:
     async with async_session() as session:
         return await db.get_warehouse(session, warehouse_id)
+
+
+async def create_own_storages():
+    async with async_session() as session:
+        logger.info('Start setup own-storages')
+        await db.create_own_storage_stocks(session)
+        logger.info('Finish setup own-storages')
+
+
 

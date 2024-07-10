@@ -178,7 +178,7 @@ async def get_own_storages(session: AsyncSession):
 
     for sku in skus_query.all():
         offers_query = await session.execute(
-            select(Offer, OwnStorage).where(Offer.sku == sku[0]).join(OwnStorage, OwnStorage.sku == Offer.sku)
+            select(Offer, OwnStorage).where(Offer.sku == sku[0]).join(OwnStorage, OwnStorage.sku == Offer.sku, isouter=True)
         )
 
         data = {
@@ -194,6 +194,8 @@ async def get_own_storages(session: AsyncSession):
         }
 
         for offer, own_storage in offers_query.all():
+            if not own_storage: continue
+
             data['name'].add(offer.name)
             data['photo'].add(offer.photo)
             data['note_1'].add(offer.note_1)
@@ -210,9 +212,13 @@ async def get_own_storages(session: AsyncSession):
                 }
             )
 
+        if 'own_storage' not in data: continue
+
         storages_result.append(data)
 
     return storages_result
+
+
 
 
 async def change_own_storages(session: AsyncSession, data: list[OwnStorageUpdate]):
@@ -392,3 +398,13 @@ async def get_warehouse(session: AsyncSession, warehouse_id: int, model_schema: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Warehouse with id - {warehouse_id} not found")
 
     return model_schema.model_validate(result, from_attributes=True)
+
+
+async def create_own_storage_stocks(session: AsyncSession):
+    sub_query = select(OwnStorage.sku).distinct()
+    query = select(Offer.sku).distinct().where(Offer.sku.not_in(sub_query))
+    result = (await session.execute(query)).all()
+    skus = [i[0] for i in result]
+
+    session.add_all([OwnStorage(sku=sku, value=0) for sku in skus])
+    await session.commit()

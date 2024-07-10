@@ -5,6 +5,8 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import ListFlowable, Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.database.warehouse_db import create_own_storage_stocks
 from src.params.confing import config
 from logs import get_logger
 from src.api.wrapper import APIWrapper
@@ -24,6 +26,7 @@ from fastapi import status
 from datetime import datetime
 
 from src.schemas.settings_schemas import MarketOut
+from src.schemas.stocks_schemas import OwnStorageCreate
 from src.services.base_utils import error_handler
 
 
@@ -132,6 +135,8 @@ async def update_offers(user_id: int):
         for market in await get_markets(session):
             to_create_df_chunked = await utils.build_offers_data(to_create_df[((to_create_df['market'] == market.type) & (to_create_df['name_of_shop'] == market.name))], settings, market, setup_mode=True)
             await db.create_offers(session, to_create_df_chunked)
+
+        await create_own_storage_stocks(session)
 
         # Снять галочки с измененных полей
         for column in CONTROL_CHANGES:
