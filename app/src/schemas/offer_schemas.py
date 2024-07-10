@@ -96,6 +96,8 @@ class OfferChange(BaseOffer):
     pricing_scheme_name: str = Field(title='Id схемы ценообразования')
     supplier_available: bool = Field(title='Наличие у поставщика')
     search_words: str | None = Field(title='Поисковые слова')
+    use_promotion_price: bool = Field(title='Акция')
+
 
     hidden: bool = Field(False, title='Скрыт')
 
@@ -146,7 +148,6 @@ class OfferOut(OfferChange):
     your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
     min_general_markets_price: float | None = Field(title='Лучшая цена среди всех площадок')
     barcodes: str | None = Field(title='Штрихкоды')
-    use_promotion_price: bool = Field(title='Акция')
     wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.')
     vendor_code: int | None = Field(title='Артикул')
     recommended_retail_price: float | None = Field(title='РРЦ')
