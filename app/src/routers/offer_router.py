@@ -1,10 +1,7 @@
 from fastapi import APIRouter, File, Depends, UploadFile, status, Body
 from fastapi.responses import FileResponse
 from pathlib import PurePath, Path
-
-from fastapi_cache.decorator import cache
 from starlette.background import BackgroundTask
-
 from src.dependencies.users import get_current_user, require_staff
 from src.schemas.offer_schemas import (
     OfferOut,
@@ -27,7 +24,6 @@ data_router = APIRouter(
 
 
 @data_router.get('/offers', response_model=list[OfferOut], tags=['Offers'])
-@cache(60*5)
 async def get_offers(offset: int = 0, limit: int | None = None):
     return await service.get_offers(offset=offset, limit=limit)
 
