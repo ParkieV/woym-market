@@ -14,8 +14,8 @@ async def calculate_offers_values(data: pd.DataFrame, settings, market_settings:
     data['volume_difference'] = data['yandex_volume'] / data['volume']
     data['cost_price'] = data['dollar_cost_price'] * market_settings.rate
     data['total_price'] = data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional']
-    data['recommended_retail_price'] = market_settings.first_variable_for_recommended_retail_price + data['wholesale_dollar_cost_price'] + (market_settings.second_variable_for_recommended_retail_price / 100 * data['wholesale_dollar_cost_price'])
-    data['stop_price'] = market_settings.first_variable_for_stop_price + data['wholesale_dollar_cost_price'] + (market_settings.second_variable_for_stop_price / 100 * data['wholesale_dollar_cost_price'])
+    data['recommended_retail_price'] = market_settings.first_variable_for_recommended_retail_price + (data['wholesale_dollar_cost_price'] * market_settings.rate) + (market_settings.second_variable_for_recommended_retail_price / 100 * data['wholesale_dollar_cost_price'] * market_settings.rate)
+    data['stop_price'] = market_settings.first_variable_for_stop_price + (data['wholesale_dollar_cost_price'] * market_settings.rate) + (market_settings.second_variable_for_stop_price / 100 * data['wholesale_dollar_cost_price'] * market_settings.rate)
 
     data = await calculate_price(data, market_settings)
 
