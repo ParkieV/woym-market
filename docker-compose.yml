@@ -13,8 +13,8 @@ services:
       - db
     volumes:
       - /logs:/app/logs
-    ports:
-      - 8000:8000
+    expose:
+      - 8000
 
   frontend:
     container_name: frontend
@@ -49,5 +49,5 @@ services:
     env_file: db.env
     volumes:
       - ./db-data:/var/lib/postgresql/data
-    ports:
-      - 5432:5432
+    expose:
+      - 5432
