@@ -321,14 +321,19 @@ market_handlers = {
 
 @error_handler('Ошибка экспорта поставки.')
 async def export_supply(warehouses: list[int] | None = None, offers: list[int] | None = None, name_of_shop: str | None = None, market: str | None = None):
+    if not warehouses:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Для формирования поставки нужно указать склады')
+
+    if not offers:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Для формирования поставки нужно передать товары')
+
     async with async_session() as session:
         rez = await db.get_supply_data(session, warehouses, offers, market, name_of_shop)
 
         if not rez:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, 'No offers to supply')
+            raise HTTPException(status.HTTP_404_NOT_FOUND, 'Данных для поставки не найдено')
 
         df = pd.DataFrame(rez)
-
 
         df['for_delivery'] = np.where(
             df['supplier_available'],
@@ -337,6 +342,9 @@ async def export_supply(warehouses: list[int] | None = None, offers: list[int] |
         )
 
         df = df[df['for_delivery'] > 0]
+
+        if not len(df):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, 'Товаров с ненулевым значением "к поставке" не найдено')
 
 
         # create zip archive/folder
