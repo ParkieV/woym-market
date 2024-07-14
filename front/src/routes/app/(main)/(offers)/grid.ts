@@ -329,8 +329,7 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "difference_from_recommended_retail_price",
                     header: "Разница с РРЦ",
-                    base: rubleColumn,
-                    editable: true
+                    base: rubleColumn
                 },
                 {
                     key: "your_promotion_price",
