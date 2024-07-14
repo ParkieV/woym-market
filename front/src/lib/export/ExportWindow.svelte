@@ -8,7 +8,6 @@
     export let open: boolean;
     let data: SimpleExport | SupplyExport | null = null;
     $: if (open === false) data = null;
-    $: if (data instanceof ViolatorsExport) data.market = "yandex";
 
     const ok = async () => {
         if (data === null) return;
@@ -45,7 +44,7 @@
         {#if data !== null}
             <label>
                 <span>Маркет</span>
-                <select bind:value={data.market} disabled={data instanceof ViolatorsExport}>
+                <select bind:value={data.market}>
                     <option value={null}>Все</option>
                     {#each market_options as option}
                         <option value={option}>{option}</option>
