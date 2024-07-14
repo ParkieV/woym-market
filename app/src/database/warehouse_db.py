@@ -291,18 +291,14 @@ async def get_supply_data(session: AsyncSession, warehouses: list[int] | None = 
         .join(Offer, OfferStock.offer_id == Offer.id)
         .join(Warehouse, OfferStock.warehouse_id == Warehouse.id)
         .join(OwnStorage, OwnStorage.sku == Offer.sku)
+        .where(OfferStock.offer_id.in_(offers))
+        .where(Warehouse.id.in_(warehouses))
     )
     if market:
         query = query.where(Offer.market == market)
 
     if name_of_shop:
         query = query.where(Offer.name_of_shop == name_of_shop)
-
-    if offers:
-        query = query.where(OfferStock.offer_id.in_(offers))
-
-    if warehouses:
-        query = query.where(Warehouse.id.in_(warehouses))
 
     result = await session.execute(query)
     return [
