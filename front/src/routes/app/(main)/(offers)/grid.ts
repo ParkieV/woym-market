@@ -332,6 +332,11 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     base: rubleColumn
                 },
                 {
+                    key: "violator",
+                    header: "Нарушители РРЦ",
+                    base: new StringColumn()
+                },
+                {
                     key: "your_promotion_price",
                     header: "Ваша цена по акции",
                     base: rubleColumn
