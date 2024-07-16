@@ -142,7 +142,7 @@ async def build_offers_data(data: pd.DataFrame, settings, market, total_price_co
     return data
 
 
-def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0, file_extension: str = 'xlsx', header: int = 0) -> pd.DataFrame:
+def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0, file_extension: str = '.xlsx', header: int = 0) -> pd.DataFrame:
     io = BytesIO(data)
     pd_engine = {
         '.xlsx': 'openpyxl',

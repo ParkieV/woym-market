@@ -10,7 +10,7 @@ from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, Wareho
 from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace
 from pydantic import BaseModel
 from src.database.models.models import Offer
-from typing import Type, TypeVar
+from typing import Type, TypeVar, Any
 from fastapi import status
 from fastapi.exceptions import HTTPException
 
@@ -226,6 +226,13 @@ async def change_own_storages(session: AsyncSession, data: list[OwnStorageUpdate
         stmp = update(OwnStorage).where(OwnStorage.id == storage.id).where(OwnStorage.storage_place_id == storage.storage_place_id).values(**storage.model_dump())
         await session.execute(stmp)
 
+    await session.commit()
+
+
+async def increment_own_storage_values(session: AsyncSession, data: list[dict[str, Any]], place_id: int):
+    for item in data:
+        stmp = update(OwnStorage).where(OwnStorage.storage_place_id == place_id).where(OwnStorage.sku == item['sku']).values(value=OwnStorage.value + item['value'])
+        await session.execute(stmp)
     await session.commit()
 
 

@@ -435,3 +435,15 @@ async def change_own_storage_places(data: list[OwnStoragePlaceUpdate]):
         await db.change_own_storage_places(session, data)
 
 
+async def increment_own_storage_values(data, place_id: int, file_extension: str, coef: int = 1):
+    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
+    df.rename({'артикул': 'sku', 'количество': 'value'}, axis='columns', inplace=True)
+    df = df[['sku', 'value']]
+    df = df.astype({'sku': str, 'value': int})
+    df['value'] = df['value'] * coef
+
+    async with async_session() as session:
+        await db.increment_own_storage_values(session, df.to_dict('records'), place_id)
+
+
+

@@ -52,13 +52,18 @@ async def export_own_storage(place_id: int = Body(), name_of_shop: str | None = 
 
 
 @stocks_router.post('/own-storage/coming/import', dependencies=[Depends(require_staff)], tags=['Own storage', 'Import'])
-async def import_own_storage_coming(data: UploadFile = File(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
-    pass
+async def import_own_storage_coming(file: UploadFile = File(), place_id: int = Body(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
+    content = await file.read()
+    await service.increment_own_storage_values(content, place_id, PurePath(file.filename).suffix, 1)
+    return {'status': 'OK'}
 
 
 @stocks_router.post('/own-storage/consumption/import', dependencies=[Depends(require_staff)], tags=['Own storage', 'Import'])
-async def import_own_storage_consumption(data: UploadFile = File(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
-    pass
+async def import_own_storage_consumption(file: UploadFile = File(), place_id: int = Body(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
+    content = await file.read()
+    await service.increment_own_storage_values(content, place_id, PurePath(file.filename).suffix, -1)
+    return {'status': 'OK'}
+
 
 
 @stocks_router.post('/own-storage/import', dependencies=[Depends(require_staff)], tags=['Own storage', 'Import'])
