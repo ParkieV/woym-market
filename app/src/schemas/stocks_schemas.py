@@ -132,16 +132,19 @@ class OfferWithStocksUpdate(BaseModel):
 class OwnStorageCreate(BaseModel):
     sku: str
     value: int = 0
+    storage_place_id: int
 
 
 class OwnStorageOut(BaseModel):
     id: int
     value: int = 0
+    storage_place_id: int | None
 
 
 class OwnStorageUpdate(BaseModel):
     id: int
     value: int = 0
+    storage_place_id: int
 
 
 class OfferStorageStock(BaseModel):
@@ -166,6 +169,20 @@ class OfferStorage(BaseModel):
 class OwnStorages(BaseModel):
     markets: list[MarketOut]
     data: list[OfferStorage]
+
+
+class OwnStoragePlaceCreate(BaseModel):
+    name: str
+
+
+class OwnStoragePlaceOut(BaseModel):
+    id: int
+    name: str
+
+
+class OwnStoragePlaceUpdate(BaseModel):
+    id: int
+    name: str
 
 
 @dataclass(frozen=True)

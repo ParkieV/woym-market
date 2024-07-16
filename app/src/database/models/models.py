@@ -227,7 +227,8 @@ class OwnStorage(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
     sku = Column(String, unique=True, index=True, nullable=False)
-
+    storage_place_id = Column(Integer, ForeignKey('own_storage_place.id', ondelete='RESTRICT'), nullable=True, default=None)
+    storage_place = relationship('OwnStoragePlace', uselist=False)
     value = Column(Integer, default=0, nullable=False)
 
 
@@ -253,5 +254,14 @@ class PricingSchemeField(Base):
 
     pricing_scheme_name = Column(String, ForeignKey("pricing_schemes.name", ondelete='CASCADE'))
     pricing_scheme = relationship(PricingScheme, uselist=False, back_populates='fields')
+
+
+class OwnStoragePlace(Base):
+    __tablename__ = 'own_storage_place'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+
+
 
 

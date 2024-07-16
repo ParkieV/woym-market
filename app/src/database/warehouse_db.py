@@ -6,8 +6,8 @@ from sqlalchemy.orm import selectinload, subqueryload
 from src.database.utils import _update_or_create_object, _get_or_create
 from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
     OfferStockWithWarehouseOut, OfferWithStocksUpdate, OfferStockUpdate, OwnStorageCreate, OwnStorageOut, \
-    OwnStorageUpdate, SupplyData, GeneralOrderData
-from src.database.models.models import Warehouse, OfferStock, OwnStorage
+    OwnStorageUpdate, SupplyData, GeneralOrderData, OwnStoragePlaceCreate, OwnStoragePlaceOut, OwnStoragePlaceUpdate
+from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace
 from pydantic import BaseModel
 from src.database.models.models import Offer
 from typing import Type, TypeVar
@@ -171,14 +171,14 @@ async def update_or_create_own_storage(session: AsyncSession, data: OwnStorageCr
     await session.commit()
 
 
-async def get_own_storages(session: AsyncSession):
+async def get_own_storages(session: AsyncSession, place_id: int | None):
     storages_result = []
 
     skus_query = await session.execute(select(Offer.sku).distinct())
 
     for sku in skus_query.all():
         offers_query = await session.execute(
-            select(Offer, OwnStorage).where(Offer.sku == sku[0]).join(OwnStorage, OwnStorage.sku == Offer.sku, isouter=True)
+            select(Offer, OwnStorage).where(Offer.sku == sku[0]).join(OwnStorage, OwnStorage.sku == Offer.sku, isouter=True).where(OwnStorage.storage_place_id == place_id)
         )
 
         data = {
@@ -223,8 +223,8 @@ async def get_own_storages(session: AsyncSession):
 
 async def change_own_storages(session: AsyncSession, data: list[OwnStorageUpdate]):
     for storage in data:
-        stmp = update(OwnStorage).where(OwnStorage.id == storage.id).values(**storage.model_dump())
-        a = await session.execute(stmp)
+        stmp = update(OwnStorage).where(OwnStorage.id == storage.id).where(OwnStorage.storage_place_id == storage.storage_place_id).values(**storage.model_dump())
+        await session.execute(stmp)
 
     await session.commit()
 
@@ -275,13 +275,12 @@ async def get_offer_stock(session: AsyncSession, offer_id: int, warehouse_id: in
     return result.scalar_one_or_none()
 
 
-async def update_own_storages_by_sku(session: AsyncSession, data: list[dict]):
+async def update_own_storages_by_sku(session: AsyncSession, data: list[dict], place_id: int):
     for storage in data:
-        stmp = update(OwnStorage).where(OwnStorage.sku == storage['sku']).values(**storage)
+        stmp = update(OwnStorage).where(OwnStorage.storage_place_id == place_id).where(OwnStorage.sku == storage['sku']).values(**storage)
         await session.execute(stmp)
 
     await session.commit()
-
 
 
 async def get_supply_data(session: AsyncSession, warehouses: list[int] | None = None, offers: list[int] | None = None, market: str | None = None, name_of_shop: str | None = None):
@@ -397,10 +396,34 @@ async def get_warehouse(session: AsyncSession, warehouse_id: int, model_schema: 
 
 
 async def create_own_storage_stocks(session: AsyncSession):
-    sub_query = select(OwnStorage.sku).distinct()
-    query = select(Offer.sku).distinct().where(Offer.sku.not_in(sub_query))
-    result = (await session.execute(query)).all()
-    skus = [i[0] for i in result]
+    places_query = select(OwnStoragePlace.id)
+    places = [i[0] for i in (await session.execute(places_query)).all()]
 
-    session.add_all([OwnStorage(sku=sku, value=0) for sku in skus])
+    for place_id in places:
+        sub_query = select(OwnStorage.sku).where(OwnStorage.storage_place_id == place_id).distinct()
+        query = select(Offer.sku).distinct().where(Offer.sku.not_in(sub_query))
+        result = (await session.execute(query)).all()
+        skus = [i[0] for i in result]
+
+        session.add_all([OwnStorage(sku=sku, value=0, storage_place_id=place_id) for sku in skus])
+        await session.commit()
+
+
+async def create_own_storage_places(session: AsyncSession, data: list[OwnStoragePlaceCreate]):
+    db_storages = [OwnStoragePlace(**i.model_dump()) for i in data]
+    session.add_all(db_storages)
+    await session.commit()
+
+
+async def get_all_own_storage_places(session: AsyncSession) -> list[OwnStoragePlaceOut]:
+    query = select(OwnStoragePlace)
+    result = await session.execute(query)
+    return [OwnStoragePlaceOut.model_validate(i, from_attributes=True) for i in result.scalars()]
+
+
+async def change_own_storage_places(session: AsyncSession, data: list[OwnStoragePlaceUpdate]):
+    for place in data:
+        stmp = update(OwnStoragePlace).where(OwnStoragePlace.id == place.id).values(**place.model_dump())
+        await session.execute(stmp)
+
     await session.commit()

@@ -7,7 +7,7 @@ from starlette.responses import FileResponse
 from src.services import stocks_service as service
 from src.dependencies.users import get_current_user, require_staff
 from src.schemas.stocks_schemas import OfferWithStocksUpdate, OfferWithStocks, OwnStorageUpdate, OwnStorages, \
-    WarehouseOut
+    WarehouseOut, OwnStoragePlaceCreate, OwnStoragePlaceOut, OwnStoragePlaceUpdate
 from src.services.base_utils import clean_up_files
 
 stocks_router = APIRouter(
@@ -16,9 +16,27 @@ stocks_router = APIRouter(
 )
 
 
-@stocks_router.get('/own-storage', dependencies=[Depends(get_current_user)], response_model=OwnStorages, tags=['Own storage'])
-async def get_own_storages():
-    return await service.get_own_storages()
+
+@stocks_router.post('/own-storage/places', dependencies=[Depends(require_staff)], tags=['Own storage', 'Own storage place'])
+async def create_own_storage_places(data: list[OwnStoragePlaceCreate]):
+    await service.create_own_storage_places(data)
+    return {'status': 'OK'}
+
+
+@stocks_router.patch('/own-storage/places', dependencies=[Depends(require_staff)], tags=['Own storage', 'Own storage place'])
+async def change_own_storage_place(data: list[OwnStoragePlaceUpdate]):
+    await service.change_own_storage_places(data)
+    return {'status': 'OK'}
+
+
+@stocks_router.get('/own-storage/places', dependencies=[Depends(get_current_user)], tags=['Own storage', 'Own storage place'])
+async def get_own_storage_places():
+    return await service.get_all_own_storage_places()
+
+
+@stocks_router.get('/own-storage/{place_id}', dependencies=[Depends(get_current_user)], response_model=OwnStorages, tags=['Own storage'])
+async def get_own_storages(place_id: int):
+    return await service.get_own_storages(place_id)
 
 
 @stocks_router.patch('/own-storage', dependencies=[Depends(require_staff)], tags=['Own storage'])
@@ -28,15 +46,25 @@ async def change_own_storages(data: list[OwnStorageUpdate]):
 
 
 @stocks_router.post('/own-storage/export', dependencies=[Depends(require_staff)], tags=['Own storage', 'Export'])
-async def export_own_storage(name_of_shop: str | None = Body(None), market: str | None = Body(None)):
-    path = Path(await service.export_own_storages(name_of_shop, market))
+async def export_own_storage(place_id: int = Body(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
+    path = Path(await service.export_own_storages(place_id, name_of_shop, market))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 
+@stocks_router.post('/own-storage/coming/import', dependencies=[Depends(require_staff)], tags=['Own storage', 'Import'])
+async def import_own_storage_coming(data: UploadFile = File(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
+    pass
+
+
+@stocks_router.post('/own-storage/consumption/import', dependencies=[Depends(require_staff)], tags=['Own storage', 'Import'])
+async def import_own_storage_consumption(data: UploadFile = File(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
+    pass
+
+
 @stocks_router.post('/own-storage/import', dependencies=[Depends(require_staff)], tags=['Own storage', 'Import'])
-async def import_own_storage(data: UploadFile = File(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
+async def import_own_storage(data: UploadFile = File(), place_id: int = Body(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
     content = await data.read()
-    await service.import_own_storages(content, name_of_shop, market, PurePath(data.filename).suffix)
+    await service.import_own_storages(content, place_id, name_of_shop, market, PurePath(data.filename).suffix)
     return {'status': 'OK'}
 
 
@@ -85,7 +113,6 @@ async def import_fbo(data: UploadFile = File(), name_of_shop: str | None = Body(
 async def export_fbo_stocks(name_of_shop: str | None = Body(None), market: str | None = Body(None)):
     path = Path(await service.export_stocks(name_of_shop, market))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
-
 
 
 @stocks_router.post('/supply/export', dependencies=[Depends(require_staff)], tags=['Export'])
