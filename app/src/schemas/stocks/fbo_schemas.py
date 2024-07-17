@@ -50,6 +50,7 @@ class OfferWithStocks(BaseModel):
     self_weight: float | None
     volume: float | None
     hidden: bool
+    barcodes: str | None
     stocks: list[OfferStockWithWarehouseOut]
 
     @property

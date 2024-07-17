@@ -43,6 +43,7 @@ class OwnStorageAggOfferOut(BaseModel):
     note_1: str
     note_2: str
     note_3: str
+    barcodes: str | None
 
 
 class OwnStorageOfferStockOut(BaseModel):
