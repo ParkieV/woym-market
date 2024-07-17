@@ -12,9 +12,10 @@ from src.database import offer_db
 import src.services.offer_utils as utils
 from src.database.settings_db import get_markets
 from src.schemas.offer_schemas import OfferOut
-from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, \
-    OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate, WarehouseOut, OwnStoragePlaceOut, OwnStoragePlaceCreate, \
-    OwnStoragePlaceUpdate
+from src.schemas.stocks.own_storages_schemas import OwnStorageCreate, OwnStorageUpdate, OwnStoragePlaceCreate, \
+    OwnStoragePlaceOut, OwnStoragePlaceUpdate
+from src.schemas.stocks.fbo_schemas import OfferStockCreate, OfferWithStocksUpdate
+from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 from src.services.base_utils import error_handler, clean_up_files
 from datetime import datetime
 from pathlib import Path
@@ -96,11 +97,9 @@ async def change_offer_with_stock(data: list[OfferWithStocksUpdate]):
 
 
 @error_handler('Не удалось получить собственные остатки.')
-async def get_own_storages(place_id: int | None):
+async def get_own_storages():
     async with async_session() as session:
-        storages = await db.get_own_storages(session, place_id)
-        markets = await get_markets(session)
-        return {'markets': markets, 'data': storages}
+        return await db.get_own_storages(session)
 
 
 @error_handler('Не удалось обновить собственные остатки.')

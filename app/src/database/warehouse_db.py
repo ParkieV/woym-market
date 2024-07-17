@@ -4,15 +4,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, and_, func, text, bindparam, literal_column, Select
 from sqlalchemy.orm import selectinload, subqueryload
 from src.database.utils import _update_or_create_object, _get_or_create
-from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, WarehouseOut, OfferStockOut, OfferWithStocks, \
-    OfferStockWithWarehouseOut, OfferWithStocksUpdate, OfferStockUpdate, OwnStorageCreate, OwnStorageOut, \
-    OwnStorageUpdate, SupplyData, GeneralOrderData, OwnStoragePlaceCreate, OwnStoragePlaceOut, OwnStoragePlaceUpdate
+from src.schemas.stocks.own_storages_schemas import OwnStorageAggOfferOut, OwnStorageOfferStockOut, OwnStorageOut, \
+    OwnStorageCreate, OwnStorageStockOut, OwnStorageUpdate, OwnStoragePlaceCreate, OwnStoragePlaceOut, \
+    OwnStoragePlaceUpdate
+from src.schemas.stocks.stocks_schemas import SupplyData, GeneralOrderData
+from src.schemas.stocks.fbo_schemas import OfferStockUpdate, OfferStockCreate, OfferStockOut, \
+    OfferStockWithWarehouseOut, OfferWithStocks, OfferWithStocksUpdate
+from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace
 from pydantic import BaseModel
 from src.database.models.models import Offer
 from typing import Type, TypeVar, Any
 from fastapi import status
 from fastapi.exceptions import HTTPException
+from collections import defaultdict
 
 ModelSchema = TypeVar('ModelSchema', bound=Type[BaseModel])
 
@@ -171,59 +176,96 @@ async def update_or_create_own_storage(session: AsyncSession, data: OwnStorageCr
     await session.commit()
 
 
-async def get_own_storages(session: AsyncSession, place_id: int | None):
-    storages_result = []
-
-    skus_query = await session.execute(select(Offer.sku).distinct())
-
-    for sku in skus_query.all():
-        offers_query = await session.execute(
-            select(Offer, OwnStorage).where(Offer.sku == sku[0]).join(OwnStorage, OwnStorage.sku == Offer.sku, isouter=True).where(OwnStorage.storage_place_id == place_id)
+async def get_own_storages(session: AsyncSession):
+    agg_offers_query = (
+        select(
+            Offer.sku,
+            func.string_agg(Offer.name.distinct(), literal_column("', '")).label('name'),
+            func.string_agg(Offer.photo.distinct(), literal_column("', '")).label('photo'),
+            func.string_agg(Offer.name_of_shop.distinct(), literal_column("', '")).label('name_of_shop'),
+            func.string_agg(Offer.market.distinct(), literal_column("', '")).label('market'),
+            func.string_agg(Offer.note_1.distinct(), literal_column("', '")).label('note_1'),
+            func.string_agg(Offer.note_2.distinct(), literal_column("', '")).label('note_2'),
+            func.string_agg(Offer.note_3.distinct(), literal_column("', '")).label('note_3'),
         )
+        .group_by(Offer.sku)
+    )
 
-        data = {
-            'sku': sku[0],
-            'name': set(),
-            'photo': set(),
-            'name_of_shop': set(),
-            'market': set(),
-            'note_1': set(),
-            'note_2': set(),
-            'note_3': set(),
-            'stocks': []
-        }
+    agg_offers_result = [OwnStorageAggOfferOut.model_validate(i, from_attributes=True) for i in (await session.execute(agg_offers_query)).all()]
 
-        for offer, own_storage in offers_query.all():
-            if not own_storage: continue
+    offer_stocks_query = select(Offer.sku, Offer.name_of_shop, Offer.market, func.sum(Offer.remaining_stock).label('stock')).group_by(Offer.sku, Offer.name_of_shop, Offer.market)
+    offer_stocks_result = [OwnStorageOfferStockOut.model_validate(i, from_attributes=True) for i in (await session.execute(offer_stocks_query)).all()]
+    stocks = defaultdict(list)
+    for offer_stock in offer_stocks_result:
+        stocks[offer_stock.sku].append(offer_stock)
 
-            data['name'].add(offer.name)
-            data['photo'].add(offer.photo)
-            data['note_1'].add(offer.note_1)
-            data['note_2'].add(offer.note_2)
-            data['note_3'].add(offer.note_3)
-            data['name_of_shop'].add(offer.name_of_shop)
-            data['market'].add(offer.market)
-            data['own_storage'] = OwnStorageOut.model_validate(own_storage, from_attributes=True)
-            data['stocks'].append(
-                {
-                    'name_of_shop': offer.name_of_shop,
-                    'market': offer.market,
-                    'value': offer.remaining_stock
-                }
-            )
+    own_storages = select(OwnStorage)
+    own_storages_result = [OwnStorageStockOut.model_validate(i, from_attributes=True) for i in (await session.execute(own_storages)).scalars()]
 
-        if 'own_storage' not in data: continue
+    own_storages = defaultdict(list)
+    for own_storage in own_storages_result:
+        own_storages[own_storage.sku].append(own_storage)
 
-        storages_result.append(data)
+    return [
+        OwnStorageOut(
+            offer=offer,
+            storages=own_storages[offer.sku],
+            stocks=stocks[offer.sku],
+        )
+        for offer in agg_offers_result
+            ]
 
-    return storages_result
-
-
+    # storages_result = []
+    #
+    # skus_query = await session.execute(select(Offer.sku).distinct())
+    #
+    # for sku in skus_query.all():
+    #     offers_query = await session.execute(
+    #         select(Offer, OwnStorage).where(Offer.sku == sku[0]).join(OwnStorage, OwnStorage.sku == Offer.sku, isouter=True).where(OwnStorage.storage_place_id == place_id)
+    #     )
+    #
+    #     data = {
+    #         'sku': sku[0],
+    #         'name': set(),
+    #         'photo': set(),
+    #         'name_of_shop': set(),
+    #         'market': set(),
+    #         'note_1': set(),
+    #         'note_2': set(),
+    #         'note_3': set(),
+    #         'stocks': []
+    #     }
+    #
+    #     for offer, own_storage in offers_query.all():
+    #         if not own_storage: continue
+    #
+    #         data['name'].add(offer.name)
+    #         data['photo'].add(offer.photo)
+    #         data['note_1'].add(offer.note_1)
+    #         data['note_2'].add(offer.note_2)
+    #         data['note_3'].add(offer.note_3)
+    #         data['name_of_shop'].add(offer.name_of_shop)
+    #         data['market'].add(offer.market)
+    #         data['own_storage'] = OwnStorageOut.model_validate(own_storage, from_attributes=True)
+    #         data['stocks'].append(
+    #             {
+    #                 'name_of_shop': offer.name_of_shop,
+    #                 'market': offer.market,
+    #                 'value': offer.remaining_stock
+    #             }
+    #         )
+    #
+    #     if 'own_storage' not in data: continue
+    #
+    #     storages_result.append(data)
+    #
+    # return storages_result
 
 
 async def change_own_storages(session: AsyncSession, data: list[OwnStorageUpdate]):
     for storage in data:
-        stmp = update(OwnStorage).where(OwnStorage.id == storage.id).where(OwnStorage.storage_place_id == storage.storage_place_id).values(**storage.model_dump())
+        stmp = update(OwnStorage).where(OwnStorage.id == storage.id).where(
+            OwnStorage.storage_place_id == storage.storage_place_id).values(**storage.model_dump())
         await session.execute(stmp)
 
     await session.commit()
@@ -231,7 +273,8 @@ async def change_own_storages(session: AsyncSession, data: list[OwnStorageUpdate
 
 async def increment_own_storage_values(session: AsyncSession, data: list[dict[str, Any]], place_id: int):
     for item in data:
-        stmp = update(OwnStorage).where(OwnStorage.storage_place_id == place_id).where(OwnStorage.sku == item['sku']).values(value=OwnStorage.value + item['value'])
+        stmp = update(OwnStorage).where(OwnStorage.storage_place_id == place_id).where(
+            OwnStorage.sku == item['sku']).values(value=OwnStorage.value + item['value'])
         await session.execute(stmp)
     await session.commit()
 
@@ -284,16 +327,20 @@ async def get_offer_stock(session: AsyncSession, offer_id: int, warehouse_id: in
 
 async def update_own_storages_by_sku(session: AsyncSession, data: list[dict], place_id: int):
     for storage in data:
-        stmp = update(OwnStorage).where(OwnStorage.storage_place_id == place_id).where(OwnStorage.sku == storage['sku']).values(**storage)
+        stmp = update(OwnStorage).where(OwnStorage.storage_place_id == place_id).where(
+            OwnStorage.sku == storage['sku']).values(**storage)
         await session.execute(stmp)
 
     await session.commit()
 
 
-async def get_supply_data(session: AsyncSession, warehouses: list[int] | None = None, offers: list[int] | None = None, market: str | None = None, name_of_shop: str | None = None):
+async def get_supply_data(session: AsyncSession, warehouses: list[int] | None = None, offers: list[int] | None = None,
+                          market: str | None = None, name_of_shop: str | None = None):
     query = (
-        select(Offer.sku, Offer.name, Offer.name_of_shop, Offer.market, OfferStock.for_delivery, Warehouse.name.label('warehouse_name'),
-               Offer.supplier_available, OwnStorage.value.label('own_storage_value'), Offer.barcodes, Offer.current_price)
+        select(Offer.sku, Offer.name, Offer.name_of_shop, Offer.market, OfferStock.for_delivery,
+               Warehouse.name.label('warehouse_name'),
+               Offer.supplier_available, OwnStorage.value.label('own_storage_value'), Offer.barcodes,
+               Offer.current_price)
         .join(Offer, OfferStock.offer_id == Offer.id)
         .join(Warehouse, OfferStock.warehouse_id == Warehouse.id)
         .join(OwnStorage, OwnStorage.sku == Offer.sku)
@@ -324,7 +371,9 @@ async def get_supply_data(session: AsyncSession, warehouses: list[int] | None = 
     ]
 
 
-async def get_general_order_data(session: AsyncSession, warehouses: list[int] | None = None, offers: list[int] | None = None, name_of_shop: str | None = None, market: str | None = None):
+async def get_general_order_data(session: AsyncSession, warehouses: list[int] | None = None,
+                                 offers: list[int] | None = None, name_of_shop: str | None = None,
+                                 market: str | None = None):
     for_delivery_query = select(func.sum(OfferStock.for_delivery)).where(OfferStock.offer_id == Offer.id)
 
     if warehouses:
@@ -389,7 +438,8 @@ async def update_fbo_support_data(session: AsyncSession, data: list[dict], name_
     await session.commit()
 
 
-async def get_warehouse(session: AsyncSession, warehouse_id: int, model_schema: Type[ModelSchema] = WarehouseOut, allow_none: bool = True) -> WarehouseOut | None:
+async def get_warehouse(session: AsyncSession, warehouse_id: int, model_schema: Type[ModelSchema] = WarehouseOut,
+                        allow_none: bool = True) -> WarehouseOut | None:
     query = select(Warehouse).where(Warehouse.id == warehouse_id)
     result = (await session.execute(query)).scalar_one_or_none()
 
@@ -397,7 +447,8 @@ async def get_warehouse(session: AsyncSession, warehouse_id: int, model_schema: 
         if allow_none:
             return None
 
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Warehouse with id - {warehouse_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Warehouse with id - {warehouse_id} not found")
 
     return model_schema.model_validate(result, from_attributes=True)
 

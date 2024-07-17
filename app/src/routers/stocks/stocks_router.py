@@ -7,7 +7,7 @@ from starlette.responses import FileResponse
 from src.dependencies.users import get_current_user, require_staff
 from src.routers.stocks.fbo_router import router as fbo_router
 from src.routers.stocks.own_storage_router import router as own_storage_router
-from src.schemas.stocks_schemas import WarehouseOut
+from src.schemas.stocks.warehouses_schemas import WarehouseOut
 from src.services import stocks_service as service
 from src.services.base_utils import clean_up_files
 

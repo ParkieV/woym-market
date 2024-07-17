@@ -226,7 +226,7 @@ class OwnStorage(Base):
     __tablename__ = 'own_storage'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
-    sku = Column(String, unique=True, index=True, nullable=False)
+    sku = Column(String, index=True, nullable=False)
     storage_place_id = Column(Integer, ForeignKey('own_storage_place.id', ondelete='RESTRICT'), nullable=True, default=None)
     storage_place = relationship('OwnStoragePlace', uselist=False)
     value = Column(Integer, default=0, nullable=False)

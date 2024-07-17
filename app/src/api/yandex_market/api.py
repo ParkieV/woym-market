@@ -287,7 +287,7 @@ class YandexMarketAPI(BaseAPI):
             data = response.json()
 
             for offer_data in data['offers']:
-                result[data['offerId']] = data['offerId']['price']['value']
+                result[offer_data['offerId']] = offer_data['offerId']['price']['value']
 
             page_token = data['result']['paging'].get('nextPageToken', None)
             if page_token is None:

@@ -1,31 +1,6 @@
-from datetime import datetime
-from enum import Enum
-
 from pydantic import BaseModel, computed_field
 
-from src.schemas.base_api_schemas import WarehouseType
-from src.schemas.settings_schemas import MarketOut
-from dataclasses import dataclass
-
-
-class WarehouseTypes(str, Enum):
-    WAREHOUSE = 'warehouse'
-    CLUSTER = 'cluster'
-
-
-class BaseWarehouse(BaseModel):
-    name: str
-    warehouse_type: WarehouseType
-
-
-class WarehouseCreate(BaseWarehouse):
-    market: str
-
-
-class WarehouseOut(BaseWarehouse):
-    id: int
-    market: str
-    from_file_updated_at: datetime | None
+from src.schemas.stocks.warehouses_schemas import WarehouseOut
 
 
 class BaseOfferStock(BaseModel):
@@ -52,7 +27,6 @@ class OfferStockCreate(BaseOfferStock):
 
 class OfferStockOut(BaseOfferStock):
     id: int
-
 
 
 class OfferStockWithWarehouseOut(OfferStockOut):
@@ -118,7 +92,6 @@ class OfferWithStocks(BaseModel):
         return self.profit * self.total_for_delivery
 
 
-
 class OfferWithStocksUpdate(BaseModel):
     id: int
     note_1: str = ''
@@ -127,83 +100,3 @@ class OfferWithStocksUpdate(BaseModel):
     supplier_available: bool
     hidden: bool
     stocks: list[OfferStockUpdate]
-
-
-class OwnStorageCreate(BaseModel):
-    sku: str
-    value: int = 0
-    storage_place_id: int
-
-
-class OwnStorageOut(BaseModel):
-    id: int
-    value: int = 0
-    storage_place_id: int | None
-
-
-class OwnStorageUpdate(BaseModel):
-    id: int
-    value: int = 0
-    storage_place_id: int
-
-
-class OfferStorageStock(BaseModel):
-    name_of_shop: str
-    market: str
-    value: int
-
-
-class OfferStorage(BaseModel):
-    sku: str
-    name: list[str]
-    photo: list[str | None]
-    name_of_shop: list[str]
-    market: list[str]
-    note_1: list[str]
-    note_2: list[str]
-    note_3: list[str]
-    own_storage: OwnStorageOut
-    stocks: list[OfferStorageStock]
-
-
-class OwnStorages(BaseModel):
-    markets: list[MarketOut]
-    data: list[OfferStorage]
-
-
-class OwnStoragePlaceCreate(BaseModel):
-    name: str
-
-
-class OwnStoragePlaceOut(BaseModel):
-    id: int
-    name: str
-
-
-class OwnStoragePlaceUpdate(BaseModel):
-    id: int
-    name: str
-
-
-@dataclass(frozen=True)
-class SupplyData:
-    sku: str
-    name: str
-    market: str
-    name_of_shop: str
-    for_delivery: int
-    warehouse_name: str
-    supplier_available: bool
-    own_storage_value: int | None
-    barcodes: str | None
-    current_price: float | None
-
-
-@dataclass(frozen=True)
-class GeneralOrderData:
-    sku: str
-    name: str
-    volume: float | None
-    cost_price: float | None
-    self_weight: float | None
-    for_delivery: float | None
