@@ -181,12 +181,13 @@ async def get_own_storages(session: AsyncSession):
         select(
             Offer.sku,
             func.string_agg(Offer.name.distinct(), literal_column("', '")).label('name'),
-            func.string_agg(Offer.photo.distinct(), literal_column("', '")).label('photo'),
+            func.array_agg(Offer.photo.distinct()).label('photo'),
             func.string_agg(Offer.name_of_shop.distinct(), literal_column("', '")).label('name_of_shop'),
             func.string_agg(Offer.market.distinct(), literal_column("', '")).label('market'),
             func.string_agg(Offer.note_1.distinct(), literal_column("', '")).label('note_1'),
             func.string_agg(Offer.note_2.distinct(), literal_column("', '")).label('note_2'),
             func.string_agg(Offer.note_3.distinct(), literal_column("', '")).label('note_3'),
+            func.string_agg(Offer.barcodes.distinct(), literal_column("', '")).label('barcodes'),
         )
         .group_by(Offer.sku)
     )

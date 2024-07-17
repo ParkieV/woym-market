@@ -37,12 +37,13 @@ class OwnStoragePlaceUpdate(BaseModel):
 class OwnStorageAggOfferOut(BaseModel):
     sku: str
     name: str
-    photo: str
+    photo: list[str | None]
     market: str
     name_of_shop: str
     note_1: str
     note_2: str
     note_3: str
+    barcodes: str | None
 
 
 class OwnStorageOfferStockOut(BaseModel):
