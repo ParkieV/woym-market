@@ -26,7 +26,7 @@ from fastapi import status
 from datetime import datetime
 
 from src.schemas.settings_schemas import MarketOut
-from src.schemas.stocks_schemas import OwnStorageCreate
+from src.schemas.stocks.own_storages_schemas import OwnStorageCreate
 from src.services.base_utils import error_handler
 
 

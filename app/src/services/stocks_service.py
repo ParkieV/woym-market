@@ -12,8 +12,10 @@ from src.database import offer_db
 import src.services.offer_utils as utils
 from src.database.settings_db import get_markets
 from src.schemas.offer_schemas import OfferOut
-from src.schemas.stocks_schemas import WarehouseCreate, OfferStockCreate, \
-    OfferWithStocksUpdate, OwnStorageCreate, OwnStorageUpdate, WarehouseOut
+from src.schemas.stocks.own_storages_schemas import OwnStorageCreate, OwnStorageUpdate, OwnStoragePlaceCreate, \
+    OwnStoragePlaceOut, OwnStoragePlaceUpdate
+from src.schemas.stocks.fbo_schemas import OfferStockCreate, OfferWithStocksUpdate
+from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 from src.services.base_utils import error_handler, clean_up_files
 from datetime import datetime
 from pathlib import Path
@@ -97,9 +99,7 @@ async def change_offer_with_stock(data: list[OfferWithStocksUpdate]):
 @error_handler('Не удалось получить собственные остатки.')
 async def get_own_storages():
     async with async_session() as session:
-        storages = await db.get_own_storages(session)
-        markets = await get_markets(session)
-        return {'markets': markets, 'data': storages}
+        return await db.get_own_storages(session)
 
 
 @error_handler('Не удалось обновить собственные остатки.')
@@ -200,8 +200,12 @@ async def export_stocks(name_of_shop: str | None = None, market: str | None = No
 
 
 @error_handler('Ошибка экспорта собственных остатков.')
-async def export_own_storages(name_of_shop: str | None = None, market: str | None = None) -> str:
-    data = await get_own_storages()
+async def export_own_storages(place_id, name_of_shop: str | None = None, market: str | None = None) -> str:
+    data = await get_own_storages(place_id)
+
+    if not data['data']:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, 'Собственных остатков не найдено')
+
     columns = ['sku', 'Название', 'Фото', 'Магазин', 'Маркетплейс', 'Примечание 1', 'Примечание 2', 'Примечание 3',
                'Мои остатки']
     aggregated_columns = ['name', 'photo', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']
@@ -227,8 +231,7 @@ async def export_own_storages(name_of_shop: str | None = None, market: str | Non
 
 
 @error_handler('Ошибка импорта собственных остатков.')
-async def import_own_storages(data, name_of_shop: str | None = None, market: str | None = None,
-                              file_extension: str = 'xlsx'):
+async def import_own_storages(data, place_id: int,  name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df.rename(columns={'Мои остатки': 'value'}, inplace=True)
@@ -237,7 +240,7 @@ async def import_own_storages(data, name_of_shop: str | None = None, market: str
     data = df.to_dict('records')
 
     async with async_session() as session:
-        await db.update_own_storages_by_sku(session, data)
+        await db.update_own_storages_by_sku(session, data, place_id)
 
 
 async def export_yandex_supply(data: pd.DataFrame, dir_path: Path):
@@ -414,6 +417,32 @@ async def create_own_storages():
         logger.info('Start setup own-storages')
         await db.create_own_storage_stocks(session)
         logger.info('Finish setup own-storages')
+
+
+async def create_own_storage_places(data: list[OwnStoragePlaceCreate]):
+    async with async_session() as session:
+        await db.create_own_storage_places(session, data)
+
+
+async def get_all_own_storage_places() -> list[OwnStoragePlaceOut]:
+    async with async_session() as session:
+        return await db.get_all_own_storage_places(session)
+
+
+async def change_own_storage_places(data: list[OwnStoragePlaceUpdate]):
+    async with async_session() as session:
+        await db.change_own_storage_places(session, data)
+
+
+async def increment_own_storage_values(data, place_id: int, file_extension: str, coef: int = 1):
+    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
+    df.rename({'артикул': 'sku', 'количество': 'value'}, axis='columns', inplace=True)
+    df = df[['sku', 'value']]
+    df = df.astype({'sku': str, 'value': int})
+    df['value'] = df['value'] * coef
+
+    async with async_session() as session:
+        await db.increment_own_storage_values(session, df.to_dict('records'), place_id)
 
 
 
