@@ -44,6 +44,12 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 },
                 {
                     base: new StringColumn(),
+                    key: "barcodes",
+                    header: "Штрихкоды",
+                    columnGroupShow: "closed"
+                },
+                {
+                    base: new StringColumn(),
                     header: "Примечание 1",
                     key: "note_1",
                     editable: true,

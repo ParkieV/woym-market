@@ -17,15 +17,27 @@
     let ozon = markets
         .filter(({ type }) => type === "ozon")
         .map(({ name }) => ({ name, selected: true }));
-    const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"];
 
-    const market_filter = (storage: OwnStorage, opts: Option[]) =>
-        storage.name_of_shop.some(shop =>
+    const market_filter = (storage: OwnStorage, opts: Option[]) => {
+        return storage.offer.name_of_shop.some(shop =>
             opts
                 .filter(x => x.selected)
                 .map(x => x.name)
                 .includes(shop)
         );
+    };
+
+    function searchStrings(data: OwnStorage) {
+        return [
+            data.offer.sku,
+            data.offer.name,
+            data.offer.note_1,
+            data.offer.note_2,
+            data.offer.note_3
+        ]
+            .flat(1)
+            .filter(x => x !== null) as string[];
+    }
 
     export let filter: Filter<OwnStorage>;
 </script>
@@ -38,7 +50,7 @@
                 <OptionsFilter filter={market_filter} image={"/ozon.svg"} bind:options={ozon} />
             </FilterGroup>
         </div>
-        <Search placeholder="Поиск..." fields={SEARCH_FIELDS} />
+        <Search placeholder="Поиск..." fields={searchStrings} />
     </FilterGroup>
 </menu>
 

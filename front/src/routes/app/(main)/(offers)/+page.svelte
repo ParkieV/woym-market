@@ -39,7 +39,7 @@
         definition = offerGrid(templates)
             .plugin(new FilterPlugin(filterStore))
             .plugin(new StatePlugin("offers"))
-            .plugin(new ChangesPlugin("id", offersState.changes))
+            .plugin(new ChangesPlugin(x => x.id, offersState.changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
             .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(

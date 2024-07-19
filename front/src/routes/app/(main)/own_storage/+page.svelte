@@ -19,8 +19,6 @@
     import FilterPlugin from "$lib/datagrid/plugins/filter";
     import { ownStorageState } from "../state";
 
-    onMount(() => ownStorageState.load());
-
     export let data: PageData;
 
     let definition: GridDefinition;
@@ -28,10 +26,11 @@
     let selected_image: string | undefined = undefined;
 
     onMount(async () => {
-        definition = ownStorageGrid(data.markets)
+        await ownStorageState.load();
+        definition = ownStorageGrid(data.markets, data.storages)
             .plugin(new FilterPlugin(filterStore))
             .plugin(new StatePlugin("own_storage"))
-            .plugin(new ChangesPlugin("sku", ownStorageState.changes))
+            .plugin(new ChangesPlugin(x => x.offer.sku, ownStorageState.changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
             .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(new ClassesPlugin());
@@ -39,7 +38,7 @@
 
     async function save() {
         let ok = await patchOwnStorages(
-            get(ownStorageState).filter(x => get(ownStorageState.changes).isChanged(x.sku))
+            get(ownStorageState).filter(x => get(ownStorageState.changes).isChanged(x.offer.sku))
         );
         if (ok) await ownStorageState.forceReload();
     }
@@ -54,7 +53,7 @@
 {/if}
 
 <Toolbar bind:filter markets={data.markets} />
-{#if definition}
+{#if definition && $ownStorageState}
     <Grid {definition} bind:data={$ownStorageState} />
 {/if}
 <Footer

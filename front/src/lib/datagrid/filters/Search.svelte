@@ -8,14 +8,17 @@
     $: search = normalizeString(value);
 
     /** Fields to check when doing search. */
-    export let fields: (keyof T)[];
+    export let fields: (keyof T)[] | ((data: T) => string[]);
 
     function filter(data: T) {
-        return fields
-            .map(field => data[field])
+        let strings: string[];
+        if (Array.isArray(fields)) {
+            strings = fields.map(field => data[field] + "");
+        } else {
+            strings = fields(data);
+        }
+        return strings
             .filter(data => data !== undefined && data !== null)
-            .map((data): T[keyof T][] => (Array.isArray(data) ? data : [data]))
-            .flat(1)
             .map(data => normalizeString((data as {}).toString()))
             .some(s => s.includes(search));
     }

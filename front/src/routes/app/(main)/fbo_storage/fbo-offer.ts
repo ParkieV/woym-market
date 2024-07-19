@@ -20,8 +20,8 @@ import { selectedContextMenuItems } from "./selected";
 import { calcToDeliver } from "./fbo-warehouse";
 
 export default function fboOffersGrid(
-    changes: ChangeList<FboStocks, "id">,
-    innerChanges: ChangeList<FboStorage, "id">
+    changes: ChangeList<FboStocks, number>,
+    innerChanges: ChangeList<FboStorage, number>
 ): GridDefinition<FboStocks> {
     return new GridDefinition({ ...BASE_GRID_OPTIONS, getContextMenuItems }, columns());
 
@@ -80,6 +80,12 @@ function columns(): (Column | ColumnGroup)[] {
                     header: "Примечание 3",
                     key: "note_3",
                     editable: true,
+                    columnGroupShow: "closed"
+                },
+                {
+                    base: new StringColumn(),
+                    key: "barcodes",
+                    header: "Штрихкоды",
                     columnGroupShow: "closed"
                 },
                 {

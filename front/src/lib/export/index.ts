@@ -60,15 +60,22 @@ export class SimpleExport extends Export {
 }
 
 export class SupplyExport extends Export {
+    public type: "only-own-storage" | "only-stocks" | "with-own-storage" | null = null;
+    public place_id: number | null = null;
     public name_of_shop: string | null = null;
     public market: string | null = null;
 
+    constructor() {
+        super();
+    }
+
     protected get url(): string {
-        return "stocks/supply/export";
+        return `stocks/supply/${this.type}/export`;
     }
 
     protected get body(): string {
-        let data: Record<string, string | number[]> = {
+        let data: Record<string, string | number | number[] | null> = {
+            place_id: this.place_id,
             offers_id: Array.from(get(fboOffersSelection.filtered)).map(x => x[1].id),
             warehouses_id: Array.from(get(fboStorageSelection.filtered)).map(x => x[1].warehouse.id)
         };
@@ -80,7 +87,11 @@ export class SupplyExport extends Export {
     }
 
     public get valid(): boolean {
-        return true;
+        return this.type !== null && (this.place_id !== null || !this.isPlaceNeeded);
+    }
+
+    public get isPlaceNeeded() {
+        return this.type !== "only-stocks";
     }
 }
 

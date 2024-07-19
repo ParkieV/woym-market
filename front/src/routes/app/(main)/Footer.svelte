@@ -1,4 +1,4 @@
-<script lang="ts" generics="T, K extends keyof T">
+<script lang="ts" generics="T">
     import { serverUpdatedAt } from "$lib/data/settings";
 
     import {
@@ -9,7 +9,7 @@
     import { createEventDispatcher } from "svelte";
     import { userCanModify } from "$lib/data/user";
 
-    export let changes: ChangeList<T, K>;
+    export let changes: ChangeList<T, any>;
 
     const dispatch = createEventDispatcher<{ save: void; cancel: void }>();
 

@@ -95,3 +95,38 @@ export type FboAdditionsImportProps = {
     name_of_shop: string | null;
     warehouse_id: number | null;
 };
+
+export class OwnStorageImport extends Import {
+    public market: string | null = null;
+    public name_of_shop: string | null = null;
+    public place_id: number | null = null;
+
+    constructor(private subtype: "consumption" | "coming" | null) {
+        super();
+    }
+
+    protected get url(): string {
+        if (this.subtype === "coming") {
+            return "stocks/own-storage/coming/import";
+        } else if (this.subtype === "consumption") {
+            return "stocks/own-storage/consumption/import";
+        } else if (this.subtype === null) {
+            return "stocks/own-storage/import";
+        } else {
+            throw new Error("Unexpected url type");
+        }
+    }
+
+    protected body(file: Blob): FormData {
+        let formData = new FormData();
+        if (this.place_id) formData.append("place_id", this.place_id.toFixed(0));
+        if (this.market) formData.append("market", this.market);
+        if (this.name_of_shop) formData.append("name_of_shop", this.name_of_shop);
+        formData.append("data", file);
+        return formData;
+    }
+
+    public get valid(): boolean {
+        return this.place_id !== null;
+    }
+}

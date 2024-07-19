@@ -13,8 +13,8 @@
 
     export let grid: GridApi<FboStocks>;
 
-    export let changes: ChangeList<FboStocks, "id">;
-    export let innerChanges: ChangeList<FboStorage, "id">;
+    export let changes: ChangeList<FboStocks, number>;
+    export let innerChanges: ChangeList<FboStorage, number>;
 
     export let selectedStocks: Readable<Map<number, FboStocks>>;
     export let selectedStorage: Readable<Map<number, FboStorage>>;

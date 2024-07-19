@@ -4,6 +4,7 @@
     import { getStoreNames, getStoreTypes } from "$lib/data/markets";
     import { SimpleExport, SupplyExport, ViolatorsExport } from ".";
     import { page } from "$app/stores";
+    import { getStoragePlaces, type StoragePlace } from "$lib/data/own_storage/places";
 
     export let open: boolean;
     let data: SimpleExport | SupplyExport | null = null;
@@ -17,10 +18,13 @@
 
     let name_of_shop_options: string[] = [];
     let market_options: string[] = [];
+    let storages: StoragePlace[] = [];
+
     onMount(async () => {
-        [name_of_shop_options, market_options] = await Promise.all([
+        [name_of_shop_options, market_options, storages] = await Promise.all([
             getStoreNames(),
-            getStoreTypes()
+            getStoreTypes(),
+            getStoragePlaces()
         ]);
     });
 </script>
@@ -32,7 +36,7 @@
             <span>Вид</span>
             <select bind:value={data}>
                 <option value={null} disabled>Не выбрано</option>
-                <option value={new SimpleExport("data/export")}>Таблица</option>
+                <option value={new SimpleExport("data/export")}>Карточки</option>
                 <option value={new SimpleExport("stocks/own-storage/export")}>Мои остатки</option>
                 <option value={new SimpleExport("stocks/fbo/export")}>FBO остатки</option>
                 <option value={new ViolatorsExport()}>Нарушители РРЦ</option>
@@ -60,6 +64,30 @@
                     {/each}
                 </select>
             </label>
+            {#if data instanceof SupplyExport}
+                <label>
+                    <span>Режим</span>
+                    <select bind:value={data.type}>
+                        <option value={null}>Не выбрано</option>
+                        <option value={"only-own-storage"}>Только Мой склад</option>
+                        <option value={"only-stocks"}>Без учета Мой склад</option>
+                        <option value={"with-own-storage"}>C учетом Мой склад</option>
+                    </select>
+                </label>
+                {#if data.isPlaceNeeded}
+                    <label>
+                        <span>Склад</span>
+                        <select bind:value={data.place_id}>
+                            <option value={null}>Не выбрано</option>
+                            {#await storages then storages}
+                                {#each storages as storage}
+                                    <option value={storage.id}>{storage.name}</option>
+                                {/each}
+                            {/await}
+                        </select>
+                    </label>
+                {/if}
+            {/if}
         {/if}
     </div>
     <svelte:fragment slot="footer">
@@ -88,7 +116,7 @@
                 font-size: 16px;
             }
             > select {
-                width: 180px;
+                width: 280px;
                 text-overflow: ellipsis;
                 border-radius: 0;
                 border: 0;

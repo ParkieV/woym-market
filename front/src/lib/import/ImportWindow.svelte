@@ -1,9 +1,10 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
     import Window from "../components/windows/Window.svelte";
-    import { Import, SimpleImport, FboAdditionsImport } from ".";
+    import { Import, SimpleImport, FboAdditionsImport, OwnStorageImport } from ".";
     import Simple from "./Simple.svelte";
     import Warehouse from "./Warehouse.svelte";
+    import OwnStorage from "./OwnStorage.svelte";
 
     export let open: boolean;
 
@@ -27,10 +28,12 @@
             <span>Вид</span>
             <select bind:value={data}>
                 <option value={null} disabled>Не выбрано</option>
-                <option value={new SimpleImport("data/import", "table")}>Таблица</option>
+                <option value={new SimpleImport("data/import", "table")}>Карточки</option>
                 <option value={new SimpleImport("data/import", "sizes")}>Размеры</option>
                 <option value={new SimpleImport("data/import", "prices")}>Цены</option>
-                <option value={new SimpleImport("stocks/own-storage/import")}>Мои остатки</option>
+                <option value={new OwnStorageImport(null)}>Мои остатки</option>
+                <option value={new OwnStorageImport("coming")}>Приход</option>
+                <option value={new OwnStorageImport("consumption")}>Расход</option>
                 <option value={new SimpleImport("stocks/fbo/import")}>FBO остатки</option>
                 <option value={new FboAdditionsImport()}>FBO Яндекс</option>
             </select>
@@ -39,6 +42,8 @@
             <Simple bind:data />
         {:else if data instanceof FboAdditionsImport}
             <Warehouse bind:data />
+        {:else if data instanceof OwnStorageImport}
+            <OwnStorage bind:data />
         {/if}
     </div>
     <svelte:fragment slot="footer">

@@ -1,9 +1,9 @@
 import { ChangeList } from "$lib/datagrid/plugins/changes";
-import { get, writable, type Writable } from "svelte/store";
-import { setLocalUpdateTime, shouldReload, localUpdatedAt } from "./data/settings";
+import { writable, type Writable } from "svelte/store";
+import { setLocalUpdateTime, shouldReload } from "./data/settings";
 
 /** Managed state of the grid5. */
-export class GridState<T, KEY extends keyof T> implements Writable<T[]> {
+export class GridState<T, K> implements Writable<T[]> {
     constructor(public getter: () => T[] | Promise<T[]>) {
         shouldReload.subscribe(async should => {
             if (!should || !this.initialized) return;
@@ -29,7 +29,7 @@ export class GridState<T, KEY extends keyof T> implements Writable<T[]> {
     public update = this.current.update;
 
     /** Changelist to track what values were changed. */
-    public changes = new ChangeList<T, KEY>();
+    public changes = new ChangeList<T, K>();
 
     /** Initially loads data if it wasn't loaded yet. */
     public async load() {

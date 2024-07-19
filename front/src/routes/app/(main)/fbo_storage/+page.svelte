@@ -47,10 +47,16 @@
         const detail = fboWarehouseGrid()
             .plugin(new FilterPlugin(fboStorageFilter))
             .plugin(
-                new ChangesPlugin("id", fboStorageChanges, ({ data: storage }) => {
-                    let stock = get(fboState).find(x => x.stocks.some(s => s.id === storage.id));
-                    if (stock) fboState.changes.add(stock.id);
-                })
+                new ChangesPlugin(
+                    x => x.id,
+                    fboStorageChanges,
+                    ({ data: storage }) => {
+                        let stock = get(fboState).find(x =>
+                            x.stocks.some(s => s.id === storage.id)
+                        );
+                        if (stock) fboState.changes.add(stock.id);
+                    }
+                )
             )
             .plugin(new ReadonlyPlugin(!$userCanModify))
             .plugin(new ClassesPlugin())
@@ -64,7 +70,7 @@
         const master = fboOffersGrid(fboState.changes, fboStorageChanges)
             .plugin(new FilterPlugin(fboOffersFilter))
             .plugin(new StatePlugin("fbo_storage"))
-            .plugin(new ChangesPlugin("id", fboState.changes))
+            .plugin(new ChangesPlugin(x => x.id, fboState.changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
             .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(new ClassesPlugin())

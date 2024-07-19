@@ -8,8 +8,8 @@ import SetSelectedWindow from "./SetSelectedWindow.svelte";
 import { fboOffersSelection, fboStorageSelection } from "../state";
 
 export function selectedContextMenuItems(
-    changes: ChangeList<FboStocks, "id">,
-    innerChanges: ChangeList<FboStorage, "id">
+    changes: ChangeList<FboStocks, number>,
+    innerChanges: ChangeList<FboStorage, number>
 ): MenuItemDef[] {
     return [
         {

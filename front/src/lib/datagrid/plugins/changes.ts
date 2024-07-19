@@ -8,9 +8,9 @@ import { derived, get, writable, type Readable, type Writable } from "svelte/sto
  *
  * Changed cells will have `changed` class applied.
  * */
-export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T> {
+export default class ChangesPlugin<T, K> implements GridPlugin<T> {
     constructor(
-        private key: K,
+        private key: (val: T) => K,
         private changes: ChangeList<T, K>,
         private onChange?: (e: CellValueChangedEvent<T, K>) => void | Promise<void>
     ) {}
@@ -24,7 +24,7 @@ export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T
                     }
                     col.cellClassRules.changed = ({ data }) => {
                         if (!data) return false;
-                        return get(this.changes).isChanged(data[this.key]);
+                        return get(this.changes).isChanged(this.key(data));
                     };
                 }
             }
@@ -32,7 +32,7 @@ export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T
 
         let func = opts.onCellValueChanged;
         opts.onCellValueChanged = e => {
-            this.changes.add(e.data[this.key]);
+            this.changes.add(this.key(e.data));
             e.api.refreshCells({ rowNodes: [e.node] });
             this.onChange?.(e);
             func?.(e);
@@ -41,11 +41,11 @@ export default class ChangesPlugin<T, K extends keyof T> implements GridPlugin<T
 }
 
 // TODO: check which properties were changed.
-export class ChangeList<T, KEY extends keyof T> implements Readable<ChangeListInfo<T[KEY]>> {
-    private changes: Writable<Set<T[KEY]>> = writable(new Set());
+export class ChangeList<T, K> implements Readable<ChangeListInfo<K>> {
+    private changes: Writable<Set<K>> = writable(new Set());
 
     /** Mark value with key as changed. */
-    public add(key: T[KEY]) {
+    public add(key: K) {
         this.changes.update(x => (x.add(key), x));
     }
 
