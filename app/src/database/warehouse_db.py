@@ -192,16 +192,21 @@ async def get_own_storages(session: AsyncSession):
         .group_by(Offer.sku)
     )
 
-    agg_offers_result = [OwnStorageAggOfferOut.model_validate(i, from_attributes=True) for i in (await session.execute(agg_offers_query)).all()]
+    agg_offers_result = [OwnStorageAggOfferOut.model_validate(i, from_attributes=True) for i in
+                         (await session.execute(agg_offers_query)).all()]
 
-    offer_stocks_query = select(Offer.sku, Offer.name_of_shop, Offer.market, func.sum(Offer.remaining_stock).label('stock')).group_by(Offer.sku, Offer.name_of_shop, Offer.market)
-    offer_stocks_result = [OwnStorageOfferStockOut.model_validate(i, from_attributes=True) for i in (await session.execute(offer_stocks_query)).all()]
+    offer_stocks_query = select(Offer.sku, Offer.name_of_shop, Offer.market,
+                                func.sum(Offer.remaining_stock).label('stock')).group_by(Offer.sku, Offer.name_of_shop,
+                                                                                         Offer.market)
+    offer_stocks_result = [OwnStorageOfferStockOut.model_validate(i, from_attributes=True) for i in
+                           (await session.execute(offer_stocks_query)).all()]
     stocks = defaultdict(list)
     for offer_stock in offer_stocks_result:
         stocks[offer_stock.sku].append(offer_stock)
 
     own_storages = select(OwnStorage)
-    own_storages_result = [OwnStorageStockOut.model_validate(i, from_attributes=True) for i in (await session.execute(own_storages)).scalars()]
+    own_storages_result = [OwnStorageStockOut.model_validate(i, from_attributes=True) for i in
+                           (await session.execute(own_storages)).scalars()]
 
     own_storages = defaultdict(list)
     for own_storage in own_storages_result:
@@ -214,7 +219,7 @@ async def get_own_storages(session: AsyncSession):
             stocks=stocks[offer.sku],
         )
         for offer in agg_offers_result
-            ]
+    ]
 
     # storages_result = []
     #
@@ -335,18 +340,26 @@ async def update_own_storages_by_sku(session: AsyncSession, data: list[dict], pl
     await session.commit()
 
 
-async def get_supply_data(session: AsyncSession, warehouses: list[int] | None = None, offers: list[int] | None = None,
-                          market: str | None = None, name_of_shop: str | None = None):
+async def get_supply_data(
+        session: AsyncSession,
+        warehouses: list[int],
+        offers: list[int],
+        market: str | None = None,
+        name_of_shop: str | None = None,
+        place_id: int = None,
+):
     query = (
         select(Offer.sku, Offer.name, Offer.name_of_shop, Offer.market, OfferStock.for_delivery,
                Warehouse.name.label('warehouse_name'),
-               Offer.supplier_available, OwnStorage.value.label('own_storage_value'), Offer.barcodes,
+               OwnStorage.value.label('own_storage_value'),
+               Offer.barcodes,
                Offer.current_price)
         .join(Offer, OfferStock.offer_id == Offer.id)
         .join(Warehouse, OfferStock.warehouse_id == Warehouse.id)
-        .join(OwnStorage, OwnStorage.sku == Offer.sku)
+        .outerjoin(OwnStorage, OwnStorage.sku == Offer.sku)
         .where(OfferStock.offer_id.in_(offers))
         .where(Warehouse.id.in_(warehouses))
+        .where(OwnStorage.storage_place_id == place_id)
     )
     if market:
         query = query.where(Offer.market == market)
@@ -356,29 +369,23 @@ async def get_supply_data(session: AsyncSession, warehouses: list[int] | None = 
 
     result = await session.execute(query)
     return [
-        SupplyData(
-            sku=i[0],
-            name=i[1],
-            name_of_shop=i[2],
-            market=i[3],
-            for_delivery=i[4],
-            warehouse_name=i[5],
-            supplier_available=i[6],
-            own_storage_value=i[7],
-            barcodes=i[8],
-            current_price=i[9]
-        )
-        for i in result.all()
+        SupplyData.model_validate(i, from_attributes=True) for i in result.all()
     ]
 
 
-async def get_general_order_data(session: AsyncSession, warehouses: list[int] | None = None,
-                                 offers: list[int] | None = None, name_of_shop: str | None = None,
-                                 market: str | None = None):
-    for_delivery_query = select(func.sum(OfferStock.for_delivery)).where(OfferStock.offer_id == Offer.id)
-
-    if warehouses:
-        for_delivery_query = for_delivery_query.where(OfferStock.warehouse_id.in_(warehouses))
+async def get_general_order_data(
+        session: AsyncSession,
+        warehouses: list[int],
+        offers: list[int],
+        name_of_shop: str | None = None,
+        market: str | None = None,
+        place_id: int | None = None,
+):
+    for_delivery_query = (
+        select(func.sum(OfferStock.for_delivery))
+        .where(OfferStock.offer_id == Offer.id)
+        .where(OfferStock.warehouse_id.in_(warehouses))
+    )
 
     tb = select(
         Offer.sku,
@@ -387,6 +394,12 @@ async def get_general_order_data(session: AsyncSession, warehouses: list[int] | 
         Offer.cost_price,
         Offer.self_weight,
         for_delivery_query.label('for_delivery'),
+    ).where(Offer.id.in_(offers))
+
+    own_storage_value = (
+        select(OwnStorage.value)
+        .where(OwnStorage.sku == tb.c.sku)
+        .where(OwnStorage.storage_place_id == place_id)
     )
 
     if market:
@@ -395,29 +408,19 @@ async def get_general_order_data(session: AsyncSession, warehouses: list[int] | 
     if name_of_shop:
         tb = tb.where(Offer.name_of_shop == name_of_shop)
 
-    if offers:
-        tb = tb.where(Offer.id.in_(offers))
-
     query = select(
         tb.c.sku,
-        func.string_agg(tb.c.name, literal_column("','")),
-        func.avg(tb.c.volume),
-        func.avg(tb.c.cost_price),
-        func.avg(tb.c.self_weight),
-        func.sum(tb.c.for_delivery)
+        func.string_agg(tb.c.name, literal_column("','")).label('name'),
+        func.avg(tb.c.volume).label('volume'),
+        func.avg(tb.c.cost_price).label('cost_price'),
+        func.avg(tb.c.self_weight).label('self_weight'),
+        func.sum(tb.c.for_delivery).label('for_delivery'),
+        func.sum(own_storage_value).label('own_storage_value'),
     ).group_by(tb.c.sku)
 
     result = (await session.execute(query)).all()
 
-    dt = [GeneralOrderData(
-        sku=i[0],
-        name=i[1],
-        volume=i[2],
-        cost_price=i[3],
-        self_weight=i[4],
-        for_delivery=i[5]
-    ) for i in result]
-    return dt
+    return [GeneralOrderData.model_validate(i, from_attributes=True) for i in result]
 
 
 async def update_fbo_support_data(session: AsyncSession, data: list[dict], name_of_shop: str, warehouse_id: int):
