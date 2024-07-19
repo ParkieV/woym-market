@@ -3,7 +3,8 @@ import type {
     ColDefField,
     ColGroupDef,
     ColumnGroupShowType,
-    ValueGetterFunc
+    ValueGetterFunc,
+    ValueSetterFunc
 } from "ag-grid-enterprise";
 import type { ColumnBase } from "./columns/types";
 import valueSetter from "./columns/valueSetter";
@@ -19,6 +20,7 @@ export type Column<T = any> = {
     pinned?: boolean;
     columnGroupShow?: ColumnGroupShowType;
     valueGetter?: ValueGetterFunc;
+    valueSetter?: ValueSetterFunc;
 };
 
 /** {@link ColDef} with preserved translation source. */
@@ -75,7 +77,7 @@ export function getColumns<T>(
             cellEditorParams: col.base.cellEditorParams,
             valueParser,
             valueFormatter,
-            valueSetter: valueSetter(col.key)
+            valueSetter: valueSetter(col.key, col.valueSetter)
         };
 
         if (col.pinned) {

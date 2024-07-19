@@ -1,7 +1,8 @@
 import type { ValueSetterFunc } from "ag-grid-enterprise";
 
-export default function valueSetter<T extends Object>(field: string) {
-    return (({ data, oldValue, newValue }) => {
+export default function valueSetter<T extends Object>(field: string, setter?: ValueSetterFunc) {
+    return (params => {
+        let { data, oldValue, newValue } = params;
         if (newValue instanceof Error) return false;
         if (typeof oldValue === "string" && newValue === null) {
             setByPath(data, "", field);
@@ -15,9 +16,12 @@ export default function valueSetter<T extends Object>(field: string) {
             return false;
         }
 
-        // FIXME: won't handle fields with dots correctly
-        setByPath(data, newValue, field);
-        return true;
+        if (setter) return setter(params);
+        else {
+            // FIXME: won't handle fields with dots correctly
+            setByPath(data, newValue, field);
+            return true;
+        }
     }) as ValueSetterFunc<any, T>;
 }
 

@@ -111,6 +111,12 @@ function storageColumns(storages: StoragePlace[]) {
                 );
                 return stock?.value;
             },
+            valueSetter: ({ data, newValue }: { data: OwnStorage; newValue: number }) => {
+                let stock = data.storages.find(x => x.storage_place_id === storage.id);
+                if (stock === undefined) return false;
+                stock.value = newValue;
+                return true;
+            },
             editable: true,
             base: intColumn
         } as Column;
