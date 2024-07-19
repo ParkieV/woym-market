@@ -28,14 +28,14 @@
             <span>Вид</span>
             <select bind:value={data}>
                 <option value={null} disabled>Не выбрано</option>
-                <option value={new SimpleImport("data/import", "table")}>Карточки</option>
-                <option value={new SimpleImport("data/import", "sizes")}>Размеры</option>
-                <option value={new SimpleImport("data/import", "prices")}>Цены</option>
-                <option value={new OwnStorageImport(null)}>Мои остатки</option>
-                <option value={new OwnStorageImport("coming")}>Приход</option>
-                <option value={new OwnStorageImport("consumption")}>Расход</option>
-                <option value={new SimpleImport("stocks/fbo/import")}>FBO остатки</option>
-                <option value={new FboAdditionsImport()}>FBO Яндекс</option>
+                <option value={new SimpleImport("data/import", "table")}>Карточки: Таблица</option>
+                <option value={new SimpleImport("data/import", "sizes")}>Карточки: Размеры</option>
+                <option value={new SimpleImport("data/import", "prices")}>Карточки: Цены</option>
+                <option value={new OwnStorageImport(null)}>Мои остатки: Таблица</option>
+                <option value={new OwnStorageImport("coming")}>Мои остатки: Приход </option>
+                <option value={new OwnStorageImport("consumption")}>Мои остатки: Расход</option>
+                <option value={new SimpleImport("stocks/fbo/import")}>FBO остатки: Таблица</option>
+                <option value={new FboAdditionsImport()}>FBO остатки: Яндекс</option>
             </select>
         </label>
         {#if data instanceof SimpleImport}

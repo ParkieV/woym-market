@@ -36,9 +36,11 @@
             <span>Вид</span>
             <select bind:value={data}>
                 <option value={null} disabled>Не выбрано</option>
-                <option value={new SimpleExport("data/export")}>Карточки</option>
-                <option value={new SimpleExport("stocks/own-storage/export")}>Мои остатки</option>
-                <option value={new SimpleExport("stocks/fbo/export")}>FBO остатки</option>
+                <option value={new SimpleExport("data/export")}>Карточки: Таблица</option>
+                <option value={new SimpleExport("stocks/own-storage/export")}>
+                    Мои остатки: Таблица
+                </option>
+                <option value={new SimpleExport("stocks/fbo/export")}>FBO остатки: Таблица</option>
                 <option value={new ViolatorsExport()}>Нарушители РРЦ</option>
                 {#if $page.url.pathname === "/app/fbo_storage"}
                     <option value={new SupplyExport()}>Поставка</option>
@@ -116,7 +118,7 @@
                 font-size: 16px;
             }
             > select {
-                width: 280px;
+                width: 300px;
                 text-overflow: ellipsis;
                 border-radius: 0;
                 border: 0;
