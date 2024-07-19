@@ -357,8 +357,9 @@ async def get_supply_data(
         .outerjoin(OwnStorage, OwnStorage.sku == Offer.sku)
         .where(OfferStock.offer_id.in_(offers))
         .where(Warehouse.id.in_(warehouses))
-        .where(OwnStorage.storage_place_id == place_id)
     )
+    if place_id is not None:
+        query = query.where(OwnStorage.storage_place_id == place_id)
 
     result = await session.execute(query)
     return [
