@@ -48,11 +48,9 @@ async def setup_fbo_stocks():
 async def export_only_own_storage_supply(
         place_id: int = Body(),
         warehouses_id: list[int] = Body(),
-        offers_id: list[int] = Body(),
-        market: str | None = Body(None),
-        name_of_shop: str | None = Body(None)
+        offers_id: list[int] = Body()
 ):
-    path = Path(await service.export_supply(SupplyExportType.ONLY_OWN_STORAGE, warehouses_id, offers_id, name_of_shop, market, place_id=place_id))
+    path = Path(await service.export_supply(SupplyExportType.ONLY_OWN_STORAGE, warehouses_id, offers_id, place_id=place_id))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 
@@ -60,10 +58,8 @@ async def export_only_own_storage_supply(
 async def export_only_stocks_supply(
         warehouses_id: list[int] = Body(),
         offers_id: list[int] = Body(),
-        market: str | None = Body(None),
-        name_of_shop: str | None = Body(None)
 ):
-    path = Path(await service.export_supply(SupplyExportType.ONLY_STOCKS, warehouses_id, offers_id, name_of_shop, market))
+    path = Path(await service.export_supply(SupplyExportType.ONLY_STOCKS, warehouses_id, offers_id))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data',
                         background=BackgroundTask(clean_up_files, str(path)))
 
@@ -72,10 +68,8 @@ async def export_only_stocks_supply(
 async def export_with_own_storage_supply(
         place_id: int = Body(),
         warehouses_id: list[int] = Body(),
-        offers_id: list[int] = Body(),
-        market: str | None = Body(None),
-        name_of_shop: str | None = Body(None)
+        offers_id: list[int] = Body()
 ):
-    path = Path(await service.export_supply(SupplyExportType.WITH_OWN_STORAGE, warehouses_id, offers_id, name_of_shop, market, place_id=place_id))
+    path = Path(await service.export_supply(SupplyExportType.WITH_OWN_STORAGE, warehouses_id, offers_id, place_id=place_id))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data',
                         background=BackgroundTask(clean_up_files, str(path)))
