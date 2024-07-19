@@ -111,6 +111,7 @@ function storageColumns(storages: StoragePlace[]) {
                 );
                 return stock?.value;
             },
+            editable: true,
             base: intColumn
         } as Column;
     });
