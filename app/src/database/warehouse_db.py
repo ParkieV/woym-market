@@ -344,8 +344,6 @@ async def get_supply_data(
         session: AsyncSession,
         warehouses: list[int],
         offers: list[int],
-        market: str | None = None,
-        name_of_shop: str | None = None,
         place_id: int = None,
 ):
     query = (
@@ -361,11 +359,6 @@ async def get_supply_data(
         .where(Warehouse.id.in_(warehouses))
         .where(OwnStorage.storage_place_id == place_id)
     )
-    if market:
-        query = query.where(Offer.market == market)
-
-    if name_of_shop:
-        query = query.where(Offer.name_of_shop == name_of_shop)
 
     result = await session.execute(query)
     return [
@@ -377,8 +370,6 @@ async def get_general_order_data(
         session: AsyncSession,
         warehouses: list[int],
         offers: list[int],
-        name_of_shop: str | None = None,
-        market: str | None = None,
         place_id: int | None = None,
 ):
     for_delivery_query = (
@@ -401,12 +392,6 @@ async def get_general_order_data(
         .where(OwnStorage.sku == tb.c.sku)
         .where(OwnStorage.storage_place_id == place_id)
     )
-
-    if market:
-        tb = tb.where(Offer.market == market)
-
-    if name_of_shop:
-        tb = tb.where(Offer.name_of_shop == name_of_shop)
 
     query = select(
         tb.c.sku,
