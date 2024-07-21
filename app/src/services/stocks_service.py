@@ -302,7 +302,7 @@ async def general_order_report(
     df['total_weight'] = df['self_weight'] * df['for_delivery']
     df = df[['sku', 'name', 'for_delivery', 'self_weight', 'total_weight', 'volume', 'total_volume', 'cost_price', 'total_cost_price']]
     df.fillna(0, inplace=True)
-    # df = df[df['for_delivery'] > 0]
+    df = df[df['for_delivery'] > 0]
 
     total_row = ['Итого', np.nan, np.nan, np.nan, df['total_weight'].sum(), np.nan, df['total_volume'].sum(), np.nan,
                  df['total_cost_price'].sum()]
@@ -354,11 +354,10 @@ async def export_supply(export_type: SupplyExportType, warehouses: list[int], of
             offers_data, aggregated_offers_data = await db.get_supply_only_stocks(session=session, warehouses=warehouses, offers=offers, place_id=place_id)
             df = pd.DataFrame([i.model_dump() for i in offers_data])
 
-
         if not all((offers_data, aggregated_offers_data)):
             raise HTTPException(status.HTTP_404_NOT_FOUND, 'Данных для поставки не найдено')
 
-        # df = df[df['for_delivery'] > 0]
+        df = df[df['for_delivery'] > 0]
 
         if not len(df):
             raise HTTPException(status.HTTP_404_NOT_FOUND, 'Товаров с ненулевым значением "к поставке" не найдено')
