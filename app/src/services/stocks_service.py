@@ -17,7 +17,7 @@ from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks.own_storages_schemas import OwnStorageCreate, OwnStorageUpdate, OwnStoragePlaceCreate, \
     OwnStoragePlaceOut, OwnStoragePlaceUpdate
 from src.schemas.stocks.fbo_schemas import OfferStockCreate, OfferWithStocksUpdate
-from src.schemas.stocks.stocks_schemas import SupplyExportType
+from src.schemas.stocks.stocks_schemas import SupplyExportType, GeneralOrderData
 from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 from src.services.base_utils import error_handler, clean_up_files
 from datetime import datetime
@@ -287,24 +287,22 @@ async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
 
 
 async def general_order_report(
-        session: AsyncSession,
-        for_delivery_func: Callable[[pd.DataFrame], pd.Series],
+        data: list[GeneralOrderData],
         dir_path: Path,
-        warehouses: list[int],
-        offers: list[int],
-        place_id: int | None = None,
         file_type_name: str = 'Заказ',
+        fd_builder_func: Callable[[pd.DataFrame], pd.Series] | None = None
 ):
-    rez = await db.get_general_order_data(session=session, warehouses=warehouses, offers=offers, place_id=place_id)
-    df = pd.DataFrame([i.model_dump() for i in rez])
-    df['for_delivery'] = df['for_delivery'].astype('float')
-    df['for_delivery'] = for_delivery_func(df)
+    df = pd.DataFrame([i.model_dump() for i in data])
+
+    if fd_builder_func:
+        df['for_delivery'] = fd_builder_func(df)
+
     df['total_cost_price'] = df['cost_price'] * df['for_delivery']
     df['total_volume'] = df['volume'] * df['for_delivery']
     df['total_weight'] = df['self_weight'] * df['for_delivery']
     df = df[['sku', 'name', 'for_delivery', 'self_weight', 'total_weight', 'volume', 'total_volume', 'cost_price', 'total_cost_price']]
     df.fillna(0, inplace=True)
-    df = df[df['for_delivery'] > 0]
+    # df = df[df['for_delivery'] > 0]
 
     total_row = ['Итого', np.nan, np.nan, np.nan, df['total_weight'].sum(), np.nan, df['total_volume'].sum(), np.nan,
                  df['total_cost_price'].sum()]
@@ -328,6 +326,7 @@ async def general_order_report(
     df.to_excel(file_path, index=False)
 
 
+
 market_handlers = {
     'ozon': export_ozon_supply,
     'yandex': export_yandex_supply
@@ -343,16 +342,23 @@ async def export_supply(export_type: SupplyExportType, warehouses: list[int], of
         raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Для формирования поставки нужно передать товары')
 
     async with async_session() as session:
-        rez = await db.get_supply_data(session=session, warehouses=warehouses, offers=offers, place_id=place_id)
+        if export_type == SupplyExportType.ONLY_OWN_STORAGE:
+            offers_data, aggregated_offers_data = await db.get_supply_only_own_storage(session=session, warehouses=warehouses, offers=offers, place_id=place_id)
+            df = pd.DataFrame([i.model_dump() for i in offers_data])
 
-        if not rez:
+        elif export_type == SupplyExportType.WITH_OWN_STORAGE:
+            offers_data, aggregated_offers_data = await db.get_supply_only_own_storage(session=session, warehouses=warehouses, offers=offers, place_id=place_id)
+            df = pd.DataFrame([i.model_dump() for i in offers_data])
+            df['for_delivery'] = df['base_for_delivery']
+        else:
+            offers_data, aggregated_offers_data = await db.get_supply_only_stocks(session=session, warehouses=warehouses, offers=offers, place_id=place_id)
+            df = pd.DataFrame([i.model_dump() for i in offers_data])
+
+
+        if not all((offers_data, aggregated_offers_data)):
             raise HTTPException(status.HTTP_404_NOT_FOUND, 'Данных для поставки не найдено')
 
-        df = pd.DataFrame([i.model_dump() for i in rez])
-        if export_type != SupplyExportType.WITH_OWN_STORAGE:
-            df['for_delivery'] = np.min(df[['for_delivery', 'own_storage_value']], axis=1)
-
-        df = df[df['for_delivery'] > 0]
+        # df = df[df['for_delivery'] > 0]
 
         if not len(df):
             raise HTTPException(status.HTTP_404_NOT_FOUND, 'Товаров с ненулевым значением "к поставке" не найдено')
@@ -383,39 +389,12 @@ async def export_supply(export_type: SupplyExportType, warehouses: list[int], of
                 # create supply files in directory
                 await handler(temp_df, shop_file_path)
 
-        if export_type == SupplyExportType.ONLY_OWN_STORAGE:
-            await general_order_report(
-                session=session,
-                for_delivery_func=lambda x: np.min(x[['for_delivery', 'own_storage_value']], axis=1),
-                dir_path=zip_file_path,
-                warehouses=warehouses,
-                offers=offers,
-                place_id=place_id)
-        elif export_type == SupplyExportType.WITH_OWN_STORAGE:
-            await general_order_report(
-                session=session,
-                for_delivery_func=lambda x: np.min(x[['for_delivery', 'own_storage_value']], axis=1),
-                dir_path=zip_file_path,
-                warehouses=warehouses,
-                offers=offers,
-                place_id=place_id,
-                file_type_name='Заказ (в наличии)')
-            await general_order_report(
-                session=session,
-                for_delivery_func=lambda x: x['for_delivery'] - np.min(x[['for_delivery', 'own_storage_value']], axis=1),
-                dir_path=zip_file_path,
-                warehouses=warehouses,
-                offers=offers,
-                place_id=place_id,
-                file_type_name='Заказ (дозаказать)')
+        if export_type == SupplyExportType.WITH_OWN_STORAGE:
+            await general_order_report(aggregated_offers_data, zip_file_path, file_type_name='Заказ (в наличии)', fd_builder_func=lambda x: x['for_delivery'])
+            await general_order_report(aggregated_offers_data, zip_file_path, file_type_name='Заказ (дозаказать)', fd_builder_func=lambda x: x['base_for_delivery'] - x['for_delivery'])
         else:
-            await general_order_report(
-                session=session,
-                for_delivery_func=lambda x: x['for_delivery'],
-                dir_path=zip_file_path,
-                offers=offers,
-                warehouses=warehouses,
-                place_id=place_id)
+            await general_order_report(aggregated_offers_data, zip_file_path)
+
 
         # archive created directory
         response_file_path = make_archive(str(zip_file_path), root_dir=zip_file_path, format='zip')

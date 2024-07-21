@@ -367,6 +367,93 @@ async def get_supply_data(
     ]
 
 
+async def get_supply_only_stocks(session: AsyncSession, warehouses: list[int], offers: list[int], place_id: int):
+    offers_query = (
+        select(
+            Offer.sku,
+            Offer.name,
+            Offer.name_of_shop,
+            Offer.market,
+            Offer.name_of_shop,
+            Offer.barcodes,
+            Offer.current_price,
+            Offer.volume,
+            Offer.self_weight,
+            Offer.cost_price,
+            OfferStock.for_delivery,
+            Warehouse.name.label('warehouse_name'),
+            OfferStock.for_delivery.label('base_for_delivery')
+        )
+        .join(OfferStock, OfferStock.offer_id == Offer.id)
+        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .where(Warehouse.id.in_(warehouses))
+        .where(Offer.id.in_(offers)))
+
+    aggregated_offers_query = select(
+        offers_query.c.sku,
+        func.string_agg(offers_query.c.name, literal_column("','")).label('name'),
+        func.avg(offers_query.c.current_price).label('current_price'),
+        func.sum(offers_query.c.for_delivery).label('for_delivery'),
+        func.avg(offers_query.c.volume).label('volume'),
+        func.avg(offers_query.c.self_weight).label('self_weight'),
+        func.avg(offers_query.c.cost_price).label('cost_price'),
+        func.sum(offers_query.c.base_for_delivery).label('base_for_delivery')
+    ).group_by(offers_query.c.sku)
+
+    offers_result = (await session.execute(offers_query)).all()
+    aggregated_offers_result = (await session.execute(aggregated_offers_query)).all()
+
+    return (
+        [SupplyData.model_validate(i, from_attributes=True) for i in offers_result],
+        [GeneralOrderData.model_validate(i, from_attributes=True) for i in aggregated_offers_result])
+
+
+async def get_supply_only_own_storage(session: AsyncSession, warehouses: list[int], offers: list[int], place_id: int):
+    own_storage_query = (select(OwnStorage.value).where(OwnStorage.storage_place_id == place_id).where(OwnStorage.sku == Offer.sku)).label('own_storage_value')
+
+    offers_query = (
+        select(
+            Offer.sku,
+            Offer.name,
+            Offer.name_of_shop,
+            Offer.market,
+            Offer.name_of_shop,
+            Offer.barcodes,
+            Offer.current_price,
+            Offer.volume,
+            Offer.self_weight,
+            Offer.cost_price,
+            Warehouse.name.label('warehouse_name'),
+            func.greatest(0, func.least(OfferStock.for_delivery, (own_storage_query - func.sum(OfferStock.for_delivery).over(partition_by=Offer.id, order_by=None, rows=(None, -1))))).label('for_delivery'),
+            OfferStock.for_delivery.label('base_for_delivery')
+        )
+        .join(OfferStock, OfferStock.offer_id == Offer.id)
+        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .where(Warehouse.id.in_(warehouses))
+        .where(Offer.id.in_(offers))
+    )
+
+    aggregated_offers_query = select(
+        offers_query.c.sku,
+        func.string_agg(offers_query.c.name, literal_column("','")).label('name'),
+        func.avg(offers_query.c.current_price).label('current_price'),
+        func.sum(offers_query.c.for_delivery).label('for_delivery'),
+        func.avg(offers_query.c.volume).label('volume'),
+        func.avg(offers_query.c.self_weight).label('self_weight'),
+        func.avg(offers_query.c.cost_price).label('cost_price'),
+        (select(OwnStorage.value).where(OwnStorage.storage_place_id == place_id).where(OwnStorage.sku == offers_query.c.sku)).label('own_storage_value'),
+        func.sum(offers_query.c.base_for_delivery).label('base_for_delivery')
+    ).group_by(offers_query.c.sku)
+
+    offers_result = (await session.execute(offers_query)).all()
+    aggregated_offers_result = (await session.execute(aggregated_offers_query)).all()
+
+    return (
+        [SupplyData.model_validate(i, from_attributes=True) for i in offers_result],
+        [GeneralOrderData.model_validate(i, from_attributes=True) for i in aggregated_offers_result])
+
+
+
 async def get_general_order_data(
         session: AsyncSession,
         warehouses: list[int],

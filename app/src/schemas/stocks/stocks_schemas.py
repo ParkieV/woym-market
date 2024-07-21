@@ -10,8 +10,9 @@ class SupplyData(BaseModel):
     market: str
     name_of_shop: str
     for_delivery: int
+    base_for_delivery: int
     warehouse_name: str
-    own_storage_value: int | None
+    own_storage_value: int | None = None
     barcodes: str | None
     current_price: float | None
 
@@ -22,8 +23,9 @@ class GeneralOrderData(BaseModel):
     volume: float | None
     cost_price: float | None
     self_weight: float | None
-    for_delivery: float | None
-    own_storage_value: int | None
+    for_delivery: int
+    base_for_delivery: int
+    own_storage_value: int | None = None
 
 
 class SupplyExportType(str, Enum):
