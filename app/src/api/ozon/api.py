@@ -321,8 +321,9 @@ class OzonAPI(BaseAPI):
         return result
 
     def _get_clasters_info(self) -> list[APIWarehouse]:
-        url = 'https://seller-edu.ozon.ru/document-manager-api.kms/api/v2/seller-edu/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
-
+        # url = 'https://seller-edu.ozon.ru/document-manager-api.kms/api/v2/seller-edu/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
+        url = 'https://seller-edu.ozon.ru/document-manager-api/seller-edu/api/v3/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
+        #
         response = self.session.get(url)
 
         data = response.json()
