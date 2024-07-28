@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_, func, text, bindparam, literal_column, Select
+from sqlalchemy import select, update, delete, and_, func, text, bindparam, literal_column, Select, insert, cast, String
 from sqlalchemy.orm import selectinload, subqueryload
 from src.database.utils import _update_or_create_object, _get_or_create
 from src.schemas.stocks.own_storages_schemas import OwnStorageAggOfferOut, OwnStorageOfferStockOut, OwnStorageOut, \
@@ -11,7 +11,7 @@ from src.schemas.stocks.stocks_schemas import SupplyData, GeneralOrderData
 from src.schemas.stocks.fbo_schemas import OfferStockUpdate, OfferStockCreate, OfferStockOut, \
     OfferStockWithWarehouseOut, OfferWithStocks, OfferWithStocksUpdate
 from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
-from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace
+from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market
 from pydantic import BaseModel
 from src.database.models.models import Offer
 from typing import Type, TypeVar, Any
@@ -35,6 +35,22 @@ async def get_warehouses(session: AsyncSession, model_schema: ModelSchema = Ware
     result = await session.execute(query)
     return [model_schema.model_validate(warehouse_db, from_attributes=True) for warehouse_db in result.scalars().all()]
 
+async def get_all_offers_stocks(session: AsyncSession):
+    query = (
+        select(
+            OfferStock.id.label('id'),
+            OfferStock.current_stock,
+            OfferStock.offer_id,
+            Warehouse.name.label('warehouse_name'),
+            Offer.sku.label('sku'),
+            Offer.market.label('market'),
+            Offer.name_of_shop.label('name_of_shop'),
+        )
+        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .join(Offer, Offer.id == OfferStock.offer_id)
+    )
+    result = (await session.execute(query)).all()
+    return result
 
 async def create_offer_stock(session: AsyncSession, data: OfferStockCreate,
                              model_schema: ModelSchema = OfferStockOut) -> ModelSchema:
@@ -562,3 +578,73 @@ async def change_own_storage_places(session: AsyncSession, data: list[OwnStorage
         await session.execute(stmp)
 
     await session.commit()
+
+
+async def create_fbo_stocks_(session: AsyncSession, data: list[dict]):
+    for item in data:
+        warehouse_id_query = select(Warehouse.id).where(Warehouse.name == item["warehouse_name"])
+        warehouse_id_rez = (await session.execute(warehouse_id_query)).first()
+
+        if not warehouse_id_rez:
+            continue
+
+
+        offer_id_query = select(Offer.id).where(and_(Offer.sku == item['sku'], Offer.market == item['market'], Offer.name_of_shop == item['name_of_shop']))
+        offer_id_rez = (await session.execute(offer_id_query)).first()
+
+        if not offer_id_rez:
+            continue
+
+        stmp = insert(OfferStock).values(
+            offer_id=offer_id_rez[0],
+            current_stock=item['current_stock'],
+            warehouse_id=warehouse_id_rez[0],
+        )
+        await session.execute(stmp)
+
+    await session.commit()
+
+async def update_fbo_stocks(session: AsyncSession, data: list[dict]):
+    for stock in data:
+        stmp = update(OfferStock).values(current_stock=stock['current_stock']).where(OfferStock.id == stock['id'])
+        await session.execute(stmp)
+
+    await session.commit()
+
+
+async def fill_empty_stocks(session: AsyncSession):
+    markets_query = select(
+        func.upper(cast(Market.type, String)).label('market'),
+        func.array(
+            (select(Warehouse.id).where(func.upper(cast(Warehouse.market, String)) == func.upper(cast(Market.type, String))))
+        ).label('warehouses')
+    )
+    markets_warehouses = {i.market: set(i.warehouses) for i in (await session.execute(markets_query)).all()}
+
+    query = select(
+        Offer.id,
+        Offer.sku,
+        func.upper(cast(Offer.market, String)).label('market'),
+        Offer.name_of_shop,
+        func.array(
+            (select(OfferStock.warehouse_id).where(OfferStock.offer_id == Offer.id))
+        ).label('warehouses')
+    )
+    result = (await session.execute(query)).all()
+
+    for item in result:
+        if len(markets_warehouses[item.market]) == len(set(item.warehouses)):
+            continue
+
+        to_set_warehouses_stocks = markets_warehouses[item.market] - set(item.warehouses)
+
+        new_stocks = [OfferStock(offer_id=item.id, warehouse_id=warehouse_id, current_stock=0) for warehouse_id in to_set_warehouses_stocks]
+        session.add_all(new_stocks)
+
+    await session.commit()
+
+
+
+
+
+

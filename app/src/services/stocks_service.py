@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from typing import Callable
 
 import numpy as np
@@ -36,45 +37,47 @@ async def update_warehouses_and_stocks():
 
     start_time = datetime.now()
 
-    stocks = await api_wrapper.get_stocks()
-
     async with async_session() as session:
 
+        stocks = await api_wrapper.get_stocks()
+        api_stocks_df = pd.DataFrame([{
+            'warehouse_name': warehouse.name,
+            'warehouse_type': warehouse.warehouse_type,
+            'market': warehouse.market,
+            'sku': [stock.sku for stock in warehouse.offers],
+            'name_of_shop': [stock.name_of_shop for stock in warehouse.offers],
+            'current_stock': [stock.current_stock for stock in warehouse.offers],
+        } for warehouse in stocks])
+        api_stocks_df_exploded = api_stocks_df.explode(['sku', 'name_of_shop', 'current_stock'])
+
+        db_stocks = await db.get_all_offers_stocks(session)
+        db_stocks_df = pd.DataFrame(db_stocks)
+
         for warehouse in stocks:
-            warehouse_db, _ = await db.update_or_create_warehouse(session, WarehouseCreate(
-                name=warehouse.name,
+            await db.update_or_create_warehouse(session, WarehouseCreate(
                 market=warehouse.market,
-                warehouse_type=warehouse.warehouse_type
+                name=warehouse.name,
+                warehouse_type=warehouse.warehouse_type,
             ))
 
-            for offer in await offer_db.get_offers(session, {'market': warehouse.market}):
-                await db.get_or_create_offer_stocks(session, OfferStockCreate(
-                    current_stock=0,
-                    warehouse_id=warehouse_db.id,
-                    offer_id=offer.id
-                ))
+        # НА обновление
+        to_update_df = pd.merge(api_stocks_df_exploded, db_stocks_df, how='inner', on=('sku', 'name_of_shop', 'market', 'warehouse_name'))
+        to_update_df = to_update_df[to_update_df['current_stock_x'] != to_update_df['current_stock_y']].rename({'current_stock_x': 'current_stock'}, axis='columns')[['id', 'current_stock']]
+        await db.update_fbo_stocks(session, to_update_df.to_dict('records'))
 
-            for offer_stock in warehouse.offers:
-                offer = await offer_db.get_offer(session,
-                                                 {'sku': offer_stock.sku, 'name_of_shop': offer_stock.name_of_shop,
-                                                  'market': warehouse.market}, allow_none=True)
-                if not offer:
-                    continue
+        api_idents = set([tuple(i.values()) for i in api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict('records')])
+        db_idents = set([tuple(i.values()) for i in db_stocks_df[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict('records')])
+        # api_idents - db_idents Создать
 
-                offer_stock_create = OfferStockCreate(
-                    current_stock=offer_stock.current_stock,
-                    warehouse_id=warehouse_db.id,
-                    offer_id=offer.id
-                )
-                await db.update_or_create_offer_stock(session, offer_stock_create)
+        to_create_idents = api_idents - db_idents
+        to_create_df = pd.merge(pd.DataFrame(to_create_idents, columns=['sku', 'name_of_shop', 'market', 'warehouse_name']), api_stocks_df_exploded, how='inner', on=('sku', 'name_of_shop', 'market', 'warehouse_name')).dropna()
 
-        await db.relate_warehouses_with_clusters(session, [{'name': i.name, 'related_warehouses_name': i.related_warehouses_name} for i in stocks])
+        await db.create_fbo_stocks_(session, to_create_df.to_dict('records'))
 
-        # for sku in await offer_db.get_unique_skus(session):
-        #     await db.update_or_create_own_storage(session, OwnStorageCreate(sku=sku))
+        # Создать остатки на складах, которые не были в полученных данных
+        await db.fill_empty_stocks(session)
 
-    _time = datetime.now() - start_time
-    logger.info(f'Warehouses and stocks updated completed in {_time}')
+        end = datetime.now()
 
 
 async def get_warehouses():
