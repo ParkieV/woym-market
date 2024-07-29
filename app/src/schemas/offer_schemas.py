@@ -95,9 +95,8 @@ class OfferChange(BaseOffer):
     auto_price_control: bool = Field(False, title='Авто контроль цен')
     pricing_scheme_name: str = Field(title='Id схемы ценообразования')
     supplier_available: bool = Field(title='Наличие у поставщика')
-    search_words: str | None = Field(title='Поисковые слова')
+    search_words: str | None = Field(title='Поисковые слова', max_length=255)
     use_promotion_price: bool = Field(title='Акция')
-
 
     hidden: bool = Field(False, title='Скрыт')
 
