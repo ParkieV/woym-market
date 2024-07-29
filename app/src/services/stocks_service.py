@@ -1,23 +1,18 @@
-from dataclasses import asdict
 from typing import Callable
-
 import numpy as np
 import pandas as pd
 from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 import openpyxl
 from logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
-from src.database import offer_db
 import src.services.offer_utils as utils
-from src.database.settings_db import get_markets
 from src.schemas.offer_schemas import OfferOut
-from src.schemas.stocks.own_storages_schemas import OwnStorageCreate, OwnStorageUpdate, OwnStoragePlaceCreate, \
+from src.schemas.stocks.own_storages_schemas import OwnStorageUpdate, OwnStoragePlaceCreate, \
     OwnStoragePlaceOut, OwnStoragePlaceUpdate
-from src.schemas.stocks.fbo_schemas import OfferStockCreate, OfferWithStocksUpdate
+from src.schemas.stocks.fbo_schemas import OfferWithStocksUpdate
 from src.schemas.stocks.stocks_schemas import SupplyExportType, GeneralOrderData
 from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 from src.services.base_utils import error_handler, clean_up_files
@@ -38,7 +33,7 @@ async def update_warehouses_and_stocks():
     start_time = datetime.now()
 
     async with async_session() as session:
-
+        # Остатки из API
         stocks = await api_wrapper.get_stocks()
         api_stocks_df = pd.DataFrame([{
             'warehouse_name': warehouse.name,
@@ -50,9 +45,11 @@ async def update_warehouses_and_stocks():
         } for warehouse in stocks])
         api_stocks_df_exploded = api_stocks_df.explode(['sku', 'name_of_shop', 'current_stock'])
 
+        # Остатки из БД
         db_stocks = await db.get_all_offers_stocks(session)
         db_stocks_df = pd.DataFrame(db_stocks)
 
+        # Создание новых складов
         for warehouse in stocks:
             await db.update_or_create_warehouse(session, WarehouseCreate(
                 market=warehouse.market,
@@ -60,24 +57,26 @@ async def update_warehouses_and_stocks():
                 warehouse_type=warehouse.warehouse_type,
             ))
 
-        # НА обновление
+        # Обновение остатков, у которых current_stock не совпадает с уже установленными
         to_update_df = pd.merge(api_stocks_df_exploded, db_stocks_df, how='inner', on=('sku', 'name_of_shop', 'market', 'warehouse_name'))
         to_update_df = to_update_df[to_update_df['current_stock_x'] != to_update_df['current_stock_y']].rename({'current_stock_x': 'current_stock'}, axis='columns')[['id', 'current_stock']]
         await db.update_fbo_stocks(session, to_update_df.to_dict('records'))
 
         api_idents = set([tuple(i.values()) for i in api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict('records')])
         db_idents = set([tuple(i.values()) for i in db_stocks_df[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict('records')])
-        # api_idents - db_idents Создать
 
         to_create_idents = api_idents - db_idents
         to_create_df = pd.merge(pd.DataFrame(to_create_idents, columns=['sku', 'name_of_shop', 'market', 'warehouse_name']), api_stocks_df_exploded, how='inner', on=('sku', 'name_of_shop', 'market', 'warehouse_name')).dropna()
 
+        # Создание новых остатков
         await db.create_fbo_stocks_(session, to_create_df.to_dict('records'))
 
         # Создать остатки на складах, которые не были в полученных данных
         await db.fill_empty_stocks(session)
 
-        end = datetime.now()
+    end_time = datetime.now()
+
+    logger.info(f'Update warehouses and stocks completed in {end_time - start_time}')
 
 
 async def get_warehouses():

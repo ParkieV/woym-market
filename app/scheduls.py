@@ -8,7 +8,12 @@ logger = get_logger(__name__)
 async def update_data(user_id: int):
     try:
         await update_offers(user_id)
-        await update_warehouses_and_stocks()
-        logger.info('Schedule update completed')
     except Exception as e:
-        logger.error(f"Error in update warehouses and stocks or update offers", exc_info=True)
+        logger.error(f'Error in update offers', exc_info=True)
+
+    try:
+        await update_warehouses_and_stocks()
+    except Exception as e:
+        logger.error(f"Error in update warehouses and stocks", exc_info=True)
+
+    logger.info('Schedules updated completed')
