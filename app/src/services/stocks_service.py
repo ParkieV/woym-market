@@ -1,22 +1,18 @@
 from typing import Callable
-
 import numpy as np
 import pandas as pd
 from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 import openpyxl
 from logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
-from src.database import offer_db
 import src.services.offer_utils as utils
-from src.database.settings_db import get_markets
 from src.schemas.offer_schemas import OfferOut
-from src.schemas.stocks.own_storages_schemas import OwnStorageCreate, OwnStorageUpdate, OwnStoragePlaceCreate, \
+from src.schemas.stocks.own_storages_schemas import OwnStorageUpdate, OwnStoragePlaceCreate, \
     OwnStoragePlaceOut, OwnStoragePlaceUpdate
-from src.schemas.stocks.fbo_schemas import OfferStockCreate, OfferWithStocksUpdate
+from src.schemas.stocks.fbo_schemas import OfferWithStocksUpdate
 from src.schemas.stocks.stocks_schemas import SupplyExportType, GeneralOrderData
 from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 from src.services.base_utils import error_handler, clean_up_files
@@ -36,45 +32,51 @@ async def update_warehouses_and_stocks():
 
     start_time = datetime.now()
 
-    stocks = await api_wrapper.get_stocks()
-
     async with async_session() as session:
+        # Остатки из API
+        stocks = await api_wrapper.get_stocks()
+        api_stocks_df = pd.DataFrame([{
+            'warehouse_name': warehouse.name,
+            'warehouse_type': warehouse.warehouse_type,
+            'market': warehouse.market,
+            'sku': [stock.sku for stock in warehouse.offers],
+            'name_of_shop': [stock.name_of_shop for stock in warehouse.offers],
+            'current_stock': [stock.current_stock for stock in warehouse.offers],
+        } for warehouse in stocks])
+        api_stocks_df_exploded = api_stocks_df.explode(['sku', 'name_of_shop', 'current_stock'])
 
+        # Остатки из БД
+        db_stocks = await db.get_all_offers_stocks(session)
+        db_stocks_df = pd.DataFrame(db_stocks)
+
+        # Создание новых складов
         for warehouse in stocks:
-            warehouse_db, _ = await db.update_or_create_warehouse(session, WarehouseCreate(
-                name=warehouse.name,
+            await db.update_or_create_warehouse(session, WarehouseCreate(
                 market=warehouse.market,
-                warehouse_type=warehouse.warehouse_type
+                name=warehouse.name,
+                warehouse_type=warehouse.warehouse_type,
             ))
 
-            for offer in await offer_db.get_offers(session, {'market': warehouse.market}):
-                await db.get_or_create_offer_stocks(session, OfferStockCreate(
-                    current_stock=0,
-                    warehouse_id=warehouse_db.id,
-                    offer_id=offer.id
-                ))
+        # Обновение остатков, у которых current_stock не совпадает с уже установленными
+        to_update_df = pd.merge(api_stocks_df_exploded, db_stocks_df, how='inner', on=('sku', 'name_of_shop', 'market', 'warehouse_name'))
+        to_update_df = to_update_df[to_update_df['current_stock_x'] != to_update_df['current_stock_y']].rename({'current_stock_x': 'current_stock'}, axis='columns')[['id', 'current_stock']]
+        await db.update_fbo_stocks(session, to_update_df.to_dict('records'))
 
-            for offer_stock in warehouse.offers:
-                offer = await offer_db.get_offer(session,
-                                                 {'sku': offer_stock.sku, 'name_of_shop': offer_stock.name_of_shop,
-                                                  'market': warehouse.market}, allow_none=True)
-                if not offer:
-                    continue
+        api_idents = set([tuple(i.values()) for i in api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict('records')])
+        db_idents = set([tuple(i.values()) for i in db_stocks_df[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict('records')])
 
-                offer_stock_create = OfferStockCreate(
-                    current_stock=offer_stock.current_stock,
-                    warehouse_id=warehouse_db.id,
-                    offer_id=offer.id
-                )
-                await db.update_or_create_offer_stock(session, offer_stock_create)
+        to_create_idents = api_idents - db_idents
+        to_create_df = pd.merge(pd.DataFrame(to_create_idents, columns=['sku', 'name_of_shop', 'market', 'warehouse_name']), api_stocks_df_exploded, how='inner', on=('sku', 'name_of_shop', 'market', 'warehouse_name')).dropna()
 
-        await db.relate_warehouses_with_clusters(session, [{'name': i.name, 'related_warehouses_name': i.related_warehouses_name} for i in stocks])
+        # Создание новых остатков
+        await db.create_fbo_stocks_(session, to_create_df.to_dict('records'))
 
-        # for sku in await offer_db.get_unique_skus(session):
-        #     await db.update_or_create_own_storage(session, OwnStorageCreate(sku=sku))
+        # Создать остатки на складах, которые не были в полученных данных
+        await db.fill_empty_stocks(session)
 
-    _time = datetime.now() - start_time
-    logger.info(f'Warehouses and stocks updated completed in {_time}')
+    end_time = datetime.now()
+
+    logger.info(f'Update warehouses and stocks completed in {end_time - start_time}')
 
 
 async def get_warehouses():

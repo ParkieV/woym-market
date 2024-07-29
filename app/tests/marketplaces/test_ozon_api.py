@@ -23,3 +23,8 @@ class TestOzonAPI(BaseMarketplaceAPITest):
 
     # async def test_set_search_words(self, api: OzonAPI):
     #     await api._set_search_words([('28165', 'секатор; сучкорез')])
+
+    async def test_get_clasters_info(self, api: OzonAPI):
+        clasters = api._get_clasters_info()
+        assert isinstance(clasters, list)
+        assert len(clasters)

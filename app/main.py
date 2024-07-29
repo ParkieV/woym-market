@@ -5,6 +5,9 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette import status
+from starlette.responses import JSONResponse
+
 from scheduls import update_data
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
@@ -61,6 +64,13 @@ app.include_router(settings_router)
 app.include_router(data_router)
 app.include_router(stocks_router)
 app.include_router(debug_router)
+
+
+@app.exception_handler(500)
+async def pull_response_headers(request, exc):
+    return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={
+        'detail': 'Произошла ошибка сервера'
+    })
 
 
 if __name__ == '__main__':
