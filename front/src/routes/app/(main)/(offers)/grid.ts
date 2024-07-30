@@ -72,9 +72,9 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     base: new StringColumn({
                         kind: "agLargeTextCellEditor",
-                        cols: 100,
-                        rows: 5,
-                        maxLength: 500
+                        cols: 80,
+                        rows: 4,
+                        maxLength: 255
                     }),
                     header: "Поисковые слова",
                     key: "search_words",
