@@ -2,7 +2,7 @@
     import Window from "../components/windows/Window.svelte";
     import { onMount } from "svelte";
     import { getStoreNames, getStoreTypes } from "$lib/data/markets";
-    import { SimpleExport, SupplyExport, ViolatorsExport } from ".";
+    import { OwnStorageExport, SimpleExport, SupplyExport, ViolatorsExport } from ".";
     import { page } from "$app/stores";
     import { getStoragePlaces, type StoragePlace } from "$lib/data/own_storage/places";
 
@@ -37,9 +37,7 @@
             <select bind:value={data}>
                 <option value={null} disabled>Не выбрано</option>
                 <option value={new SimpleExport("data/export")}>Карточки: Таблица</option>
-                <option value={new SimpleExport("stocks/own-storage/export")}>
-                    Мои остатки: Таблица
-                </option>
+                <option value={new OwnStorageExport()}>Мои остатки: Таблица</option>
                 <option value={new SimpleExport("stocks/fbo/export")}>FBO остатки: Таблица</option>
                 <option value={new ViolatorsExport()}>Нарушители РРЦ</option>
                 {#if $page.url.pathname === "/app/fbo_storage"}
@@ -76,19 +74,17 @@
                         <option value={"with-own-storage"}>C учетом Мой склад</option>
                     </select>
                 </label>
-                {#if data.isPlaceNeeded}
-                    <label>
-                        <span>Склад</span>
-                        <select bind:value={data.place_id}>
-                            <option value={null}>Не выбрано</option>
-                            {#await storages then storages}
-                                {#each storages as storage}
-                                    <option value={storage.id}>{storage.name}</option>
-                                {/each}
-                            {/await}
-                        </select>
-                    </label>
-                {/if}
+            {/if}
+            {#if (data instanceof SupplyExport && data.isPlaceNeeded) || data instanceof OwnStorageExport}
+                <label>
+                    <span>Склад</span>
+                    <select bind:value={data.place_id}>
+                        <option value={null}>Не выбрано</option>
+                        {#each storages as storage}
+                            <option value={storage.id}>{storage.name}</option>
+                        {/each}
+                    </select>
+                </label>
             {/if}
         {/if}
     </div>
