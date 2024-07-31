@@ -44,6 +44,7 @@ async def update_warehouses_and_stocks():
             'current_stock': [stock.current_stock for stock in warehouse.offers],
         } for warehouse in stocks])
         api_stocks_df_exploded = api_stocks_df.explode(['sku', 'name_of_shop', 'current_stock'])
+        api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']] = api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']].astype('string')
 
         # Остатки из БД
         db_stocks = await db.get_all_offers_stocks(session)
@@ -73,6 +74,8 @@ async def update_warehouses_and_stocks():
 
         # Создать остатки на складах, которые не были в полученных данных
         await db.fill_empty_stocks(session)
+
+        await db.relate_warehouses_with_clusters(session, [{'name': i.name, 'related_warehouses_name': i.related_warehouses_name} for i in stocks])
 
     end_time = datetime.now()
 
