@@ -210,7 +210,7 @@ class OzonAPI(BaseAPI):
 
                 search_attributes = [i for i in offer['attributes'] if i['attribute_id'] == 22336]
                 search_words = '; '.join([';'.join([words['value'] for words in item['values']]) for item in search_attributes])
-                search_words = search_words[:search_words[:256].rfind(';')+1]
+                search_words = search_words[:search_words[:256].rfind(';')]
 
                 result[offer['offer_id']] = {
                     'yandex_height': offer['height'] / unit_dimension_divider if offer['height'] else offer['height'],
