@@ -440,7 +440,7 @@ async def get_supply_only_own_storage(session: AsyncSession, warehouses: list[in
             Offer.self_weight,
             Offer.cost_price,
             Warehouse.name.label('warehouse_name'),
-            func.greatest(0, func.least(OfferStock.for_delivery, (own_storage_query - func.coalesce(func.sum(OfferStock.for_delivery).over(partition_by=Offer.id, order_by=OfferStock.for_delivery.desc(), rows=(None, -1)), 0)))).label('for_delivery'),
+            func.greatest(0, func.least(OfferStock.for_delivery, (own_storage_query - func.coalesce(func.sum(OfferStock.for_delivery).over(partition_by=Offer.sku, order_by=OfferStock.for_delivery.desc(), rows=(None, -1)), 0)))).label('for_delivery'),
             OfferStock.for_delivery.label('base_for_delivery')
         )
         .join(OfferStock, OfferStock.offer_id == Offer.id)
