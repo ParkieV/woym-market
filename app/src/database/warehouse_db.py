@@ -192,7 +192,7 @@ async def update_or_create_own_storage(session: AsyncSession, data: OwnStorageCr
     await session.commit()
 
 
-async def get_own_storages(session: AsyncSession):
+async def get_own_storages(session: AsyncSession, place_id: int | None = None) -> list[OwnStorageOut]:
     agg_offers_query = (
         select(
             Offer.sku,
@@ -221,6 +221,9 @@ async def get_own_storages(session: AsyncSession):
         stocks[offer_stock.sku].append(offer_stock)
 
     own_storages = select(OwnStorage)
+    if place_id is not None:
+        own_storages = own_storages.where(OwnStorage.storage_place_id == place_id)
+
     own_storages_result = [OwnStorageStockOut.model_validate(i, from_attributes=True) for i in
                            (await session.execute(own_storages)).scalars()]
 

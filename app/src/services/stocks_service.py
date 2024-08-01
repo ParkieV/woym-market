@@ -1,3 +1,4 @@
+from itertools import chain
 from typing import Callable
 import numpy as np
 import pandas as pd
@@ -209,31 +210,47 @@ async def export_stocks(name_of_shop: str | None = None, market: str | None = No
 
 @error_handler('Ошибка экспорта собственных остатков.')
 async def export_own_storages(place_id, name_of_shop: str | None = None, market: str | None = None) -> str:
-    data = await get_own_storages(place_id)
+    async with async_session() as session:
+        data = await db.get_own_storages(session, place_id)
+        storage_places = {i.id: i.name for i in await db.get_all_own_storage_places(session)}
 
-    if not data['data']:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, 'Собственных остатков не найдено')
+    offers_data = [{
+        'sku': i.offer.sku,
+        'name': ', '.join(i.offer.name),
+        'photo': ', '.join([j for j in i.offer.photo if j is not None]),
+        'market': ', '.join(i.offer.market),
+        'name_of_shop': ', '.join(i.offer.name_of_shop),
+        'note_1': ', '.join([j for j in i.offer.note_1 if j is not None]),
+        'note_2': ', '.join([j for j in i.offer.note_2 if j is not None]),
+        'note_3': ', '.join([j for j in i.offer.note_3 if j is not None]),
+        'barcodes': ', '.join([j for j in i.offer.barcodes if j is not None]),
 
-    columns = ['sku', 'Название', 'Фото', 'Магазин', 'Маркетплейс', 'Примечание 1', 'Примечание 2', 'Примечание 3',
-               'Мои остатки']
-    aggregated_columns = ['name', 'photo', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']
+    } for i in data]
+    offers_df = pd.DataFrame(offers_data)
+    offers_df['sku'] = offers_df['sku'].astype('string')
 
-    df = pd.DataFrame(data['data'])
-    df[aggregated_columns] = df[aggregated_columns].applymap(lambda x: ', '.join([str(i) for i in x]))
-    df['own_storage'] = df['own_storage'].apply(lambda x: x.value)
+    stocks_data = chain.from_iterable([[{'sku': i.offer.sku, f'{stock.name_of_shop} ({stock.market})': stock.stock} for stock in i.stocks] for i in data])
+    stocks_df = pd.DataFrame(stocks_data)
+    stocks_df['sku'] = stocks_df['sku'].astype('string')
+    stocks_df = stocks_df.groupby('sku', as_index=False).sum()
 
-    stocks = df.pop('stocks').values.tolist()
+    own_storage_data = chain.from_iterable([[{'sku': storage.sku, f'Мой склад {storage_places[storage.storage_place_id]}': storage.value} for storage in i.storages] for i in data])
+    own_storages_df = pd.DataFrame(own_storage_data)
+    own_storages_df['sku'] = own_storages_df['sku'].astype('string')
 
-    df.columns = columns
 
-    stocks_columns = [f'{i.name} {i.type}' for i in data['markets']]
-    df[stocks_columns] = 0
-
-    for index, stocks_data in enumerate(stocks):
-        for stock in stocks_data:
-            col_name = f'{stock["name_of_shop"]} {stock["market"]}'
-            df.at[index, col_name] = stock['value']
-
+    offers_with_stocks_df = offers_df.merge(stocks_df, on='sku', how='outer')
+    df = offers_with_stocks_df.merge(own_storages_df, on='sku', how='outer')
+    df.rename({
+        'name': 'Название',
+        'photo': 'Фото',
+        'market': 'Маркетплейс',
+        'name_of_shop': 'Название магазина',
+        'barcodes': 'Коды',
+        'note_1': 'Примечание 1',
+        'note_2': 'Примечание 2',
+        'note_3': 'Примечание 3',
+    }, axis='columns', inplace=True)
     df.to_excel('data/out-own-storages.xlsx', index=False)
     return 'data/out-own-storages.xlsx'
 
