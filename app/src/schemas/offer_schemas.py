@@ -80,6 +80,8 @@ class OfferChange(BaseOffer):
     self_width: float | None = Field(title='Ширина')
     self_height: float | None = Field(title='Высота')
 
+    wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.')
+
     auto_participation_in_promotions: bool = Field(title='Автоучастие в акциях')
 
     total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену', default=200)
@@ -147,7 +149,6 @@ class OfferOut(OfferChange):
     your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
     min_general_markets_price: float | None = Field(title='Лучшая цена среди всех площадок')
     barcodes: str | None = Field(title='Штрихкоды')
-    wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.')
     vendor_code: int | None = Field(title='Артикул')
     recommended_retail_price: float | None = Field(title='РРЦ')
     stop_price: float | None = Field(title='Стоп цена')
