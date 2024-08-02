@@ -206,7 +206,7 @@ class Market(Base):
 
     token = Column(String)
     entity_id = Column(Integer, nullable=True, default=None)
-    type = Column(Enum(APITypes))
+    type = Column(String, nullable=False)
     discount_purchase = Column(Float, default=20)
 
     tax = Column(Float, default=0)
@@ -236,7 +236,7 @@ class PricingScheme(Base):
     __tablename__ = 'pricing_schemes'
 
     name = Column(String, unique=True, index=True, nullable=False, primary_key=True)
-    market = Column(Enum(APITypes))
+    market = Column(String, nullable=False)
     m = Column(Float, default=0)
     n = Column(Float, default=1)
     fields = relationship('PricingSchemeField', back_populates='pricing_scheme', order_by='PricingSchemeField.name.asc()')
