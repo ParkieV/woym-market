@@ -291,10 +291,10 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
 
             chunked_df = df.copy()
 
-            chunked_df['dollar_cost_price'] = np.where(
+            chunked_df['wholesale_dollar_cost_price'] = np.where(
                 chunked_df['use_promotion_price'],
                 chunked_df['discount_price'],
-                chunked_df['wholesale_dollar_cost_price'] * (1 - _market.discount_purchase / 100)
+                chunked_df['wholesale_dollar_cost_price']
             )
             chunked_df.drop(['name', 'discount_price', 'price'], axis=1, inplace=True)
             chunked_df['market'] = _market.type
