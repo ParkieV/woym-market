@@ -40,7 +40,7 @@ async def startup(_: FastAPI):
     yield
 
 
-app: FastAPI = FastAPI(default_response_class=ORJSONResponse, root_path='/backend', lifespan=startup)
+app: FastAPI = FastAPI(default_response_class=ORJSONResponse, root_path='' if config.is_local else '/backend', lifespan=startup)
 
 
 origins = [

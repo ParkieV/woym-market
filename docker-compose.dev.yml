@@ -1,0 +1,53 @@
+version: '3.9'
+
+services:
+  app:
+    container_name: app
+    restart: always
+    command: python3 main.py
+    env_file: ./app/.env.dev
+    build:
+      context: ./app
+      dockerfile: app.dockerfile
+    depends_on:
+      - db
+    volumes:
+      - /logs:/app/logs
+    expose:
+      - 8000
+
+  frontend:
+    container_name: frontend
+    restart: always
+    env_file: ./front/.env.dev
+    build:
+      context: ./front
+      dockerfile: front.dockerfile
+    depends_on:
+      - app
+    expose:
+      - 3000
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: always
+    depends_on:
+      - app
+    volumes:
+      - ./nginx/dev:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/html:/var/www/html
+      # - ./static:/etc/nginx/static_img
+    ports:
+      - 80:80
+      - 443:443
+
+  db:
+    container_name: db
+    image: postgres:latest
+    env_file: db.env
+    volumes:
+      - ./db-data:/var/lib/postgresql/data
+    expose:
+      - 5432

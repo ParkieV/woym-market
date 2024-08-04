@@ -17,8 +17,16 @@ class Config(BaseSettings):
         return self.mode == "DEV"
 
     @property
+    def is_prod(self) -> bool:
+        return self.mode == "PROD"
+
+    @property
+    def is_local(self) -> bool:
+        return self.mode == "LOCAL"
+
+    @property
     def db_url(self) -> str:
         return f'postgresql+asyncpg://{self.dbuser}:{self.dbpassword}@{self.dbhost}:{self.dbport}/{self.dbname}'
 
 
-config = Config(_env_file='../.env', _env_file_encoding='utf-8')
+config = Config(_env_file_encoding='utf-8')

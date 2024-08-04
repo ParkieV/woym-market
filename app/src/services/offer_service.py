@@ -209,7 +209,7 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
         df1.drop(set(df1.columns) - set(OfferOut.fields()), axis=1, inplace=True, errors='ignore')
 
         await db.update_offers(session, df1, mapping_columns=['sku', 'name_of_shop'])
-
+from functools import lru_cache
 
 @error_handler('Ошибка импорта')
 async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None, user_id: int, file_extension: str = 'xlsx') -> None:

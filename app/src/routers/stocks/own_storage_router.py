@@ -44,9 +44,6 @@ async def get_own_storage_places():
     return await service.get_all_own_storage_places()
 
 
-
-
-
 @router.post('/export', dependencies=[Depends(require_staff)], tags=['Export'])
 async def export_own_storage(place_id: int = Body(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
     path = Path(await service.export_own_storages(place_id, name_of_shop, market))
