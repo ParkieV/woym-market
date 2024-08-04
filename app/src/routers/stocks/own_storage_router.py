@@ -45,8 +45,8 @@ async def get_own_storage_places():
 
 
 @router.post('/export', dependencies=[Depends(require_staff)], tags=['Export'])
-async def export_own_storage(place_id: int = Body(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
-    path = Path(await service.export_own_storages(place_id, name_of_shop, market))
+async def export_own_storage(place_id: int = Body(embed=True)):
+    path = Path(await service.export_own_storages(place_id))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 

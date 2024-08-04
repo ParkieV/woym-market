@@ -218,10 +218,10 @@ async def export_stocks(name_of_shop: str | None = None, market: str | None = No
 
 
 @error_handler('Ошибка экспорта собственных остатков.')
-async def export_own_storages(place_id, name_of_shop: str | None = None, market: str | None = None) -> str:
+async def export_own_storages(place_id: int) -> str:
     async with async_session() as session:
         data = await db.get_own_storages(session, place_id)
-        storage_places = {i.id: i.name for i in await db.get_all_own_storage_places(session)}
+        storage_place = await db.get_own_storage_place(session, place_id)
 
     offers_data = [{
         'sku': i.offer.sku,
@@ -246,7 +246,7 @@ async def export_own_storages(place_id, name_of_shop: str | None = None, market:
     stocks_df = stocks_df.groupby('sku', as_index=False).sum()
 
     own_storage_data = chain.from_iterable([[{'sku': storage.sku,
-                                              f'Мой склад {storage_places[storage.storage_place_id]}': storage.value}
+                                              f'Мой склад': storage.value}
                                              for storage in i.storages] for i in data])
     own_storages_df = pd.DataFrame(own_storage_data)
     own_storages_df['sku'] = own_storages_df['sku'].astype('string')
@@ -263,17 +263,17 @@ async def export_own_storages(place_id, name_of_shop: str | None = None, market:
         'note_2': 'Примечание 2',
         'note_3': 'Примечание 3',
     }, axis='columns', inplace=True)
-    df.to_excel('data/out-own-storages.xlsx', index=False)
-    return 'data/out-own-storages.xlsx'
+    df.to_excel(f'data/Мой склад {storage_place.name}.xlsx', index=False)
+    return f'data/Мой склад {storage_place.name}.xlsx'
 
 
 @error_handler('Ошибка импорта собственных остатков.')
 async def import_own_storages(data, place_id: int, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
-    df.rename(columns={'Мои остатки': 'value'}, inplace=True)
+    df.rename(columns={'Мой склад': 'value'}, inplace=True)
     df = df[['sku', 'value']]
-
+    df = df.astype({'sku': str, 'value': int})
     data = df.to_dict('records')
 
     async with async_session() as session:

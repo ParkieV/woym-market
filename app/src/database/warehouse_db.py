@@ -575,6 +575,19 @@ async def get_all_own_storage_places(session: AsyncSession) -> list[OwnStoragePl
     return [OwnStoragePlaceOut.model_validate(i, from_attributes=True) for i in result.scalars()]
 
 
+async def get_own_storage_place(session: AsyncSession, place_id: int, allow_none: bool = False) -> OwnStoragePlaceOut | None:
+    query = select(OwnStoragePlace).where(OwnStoragePlace.id == place_id)
+    result = (await session.execute(query)).scalar_one_or_none()
+
+    if not result:
+        if allow_none:
+            return None
+        else:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, f'Моего склада с id - {place_id} не найдено')
+
+    return OwnStoragePlaceOut.model_validate(result, from_attributes=True)
+
+
 async def change_own_storage_places(session: AsyncSession, data: list[OwnStoragePlaceUpdate]):
     for place in data:
         stmp = update(OwnStoragePlace).where(OwnStoragePlace.id == place.id).values(**place.model_dump())
