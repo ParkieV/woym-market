@@ -65,8 +65,8 @@ async def import_own_storage_consumption(file: UploadFile = File(), place_id: in
 
 
 @router.post('/import', dependencies=[Depends(require_staff)], tags=['Import'])
-async def import_own_storage(data: UploadFile = File(), place_id: int = Body(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
+async def import_own_storage(data: UploadFile = File(), place_id: int = Body()):
     content = await data.read()
-    await service.import_own_storages(content, place_id, name_of_shop, market, PurePath(data.filename).suffix)
+    await service.import_own_storages(content, place_id, PurePath(data.filename).suffix)
     return {'status': 'OK'}
 

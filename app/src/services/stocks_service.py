@@ -268,8 +268,7 @@ async def export_own_storages(place_id, name_of_shop: str | None = None, market:
 
 
 @error_handler('Ошибка импорта собственных остатков.')
-async def import_own_storages(data, place_id: int, name_of_shop: str | None = None, market: str | None = None,
-                              file_extension: str = 'xlsx'):
+async def import_own_storages(data, place_id: int, file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df.rename(columns={'Мои остатки': 'value'}, inplace=True)
