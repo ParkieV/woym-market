@@ -6,6 +6,7 @@
     import MarketSettings from "./Market.svelte";
     import { page } from "$app/stores";
     import { afterNavigate, invalidate, invalidateAll } from "$app/navigation";
+    import { invalidateAllState } from "../../(main)/state";
 
     export let data: PageServerData;
 
@@ -16,12 +17,13 @@
         if (data.market) {
             await patchStore(data.market);
             await reset();
+            await invalidateAllState();
         }
     }
 
-    afterNavigate(({ type }) => {
+    afterNavigate(async ({ type }) => {
         if (type === "enter") return;
-        reset();
+        await reset();
     });
 
     async function reset() {

@@ -13,4 +13,8 @@ export class Selection<T, K> {
     public readonly selected: Writable<Map<K, T>>;
     public readonly filter: Readable<Filter<T>>;
     public readonly filtered: Readable<Map<K, T>>;
+
+    public clear() {
+        this.selected.set(new Map());
+    }
 }

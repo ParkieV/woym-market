@@ -3,6 +3,7 @@
     import { patchTemplates } from "$lib/data/templates";
     import { userCanModify } from "$lib/data/user";
     import type { PageData } from "./$types";
+    import { invalidateAllState } from "../(main)/state";
 
     export let data: PageData;
     let changed = new Set<string>();
@@ -18,6 +19,7 @@
             changed.clear();
             changed = changed;
         }
+        await invalidateAllState();
     };
 </script>
 

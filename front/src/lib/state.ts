@@ -51,4 +51,10 @@ export class GridState<T, K> implements Writable<T[]> {
         this.changes.clear();
         this.current.set(structuredClone(this.initial));
     }
+
+    /** Cancels changes and marks state as unloaded. */
+    public reset() {
+        this.cancel();
+        this._initialized = false;
+    }
 }

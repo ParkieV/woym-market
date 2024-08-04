@@ -20,3 +20,17 @@ export const fboOffersSelection = new Selection<FboStocks, number>(fboOffersFilt
 export const fboStorageChanges = new ChangeList<FboStorage, number>();
 export const fboStorageFilter = writable<Filter<FboStorage>>(() => true);
 export const fboStorageSelection = new Selection<FboStorage, number>(fboStorageFilter);
+
+export async function invalidateAllState() {
+    Promise.all([offersState.reset(), ownStorageState.reset(), fboState.reset()]);
+
+    let filter = () => true;
+    offersFilter.set(filter);
+    ownStorageFilter.set(filter);
+    fboOffersFilter.set(filter);
+    fboStorageFilter.set(filter);
+
+    fboOffersSelection.clear();
+    fboStorageSelection.clear();
+    fboStorageChanges.clear();
+}
