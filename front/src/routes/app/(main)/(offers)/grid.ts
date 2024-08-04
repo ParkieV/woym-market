@@ -187,8 +187,7 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "dollar_cost_price",
                     header: "Закупка у. е.",
-                    base: dollarColumn,
-                    editable: true
+                    base: dollarColumn
                 },
                 {
                     key: "attractive_price_threshold",
@@ -315,7 +314,8 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "wholesale_dollar_cost_price",
                     header: "ОПТ у. е.",
-                    base: dollarColumn
+                    base: dollarColumn,
+                    editable: true
                 },
                 {
                     key: "vendor_code",
