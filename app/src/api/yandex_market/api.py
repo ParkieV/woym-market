@@ -64,7 +64,7 @@ class YandexMarketAPI(BaseAPI):
             extended_offer.update(offer)
             result.append(extended_offer)
 
-        logger.info('Yandex offers collected')
+        logger.info(f'{self._shop_name}(yandex) offers collected')
         return [APIOffer(**offer) for offer in result]
 
     def _get_campaigns(self) -> dict[int, dict[str, Any]]:
@@ -174,7 +174,7 @@ class YandexMarketAPI(BaseAPI):
 
         self._set_cofinance_offers_price(data)
 
-        logger.info('Yandex prices updated')
+        logger.info(f'{self._shop_name}(yandex) prices updated')
 
     async def _get_market_prices_report(self, business_id: int) -> dict[str, dict[str, Any]]:
         response = self.session.post('https://api.partner.market.yandex.ru/reports/prices/generate',

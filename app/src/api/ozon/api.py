@@ -59,7 +59,7 @@ class OzonAPI(BaseAPI):
             offer['vendor_code'] = product_ids.get(offer['sku'], None)
             del offer['market_sku']
 
-        logger.info('Ozon offers collected')
+        logger.info(f'{self.shop_name}(ozon) offers collected')
         return [APIOffer(**i) for i in offers]
 
     async def get_stocks(self) -> list[APIWarehouse]:
@@ -125,7 +125,7 @@ class OzonAPI(BaseAPI):
 
             await self._set_search_words([(offer_data.sku, offer_data.search_words) for offer_data in data[i:i + chunk_size] if offer_data.is_valid_search_words()])
 
-        logger.info('Ozon price updated')
+        logger.info(f'{self.shop_name}(ozon) price updated')
 
     def _get_offers_identifiers(self) -> list[OfferIdentifier]:
         response = self.session.post('https://api-seller.ozon.ru/v2/product/list', headers=self.auth_headers)
