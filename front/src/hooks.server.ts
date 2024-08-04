@@ -1,4 +1,4 @@
-import { PUBLIC_BASE_URL } from "$env/static/public";
+import { env } from "$env/dynamic/public";
 import { tokenCookieName } from "$lib/auth";
 import { redirect, type Handle, type HandleFetch } from "@sveltejs/kit";
 
@@ -26,7 +26,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 export const handleFetch: HandleFetch = async ({ event: { cookies }, request, fetch }) => {
     let token = cookies.get(tokenCookieName);
-    if (token !== undefined && request.url.startsWith(PUBLIC_BASE_URL)) {
+    if (token !== undefined && request.url.startsWith(env.PUBLIC_BASE_URL!)) {
         token = `Bearer ${token}`;
         request.headers.set("Authorization", token);
     }

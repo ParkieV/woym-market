@@ -1,3 +1,3 @@
-import { PUBLIC_BASE_URL } from "$env/static/public";
+import { env } from "$env/dynamic/public";
 
-export const BaseUrl = PUBLIC_BASE_URL;
+export const BaseUrl = env.PUBLIC_BASE_URL!;

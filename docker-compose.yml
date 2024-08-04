@@ -19,7 +19,7 @@ services:
   frontend:
     container_name: frontend
     restart: always
-    env_file: .env
+    env_file: ./front/.env.prod
     build:
       context: ./front
       dockerfile: front.dockerfile
