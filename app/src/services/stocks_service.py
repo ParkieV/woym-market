@@ -16,12 +16,11 @@ from src.schemas.stocks.own_storages_schemas import OwnStorageUpdate, OwnStorage
 from src.schemas.stocks.fbo_schemas import OfferWithStocksUpdate
 from src.schemas.stocks.stocks_schemas import SupplyExportType, GeneralOrderData
 from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
-from src.services.base_utils import error_handler, clean_up_files
+from src.services.base_utils import error_handler, clean_up_files, validate_dataframe
 from datetime import datetime
 from pathlib import Path
 from shutil import make_archive
 from src.database import settings_db
-
 
 api_wrapper = APIWrapper()
 
@@ -45,7 +44,8 @@ async def update_warehouses_and_stocks():
             'current_stock': [stock.current_stock for stock in warehouse.offers],
         } for warehouse in stocks])
         api_stocks_df_exploded = api_stocks_df.explode(['sku', 'name_of_shop', 'current_stock'])
-        api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']] = api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']].astype('string')
+        api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']] = api_stocks_df_exploded[
+            ['sku', 'name_of_shop', 'market', 'warehouse_name']].astype('string')
 
         # Остатки из БД
         db_stocks = await db.get_all_offers_stocks(session)
@@ -60,15 +60,22 @@ async def update_warehouses_and_stocks():
             ))
 
         # Обновение остатков, у которых current_stock не совпадает с уже установленными
-        to_update_df = pd.merge(api_stocks_df_exploded, db_stocks_df, how='inner', on=('sku', 'name_of_shop', 'market', 'warehouse_name'))
-        to_update_df = to_update_df[to_update_df['current_stock_x'] != to_update_df['current_stock_y']].rename({'current_stock_x': 'current_stock'}, axis='columns')[['id', 'current_stock']]
+        to_update_df = pd.merge(api_stocks_df_exploded, db_stocks_df, how='inner',
+                                on=('sku', 'name_of_shop', 'market', 'warehouse_name'))
+        to_update_df = to_update_df[to_update_df['current_stock_x'] != to_update_df['current_stock_y']].rename(
+            {'current_stock_x': 'current_stock'}, axis='columns')[['id', 'current_stock']]
         await db.update_fbo_stocks(session, to_update_df.to_dict('records'))
 
-        api_idents = set([tuple(i.values()) for i in api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict('records')])
-        db_idents = set([tuple(i.values()) for i in db_stocks_df[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict('records')])
+        api_idents = set([tuple(i.values()) for i in
+                          api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict(
+                              'records')])
+        db_idents = set([tuple(i.values()) for i in
+                         db_stocks_df[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict('records')])
 
         to_create_idents = api_idents - db_idents
-        to_create_df = pd.merge(pd.DataFrame(to_create_idents, columns=['sku', 'name_of_shop', 'market', 'warehouse_name']), api_stocks_df_exploded, how='inner', on=('sku', 'name_of_shop', 'market', 'warehouse_name')).dropna()
+        to_create_df = pd.merge(
+            pd.DataFrame(to_create_idents, columns=['sku', 'name_of_shop', 'market', 'warehouse_name']),
+            api_stocks_df_exploded, how='inner', on=('sku', 'name_of_shop', 'market', 'warehouse_name')).dropna()
 
         # Создание новых остатков
         await db.create_fbo_stocks_(session, to_create_df.to_dict('records'))
@@ -76,7 +83,9 @@ async def update_warehouses_and_stocks():
         # Создать остатки на складах, которые не были в полученных данных
         await db.fill_empty_stocks(session)
 
-        await db.relate_warehouses_with_clusters(session, [{'name': i.name, 'related_warehouses_name': i.related_warehouses_name} for i in stocks])
+        await db.relate_warehouses_with_clusters(session,
+                                                 [{'name': i.name, 'related_warehouses_name': i.related_warehouses_name}
+                                                  for i in stocks])
 
     end_time = datetime.now()
 
@@ -229,15 +238,18 @@ async def export_own_storages(place_id, name_of_shop: str | None = None, market:
     offers_df = pd.DataFrame(offers_data)
     offers_df['sku'] = offers_df['sku'].astype('string')
 
-    stocks_data = chain.from_iterable([[{'sku': i.offer.sku, f'{stock.name_of_shop} ({stock.market})': stock.stock} for stock in i.stocks] for i in data])
+    stocks_data = chain.from_iterable(
+        [[{'sku': i.offer.sku, f'{stock.name_of_shop} ({stock.market})': stock.stock} for stock in i.stocks] for i in
+         data])
     stocks_df = pd.DataFrame(stocks_data)
     stocks_df['sku'] = stocks_df['sku'].astype('string')
     stocks_df = stocks_df.groupby('sku', as_index=False).sum()
 
-    own_storage_data = chain.from_iterable([[{'sku': storage.sku, f'Мой склад {storage_places[storage.storage_place_id]}': storage.value} for storage in i.storages] for i in data])
+    own_storage_data = chain.from_iterable([[{'sku': storage.sku,
+                                              f'Мой склад {storage_places[storage.storage_place_id]}': storage.value}
+                                             for storage in i.storages] for i in data])
     own_storages_df = pd.DataFrame(own_storage_data)
     own_storages_df['sku'] = own_storages_df['sku'].astype('string')
-
 
     offers_with_stocks_df = offers_df.merge(stocks_df, on='sku', how='outer')
     df = offers_with_stocks_df.merge(own_storages_df, on='sku', how='outer')
@@ -256,7 +268,8 @@ async def export_own_storages(place_id, name_of_shop: str | None = None, market:
 
 
 @error_handler('Ошибка импорта собственных остатков.')
-async def import_own_storages(data, place_id: int,  name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+async def import_own_storages(data, place_id: int, name_of_shop: str | None = None, market: str | None = None,
+                              file_extension: str = 'xlsx'):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df.rename(columns={'Мои остатки': 'value'}, inplace=True)
@@ -322,7 +335,8 @@ async def general_order_report(
     df['total_cost_price'] = df['cost_price'] * df['for_delivery']
     df['total_volume'] = df['volume'] * df['for_delivery']
     df['total_weight'] = df['self_weight'] * df['for_delivery']
-    df = df[['sku', 'name', 'for_delivery', 'self_weight', 'total_weight', 'volume', 'total_volume', 'cost_price', 'total_cost_price']]
+    df = df[['sku', 'name', 'for_delivery', 'self_weight', 'total_weight', 'volume', 'total_volume', 'cost_price',
+             'total_cost_price']]
     df.fillna(0, inplace=True)
     df = df[df['for_delivery'] > 0]
 
@@ -344,9 +358,8 @@ async def general_order_report(
         'volume': 'Объем(одного)'
     }, axis='columns', inplace=True)
 
-    file_path = dir_path / f'{file_type_name}, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xls'
+    file_path = dir_path / f'{file_type_name}, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xlsx'
     df.to_excel(file_path, index=False)
-
 
 
 market_handlers = {
@@ -356,7 +369,8 @@ market_handlers = {
 
 
 @error_handler('Ошибка экспорта поставки.')
-async def export_supply(export_type: SupplyExportType, warehouses: list[int], offers: list[int], place_id: int | None = None):
+async def export_supply(export_type: SupplyExportType, warehouses: list[int], offers: list[int],
+                        place_id: int | None = None):
     if not warehouses:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Для формирования поставки нужно указать склады')
 
@@ -365,15 +379,21 @@ async def export_supply(export_type: SupplyExportType, warehouses: list[int], of
 
     async with async_session() as session:
         if export_type == SupplyExportType.ONLY_OWN_STORAGE:
-            offers_data, aggregated_offers_data = await db.get_supply_only_own_storage(session=session, warehouses=warehouses, offers=offers, place_id=place_id)
+            offers_data, aggregated_offers_data = await db.get_supply_only_own_storage(session=session,
+                                                                                       warehouses=warehouses,
+                                                                                       offers=offers, place_id=place_id)
             df = pd.DataFrame([i.model_dump() for i in offers_data])
 
         elif export_type == SupplyExportType.WITH_OWN_STORAGE:
-            offers_data, aggregated_offers_data = await db.get_supply_only_own_storage(session=session, warehouses=warehouses, offers=offers, place_id=place_id)
+            offers_data, aggregated_offers_data = await db.get_supply_only_own_storage(session=session,
+                                                                                       warehouses=warehouses,
+                                                                                       offers=offers, place_id=place_id)
             df = pd.DataFrame([i.model_dump() for i in offers_data])
             df['for_delivery'] = df['base_for_delivery']
         else:
-            offers_data, aggregated_offers_data = await db.get_supply_only_stocks(session=session, warehouses=warehouses, offers=offers, place_id=place_id)
+            offers_data, aggregated_offers_data = await db.get_supply_only_stocks(session=session,
+                                                                                  warehouses=warehouses, offers=offers,
+                                                                                  place_id=place_id)
             df = pd.DataFrame([i.model_dump() for i in offers_data])
 
         if not all((offers_data, aggregated_offers_data)):
@@ -383,7 +403,6 @@ async def export_supply(export_type: SupplyExportType, warehouses: list[int], of
 
         if not len(df):
             raise HTTPException(status.HTTP_404_NOT_FOUND, 'Товаров с ненулевым значением "к поставке" не найдено')
-
 
         # create zip archive/folder
         zip_file_path = Path(f'data/Поставка')
@@ -411,11 +430,12 @@ async def export_supply(export_type: SupplyExportType, warehouses: list[int], of
                 await handler(temp_df, shop_file_path)
 
         if export_type == SupplyExportType.WITH_OWN_STORAGE:
-            await general_order_report(aggregated_offers_data, zip_file_path, file_type_name='Заказ (в наличии)', fd_builder_func=lambda x: x['for_delivery'])
-            await general_order_report(aggregated_offers_data, zip_file_path, file_type_name='Заказ (дозаказать)', fd_builder_func=lambda x: x['base_for_delivery'] - x['for_delivery'])
+            await general_order_report(aggregated_offers_data, zip_file_path, file_type_name='Заказ (в наличии)',
+                                       fd_builder_func=lambda x: x['for_delivery'])
+            await general_order_report(aggregated_offers_data, zip_file_path, file_type_name='Заказ (дозаказать)',
+                                       fd_builder_func=lambda x: x['base_for_delivery'] - x['for_delivery'])
         else:
             await general_order_report(aggregated_offers_data, zip_file_path)
-
 
         # archive created directory
         response_file_path = make_archive(str(zip_file_path), root_dir=zip_file_path, format='zip')
@@ -476,13 +496,25 @@ async def change_own_storage_places(data: list[OwnStoragePlaceUpdate]):
 
 async def increment_own_storage_values(data, place_id: int, file_extension: str, coef: int = 1):
     df = utils.bytes_to_data_frame(data, file_extension=file_extension)
-    df.rename({'артикул': 'sku', 'количество': 'value'}, axis='columns', inplace=True)
-    df = df[['sku', 'value']]
+
+    if any(df.columns.str.contains('unnamed', case=False)):
+        df.columns = df.iloc[0]
+        df.drop(df.index[0], inplace=True)
+
+    df.rename(columns={
+        'артикул': 'sku',
+        'количество': 'value',
+        'Ваш SKU': 'sku',
+        'Количество товаров в поставке': 'value',
+        'SKU': 'sku',
+        'Кол-во': 'value'
+    }, inplace=True)
+
+    df = validate_dataframe(df, required_columns=['sku', 'value'], full_entry=False, allow_change=True)
+
+    df.dropna(axis='rows', inplace=True)
     df = df.astype({'sku': str, 'value': int})
     df['value'] = df['value'] * coef
 
     async with async_session() as session:
         await db.increment_own_storage_values(session, df.to_dict('records'), place_id)
-
-
-

@@ -1,5 +1,8 @@
 import shutil
 from functools import wraps
+from typing import Sequence, Set
+
+import pandas as pd
 from fastapi.exceptions import HTTPException
 from fastapi import status
 from logs import get_logger
@@ -38,3 +41,33 @@ def clean_up_files(file_path: str):
             shutil.rmtree(path)
     except Exception as e:
         logger.exception(f'Cannot remove file or dir \'{file_path}\'', exc_info=True)
+
+
+def validate_dataframe(
+        df: pd.DataFrame,
+        required_columns: list[str],
+        full_entry: bool = True,
+        allow_change: bool = False,
+        raise_error: bool = True
+) -> pd.DataFrame | None:
+    df_columns = set(df.columns.to_list())
+
+    if not len(required_columns):
+        return df
+
+    if full_entry:
+        if set(required_columns) == df_columns:
+            return df
+    else:
+        if set(required_columns).issubset(df_columns):
+            if allow_change:
+                return df[required_columns]
+            else:
+                return df
+
+    if raise_error:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, 'В файле должны присутствовать данные о количестве и SKU')
+
+    return None
+
+
