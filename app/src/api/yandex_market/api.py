@@ -156,7 +156,7 @@ class YandexMarketAPI(BaseAPI):
                         'currencyId': "RUR"
                     }
                 }
-                for price_data in data[i:i + chunk_size] if price_data.is_valid_data()]
+                for price_data in data[i:i + chunk_size] if price_data.is_valid_target_price()]
 
             if not post_data:
                 continue
@@ -337,7 +337,7 @@ class YandexMarketAPI(BaseAPI):
                             }
                         }
                     }
-                    for price_data in valid_data[i:i+chunk_size]
+                    for price_data in valid_data[i:i+chunk_size] if price_data.is_valid_auto_min_price()
                 ]
             }
 

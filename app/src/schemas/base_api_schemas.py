@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Union
 
+import numpy as np
+
 
 class WarehouseType(str, Enum):
     WAREHOUSE = 'warehouse'
@@ -74,7 +76,15 @@ class APIPriceChangeData:
     auto_min_price: float | None = None
     search_words: str | None = None
 
-    def is_valid_data(self) -> bool:
-        return isinstance(self.target_price, (float, int))
+    def is_valid_target_price(self) -> bool:
+        return isinstance(self.target_price, (float, int)) and not np.isnan(self.target_price)
 
+    def is_valid_min_price(self) -> bool:
+        return isinstance(self.min_price, (float, int)) and not np.isnan(self.min_price)
+
+    def is_valid_auto_min_price(self) -> bool:
+        return isinstance(self.auto_min_price, (float, int)) and not np.isnan(self.auto_min_price)
+
+    def is_valid_search_words(self) -> bool:
+        return isinstance(self.search_words, str)
 

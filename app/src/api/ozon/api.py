@@ -104,7 +104,7 @@ class OzonAPI(BaseAPI):
                     'price_strategy_enabled': 'UNKNOWN',
                     'min_price': str(price.min_price)
                 }
-                for price in data[i:i + chunk_size]
+                for price in data[i:i + chunk_size] if price.is_valid_min_price() and price.is_valid_target_price()
             ]
             body = {
                 'prices': post_data
@@ -123,7 +123,7 @@ class OzonAPI(BaseAPI):
                     if not offer_result['updated']:
                         logger.warning(f'Error in update offer with id - {offer_result["offer_id"]} \nErrors: {offer_result["errors"]}')
 
-            await self._set_search_words([(i.sku, i.search_words) for i in data[i:i + chunk_size]])
+            await self._set_search_words([(offer_data.sku, offer_data.search_words) for offer_data in data[i:i + chunk_size] if offer_data.is_valid_search_words()])
 
         logger.info('Ozon price updated')
 
