@@ -51,16 +51,16 @@ async def export_own_storage(place_id: int = Body(), name_of_shop: str | None = 
 
 
 @router.post('/coming/import', dependencies=[Depends(require_staff)], tags=['Import'], description='Offers with increased availability')
-async def import_own_storage_coming(file: UploadFile = File(), place_id: int = Body()):
-    content = await file.read()
-    await service.increment_own_storage_values(content, place_id, PurePath(file.filename).suffix, 1)
+async def import_own_storage_coming(data: UploadFile = File(), place_id: int = Body()):
+    content = await data.read()
+    await service.increment_own_storage_values(content, place_id, PurePath(data.filename).suffix, 1)
     return {'status': 'OK'}
 
 
 @router.post('/consumption/import', dependencies=[Depends(require_staff)], tags=['Import'], description='Offers with decreased availability')
-async def import_own_storage_consumption(file: UploadFile = File(), place_id: int = Body()):
-    content = await file.read()
-    await service.increment_own_storage_values(content, place_id, PurePath(file.filename).suffix, -1)
+async def import_own_storage_consumption(data: UploadFile = File(), place_id: int = Body()):
+    content = await data.read()
+    await service.increment_own_storage_values(content, place_id, PurePath(data.filename).suffix, -1)
     return {'status': 'OK'}
 
 
