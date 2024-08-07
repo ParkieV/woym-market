@@ -669,6 +669,11 @@ async def fill_empty_stocks(session: AsyncSession):
 
 
 async def get_fbo_offers(session: AsyncSession):
+    stocks_query = select(
+        OfferStock.offer_id,
+        (func.sum(OfferStock.for_delivery)).label('total_for_delivery'),
+    ).group_by(OfferStock.offer_id).subquery()
+
     query = (
         select(
             Offer.id,
@@ -688,8 +693,8 @@ async def get_fbo_offers(session: AsyncSession):
             Offer.volume,
             Offer.hidden,
             Offer.barcodes,
-            (select(func.sum(OfferStock.for_delivery)).where(OfferStock.offer_id == Offer.id)).label('total_for_delivery')
-        )
+            stocks_query.c.total_for_delivery,
+        ).join(stocks_query, Offer.id == stocks_query.c.offer_id)
     )
     result = (await session.execute(query)).all()
     return result

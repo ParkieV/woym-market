@@ -125,6 +125,11 @@ class FboOfferOut(BaseModel):
 
     @computed_field
     @property
+    def stocks(self) -> list:
+        return []
+
+    @computed_field
+    @property
     def total_volume(self) -> float | None:
         if self.volume is None:
             return None
