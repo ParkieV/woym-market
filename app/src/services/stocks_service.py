@@ -518,3 +518,13 @@ async def increment_own_storage_values(data, place_id: int, file_extension: str,
 
     async with async_session() as session:
         await db.increment_own_storage_values(session, df.to_dict('records'), place_id)
+
+
+async def get_offer_stock(offer_id: int):
+    async with async_session() as session:
+        return await db.get_offer_stocks(session, offer_id)
+
+
+async def get_fbo_offers():
+    async with async_session() as session:
+        return await db.get_fbo_offers(session)
