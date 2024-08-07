@@ -10,6 +10,7 @@ from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
 import src.services.offer_utils as utils
+from src.params.confing import config
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks.own_storages_schemas import OwnStorageUpdate, OwnStoragePlaceCreate, \
     OwnStoragePlaceOut, OwnStoragePlaceUpdate
@@ -294,7 +295,7 @@ async def export_yandex_supply(data: pd.DataFrame, dir_path: Path):
             'barcodes': 'Штрихкоды'
         }, axis='columns', inplace=True)
         df['НДС'] = 'VAT_20'
-        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xlsx'
+        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
         df.to_excel(file_path, index=False, header=True, sheet_name='Поставка', startrow=1)
 
         wb = openpyxl.load_workbook(file_path)
@@ -316,7 +317,7 @@ async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
             'for_delivery': 'количество'
         }, axis='columns', inplace=True)
 
-        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xlsx'
+        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
         df.to_excel(file_path, index=False)
 
 
@@ -357,7 +358,7 @@ async def general_order_report(
         'volume': 'Объем(одного)'
     }, axis='columns', inplace=True)
 
-    file_path = dir_path / f'{file_type_name}, {datetime.now().strftime("%d.%m.%Y, %H:%M")}.xlsx'
+    file_path = dir_path / f'{file_type_name}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
     df.to_excel(file_path, index=False)
 
 

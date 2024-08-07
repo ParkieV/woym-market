@@ -1,3 +1,6 @@
+from datetime import tzinfo, datetime, timedelta, timezone
+
+from dateutil.tz import tz
 from pydantic_settings import BaseSettings
 from pydantic import Field
 
@@ -27,6 +30,14 @@ class Config(BaseSettings):
     @property
     def db_url(self) -> str:
         return f'postgresql+asyncpg://{self.dbuser}:{self.dbpassword}@{self.dbhost}:{self.dbport}/{self.dbname}'
+
+    @property
+    def time_zone_ino(self) -> tzinfo:
+        offset = timedelta(hours=3)
+        print(datetime.now(tz=tz.tzlocal()))
+        print(datetime.now(timezone(timedelta(hours=3))))
+        print(datetime.now())
+        return timezone(timedelta(hours=3))
 
 
 config = Config(_env_file_encoding='utf-8')

@@ -317,20 +317,6 @@ async def get_or_create_offer_stocks(session: AsyncSession, data: OfferStockCrea
     )
 
 
-#
-# async def get_offer_stock_by(session: AsyncSession, offer_id: int, warehouse_name: str, warehouse_market: str):
-#     warehouse_query = select(Warehouse).where(Warehouse.name==warehouse_name).where(Warehouse.market==warehouse_market)
-#     result = await session.execute(warehouse_query)
-#     warehouse_db = result.scalar_one_or_none()
-#
-#     if warehouse_db is None:
-#         return None
-#
-#     stock_query = select(OfferStock).where(OfferStock.offer_id==offer_id).where(OfferStock.warehouse_id==warehouse_db.id)
-#     result = await session.execute(stock_query)
-#     return result.scalar_one_or_none()
-
-
 async def get_warehouses_by_name_and_market(session: AsyncSession, data: list[list[str, str]]) -> list[WarehouseOut]:
     results = []
 
