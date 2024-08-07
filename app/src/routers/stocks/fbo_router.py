@@ -6,7 +6,8 @@ from starlette.responses import FileResponse
 
 from src.services import stocks_service as service
 from src.dependencies.users import get_current_user, require_staff
-from src.schemas.stocks.fbo_schemas import OfferWithStocks, OfferWithStocksUpdate
+from src.schemas.stocks.fbo_schemas import OfferWithStocks, OfferWithStocksUpdate, OfferStockOut, \
+    OfferStockWithWarehouseOut, FboOfferOut
 from src.services.base_utils import clean_up_files
 
 router = APIRouter(
@@ -15,9 +16,14 @@ router = APIRouter(
 )
 
 
-@router.get('', response_model=list[OfferWithStocks], dependencies=[Depends(get_current_user)])
-async def get_fbo_stocks():
-    return await service.get_offers_with_stocks()
+@router.get('', response_model=list[FboOfferOut], dependencies=[Depends(get_current_user)])
+async def get_fbo_offers():
+    return await service.get_fbo_offers()
+
+
+@router.get('/{offer_id}', response_model=list[OfferStockWithWarehouseOut], dependencies=[Depends(get_current_user)])
+async def get_fbo_stock(offer_id: int):
+    return await service.get_offer_stock(offer_id)
 
 
 @router.patch('', dependencies=[Depends(require_staff)])

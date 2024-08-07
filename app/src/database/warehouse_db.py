@@ -35,6 +35,7 @@ async def get_warehouses(session: AsyncSession, model_schema: ModelSchema = Ware
     result = await session.execute(query)
     return [model_schema.model_validate(warehouse_db, from_attributes=True) for warehouse_db in result.scalars().all()]
 
+
 async def get_all_offers_stocks(session: AsyncSession):
     query = (
         select(
@@ -51,6 +52,7 @@ async def get_all_offers_stocks(session: AsyncSession):
     )
     result = (await session.execute(query)).all()
     return result
+
 
 async def create_offer_stock(session: AsyncSession, data: OfferStockCreate,
                              model_schema: ModelSchema = OfferStockOut) -> ModelSchema:
@@ -428,7 +430,8 @@ async def get_supply_only_stocks(session: AsyncSession, warehouses: list[int], o
 
 
 async def get_supply_only_own_storage(session: AsyncSession, warehouses: list[int], offers: list[int], place_id: int):
-    own_storage_query = (select(OwnStorage.value).where(OwnStorage.storage_place_id == place_id).where(OwnStorage.sku == Offer.sku)).label('own_storage_value')
+    own_storage_query = (select(OwnStorage.value).where(OwnStorage.storage_place_id == place_id).where(
+        OwnStorage.sku == Offer.sku)).label('own_storage_value')
 
     offers_query = (
         select(
@@ -443,7 +446,9 @@ async def get_supply_only_own_storage(session: AsyncSession, warehouses: list[in
             Offer.self_weight,
             Offer.cost_price,
             Warehouse.name.label('warehouse_name'),
-            func.greatest(0, func.least(OfferStock.for_delivery, (own_storage_query - func.coalesce(func.sum(OfferStock.for_delivery).over(partition_by=Offer.sku, order_by=OfferStock.for_delivery.desc(), rows=(None, -1)), 0)))).label('for_delivery'),
+            func.greatest(0, func.least(OfferStock.for_delivery, (own_storage_query - func.coalesce(
+                func.sum(OfferStock.for_delivery).over(partition_by=Offer.sku, order_by=OfferStock.for_delivery.desc(),
+                                                       rows=(None, -1)), 0)))).label('for_delivery'),
             OfferStock.for_delivery.label('base_for_delivery')
         )
         .join(OfferStock, OfferStock.offer_id == Offer.id)
@@ -460,7 +465,8 @@ async def get_supply_only_own_storage(session: AsyncSession, warehouses: list[in
         func.avg(offers_query.c.volume).label('volume'),
         func.avg(offers_query.c.self_weight).label('self_weight'),
         func.avg(offers_query.c.cost_price).label('cost_price'),
-        (select(OwnStorage.value).where(OwnStorage.storage_place_id == place_id).where(OwnStorage.sku == offers_query.c.sku)).label('own_storage_value'),
+        (select(OwnStorage.value).where(OwnStorage.storage_place_id == place_id).where(
+            OwnStorage.sku == offers_query.c.sku)).label('own_storage_value'),
         func.sum(offers_query.c.base_for_delivery).label('base_for_delivery')
     ).group_by(offers_query.c.sku)
 
@@ -470,7 +476,6 @@ async def get_supply_only_own_storage(session: AsyncSession, warehouses: list[in
     return (
         [SupplyData.model_validate(i, from_attributes=True) for i in offers_result],
         [GeneralOrderData.model_validate(i, from_attributes=True) for i in aggregated_offers_result])
-
 
 
 async def get_general_order_data(
@@ -604,8 +609,8 @@ async def create_fbo_stocks_(session: AsyncSession, data: list[dict]):
         if not warehouse_id_rez:
             continue
 
-
-        offer_id_query = select(Offer.id).where(and_(Offer.sku == item['sku'], Offer.market == item['market'], Offer.name_of_shop == item['name_of_shop']))
+        offer_id_query = select(Offer.id).where(
+            and_(Offer.sku == item['sku'], Offer.market == item['market'], Offer.name_of_shop == item['name_of_shop']))
         offer_id_rez = (await session.execute(offer_id_query)).first()
 
         if not offer_id_rez:
@@ -620,6 +625,7 @@ async def create_fbo_stocks_(session: AsyncSession, data: list[dict]):
 
     await session.commit()
 
+
 async def update_fbo_stocks(session: AsyncSession, data: list[dict]):
     for stock in data:
         stmp = update(OfferStock).values(current_stock=stock['current_stock']).where(OfferStock.id == stock['id'])
@@ -632,7 +638,8 @@ async def fill_empty_stocks(session: AsyncSession):
     markets_query = select(
         func.upper(cast(Market.type, String)).label('market'),
         func.array(
-            (select(Warehouse.id).where(func.upper(cast(Warehouse.market, String)) == func.upper(cast(Market.type, String))))
+            (select(Warehouse.id).where(
+                func.upper(cast(Warehouse.market, String)) == func.upper(cast(Market.type, String))))
         ).label('warehouses')
     )
     markets_warehouses = {i.market: set(i.warehouses) for i in (await session.execute(markets_query)).all()}
@@ -654,13 +661,48 @@ async def fill_empty_stocks(session: AsyncSession):
 
         to_set_warehouses_stocks = markets_warehouses[item.market] - set(item.warehouses)
 
-        new_stocks = [OfferStock(offer_id=item.id, warehouse_id=warehouse_id, current_stock=0) for warehouse_id in to_set_warehouses_stocks]
+        new_stocks = [OfferStock(offer_id=item.id, warehouse_id=warehouse_id, current_stock=0) for warehouse_id in
+                      to_set_warehouses_stocks]
         session.add_all(new_stocks)
 
     await session.commit()
 
 
+async def get_fbo_offers(session: AsyncSession):
+    query = (
+        select(
+            Offer.id,
+            Offer.sku,
+            Offer.name,
+            Offer.photo,
+            Offer.name_of_shop,
+            Offer.market,
+            Offer.note_1,
+            Offer.note_2,
+            Offer.note_3,
+            Offer.supplier_available,
+            Offer.margin,
+            Offer.cost_price,
+            Offer.profit,
+            Offer.self_weight,
+            Offer.volume,
+            Offer.hidden,
+            Offer.barcodes,
+            (select(func.sum(OfferStock.for_delivery)).where(OfferStock.offer_id == Offer.id)).label('total_for_delivery')
+        )
+    )
+    result = (await session.execute(query)).all()
+    return result
 
 
-
-
+async def get_offer_stocks(session: AsyncSession, offer_id: int):
+    query = (
+        select(OfferStock)
+        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .options(selectinload(OfferStock.warehouse))
+        .order_by(Warehouse.warehouse_type.asc())
+        .order_by(Warehouse.name.asc())
+        .where(OfferStock.offer_id == offer_id)
+    )
+    result = (await session.execute(query)).scalars()
+    return [OfferStockWithWarehouseOut.model_validate(i, from_attributes=True) for i in result]
