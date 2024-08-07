@@ -46,24 +46,26 @@
             </select>
         </label>
         {#if data !== null}
-            <label>
-                <span>Маркет</span>
-                <select bind:value={data.market}>
-                    <option value={null}>Все</option>
-                    {#each market_options as option}
-                        <option value={option}>{option}</option>
-                    {/each}
-                </select>
-            </label>
-            <label>
-                <span>Магазин</span>
-                <select bind:value={data.name_of_shop}>
-                    <option value={null}>Все</option>
-                    {#each name_of_shop_options as option}
-                        <option value={option}>{option}</option>
-                    {/each}
-                </select>
-            </label>
+            {#if !(data instanceof OwnStorageExport)}
+                <label>
+                    <span>Маркет</span>
+                    <select bind:value={data.market}>
+                        <option value={null}>Все</option>
+                        {#each market_options as option}
+                            <option value={option}>{option}</option>
+                        {/each}
+                    </select>
+                </label>
+                <label>
+                    <span>Магазин</span>
+                    <select bind:value={data.name_of_shop}>
+                        <option value={null}>Все</option>
+                        {#each name_of_shop_options as option}
+                            <option value={option}>{option}</option>
+                        {/each}
+                    </select>
+                </label>
+            {/if}
             {#if data instanceof SupplyExport}
                 <label>
                     <span>Режим</span>

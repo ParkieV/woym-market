@@ -28,28 +28,6 @@
         {/await}
     </select>
 </label>
-<label>
-    <span>Маркет</span>
-    <select bind:value={data.market}>
-        <option value={null}>Все</option>
-        {#await markets then markets}
-            {#each markets as market}
-                <option value={market}>{market}</option>
-            {/each}
-        {/await}
-    </select>
-</label>
-<label>
-    <span>Магазин</span>
-    <select bind:value={data.name_of_shop}>
-        <option value={null}>Все</option>
-        {#await shops then shops}
-            {#each shops as shop}
-                <option value={shop}>{shop}</option>
-            {/each}
-        {/await}
-    </select>
-</label>
 
 <style lang="scss">
     @import "./style.scss";

@@ -61,8 +61,6 @@ export class SimpleExport extends Export {
 
 export class OwnStorageExport extends Export {
     public place_id: number | null = null;
-    public name_of_shop: string | null = null;
-    public market: string | null = null;
 
     constructor() {
         super();
@@ -76,8 +74,6 @@ export class OwnStorageExport extends Export {
         let data: Record<string, string | number | number[] | null> = {
             place_id: this.place_id
         };
-        if (this.name_of_shop) data.name_of_shop = this.name_of_shop;
-        if (this.market) data.market = this.market;
         return JSON.stringify(data);
     }
 

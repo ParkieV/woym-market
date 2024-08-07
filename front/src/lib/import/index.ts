@@ -97,8 +97,6 @@ export type FboAdditionsImportProps = {
 };
 
 export class OwnStorageImport extends Import {
-    public market: string | null = null;
-    public name_of_shop: string | null = null;
     public place_id: number | null = null;
 
     constructor(private subtype: "consumption" | "coming" | null) {
@@ -120,8 +118,6 @@ export class OwnStorageImport extends Import {
     protected body(file: Blob): FormData {
         let formData = new FormData();
         if (this.place_id) formData.append("place_id", this.place_id.toFixed(0));
-        if (this.market) formData.append("market", this.market);
-        if (this.name_of_shop) formData.append("name_of_shop", this.name_of_shop);
         formData.append("data", file);
         return formData;
     }
