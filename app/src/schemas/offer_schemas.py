@@ -163,7 +163,7 @@ class OfferOut(OfferChange):
     @property
     def difference_from_recommended_retail_price(self) -> float | None:
         if all((self.recommended_retail_price, self.your_promotion_price)):
-            return self.recommended_retail_price - self.your_promotion_price
+            return self.your_promotion_price - self.recommended_retail_price
         return None
 
     @property
