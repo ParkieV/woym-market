@@ -144,6 +144,7 @@ async def build_offers_data(data: pd.DataFrame, settings, market, total_price_co
 
     data['use_manual_min_price'] = False
     data['auto_price_control'] = False
+    data['use_promotion_price'] = False
 
     data = await calculate_offers_values(data, settings, market)
     data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']] = data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']].astype('string')
