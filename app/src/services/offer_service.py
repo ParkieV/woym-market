@@ -166,7 +166,8 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
         data = [i.model_dump() for i in offers]
 
     if not len(data):
-        logger.warning('Price update list is empty')
+        logger.info('Skip update prices due to list is empty')
+        return
 
     data = [
         APIPriceChangeData(
