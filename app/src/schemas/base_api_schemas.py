@@ -15,7 +15,6 @@ class APIOffer:
     sku: str
     name: str
     name_of_shop: str
-
     yandex_weight: float | None = None
     yandex_length: float | None = None
     yandex_width: float | None = None
@@ -26,7 +25,6 @@ class APIOffer:
     business_id: int | None = None
     remaining_stock: int | None = None
     group_sellers_amount: int | None = None
-
     attractive_price_threshold: float | None = None
     moderately_attractive_price_threshold: float | None = None
     best_place_wm: str = ''
@@ -39,15 +37,13 @@ class APIOffer:
     fbo: float | None = None
     barcodes: str | None = None
     your_promotion_price: float | None = None
-
     content_rating: float | None = None
     price_index: float | None = None
     # артикул - product id
     vendor_code: int | None = None
     search_words: str | None = None
-
     market: str = 'yandex'
-
+27
 
 @dataclass
 class APIWarehouseOffer:
