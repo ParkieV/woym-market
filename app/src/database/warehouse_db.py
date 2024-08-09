@@ -246,52 +246,6 @@ async def get_own_storages(session: AsyncSession, place_id: int | None = None) -
         for offer in agg_offers_result
     ]
 
-    # storages_result = []
-    #
-    # skus_query = await session.execute(select(Offer.sku).distinct())
-    #
-    # for sku in skus_query.all():
-    #     offers_query = await session.execute(
-    #         select(Offer, OwnStorage).where(Offer.sku == sku[0]).join(OwnStorage, OwnStorage.sku == Offer.sku, isouter=True).where(OwnStorage.storage_place_id == place_id)
-    #     )
-    #
-    #     data = {
-    #         'sku': sku[0],
-    #         'name': set(),
-    #         'photo': set(),
-    #         'name_of_shop': set(),
-    #         'market': set(),
-    #         'note_1': set(),
-    #         'note_2': set(),
-    #         'note_3': set(),
-    #         'stocks': []
-    #     }
-    #
-    #     for offer, own_storage in offers_query.all():
-    #         if not own_storage: continue
-    #
-    #         data['name'].add(offer.name)
-    #         data['photo'].add(offer.photo)
-    #         data['note_1'].add(offer.note_1)
-    #         data['note_2'].add(offer.note_2)
-    #         data['note_3'].add(offer.note_3)
-    #         data['name_of_shop'].add(offer.name_of_shop)
-    #         data['market'].add(offer.market)
-    #         data['own_storage'] = OwnStorageOut.model_validate(own_storage, from_attributes=True)
-    #         data['stocks'].append(
-    #             {
-    #                 'name_of_shop': offer.name_of_shop,
-    #                 'market': offer.market,
-    #                 'value': offer.remaining_stock
-    #             }
-    #         )
-    #
-    #     if 'own_storage' not in data: continue
-    #
-    #     storages_result.append(data)
-    #
-    # return storages_result
-
 
 async def change_own_storages(session: AsyncSession, data: list[OwnStorageUpdate]):
     for storage in data:
