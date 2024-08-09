@@ -89,7 +89,7 @@ class MarketUpdate(BaseModel):
 
 class MarketFullOut(MarketOut):
     token: str
-    entity_id: int
+    entity_id: int | None
 
 
 class MarketFullUpdate(MarketFullOut):
@@ -101,5 +101,5 @@ class MarketCreate(BaseModel):
     tax: float = 0
     type: APITypes
     token: str
-    entity_id: int
+    entity_id: int | None
 

@@ -1,8 +1,10 @@
+from fastapi import HTTPException
 from requests import Session
+from starlette import status
 
 from logs import get_logger
 from src.api.base_api import BaseAPI
-from src.schemas.base_api_schemas import APIPriceChangeData, APIWarehouse, APIOffer, WarehouseType
+from src.schemas.base_api_schemas import APIPriceChangeData, APIWarehouse, APIOffer, WarehouseType, APIWarehouseOffer
 
 logger = get_logger(__name__)
 
@@ -22,15 +24,52 @@ class WildberriesAPI(BaseAPI):
         headers = {'X-Introspect': self.token}
         response = self.session.get(url, headers=headers)
 
+        if not response.ok:
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f'Ошибка проверки данных авторизации сервиса {self.shop_name}(wildberries)')
+
+        data = response.json()
+        if not data['Ok']:
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f'Ошибка проверки данных(токена) авторизации сервиса {self.shop_name}(wildberries)')
 
     async def get_offers_list(self) -> list[APIOffer]:
-        pass
+        offers = self._get_offers_base_info()
+        offers_prices = self._get_offers_prices()
+
+        result = []
+
+        for offer in offers:
+            offer.update(offers_prices[offer['sku']])
+            result.append(
+                APIOffer(**offer)
+            )
+
+        return result
 
     async def get_stocks(self) -> list[APIWarehouse]:
         pass
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
-        pass
+        url = 'https://discounts-prices-api.wildberries.ru/api/v2/upload/task'
+        valid_price_data = [price_data for price_data in data if price_data.is_valid_target_price()]
+
+        chunk_size = 1000
+
+        for i in range(0, len(valid_price_data), chunk_size):
+            body = {
+                'data': [
+                    {
+                        "nmID": price_data.vendor_code,
+                        "price": price_data.target_price,
+                        "discount": 0
+                    }
+                    for price_data in valid_price_data[i:i + chunk_size]
+                ]
+            }
+            response = self.session.post(url, json=body, headers=self.auth_headers)
+
+            if not response.ok:
+                #TODO
+                raise
 
     def _get_offers_base_info(self):
         url = 'https://content-api.wildberries.ru/content/v2/get/cards/list?locale=ru'
@@ -68,13 +107,19 @@ class WildberriesAPI(BaseAPI):
             cursor_data = response_data['cursor']
 
             for item in cards_data:
+
                 offer = {
                     'sku': item['vendorCode'],
                     'name': item['title'],
                     'name_of_shop': self.shop_name,
+                    'market': 'wildberries',
                     'yandex_length': item['dimensions']['length'],
                     'yandex_width': item['dimensions']['width'],
                     'yandex_height': item['dimensions']['height'],
+                    'vendor_code': item['nmID'],
+                    'photo': item['photos'][0]['big'] if item.get('photos', None) else None,
+                    'barcodes': ', '.join([', '.join(size_info['skus']) for size_info in item['sizes']])
+
                 }
                 result.append(offer)
 
@@ -131,9 +176,10 @@ class WildberriesAPI(BaseAPI):
 
         return result
 
-    def _get_warehouse(self):
-        url = 'https://marketplace-api.wildberries.ru/api/v3/offices'
+    def _get_warehouse(self) -> list[dict]:
+        url = 'https://marketplace-api.wildberries.ru/api/v3/warehouses'
         result = []
+
         response = self.session.get(url, headers=self.auth_headers)
 
         if not response.ok:
@@ -143,11 +189,37 @@ class WildberriesAPI(BaseAPI):
         response_data = response.json()
 
         for item in response_data:
-            result.append(APIWarehouse(
-                market='wildberries',
-                name=item['name'],
-                warehouse_type=WarehouseType.WAREHOUSE,
-                offers=[]
-            ))
+            result.append({
+                'market': 'wildberries',
+                'name': item['name'],
+                'warehouse_id': item['id'],
+                'warehouse_type': WarehouseType.WAREHOUSE,
+            })
 
         return result
+
+    def _get_stocks_on_warehouse(self, warehouse_id: int,  data: dict['barcode', 'sku']) -> list[APIWarehouseOffer]:
+        url = f'https://marketplace-api.wildberries.ru/api/v3/stocks/{warehouse_id}'
+        body = {
+            'skus': list(data.values())
+        }
+        response = self.session.post(url, headers=self.auth_headers, json=body)
+
+        if not response.ok:
+            # TODO
+            raise
+        result = []
+
+        json_data = response.json()
+
+        if not json_data['stocks']:
+            return result
+
+        for item in json_data['stocks']:
+            result.append(APIWarehouseOffer(
+                name_of_shop=self.shop_name,
+                current_stock=item['amount'],
+                sku=data[item['sku']]
+            ))
+        return result
+

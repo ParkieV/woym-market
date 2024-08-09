@@ -43,7 +43,7 @@ class APIOffer:
     vendor_code: int | None = None
     search_words: str | None = None
     market: str = 'yandex'
-27
+
 
 @dataclass
 class APIWarehouseOffer:
@@ -71,6 +71,7 @@ class APIPriceChangeData:
     auto_participation_in_promotions: bool
     auto_min_price: float | None = None
     search_words: str | None = None
+    vendor_code: int | None = None
 
     def is_valid_target_price(self) -> bool:
         return isinstance(self.target_price, (float, int)) and not np.isnan(self.target_price)
@@ -83,4 +84,7 @@ class APIPriceChangeData:
 
     def is_valid_search_words(self) -> bool:
         return isinstance(self.search_words, str)
+
+    def is_valid_vendor_code(self) -> bool:
+        return isinstance(self.vendor_code, int) and not np.isnan(self.vendor_code)
 
