@@ -15,6 +15,7 @@ from src.routers.offer_router import data_router
 from src.routers.debug_router import debug_router
 from src.routers.stocks.stocks_router import router as stocks_router
 from src.routers.settings_router import settings_router
+from src.routers.core_router import router as core_router
 from src.database.db import db_create
 import aioschedule
 from src.params.confing import config
@@ -58,6 +59,7 @@ app.add_middleware(
     allow_headers=['*']
 )
 
+app.include_router(core_router)
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(settings_router)
