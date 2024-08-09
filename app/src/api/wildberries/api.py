@@ -10,6 +10,9 @@ logger = get_logger(__name__)
 
 
 class WildberriesAPI(BaseAPI):
+    __characteristic_ids = {
+        'yandex_weight': 88953
+    }
 
     def __init__(self, token: str, shop_name: str, *args, **kwargs):
         self.token = token
@@ -65,11 +68,11 @@ class WildberriesAPI(BaseAPI):
                     for price_data in valid_price_data[i:i + chunk_size]
                 ]
             }
-            response = self.session.post(url, json=body, headers=self.auth_headers)
-
-            if not response.ok:
-                #TODO
-                raise
+            # response = self.session.post(url, json=body, headers=self.auth_headers)
+            #
+            # if not response.ok:
+            #     #TODO
+            #     raise
 
     def _get_offers_base_info(self):
         url = 'https://content-api.wildberries.ru/content/v2/get/cards/list?locale=ru'
@@ -107,6 +110,8 @@ class WildberriesAPI(BaseAPI):
             cursor_data = response_data['cursor']
 
             for item in cards_data:
+                yandex_weight = [i for i in item.get('characteristics', []) if i.get('id', None) == self.__characteristic_ids['yandex_weight']]
+                yandex_weight = yandex_weight[0].get('value', None) if yandex_weight else None
 
                 offer = {
                     'sku': item['vendorCode'],
@@ -116,6 +121,7 @@ class WildberriesAPI(BaseAPI):
                     'yandex_length': item['dimensions']['length'],
                     'yandex_width': item['dimensions']['width'],
                     'yandex_height': item['dimensions']['height'],
+                    'yandex_weight': yandex_weight,
                     'vendor_code': item['nmID'],
                     'photo': item['photos'][0]['big'] if item.get('photos', None) else None,
                     'barcodes': ', '.join([', '.join(size_info['skus']) for size_info in item['sizes']])
