@@ -213,8 +213,12 @@ async def get_own_storages(session: AsyncSession, place_id: int | None = None) -
     agg_offers_result = [OwnStorageAggOfferOut.model_validate(i, from_attributes=True) for i in
                          (await session.execute(agg_offers_query)).all()]
 
-    offer_stocks_query = select(Offer.sku, Offer.name_of_shop, Offer.market,
-                                func.sum(Offer.remaining_stock).label('stock')).group_by(Offer.sku, Offer.name_of_shop,
+    offer_stocks_query = select(
+        Offer.sku,
+        Offer.name_of_shop,
+        Offer.market,
+        func.coalesce(func.sum(Offer.remaining_stock), 0).label('stock')
+    ).group_by(Offer.sku, Offer.name_of_shop,
                                                                                          Offer.market)
     offer_stocks_result = [OwnStorageOfferStockOut.model_validate(i, from_attributes=True) for i in
                            (await session.execute(offer_stocks_query)).all()]
