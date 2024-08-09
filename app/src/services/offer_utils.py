@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from io import BytesIO
 from fastapi import HTTPException, status
+
+from src.api.factory import APITypes
 from src.database.offer_db import get_pricing_schemes
 from src.database.db import async_session
 from src.schemas.settings_schemas import MarketOut
@@ -125,15 +127,26 @@ async def build_offers_data(data: pd.DataFrame, settings, market, total_price_co
     if data.empty:
         return data
 
-    if setup_mode:
-        data['dollar_cost_price'] = np.nan  # закупка
-        data[['self_weight', 'self_length', 'self_width', 'self_height']] = np.nan
-        # data['pricing_scheme_name'] = 'Y0' if data['market'] == 'yandex' else 'O0'
-        data['pricing_scheme_name'] = np.where(
-            data['market'] == 'yandex',
-            'Y0',
-            'O0'
-        )
+    data['dollar_cost_price'] = np.nan  # закупка
+    data[['self_weight', 'self_length', 'self_width', 'self_height']] = np.nan
+    data['pricing_scheme_name'] = None
+
+    data['pricing_scheme_name'] = np.where(
+        data['market'] == APITypes.OZON,
+        'O0',
+        data['pricing_scheme_name']
+    )
+    data['pricing_scheme_name'] = np.where(
+        data['market'] == APITypes.YANDEX,
+        'Y0',
+        data['pricing_scheme_name']
+    )
+    data['pricing_scheme_name'] = np.where(
+        data['market'] == APITypes.WILDBERRIES,
+        'W0',
+        data['pricing_scheme_name']
+    )
+
     data['wholesale_dollar_cost_price'] = np.nan
     data['total_price_coeff'] = total_price_coeff
     data['total_price_min_additional'] = total_price_min_additional

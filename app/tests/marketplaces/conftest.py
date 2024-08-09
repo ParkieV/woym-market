@@ -19,7 +19,7 @@ class BaseMarketplaceAPITest(ABC):
         assert len(offers)
         assert isinstance(offers[0], APIOffer)
 
-    async def get_stocks(self, api: BaseAPI):
+    async def test_get_stocks(self, api):
         stocks = await api.get_stocks()
         assert isinstance(stocks, list)
         assert len(stocks)

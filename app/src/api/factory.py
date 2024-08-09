@@ -5,17 +5,20 @@ from fastapi.exceptions import HTTPException
 from fastapi import status
 from .yandex_market.api import YandexMarketAPI
 from .ozon.api import OzonAPI
+from .wildberries.api import WildberriesAPI
 
 
 class APITypes(str, Enum):
     OZON = 'ozon'
     YANDEX = 'yandex'
+    WILDBERRIES = 'wildberries'
 
 
 class APIFactory:
     __api_types: dict[APITypes, Type[BaseAPI]] = {
         APITypes.YANDEX: YandexMarketAPI,
-        APITypes.OZON: OzonAPI
+        APITypes.OZON: OzonAPI,
+        APITypes.WILDBERRIES: WildberriesAPI
     }
 
     @classmethod
