@@ -56,6 +56,7 @@ class BaseModelFields(ABC):
         'pricing_scheme',
         'business_id',
         'id',
+        'remaining_stock'
     ]
 
     @classmethod

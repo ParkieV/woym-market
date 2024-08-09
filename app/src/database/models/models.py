@@ -61,7 +61,6 @@ class Offer(Base):
     volume_difference = Column(Float, nullable=True, default=None)
 
     photo = Column(String, nullable=True)
-    remaining_stock = Column(Integer)
     name_of_shop = Column(String, index=True)
     market = Column(String)
     group_sellers_amount = Column(Integer)

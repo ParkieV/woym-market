@@ -37,7 +37,7 @@ class YandexMarketAPI(BaseAPI):
     async def get_offers_list(self) -> list[APIOffer]:
         result = []
         business_id = self._get_business_id_by_campaign_id(self._entity_id)
-        stocks = self._get_offers_stocks(self._entity_id, OFFERS)
+        # stocks = self._get_offers_stocks(self._entity_id, OFFERS)
         price_report = await self._get_market_prices_report(business_id)
         base_offers = self._get_campaign_offers(business_id)
         # offers_prices = self._get_offers_prices(self._entity_id, [i['sku'] for i in base_offers])
@@ -55,7 +55,6 @@ class YandexMarketAPI(BaseAPI):
                 'min_general_markets_price': report_line.get('min_general_markets_price', 0),
                 'your_price_for_buyers': report_line.get('your_price_for_buyers', 0),
                 'group_sellers_amount': 0,
-                'remaining_stock': stocks.get(offer['sku'], 0),
                 'name_of_shop': self._shop_name,
                 'best_place_im_link': report_line.get('best_place_im_link', None),
                 'fbo': None

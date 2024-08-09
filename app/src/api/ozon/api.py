@@ -164,7 +164,6 @@ class OzonAPI(BaseAPI):
                         'name': offer['name'],
                         'photo': offer['primary_image'],
                         'current_price': self.__str_to_float(offer['price']),
-                        'remaining_stock': offer['stocks']['present'],
                         'min_price_in_market': self.__str_to_float(offer['min_ozon_price']),
                         'min_price_without_market': self.__str_to_float(minimal_price),
                         'attractive_price_threshold': self.__str_to_float(offer['recommended_price']),

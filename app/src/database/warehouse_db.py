@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, and_, func, text, bindparam, literal_column, Select, insert, cast, String
 from sqlalchemy.orm import selectinload, subqueryload
 from src.database.utils import _update_or_create_object, _get_or_create
+from src.schemas.base_api_schemas import WarehouseType
 from src.schemas.stocks.own_storages_schemas import OwnStorageAggOfferOut, OwnStorageOfferStockOut, OwnStorageOut, \
     OwnStorageCreate, OwnStorageStockOut, OwnStorageUpdate, OwnStoragePlaceCreate, OwnStoragePlaceOut, \
     OwnStoragePlaceUpdate
@@ -20,6 +21,17 @@ from fastapi.exceptions import HTTPException
 from collections import defaultdict
 
 ModelSchema = TypeVar('ModelSchema', bound=Type[BaseModel])
+
+
+remaining_stocks_subuery = (
+    select(
+        OfferStock.offer_id,
+        func.sum(OfferStock.for_delivery).label('remaining_stock')
+    )
+    .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+    .where(Warehouse.warehouse_type == WarehouseType.WAREHOUSE)
+    .group_by(
+        OfferStock.offer_id).subquery())
 
 
 async def create_warehouse(session: AsyncSession, data: WarehouseCreate,
@@ -213,13 +225,25 @@ async def get_own_storages(session: AsyncSession, place_id: int | None = None) -
     agg_offers_result = [OwnStorageAggOfferOut.model_validate(i, from_attributes=True) for i in
                          (await session.execute(agg_offers_query)).all()]
 
-    offer_stocks_query = select(
-        Offer.sku,
-        Offer.name_of_shop,
-        Offer.market,
-        func.coalesce(func.sum(Offer.remaining_stock), 0).label('stock')
-    ).group_by(Offer.sku, Offer.name_of_shop,
-                                                                                         Offer.market)
+    # offer_stocks_query = select(
+    #     Offer.sku,
+    #     Offer.name_of_shop,
+    #     Offer.market,
+    #     func.coalesce(func.sum(Offer.remaining_stock), 0).label('stock')
+    # ).group_by(Offer.sku, Offer.name_of_shop, Offer.market)
+
+    offer_stocks_query = (
+        select(
+            OfferStock.offer_id,
+            Offer.sku,
+            Offer.market,
+            Offer.name_of_shop,
+            func.coalesce(func.sum(OfferStock.current_stock), 0).label('stock')
+        )
+        .join(Offer, Offer.id == OfferStock.offer_id)
+        .group_by(OfferStock.offer_id, Offer.sku, Offer.market, Offer.name_of_shop)
+    )
+
     offer_stocks_result = [OwnStorageOfferStockOut.model_validate(i, from_attributes=True) for i in
                            (await session.execute(offer_stocks_query)).all()]
     stocks = defaultdict(list)

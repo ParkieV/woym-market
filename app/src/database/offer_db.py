@@ -4,15 +4,27 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 from sqlalchemy.orm import selectinload
 
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, BaseOffer, \
     PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
-from .models.models import Offer, PricingScheme, PricingSchemeField
+from .models.models import Offer, PricingScheme, PricingSchemeField, OfferStock, Warehouse
 from typing import Iterable, Any, Type
 from fastapi.exceptions import HTTPException
 from fastapi import status
+
+from ..schemas.base_api_schemas import WarehouseType
+
+remaining_stocks_subuery = (
+    select(
+        OfferStock.offer_id,
+        func.sum(OfferStock.for_delivery).label('remaining_stock')
+    )
+    .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+    .where(Warehouse.warehouse_type == WarehouseType.WAREHOUSE)
+    .group_by(
+        OfferStock.offer_id).subquery())
 
 
 def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
@@ -27,7 +39,12 @@ def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
 
 
 async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None, model_schema: Type[BaseModel] = OfferOut, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
-    query = select(Offer)
+    query = select(
+        Offer,
+        remaining_stocks_subuery.c.remaining_stock
+    ).join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
+
+    # query = select(Offer)
 
     if filters:
         query = query.filter_by(**filters)
@@ -90,33 +107,25 @@ async def update_offers(
     await session.commit()
 
 
-async def get_offers_by_sku(session: AsyncSession, skus: list[str]) -> list[OfferOut]:
-    query = select(Offer).where(Offer.sku.in_(skus))
-    offers_db = await session.execute(query)
-    return [OfferOut.model_validate(offer, from_attributes=True) for offer in offers_db.unique().scalars().all()]
-
-
-async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.DataFrame, model_schema: Type[BaseModel] = OfferOut):
+async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.DataFrame,
+                        model_schema: Type[BaseModel] = OfferOut):
     data = _dataframe_to_valid_dict(data)
 
     result = []
     for offer_data in data:
-        query = select(Offer).filter_by(**offer_data)
+        query = (
+            select(
+                Offer,
+                remaining_stocks_subuery.c.remaining_stock
+            )
+            .join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
+            .filter_by(**offer_data)
+        )
         query_result = await session.execute(query)
-        result.extend([model_schema.model_validate(offer, from_attributes=True) for offer in query_result.scalars().all()])
+        result.extend(
+            [model_schema.model_validate(offer, from_attributes=True) for offer in query_result.scalars().all()])
 
     return result
-
-
-async def get_offer(session: AsyncSession, filters: dict, model_schema: Type[BaseOffer] = OfferOut, allow_none: bool = False) -> BaseOffer | None:
-    query = select(Offer).filter_by(**filters)
-    result = (await session.execute(query)).scalar_one_or_none()
-
-    if result is None:
-        if allow_none:
-            return None
-        raise HTTPException(status.HTTP_404_NOT_FOUND, 'Offer not found')
-    return model_schema.model_validate(result, from_attributes=True)
 
 
 async def validate_pricing_scheme_field_data(session: AsyncSession, data: PricingSchemeFieldCreate | dict):
@@ -126,7 +135,8 @@ async def validate_pricing_scheme_field_data(session: AsyncSession, data: Pricin
     if data['key'] not in OfferOut.fields().keys():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Поля '{data['key']}' нет в модели Offer")
 
-    query = select(PricingScheme).where(PricingScheme.name == data['pricing_scheme_name']).options(selectinload(PricingScheme.fields))
+    query = select(PricingScheme).where(PricingScheme.name == data['pricing_scheme_name']).options(
+        selectinload(PricingScheme.fields))
     result = (await session.execute(query)).scalar_one_or_none()
 
     if result is None:
@@ -140,7 +150,8 @@ async def validate_pricing_scheme_field_data(session: AsyncSession, data: Pricin
     return data
 
 
-async def create_pricing_scheme_field(session: AsyncSession, data: PricingSchemeFieldCreate | dict) -> PricingSchemeFieldOut:
+async def create_pricing_scheme_field(session: AsyncSession,
+                                      data: PricingSchemeFieldCreate | dict) -> PricingSchemeFieldOut:
     if isinstance(data, PricingSchemeFieldCreate):
         data = data.model_dump()
 
@@ -240,8 +251,10 @@ async def set_dollar_cost_price_updated_at(session: AsyncSession, skus: Iterable
         await session.commit()
 
 
-async def get_violators(session: AsyncSession, market: str | None = None, name_of_shop: str | None = None) -> list[ViolatorDTO]:
-    query = select(Offer.best_place_im, Offer.market, Offer.min_price_in_market, Offer.recommended_retail_price, Offer.best_place_im_link).where(Offer.recommended_retail_price > Offer.min_price_in_market)
+async def get_violators(session: AsyncSession, market: str | None = None, name_of_shop: str | None = None) -> list[
+    ViolatorDTO]:
+    query = select(Offer.best_place_im, Offer.market, Offer.min_price_in_market, Offer.recommended_retail_price,
+                   Offer.best_place_im_link).where(Offer.recommended_retail_price > Offer.min_price_in_market)
 
     if market:
         query = query.where(Offer.market == market)
@@ -257,4 +270,3 @@ async def get_violators(session: AsyncSession, market: str | None = None, name_o
         recommended_retail_price=i[3],
         link=i[4]
     ) for i in result]
-
