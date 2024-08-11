@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
-from .models.models import Offer, PricingScheme, PricingSchemeField, OfferWithCatalogView, \
+from .models.models import Offer, PricingScheme, PricingSchemeField, \
     remaining_stocks_subuery
 from typing import Iterable, Any, Type
 from fastapi.exceptions import HTTPException
@@ -26,7 +26,10 @@ def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
 
 
 async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None, model_schema: Type[BaseModel] = OfferOut, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
-    query = OfferWithCatalogView
+    query = select(
+        Offer,
+        remaining_stocks_subuery.c.remaining_stock
+    ).join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
 
     if filters:
         query = query.filter_by(**filters)
@@ -36,7 +39,7 @@ async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = Non
         query = query.limit(limit)
 
     offers = await session.execute(query)
-    return [model_schema.model_validate(offer, from_attributes=True) for offer in offers.all()]
+    return [model_schema.model_validate(offer, from_attributes=True) for offer in offers.unique().scalars().all()]
 
 
 async def create_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) -> None:

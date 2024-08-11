@@ -323,18 +323,3 @@ remaining_stocks_subuery = (
     .where(Warehouse.warehouse_type == WarehouseType.WAREHOUSE)
     .group_by(
         OfferStock.offer_id).subquery())
-
-OfferWithCatalogView = (
-    select(
-        remaining_stocks_subuery.c.remaining_stock,
-        *Offer.columns(use_catalog=True),
-    )
-    .where(Offer.synchronization==True).join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
-    .union(
-        select(
-            remaining_stocks_subuery.c.remaining_stock,
-            *Offer.columns(use_catalog=False)
-        ).where(Offer.synchronization==False).join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
-    )
-)
-

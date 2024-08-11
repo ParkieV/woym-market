@@ -29,6 +29,11 @@ async def setup_catalog_items():
     await service.setup_catalog_items()
 
 
+@router.post('/synchronization', tags=["Debug"])
+async def synchronize_catalog_items():
+    await service.sync_catalog_items_with_offers()
+
+
 @router.post('/export', tags=["Export"])
 async def export_catalog_items():
     path = await service.export_catalog_items()

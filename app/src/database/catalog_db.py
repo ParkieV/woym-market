@@ -1,7 +1,6 @@
 from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, subqueryload
-
+from sqlalchemy.orm import selectinload
 from src.database.models.models import CatalogItem, Offer
 from src.schemas import catalog_schemas as schemas
 
@@ -43,3 +42,28 @@ async def get_unique_skus(session: AsyncSession) -> list[str]:
     query = select(CatalogItem.sku).distinct()
     result = await session.execute(query)
     return [i[0] for i in result.all()]
+
+
+async def sync_catalog_items_with_offers(session: AsyncSession, exclude_fields: list | None = None):
+    _exclude_fields = {'id', 'sku'}
+
+    if exclude_fields:
+        _exclude_fields.add(exclude_fields)
+
+    offer_columns = set(Offer.__table__.columns.keys())
+    catalog_columns = set(CatalogItem.__table__.columns.keys())
+
+    common_columns = (offer_columns & catalog_columns) - _exclude_fields
+
+    # Формируем словарь значений для обновления
+    update_values = {col: getattr(CatalogItem, col) for col in common_columns}
+
+    stmp = (
+        update(Offer)
+        .where(Offer.synchronization == True, Offer.sku == CatalogItem.sku)
+        .values(update_values)
+        .execution_options(synchronize_session="fetch")
+    )
+    await session.execute(stmp)
+    await session.commit()
+

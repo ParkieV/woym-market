@@ -5,6 +5,7 @@ import pandas as pd
 from fastapi import HTTPException
 from starlette import status
 
+from logs import get_logger
 from src.database.db import async_session
 from src.database import offer_db
 from src.database import catalog_db as db
@@ -14,14 +15,24 @@ from src.services.offer_service import recalculate_values
 from src.services.offer_utils import bytes_to_data_frame
 
 
+logger = get_logger(__name__)
+
+
 async def setup_catalog_items() -> None:
     async with async_session() as session:
+
         offer_skus = set(await offer_db.get_unique_skus(session))
         item_skus = set(await db.get_unique_skus(session))
         new_skus = offer_skus - item_skus
 
         new_items = [CatalogItemCreate(sku=sku, note='Новый товар') for sku in new_skus]
         await db.create_catalog_items(session, new_items)
+
+        if new_items:
+            logger.info(f'Catalog items created: {len(new_items)}')
+            return
+
+        logger.info('New products not found to create catalog items')
 
 
 async def get_catalog_items() -> list[CatalogItem]:
@@ -32,7 +43,13 @@ async def get_catalog_items() -> list[CatalogItem]:
 async def change_catalog_items(items: list[CatalogItemUpdate]) -> None:
     async with async_session() as session:
         await db.change_catalog_items(session, items)
+        await db.sync_catalog_items_with_offers(session)
         await recalculate_values(session, {'id': i.id for item in items for i in item.synchronization})
+
+
+async def sync_catalog_items_with_offers(exclude_fields: list | None = None) -> None:
+    async with async_session() as session:
+        await db.sync_catalog_items_with_offers(session, exclude_fields=exclude_fields)
 
 
 async def export_catalog_items() -> Path:
