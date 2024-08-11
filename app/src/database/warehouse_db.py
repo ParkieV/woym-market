@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, and_, func, text, bindparam, literal_column, Select, insert, cast, String
-from sqlalchemy.orm import selectinload, subqueryload
+from sqlalchemy.orm import selectinload, subqueryload, Load, joinedload, load_only, contains_eager
 from src.database.utils import _update_or_create_object, _get_or_create
 from src.schemas.base_api_schemas import WarehouseType
 from src.schemas.stocks.own_storages_schemas import OwnStorageAggOfferOut, OwnStorageOfferStockOut, OwnStorageOut, \
@@ -140,25 +140,6 @@ async def update_or_create_warehouse(session: AsyncSession, data: WarehouseCreat
     )
 
 
-async def update_or_create_offer_stock(session: AsyncSession, data: OfferStockCreate):
-    query = select(OfferStock).where(
-        and_(OfferStock.offer_id == data.offer_id, OfferStock.warehouse_id == data.warehouse_id)).distinct()
-    result = await session.execute(query)
-    object_db = result.scalar_one_or_none()
-
-    if object_db is None:
-        object_db = OfferStock(**data.model_dump())
-        session.add(object_db)
-    else:
-        stmp = (
-            update(OfferStock)
-            .where(and_(OfferStock.offer_id == data.offer_id, OfferStock.warehouse_id == data.warehouse_id))
-            .values(**data.model_dump())
-        )
-        await session.execute(stmp)
-    await session.commit()
-
-
 async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[dict]):
     for storage in storages:
         if not storage['related_warehouses_name']:
@@ -188,24 +169,6 @@ async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[
     await session.commit()
 
 
-async def update_or_create_own_storage(session: AsyncSession, data: OwnStorageCreate):
-    query = select(OwnStorage).where(OwnStorage.sku == data.sku).distinct()
-    result = await session.execute(query)
-    object_db = result.scalar_one_or_none()
-
-    if object_db is None:
-        object_db = OwnStorage(**data.model_dump())
-        session.add(object_db)
-    else:
-        stmp = (
-            update(OwnStorage)
-            .where(OwnStorage.sku == data.sku)
-            .values(**data.model_dump())
-        )
-        await session.execute(stmp)
-    await session.commit()
-
-
 async def get_own_storages(session: AsyncSession, place_id: int | None = None) -> list[OwnStorageOut]:
     agg_offers_query = (
         select(
@@ -224,13 +187,6 @@ async def get_own_storages(session: AsyncSession, place_id: int | None = None) -
 
     agg_offers_result = [OwnStorageAggOfferOut.model_validate(i, from_attributes=True) for i in
                          (await session.execute(agg_offers_query)).all()]
-
-    # offer_stocks_query = select(
-    #     Offer.sku,
-    #     Offer.name_of_shop,
-    #     Offer.market,
-    #     func.coalesce(func.sum(Offer.remaining_stock), 0).label('stock')
-    # ).group_by(Offer.sku, Offer.name_of_shop, Offer.market)
 
     offer_stocks_query = (
         select(
@@ -637,35 +593,37 @@ async def fill_empty_stocks(session: AsyncSession):
 
 
 async def get_fbo_offers(session: AsyncSession):
-    stocks_query = select(
-        OfferStock.offer_id,
-        (func.sum(OfferStock.for_delivery)).label('total_for_delivery'),
-    ).group_by(OfferStock.offer_id).subquery()
+    # 6359 ms
 
-    query = (
-        select(
-            Offer.id,
-            Offer.sku,
-            Offer.name,
-            Offer.photo,
-            Offer.name_of_shop,
-            Offer.market,
-            Offer.note_1,
-            Offer.note_2,
-            Offer.note_3,
-            Offer.supplier_available,
-            Offer.margin,
-            Offer.cost_price,
-            Offer.profit,
-            Offer.self_weight,
-            Offer.volume,
-            Offer.hidden,
-            Offer.barcodes,
-            stocks_query.c.total_for_delivery,
-        ).join(stocks_query, Offer.id == stocks_query.c.offer_id)
-    )
-    result = (await session.execute(query)).all()
-    return result
+    # query = (
+    #             select(Offer)
+    #             .options(subqueryload(Offer.stocks).selectinload(OfferStock.warehouse))
+    #         )
+    # result = await session.execute(query)
+    # offers = result.scalars().all()
+    # return [OfferWithStocks.model_validate(i, from_attributes=True) for i in offers]
+
+    chunck_size = 1000
+    offset = 0
+    results = []
+
+    while True:
+        print(offset)
+        query = (
+            select(Offer)
+            .options(subqueryload(Offer.stocks).selectinload(OfferStock.warehouse))
+        ).offset(offset).limit(chunck_size)
+        result = await session.execute(query)
+        offers = result.scalars().all()
+
+        results.extend([OfferWithStocks.model_validate(i, from_attributes=True) for i in offers])
+
+        if len(offers) < chunck_size:
+            break
+
+        offset += chunck_size
+
+    return results
 
 
 async def get_offer_stocks(session: AsyncSession, offer_id: int):

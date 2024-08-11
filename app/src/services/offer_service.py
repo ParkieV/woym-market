@@ -6,6 +6,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import ListFlowable, Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.database.catalog_db import sync_catalog_items_with_offers
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.confing import config
 from logs import get_logger
@@ -26,7 +27,6 @@ from fastapi import status
 from datetime import datetime
 
 from src.schemas.settings_schemas import MarketOut
-from src.schemas.stocks.own_storages_schemas import OwnStorageCreate
 from src.services.base_utils import error_handler
 
 
@@ -70,6 +70,7 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
         changes = pd.merge(changes, merge_result, on=mapping_fields)
 
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'])
+        await sync_catalog_items_with_offers(session)
         await recalculate_values(session, settings, which=changes[mapping_fields])
         return await db.get_offers_by(session, changes[mapping_fields])
 
@@ -144,6 +145,7 @@ async def update_offers(user_id: int):
 
         await db.update_offers(session, to_update_df, mapping_columns=['name_of_shop', 'market'])
         await db.delete_offers(session, to_delete_df)
+        await sync_catalog_items_with_offers(session)
         await recalculate_values(session, settings)
 
         await update_logs(session, user_id, {'updated_at': datetime.now()})
@@ -204,14 +206,12 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
     if df.empty:
         return
 
-    # df = await utils.calculate_offers_values(df, settings)
-
     for market in await get_markets(session):
         df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], settings, market)
         df1.drop(set(df1.columns) - set(OfferOut.fields()), axis=1, inplace=True, errors='ignore')
 
         await db.update_offers(session, df1, mapping_columns=['sku', 'name_of_shop'])
-from functools import lru_cache
+
 
 @error_handler('Ошибка импорта')
 async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None, user_id: int, file_extension: str = 'xlsx') -> None:

@@ -101,13 +101,15 @@ class OfferChange(BaseOffer):
     search_words: str | None = Field(title='Поисковые слова', max_length=255)
     use_promotion_price: bool = Field(title='Акция')
 
+    synchronization: bool = Field(title='Синхронизация с каталогом')
+
     hidden: bool = Field(False, title='Скрыт')
 
 
 class OfferOut(OfferChange):
     # from yandex api
     id: int = Field(title='id')
-    name: str = Field(title='Название')
+    name: str | None = Field(title='Название')
 
     yandex_weight: float | None = Field(title='Вес с маркета', default=0)
     yandex_length: float | None = Field(title='Длинна с маркета', default=0)

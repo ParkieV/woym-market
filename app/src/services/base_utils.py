@@ -1,10 +1,13 @@
 import shutil
 from functools import wraps
-from typing import Sequence, Set
+from typing import Type
 
 import pandas as pd
 from fastapi.exceptions import HTTPException
 from fastapi import status
+from pydantic import BaseModel
+from pydantic_core import PydanticUndefined
+
 from logs import get_logger
 from pathlib import Path
 
@@ -69,5 +72,17 @@ def validate_dataframe(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, 'В файле должны присутствовать данные о количестве и SKU')
 
     return None
+
+
+def parce_field_names(cls: Type[BaseModel], reverse: bool = False, exclude: list[str] | None = None):
+    if exclude is None:
+        exclude = []
+    fields = {key: value.title for key, value in cls.model_fields.items() if key not in exclude and value.title is not PydanticUndefined}
+
+    if not reverse:
+        return fields
+
+    return {value: key for key, value in fields.items()}
+
 
 

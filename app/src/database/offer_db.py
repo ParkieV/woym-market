@@ -4,27 +4,14 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, func
+from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload
-
-from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, BaseOffer, \
-    PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
-from .models.models import Offer, PricingScheme, PricingSchemeField, OfferStock, Warehouse
+from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
+from .models.models import Offer, PricingScheme, PricingSchemeField, \
+    remaining_stocks_subuery
 from typing import Iterable, Any, Type
 from fastapi.exceptions import HTTPException
 from fastapi import status
-
-from ..schemas.base_api_schemas import WarehouseType
-
-remaining_stocks_subuery = (
-    select(
-        OfferStock.offer_id,
-        func.sum(OfferStock.for_delivery).label('remaining_stock')
-    )
-    .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
-    .where(Warehouse.warehouse_type == WarehouseType.WAREHOUSE)
-    .group_by(
-        OfferStock.offer_id).subquery())
 
 
 def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
@@ -43,8 +30,6 @@ async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = Non
         Offer,
         remaining_stocks_subuery.c.remaining_stock
     ).join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
-
-    # query = select(Offer)
 
     if filters:
         query = query.filter_by(**filters)
@@ -115,7 +100,7 @@ async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.D
     for offer_data in data:
         query = (
             select(
-                Offer,
+                Offer.columns(use_catalog=True),
                 remaining_stocks_subuery.c.remaining_stock
             )
             .join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
@@ -192,16 +177,6 @@ async def change_pricing_scheme(session: AsyncSession, data: PricingSchemeChange
     await session.commit()
     await change_pricing_scheme_field(session, data.fields)
 
-    # if isinstance(data, PricingSchemeCreate):
-    #     data = data.model_dump()
-    #
-    # scheme_db = PricingScheme(**data)
-    # session.add(scheme_db)
-    # await session.commit()
-    # await session.refresh(scheme_db)
-    #
-    # return PricingSchemeOut.model_validate(scheme_db, from_attributes=True)
-
 
 async def delete_pricing_scheme(session: AsyncSession, names: list[str]):
     query = delete(PricingScheme).where(PricingScheme.name.in_(names))
@@ -251,10 +226,14 @@ async def set_dollar_cost_price_updated_at(session: AsyncSession, skus: Iterable
         await session.commit()
 
 
-async def get_violators(session: AsyncSession, market: str | None = None, name_of_shop: str | None = None) -> list[
-    ViolatorDTO]:
-    query = select(Offer.best_place_im, Offer.market, Offer.min_price_in_market, Offer.recommended_retail_price,
-                   Offer.best_place_im_link).where(Offer.recommended_retail_price > Offer.min_price_in_market)
+async def get_violators(session: AsyncSession, market: str | None = None, name_of_shop: str | None = None) -> list[ViolatorDTO]:
+    query = select(
+        Offer.best_place_im.label('name_of_shop'),
+        Offer.market,
+        Offer.min_price_in_market.label('price'),
+        Offer.recommended_retail_price,
+        Offer.best_place_im_link.label('link')
+    ).where(Offer.recommended_retail_price > Offer.min_price_in_market)
 
     if market:
         query = query.where(Offer.market == market)
@@ -262,11 +241,5 @@ async def get_violators(session: AsyncSession, market: str | None = None, name_o
     if name_of_shop:
         query = query.where(Offer.name_of_shop == name_of_shop)
 
-    result = (await session.execute(query)).fetchall()
-    return [ViolatorDTO(
-        name_of_shop=i[0],
-        market=i[1],
-        price=i[2],
-        recommended_retail_price=i[3],
-        link=i[4]
-    ) for i in result]
+    result = (await session.execute(query)).all()
+    return [ViolatorDTO.model_validate(i, from_attributes=True) for i in result]
