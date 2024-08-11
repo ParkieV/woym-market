@@ -168,6 +168,7 @@ class OzonAPI(BaseAPI):
                         'min_price_without_market': self.__str_to_float(minimal_price),
                         'attractive_price_threshold': self.__str_to_float(offer['recommended_price']),
                         'market': 'ozon',
+                        'barcodes': ', '.join(offer.get('barcodes', [])),
                         'price_index': self.__translate_price_index(price_index),
                         'market_sku': offer['sku'],
                         'your_price_for_buyers': self.__str_to_float(offer['marketing_price'])
