@@ -125,6 +125,8 @@ class Offer(Base):
     search_words = Column(String, nullable=True, default=None)
     search_words_changed = Column(Boolean, default=False, nullable=False)
 
+    synchronization = Column(Boolean, default=False, nullable=False)
+
     stocks = relationship('OfferStock')
 
 
@@ -260,6 +262,25 @@ class OwnStoragePlace(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
     name = Column(String, unique=True, nullable=False)
+
+
+class CatalogItem(Base):
+    __tablename__ = 'catalog_items'
+
+    sku = Column(String, index=True, nullable=False, primary_key=True)
+
+    self_weight = Column(Float, nullable=True, default=None)
+    self_length = Column(Float, nullable=True, default=None)
+    self_width = Column(Float, nullable=True, default=None)
+    self_height = Column(Float, nullable=True, default=None)
+    self_volume = Column(Float, nullable=True, default=None)
+    note = Column(String, nullable=True, server_default='Новый товар')
+    use_promotion_price = Column(Boolean, nullable=False, default=False)
+    wholesale_dollar_cost_price = Column(Float, nullable=True, default=None)
+    supplier_available = Column(Boolean, nullable=False, default=False)
+
+    synchronization = relationship('Offer', uselist=True, primaryjoin='foreign(Offer.sku) == CatalogItem.sku')
+
 
 
 
