@@ -12,7 +12,7 @@ from src.schemas.stocks.stocks_schemas import SupplyData, GeneralOrderData
 from src.schemas.stocks.fbo_schemas import OfferStockUpdate, OfferStockCreate, OfferStockOut, \
     OfferStockWithWarehouseOut, OfferWithStocks, OfferWithStocksUpdate
 from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
-from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market
+from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market, OfferWithCatalogView
 from pydantic import BaseModel
 from src.database.models.models import Offer
 from typing import Type, TypeVar, Any
@@ -172,17 +172,18 @@ async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[
 async def get_own_storages(session: AsyncSession, place_id: int | None = None) -> list[OwnStorageOut]:
     agg_offers_query = (
         select(
-            Offer.sku,
-            func.array_agg(Offer.name.distinct()).label('name'),
-            func.array_agg(Offer.photo.distinct()).label('photo'),
-            func.array_agg(Offer.name_of_shop.distinct()).label('name_of_shop'),
-            func.array_agg(Offer.market.distinct()).label('market'),
-            func.array_agg(Offer.note_1.distinct()).label('note_1'),
-            func.array_agg(Offer.note_2.distinct()).label('note_2'),
-            func.array_agg(Offer.note_3.distinct()).label('note_3'),
-            func.array_agg(Offer.barcodes.distinct()).label('barcodes'),
+            OfferWithCatalogView.c.sku,
+            func.array_agg(OfferWithCatalogView.c.name.distinct()).label('name'),
+            func.array_agg(OfferWithCatalogView.c.photo.distinct()).label('photo'),
+            func.array_agg(OfferWithCatalogView.c.name_of_shop.distinct()).label('name_of_shop'),
+            func.array_agg(OfferWithCatalogView.c.market.distinct()).label('market'),
+            func.array_agg(OfferWithCatalogView.c.note_1.distinct()).label('note_1'),
+            func.array_agg(OfferWithCatalogView.c.note_2.distinct()).label('note_2'),
+            func.array_agg(OfferWithCatalogView.c.note_3.distinct()).label('note_3'),
+            func.array_agg(OfferWithCatalogView.c.barcodes.distinct()).label('barcodes'),
         )
-        .group_by(Offer.sku)
+        .select_from(OfferWithCatalogView)
+        .group_by(OfferWithCatalogView.c.sku)
     )
 
     agg_offers_result = [OwnStorageAggOfferOut.model_validate(i, from_attributes=True) for i in

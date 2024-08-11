@@ -4,27 +4,14 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, func
+from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload
-
-from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, BaseOffer, \
-    PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
-from .models.models import Offer, PricingScheme, PricingSchemeField, OfferStock, Warehouse
+from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
+from .models.models import Offer, PricingScheme, PricingSchemeField, OfferWithCatalogView, \
+    remaining_stocks_subuery
 from typing import Iterable, Any, Type
 from fastapi.exceptions import HTTPException
 from fastapi import status
-
-from ..schemas.base_api_schemas import WarehouseType
-
-remaining_stocks_subuery = (
-    select(
-        OfferStock.offer_id,
-        func.sum(OfferStock.for_delivery).label('remaining_stock')
-    )
-    .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
-    .where(Warehouse.warehouse_type == WarehouseType.WAREHOUSE)
-    .group_by(
-        OfferStock.offer_id).subquery())
 
 
 def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
@@ -39,10 +26,7 @@ def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
 
 
 async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None, model_schema: Type[BaseModel] = OfferOut, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
-    query = select(
-        Offer,
-        remaining_stocks_subuery.c.remaining_stock
-    ).join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
+    query = OfferWithCatalogView
 
     if filters:
         query = query.filter_by(**filters)
@@ -52,7 +36,7 @@ async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = Non
         query = query.limit(limit)
 
     offers = await session.execute(query)
-    return [model_schema.model_validate(offer, from_attributes=True) for offer in offers.unique().scalars().all()]
+    return [model_schema.model_validate(offer, from_attributes=True) for offer in offers.all()]
 
 
 async def create_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) -> None:
@@ -113,7 +97,7 @@ async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.D
     for offer_data in data:
         query = (
             select(
-                Offer,
+                Offer.columns(use_catalog=True),
                 remaining_stocks_subuery.c.remaining_stock
             )
             .join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)

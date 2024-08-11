@@ -10,12 +10,6 @@ class SynchronizationOffer(BaseModel):
     # is_blocked: bool = Field(title='Доступно ли изменение синхронизации', description='Если поле false, то товар на данной площадке не представлен')
 
 
-class SynchronizationOfferUpdate(BaseModel):
-    sku: str = Field('SKU товара')
-    id: int
-    synchronization: bool
-
-
 class BaseCatalogItem(BaseModel):
     sku: str = Field(title='sku')
 
@@ -35,15 +29,18 @@ class CatalogItemUpdate(BaseCatalogItem):
     use_promotion_price: bool = Field(title='Акция', default=False)
     wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.', default=None)
 
+    synchronization: list[SynchronizationOffer] = Field(title='Связанные товары', default_factory=list)
 
-class CatalogItemCreate(CatalogItemUpdate):
-    pass
+
+class CatalogItemCreate(BaseModel):
+    sku: str = Field('sku')
+    note: str | None = Field(title='Примечание', default=None)
 
 
 class CatalogItem(CatalogItemUpdate):
+    pass
     # supplier_available: bool = Field(title='Наличие у поставщика')
 
-    synchronization: list[SynchronizationOffer] = Field(title='Связанные товары', default_factory=list)
 
 
 

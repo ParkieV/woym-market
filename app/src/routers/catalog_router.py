@@ -4,7 +4,7 @@ from fastapi import APIRouter, UploadFile, File
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
-from src.schemas.catalog_schemas import SynchronizationOffer, CatalogItem, CatalogItemUpdate, SynchronizationOfferUpdate
+from src.schemas.catalog_schemas import SynchronizationOffer, CatalogItem, CatalogItemUpdate
 from src.services import catalog_service as service
 from src.services.base_utils import clean_up_files
 
@@ -22,11 +22,6 @@ async def get_catalog_items():
 @router.post('')
 async def change_catalog_items(items: list[CatalogItemUpdate]):
     await service.change_catalog_items(items)
-
-
-@router.post('/synchronization')
-async def synchronize_catalog_items(data: list[SynchronizationOfferUpdate]):
-    pass
 
 
 @router.post('/setup', tags=["Debug"])

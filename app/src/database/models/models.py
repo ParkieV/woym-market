@@ -1,5 +1,3 @@
-import enum
-
 from sqlalchemy import (
     Column,
     ForeignKey,
@@ -9,7 +7,7 @@ from sqlalchemy import (
     TIMESTAMP,
     Float,
     DateTime,
-    Enum
+    Enum, select, func
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
@@ -44,7 +42,7 @@ class Offer(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
 
     sku = Column(String, index=True, nullable=False) # same as id
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=True)
 
     self_weight = Column(Float, default=None, nullable=True)
     self_length = Column(Float, default=None, nullable=True)
@@ -128,6 +126,36 @@ class Offer(Base):
     synchronization = Column(Boolean, default=False, nullable=False)
 
     stocks = relationship('OfferStock')
+
+    @classmethod
+    def columns(cls, use_catalog: bool = False, exclude: list | None = None, exclude_from_catalog: list | None = None):
+        _exclude = exclude or []
+
+        if not use_catalog:
+            return [i for i in cls.__table__.columns if i.name not in _exclude]
+
+        _exclude_from_catalog = ['id', 'sku']
+        if exclude_from_catalog:
+            _exclude_from_catalog.extend(exclude_from_catalog)
+
+        catalog_columns = {i.name: i for i in CatalogItem.__table__.columns if i.name not in _exclude_from_catalog}
+
+        result = []
+
+        for column in cls.__table__.columns:
+            if column.name in _exclude:
+                continue
+
+            if column.name in catalog_columns:
+                result.append(catalog_columns[column.name])
+            else:
+                result.append(column)
+
+        return result
+
+
+
+
 
 
 class Logs(Base):
@@ -275,9 +303,9 @@ class CatalogItem(Base):
     self_height = Column(Float, nullable=True, default=None)
     self_volume = Column(Float, nullable=True, default=None)
     note = Column(String, nullable=True, server_default='Новый товар')
-    use_promotion_price = Column(Boolean, nullable=False, default=False)
+    use_promotion_price = Column(Boolean, nullable=True, default=None, server_default=None)
     wholesale_dollar_cost_price = Column(Float, nullable=True, default=None)
-    supplier_available = Column(Boolean, nullable=False, default=False)
+    supplier_available = Column(Boolean, nullable=True, default=None, server_default=None)
     annotation = Column(String, nullable=True, default=None, server_default=None)
     search_words = Column(String, nullable=True, default=None, server_default=None)
     name = Column(String, nullable=True, default=None, server_default=None)
@@ -286,6 +314,29 @@ class CatalogItem(Base):
     synchronization = relationship('Offer', uselist=True, primaryjoin='foreign(Offer.sku) == CatalogItem.sku')
 
 
+remaining_stocks_subuery = (
+    select(
+        OfferStock.offer_id,
+        func.sum(OfferStock.for_delivery).label('remaining_stock')
+    )
+    .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+    .where(Warehouse.warehouse_type == WarehouseType.WAREHOUSE)
+    .group_by(
+        OfferStock.offer_id).subquery())
 
+OfferWithCatalogView = (
+    select(
+        remaining_stocks_subuery.c.remaining_stock,
+        *Offer.columns(use_catalog=True),
 
+    )
+    .where(Offer.synchronization==True).join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
+    .union(
+        select(
+            remaining_stocks_subuery.c.remaining_stock,
+            *Offer.columns(use_catalog=False)
+        ).where(Offer.synchronization==False).join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
+    )
+
+)
 

@@ -13,7 +13,21 @@ async def get_all_catalog_items(session: AsyncSession) -> list[CatalogItem]:
 
 async def change_catalog_items(session: AsyncSession, items: list[schemas.CatalogItemUpdate]) -> None:
     for item in items:
-        stmp = update(CatalogItem).where(CatalogItem.sku == item.sku).values(**item.model_dump())
+        synchronization_info = item.synchronization.copy()
+        await synchronize_offers(session, synchronization_info)
+
+        changed_data = item.model_dump()
+        changed_data.pop('synchronization')
+
+        item_stmp = update(CatalogItem).where(CatalogItem.sku == item.sku).values(**changed_data)
+        await session.execute(item_stmp)
+
+    await session.commit()
+
+
+async def synchronize_offers(session: AsyncSession, items: list[schemas.SynchronizationOffer]):
+    for item in items:
+        stmp = update(Offer).where(Offer.sku == item.sku).values(synchronization=item.synchronization)
         await session.execute(stmp)
 
     await session.commit()

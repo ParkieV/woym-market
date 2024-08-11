@@ -10,6 +10,7 @@ from src.database import offer_db
 from src.database import catalog_db as db
 from src.schemas.catalog_schemas import CatalogItemCreate, CatalogItem, CatalogItemUpdate
 from src.services.base_utils import parce_field_names
+from src.services.offer_service import recalculate_values
 from src.services.offer_utils import bytes_to_data_frame
 
 
@@ -31,6 +32,7 @@ async def get_catalog_items() -> list[CatalogItem]:
 async def change_catalog_items(items: list[CatalogItemUpdate]) -> None:
     async with async_session() as session:
         await db.change_catalog_items(session, items)
+        await recalculate_values(session, {'id': i.id for item in items for i in item.synchronization})
 
 
 async def export_catalog_items() -> Path:
