@@ -1,6 +1,12 @@
+from pathlib import PurePath
+
 from fastapi import APIRouter, UploadFile, File
+from starlette.background import BackgroundTask
+from starlette.responses import FileResponse
+
 from src.schemas.catalog_schemas import SynchronizationOffer, CatalogItem, CatalogItemUpdate, SynchronizationOfferUpdate
 from src.services import catalog_service as service
+from src.services.base_utils import clean_up_files
 
 router = APIRouter(
     prefix="/catalog",
@@ -14,8 +20,8 @@ async def get_catalog_items():
 
 
 @router.post('')
-async def change_catalog_items(data: list[CatalogItemUpdate]):
-    pass
+async def change_catalog_items(items: list[CatalogItemUpdate]):
+    await service.change_catalog_items(items)
 
 
 @router.post('/synchronization')
@@ -30,10 +36,12 @@ async def setup_catalog_items():
 
 @router.post('/export', tags=["Export"])
 async def export_catalog_items():
-    pass
+    path = await service.export_catalog_items()
+    return FileResponse(path, filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 
 @router.post('/import', tags=["Import"])
 async def import_catalog_items(data: UploadFile = File()):
-    pass
+    content = await data.read()
+    await service.import_catalog_items(content, PurePath(data.filename).suffix)
 

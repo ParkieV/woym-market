@@ -140,25 +140,6 @@ async def update_or_create_warehouse(session: AsyncSession, data: WarehouseCreat
     )
 
 
-async def update_or_create_offer_stock(session: AsyncSession, data: OfferStockCreate):
-    query = select(OfferStock).where(
-        and_(OfferStock.offer_id == data.offer_id, OfferStock.warehouse_id == data.warehouse_id)).distinct()
-    result = await session.execute(query)
-    object_db = result.scalar_one_or_none()
-
-    if object_db is None:
-        object_db = OfferStock(**data.model_dump())
-        session.add(object_db)
-    else:
-        stmp = (
-            update(OfferStock)
-            .where(and_(OfferStock.offer_id == data.offer_id, OfferStock.warehouse_id == data.warehouse_id))
-            .values(**data.model_dump())
-        )
-        await session.execute(stmp)
-    await session.commit()
-
-
 async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[dict]):
     for storage in storages:
         if not storage['related_warehouses_name']:
@@ -188,24 +169,6 @@ async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[
     await session.commit()
 
 
-async def update_or_create_own_storage(session: AsyncSession, data: OwnStorageCreate):
-    query = select(OwnStorage).where(OwnStorage.sku == data.sku).distinct()
-    result = await session.execute(query)
-    object_db = result.scalar_one_or_none()
-
-    if object_db is None:
-        object_db = OwnStorage(**data.model_dump())
-        session.add(object_db)
-    else:
-        stmp = (
-            update(OwnStorage)
-            .where(OwnStorage.sku == data.sku)
-            .values(**data.model_dump())
-        )
-        await session.execute(stmp)
-    await session.commit()
-
-
 async def get_own_storages(session: AsyncSession, place_id: int | None = None) -> list[OwnStorageOut]:
     agg_offers_query = (
         select(
@@ -224,13 +187,6 @@ async def get_own_storages(session: AsyncSession, place_id: int | None = None) -
 
     agg_offers_result = [OwnStorageAggOfferOut.model_validate(i, from_attributes=True) for i in
                          (await session.execute(agg_offers_query)).all()]
-
-    # offer_stocks_query = select(
-    #     Offer.sku,
-    #     Offer.name_of_shop,
-    #     Offer.market,
-    #     func.coalesce(func.sum(Offer.remaining_stock), 0).label('stock')
-    # ).group_by(Offer.sku, Offer.name_of_shop, Offer.market)
 
     offer_stocks_query = (
         select(

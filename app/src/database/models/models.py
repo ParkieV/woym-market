@@ -278,6 +278,10 @@ class CatalogItem(Base):
     use_promotion_price = Column(Boolean, nullable=False, default=False)
     wholesale_dollar_cost_price = Column(Float, nullable=True, default=None)
     supplier_available = Column(Boolean, nullable=False, default=False)
+    annotation = Column(String, nullable=True, default=None, server_default=None)
+    search_words = Column(String, nullable=True, default=None, server_default=None)
+    name = Column(String, nullable=True, default=None, server_default=None)
+    barcodes = Column(String, nullable=True, default=None, server_default=None)
 
     synchronization = relationship('Offer', uselist=True, primaryjoin='foreign(Offer.sku) == CatalogItem.sku')
 

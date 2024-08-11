@@ -1,7 +1,16 @@
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from fastapi import HTTPException
+from starlette import status
+
 from src.database.db import async_session
 from src.database import offer_db
 from src.database import catalog_db as db
-from src.schemas.catalog_schemas import CatalogItemCreate
+from src.schemas.catalog_schemas import CatalogItemCreate, CatalogItem, CatalogItemUpdate
+from src.services.base_utils import parce_field_names
+from src.services.offer_utils import bytes_to_data_frame
 
 
 async def setup_catalog_items() -> None:
@@ -14,6 +23,43 @@ async def setup_catalog_items() -> None:
         await db.create_catalog_items(session, new_items)
 
 
-async def get_catalog_items():
+async def get_catalog_items() -> list[CatalogItem]:
     async with async_session() as session:
         return await db.get_all_catalog_items(session)
+
+
+async def change_catalog_items(items: list[CatalogItemUpdate]) -> None:
+    async with async_session() as session:
+        await db.change_catalog_items(session, items)
+
+
+async def export_catalog_items() -> Path:
+    catalog_items = await get_catalog_items()
+    df = pd.DataFrame([i.model_dump() for i in catalog_items])
+    df.drop(columns=['synchronization'], inplace=True, errors='ignore')
+    df.rename(columns=parce_field_names(CatalogItem), inplace=True)
+
+    path = Path('data/catalog_items.xlsx')
+    df.to_excel(str(path), index=False)
+    return path
+
+
+async def import_catalog_items(file: bytes, file_extension: str = '.xlsx') -> list[CatalogItem]:
+    df = bytes_to_data_frame(file, file_extension=file_extension)
+    if 'sku' not in df.columns.values.tolist():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, 'В файле должна быть колонка "sku"')
+
+    df['sku'] = df['sku'].astype('string')
+
+    columns = parce_field_names(CatalogItem, reverse=True)
+
+    df = df[list(set(df.columns.values.tolist()) & set(columns.keys()))]
+    df.rename(columns=columns, inplace=True)
+    df.replace({np.nan: None}, inplace=True)
+
+    to_update_items = [CatalogItemUpdate(**i) for i in df.to_dict('records')]
+
+    await change_catalog_items(to_update_items)
+
+
+

@@ -17,7 +17,7 @@ class SynchronizationOfferUpdate(BaseModel):
 
 
 class BaseCatalogItem(BaseModel):
-    sku: str = Field(title='SKU товара')
+    sku: str = Field(title='sku')
 
 
 class CatalogItemUpdate(BaseCatalogItem):
