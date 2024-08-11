@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, and_, func, text, bindparam, literal_column, Select, insert, cast, String
-from sqlalchemy.orm import selectinload, subqueryload
+from sqlalchemy.orm import selectinload, subqueryload, Load, joinedload, load_only, contains_eager
 from src.database.utils import _update_or_create_object, _get_or_create
 from src.schemas.base_api_schemas import WarehouseType
 from src.schemas.stocks.own_storages_schemas import OwnStorageAggOfferOut, OwnStorageOfferStockOut, OwnStorageOut, \
@@ -594,35 +594,37 @@ async def fill_empty_stocks(session: AsyncSession):
 
 
 async def get_fbo_offers(session: AsyncSession):
-    stocks_query = select(
-        OfferStock.offer_id,
-        (func.sum(OfferStock.for_delivery)).label('total_for_delivery'),
-    ).group_by(OfferStock.offer_id).subquery()
+    # 6359 ms
 
-    query = (
-        select(
-            Offer.id,
-            Offer.sku,
-            Offer.name,
-            Offer.photo,
-            Offer.name_of_shop,
-            Offer.market,
-            Offer.note_1,
-            Offer.note_2,
-            Offer.note_3,
-            Offer.supplier_available,
-            Offer.margin,
-            Offer.cost_price,
-            Offer.profit,
-            Offer.self_weight,
-            Offer.volume,
-            Offer.hidden,
-            Offer.barcodes,
-            stocks_query.c.total_for_delivery,
-        ).join(stocks_query, Offer.id == stocks_query.c.offer_id)
-    )
-    result = (await session.execute(query)).all()
-    return result
+    # query = (
+    #             select(Offer)
+    #             .options(subqueryload(Offer.stocks).selectinload(OfferStock.warehouse))
+    #         )
+    # result = await session.execute(query)
+    # offers = result.scalars().all()
+    # return [OfferWithStocks.model_validate(i, from_attributes=True) for i in offers]
+
+    chunck_size = 1000
+    offset = 0
+    results = []
+
+    while True:
+        print(offset)
+        query = (
+            select(Offer)
+            .options(subqueryload(Offer.stocks).selectinload(OfferStock.warehouse))
+        ).offset(offset).limit(chunck_size)
+        result = await session.execute(query)
+        offers = result.scalars().all()
+
+        results.extend([OfferWithStocks.model_validate(i, from_attributes=True) for i in offers])
+
+        if len(offers) < chunck_size:
+            break
+
+        offset += chunck_size
+
+    return results
 
 
 async def get_offer_stocks(session: AsyncSession, offer_id: int):

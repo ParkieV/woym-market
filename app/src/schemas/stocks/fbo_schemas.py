@@ -123,10 +123,12 @@ class FboOfferOut(BaseModel):
     barcodes: str | None
     total_for_delivery: int
 
-    @computed_field
-    @property
-    def stocks(self) -> list:
-        return []
+    stocks: list[OfferStockOut]
+
+    # @computed_field
+    # @property
+    # def stocks(self) -> list:
+    #     return []
 
     @computed_field
     @property

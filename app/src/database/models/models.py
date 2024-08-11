@@ -215,8 +215,8 @@ class OfferStock(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
 
-    offer_id = Column(Integer, ForeignKey('offers.id', ondelete='CASCADE'))
-    warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='CASCADE'))
+    offer_id = Column(Integer, ForeignKey('offers.id', ondelete='CASCADE'), index=True)
+    warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='CASCADE'), index=True)
     warehouse = relationship(Warehouse, uselist=False)
     can_be_delivered = Column(Boolean, default=False)
     advice_from_the_store = Column(String, default='')
@@ -231,11 +231,11 @@ class Market(Base):
     __tablename__ = 'markets'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
-    name = Column(String)
+    name = Column(String, index=True)
 
     token = Column(String)
     entity_id = Column(Integer, nullable=True, default=None)
-    type = Column(String, nullable=False)
+    type = Column(String, nullable=False, index=True)
     discount_purchase = Column(Float, default=20)
 
     tax = Column(Float, default=0)
@@ -328,7 +328,6 @@ OfferWithCatalogView = (
     select(
         remaining_stocks_subuery.c.remaining_stock,
         *Offer.columns(use_catalog=True),
-
     )
     .where(Offer.synchronization==True).join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
     .union(
@@ -337,6 +336,5 @@ OfferWithCatalogView = (
             *Offer.columns(use_catalog=False)
         ).where(Offer.synchronization==False).join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
     )
-
 )
 
