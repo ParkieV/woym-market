@@ -45,12 +45,13 @@ async def update_warehouses_and_stocks():
             'current_stock': [stock.current_stock for stock in warehouse.offers],
         } for warehouse in stocks])
         api_stocks_df_exploded = api_stocks_df.explode(['sku', 'name_of_shop', 'current_stock'])
+        api_stocks_df_exploded.dropna(inplace=True)
         api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']] = api_stocks_df_exploded[
             ['sku', 'name_of_shop', 'market', 'warehouse_name']].astype('string')
 
         # Остатки из БД
         db_stocks = await db.get_all_offers_stocks(session)
-        db_stocks_df = pd.DataFrame(db_stocks)
+        db_stocks_df = pd.DataFrame(db_stocks, columns=['id', 'current_stock', 'offer_id', 'warehouse_name', 'sku', 'market', 'name_of_shop'])
 
         # Создание новых складов
         for warehouse in stocks:
@@ -59,6 +60,7 @@ async def update_warehouses_and_stocks():
                 name=warehouse.name,
                 warehouse_type=warehouse.warehouse_type,
             ))
+        logger.info('Warehouses created')
 
         # Обновение остатков, у которых current_stock не совпадает с уже установленными
         to_update_df = pd.merge(api_stocks_df_exploded, db_stocks_df, how='inner',
@@ -66,7 +68,7 @@ async def update_warehouses_and_stocks():
         to_update_df = to_update_df[to_update_df['current_stock_x'] != to_update_df['current_stock_y']].rename(
             {'current_stock_x': 'current_stock'}, axis='columns')[['id', 'current_stock']]
         await db.update_fbo_stocks(session, to_update_df.to_dict('records'))
-        logger.info('FBO stocks updated')
+        logger.info(f'FBO stocks updated: {len(to_update_df)}')
 
         api_idents = set([tuple(i.values()) for i in
                           api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict(
@@ -81,7 +83,7 @@ async def update_warehouses_and_stocks():
 
         # Создание новых остатков
         await db.create_fbo_stocks_(session, to_create_df.to_dict('records'))
-        logger.info('New fbo stocks created')
+        logger.info(f'New fbo stocks created: {len(to_create_df)}')
 
         # Создать остатки на складах, которые не были в полученных данных
         await db.fill_empty_stocks(session)

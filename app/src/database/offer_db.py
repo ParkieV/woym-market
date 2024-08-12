@@ -29,7 +29,7 @@ async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = Non
     query = select(
         Offer,
         remaining_stocks_subuery.c.remaining_stock
-    ).join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
+    ).outerjoin(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
 
     if filters:
         query = query.filter_by(**filters)
@@ -89,7 +89,7 @@ async def update_offers(
 
         await session.execute(query.values(**offer))
 
-    await session.commit()
+        await session.commit()
 
 
 async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.DataFrame,

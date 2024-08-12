@@ -81,12 +81,13 @@ async def setup_offers_data(user_id: int):
     async with async_session() as session:
         await db.check_pricing_schemes_exists(session, 'Y0')
         await db.check_pricing_schemes_exists(session, 'O0')
+        await db.check_pricing_schemes_exists(session, 'W0')
         settings = await get_user_settings(session, user_id)
 
-        data = await utils.build_offers_data(yandex_offers_df, setup_mode=True, settings=settings)
-
-        offers_db = await db.create_offers(session, data)
-        return offers_db
+        for market in await get_markets(session):
+            data = await utils.build_offers_data(yandex_offers_df[((yandex_offers_df['market'] == market.type) & (yandex_offers_df['name_of_shop'] == market.name))], setup_mode=True, settings=settings, market=market)
+            await db.create_offers(session, data)
+            # logger.info(f'{market.type}({market.name}) offers created: {len(data)}')
 
 
 async def update_offers(user_id: int):
@@ -136,6 +137,7 @@ async def update_offers(user_id: int):
         for market in await get_markets(session):
             to_create_df_chunked = await utils.build_offers_data(to_create_df[((to_create_df['market'] == market.type) & (to_create_df['name_of_shop'] == market.name))], settings, market, setup_mode=True)
             await db.create_offers(session, to_create_df_chunked)
+            logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df)}')
 
         await create_own_storage_stocks(session)
 
@@ -144,9 +146,16 @@ async def update_offers(user_id: int):
             to_update_df[f'{column}_changed'] = False
 
         await db.update_offers(session, to_update_df, mapping_columns=['name_of_shop', 'market'])
+        logger.info(f'Offers updated: {len(to_update_df)}')
+
         await db.delete_offers(session, to_delete_df)
+        logger.info(f'Offers deleted: {len(to_delete_df)}')
+
         await sync_catalog_items_with_offers(session)
+        logger.info('Offers synchronized with catalog')
+
         await recalculate_values(session, settings)
+        logger.info('Offers recalculated')
 
         await update_logs(session, user_id, {'updated_at': datetime.now()})
 
@@ -210,7 +219,7 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
         df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], settings, market)
         df1.drop(set(df1.columns) - set(OfferOut.fields()), axis=1, inplace=True, errors='ignore')
 
-        await db.update_offers(session, df1, mapping_columns=['sku', 'name_of_shop'])
+        await db.update_offers(session, df1, mapping_columns=['sku', 'name_of_shop', 'market'])
 
 
 @error_handler('Ошибка импорта')

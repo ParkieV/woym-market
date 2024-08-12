@@ -547,7 +547,7 @@ async def create_fbo_stocks_(session: AsyncSession, data: list[dict]):
         )
         await session.execute(stmp)
 
-    await session.commit()
+        await session.commit()
 
 
 async def update_fbo_stocks(session: AsyncSession, data: list[dict]):
@@ -589,7 +589,7 @@ async def fill_empty_stocks(session: AsyncSession):
                       to_set_warehouses_stocks]
         session.add_all(new_stocks)
 
-    await session.commit()
+        await session.commit()
 
 
 async def get_fbo_offers(session: AsyncSession):
