@@ -66,6 +66,7 @@ async def update_warehouses_and_stocks():
         to_update_df = to_update_df[to_update_df['current_stock_x'] != to_update_df['current_stock_y']].rename(
             {'current_stock_x': 'current_stock'}, axis='columns')[['id', 'current_stock']]
         await db.update_fbo_stocks(session, to_update_df.to_dict('records'))
+        logger.info('FBO stocks updated')
 
         api_idents = set([tuple(i.values()) for i in
                           api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict(
@@ -80,9 +81,11 @@ async def update_warehouses_and_stocks():
 
         # Создание новых остатков
         await db.create_fbo_stocks_(session, to_create_df.to_dict('records'))
+        logger.info('New fbo stocks created')
 
         # Создать остатки на складах, которые не были в полученных данных
         await db.fill_empty_stocks(session)
+        logger.info('Empty fbo stocks filled')
 
         await db.relate_warehouses_with_clusters(session,
                                                  [{'name': i.name, 'related_warehouses_name': i.related_warehouses_name}
