@@ -144,7 +144,7 @@ async def change_offer_with_stock(session: AsyncSession, data: list[OfferWithSto
             )
             await session.execute(stmp)
 
-    await session.commit()
+        await session.commit()
 
 
 async def recalculate_stocks_for_delivery(session: AsyncSession) -> None:
