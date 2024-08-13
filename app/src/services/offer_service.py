@@ -29,7 +29,6 @@ from datetime import datetime
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
 
-
 api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
@@ -53,23 +52,8 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
         settings = await get_user_settings(session, user_id)
 
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
-        [await db.check_pricing_schemes_exists(session, i) for i in changes['pricing_scheme_name'].values.tolist()]
 
-        offers_db = await db.get_offers_by(session, changes[mapping_fields].to_dict('records'))
-        offers_db_df = pd.DataFrame([i.model_dump() for i in offers_db])[changes.columns.values]
-
-        if len(offers_db_df) != len(changes):
-            logger.info('')
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Неудалось обновить товары')
-
-        merge_result = pd.merge(offers_db_df[mapping_fields + CONTROL_CHANGES], changes[mapping_fields + CONTROL_CHANGES], on=mapping_fields)
-        for field in CONTROL_CHANGES:
-            merge_result[f'{field}_changed'] = ~merge_result[f'{field}_x'].eq(merge_result[f'{field}_y'])
-            merge_result.drop([f'{field}_x', f'{field}_y'], axis='columns', inplace=True)
-
-        changes = pd.merge(changes, merge_result, on=mapping_fields)
-
-        await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'])
+        await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=True)
         await sync_catalog_items_with_offers(session)
         await recalculate_values(session, settings, which=changes[mapping_fields])
         return await db.get_offers_by(session, changes[mapping_fields])
@@ -140,6 +124,9 @@ async def update_offers(user_id: int):
             logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df)}')
 
         await create_own_storage_stocks(session)
+        logger.info('Own storage stocks created')
+
+        # await setup_catalog_items()
 
         # Снять галочки с измененных полей
         for column in CONTROL_CHANGES:

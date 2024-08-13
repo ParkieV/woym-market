@@ -18,7 +18,7 @@ async def change_catalog_items(session: AsyncSession, items: list[schemas.Catalo
         changed_data = item.model_dump()
         changed_data.pop('synchronization')
 
-        item_stmp = update(CatalogItem).where(CatalogItem.sku == item.sku).values(**changed_data)
+        item_stmp = update(CatalogItem).where(CatalogItem.sku == item.sku).values(search_words_changed=func.coalesce(CatalogItem.search_words, 'null') != func.coalesce(item.search_words, 'null'), **changed_data)
         await session.execute(item_stmp)
 
     await session.commit()

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 from sqlalchemy.orm import selectinload
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
 from .models.models import Offer, PricingScheme, PricingSchemeField, \
@@ -66,6 +66,7 @@ async def update_offers(
         mapping_columns: list[str] | None = None,
         filters: dict[str, Any] | None = None,
         endswith_sku: bool = False,
+        detect_changes: bool = False,
 ) -> None:
     data = _dataframe_to_valid_dict(data)
 
@@ -73,21 +74,28 @@ async def update_offers(
         if 'id' in offer.keys():
             del offer['id']
 
-        query = update(Offer)
+        stmp = update(Offer)
 
         if filters:
-            query = query.filter_by(**filters)
+            stmp = stmp.filter_by(**filters)
 
         if mapping_columns:
-            query = query.filter_by(**{column: offer[column] for column in mapping_columns})
+            stmp = stmp.filter_by(**{column: offer[column] for column in mapping_columns})
 
         if endswith_sku:
-            query = query.where(Offer.sku.endswith(offer['sku']))
+            stmp = stmp.where(Offer.sku.endswith(offer['sku']))
             del offer['sku']
         else:
-            query = query.where(Offer.sku == offer['sku'])
+            stmp = stmp.where(Offer.sku == offer['sku'])
 
-        await session.execute(query.values(**offer))
+        if detect_changes and 'search_words' in offer:
+            offer.update({
+                'search_words_changed': func.coalesce(Offer.search_words, 'null') != func.coalesce(offer['search_words'], 'null'),
+            })
+
+        stmp = stmp.values(**offer)
+
+        await session.execute(stmp)
 
         await session.commit()
 
@@ -100,11 +108,12 @@ async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.D
     for offer_data in data:
         query = (
             select(
-                Offer.columns(use_catalog=True),
+                Offer,
                 remaining_stocks_subuery.c.remaining_stock
             )
-            .join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
             .filter_by(**offer_data)
+            .join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
+
         )
         query_result = await session.execute(query)
         result.extend(

@@ -308,6 +308,7 @@ class CatalogItem(Base):
     supplier_available = Column(Boolean, nullable=False, default=False)
     annotation = Column(String, nullable=True, default=None, server_default=None)
     search_words = Column(String, nullable=True, default=None, server_default=None)
+    search_words_changed = Column(Boolean, nullable=False, default=False)
     name = Column(String, nullable=True, default=None, server_default=None)
     barcodes = Column(String, nullable=True, default=None, server_default=None)
 

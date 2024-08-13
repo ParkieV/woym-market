@@ -40,4 +40,4 @@ class Config(BaseSettings):
         return timezone(timedelta(hours=3))
 
 
-config = Config(_env_file='app/.env.local', _env_file_encoding='utf-8')
+config = Config(_env_file='.env.local', _env_file_encoding='utf-8')
