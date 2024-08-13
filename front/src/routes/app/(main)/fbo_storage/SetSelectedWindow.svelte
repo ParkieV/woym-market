@@ -2,7 +2,7 @@
     import { selectedDisplayInfo } from "./selected";
     import type { ChangeList } from "$lib/datagrid/plugins/changes";
     import type { Readable } from "svelte/store";
-    import type { FboStocks, FboStorage } from "$lib/data/fbo_storage";
+    import type { FboStorage, FboStocks } from "$lib/data/fbo_storage";
     import type { GridApi, IRowNode } from "ag-grid-enterprise";
     import Window from "$lib/components/windows/Window.svelte";
 
@@ -11,16 +11,16 @@
     let input: HTMLInputElement;
     let valid = false;
 
-    export let grid: GridApi<FboStocks>;
+    export let grid: GridApi<FboStorage>;
 
-    export let changes: ChangeList<FboStocks, number>;
-    export let innerChanges: ChangeList<FboStorage, number>;
+    export let changes: ChangeList<FboStorage, number>;
+    export let innerChanges: ChangeList<FboStocks, number>;
 
-    export let selectedStocks: Readable<Map<number, FboStocks>>;
-    export let selectedStorage: Readable<Map<number, FboStorage>>;
+    export let selectedStocks: Readable<Map<number, FboStorage>>;
+    export let selectedStorage: Readable<Map<number, FboStocks>>;
 
     function ok() {
-        let changedStocks = new Set<IRowNode<FboStocks>>();
+        let changedStocks = new Set<IRowNode<FboStorage>>();
 
         grid.forEachNode(node => {
             if (node.data === undefined || !$selectedStocks.has(node.data.id)) return;

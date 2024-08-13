@@ -10,12 +10,11 @@ export default class FilterPlugin<T> implements GridPlugin<T> {
         let func = opts.onGridReady;
         opts.onGridReady = e => {
             this.filter.subscribe(filter => {
+                e.api.setGridOption("isExternalFilterPresent", () => true);
                 e.api.setGridOption(
                     "doesExternalFilterPass",
                     ({ data }) => data === undefined || filter(data)
                 );
-                e.api.setGridOption("isExternalFilterPresent", () => true);
-                e.api.onFilterChanged();
             });
             func?.(e);
         };

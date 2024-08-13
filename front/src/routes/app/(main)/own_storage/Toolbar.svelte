@@ -1,57 +1,38 @@
-<script lang="ts">
-    import type { Filter } from "$lib/datagrid/filters";
-    import FilterGroup from "$lib/datagrid/filters/FilterGroup.svelte";
-    import OptionsFilter, { type Option } from "$lib/datagrid/filters/OptionsFilter.svelte";
-    import Search from "$lib/datagrid/filters/Search.svelte";
-    import type { OwnStorage } from "$lib/data/own_storage";
+<script lang="ts" context="module">
+    import { derived } from "svelte/store";
 
-    export let markets: {
-        id: number;
-        name: string;
-        type: string;
-    }[];
+    export function getOwnStorageFilter() {
+        return derived(filterState, state => {
+            const FIELDS = ["name", "note_1", "note_2", "note_3"] as const;
+            const sku = (data: OwnStorage) => data.offer.sku;
+            const getters = FIELDS.map(
+                field => (data: OwnStorage) => data.offer[field].map(x => x ?? "")
+            );
+            let searchFilter = createSearchFilter(state.search, [sku, ...getters]);
 
-    let yandex = markets
-        .filter(({ type }) => type === "yandex")
-        .map(({ name }) => ({ name, selected: true }));
-    let ozon = markets
-        .filter(({ type }) => type === "ozon")
-        .map(({ name }) => ({ name, selected: true }));
-
-    const market_filter = (storage: OwnStorage, opts: Option[]) => {
-        return storage.offer.name_of_shop.some(shop =>
-            opts
-                .filter(x => x.selected)
-                .map(x => x.name)
-                .includes(shop)
-        );
-    };
-
-    function searchStrings(data: OwnStorage) {
-        return [
-            data.offer.sku,
-            data.offer.name,
-            data.offer.note_1,
-            data.offer.note_2,
-            data.offer.note_3
-        ]
-            .flat(1)
-            .filter(x => x !== null) as string[];
+            return (storage: OwnStorage) =>
+                searchFilter(storage) &&
+                storage.offer.name_of_shop.some(shop =>
+                    state.shops
+                        .filter(x => x.selected)
+                        .map(x => x.name)
+                        .includes(shop)
+                );
+        });
     }
+</script>
 
-    export let filter: Filter<OwnStorage>;
+<script lang="ts">
+    import Search from "$lib/filter/Search.svelte";
+    import createSearchFilter from "$lib/filter/search";
+    import MarketsFilter from "$lib/filter/ShopsFilter.svelte";
+    import { filterState } from "../state";
+    import type { OwnStorage } from "$lib/data/own_storage";
 </script>
 
 <menu>
-    <FilterGroup bind:filter>
-        <div class="stores">
-            <FilterGroup kind="or">
-                <OptionsFilter filter={market_filter} image={"/yandex.svg"} bind:options={yandex} />
-                <OptionsFilter filter={market_filter} image={"/ozon.svg"} bind:options={ozon} />
-            </FilterGroup>
-        </div>
-        <Search placeholder="Поиск..." fields={searchStrings} />
-    </FilterGroup>
+    <MarketsFilter bind:options={$filterState.shops} />
+    <Search bind:value={$filterState.search} placeholder="Поиск..." />
 </menu>
 
 <style lang="scss">
@@ -61,13 +42,5 @@
         padding: 8px 12px;
         width: 100%;
         overflow: hidden;
-
-        > .stores {
-            flex: 1 1 400px;
-            display: flex;
-            gap: 16px;
-            overflow-x: scroll;
-            margin-right: auto;
-        }
     }
 </style>

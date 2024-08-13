@@ -4,7 +4,7 @@
     import { type Offer, patchOfferList } from "$lib/data/offers";
     import Footer from "../Footer.svelte";
     import { fetchTemplates, type Template } from "$lib/data/templates";
-    import { writable, get } from "svelte/store";
+    import { get } from "svelte/store";
     import type { GridDefinition } from "$lib/datagrid";
     import offerGrid from "./grid";
     import StatePlugin from "$lib/datagrid/plugins/state";
@@ -14,15 +14,11 @@
     import ZoomPlugin from "$lib/datagrid/plugins/zoom";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import ClassesPlugin from "$lib/datagrid/plugins/classes";
-    import Toolbar from "./Toolbar.svelte";
-    import type { PageData } from "./$types";
-    import type { Filter } from "$lib/datagrid/filters";
+    import Toolbar, { getOffersFilter } from "./Toolbar.svelte";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
     import { offersState } from "../state";
 
     onMount(() => offersState.load());
-
-    export let data: PageData;
 
     let definition: GridDefinition<Offer>;
 
@@ -33,11 +29,12 @@
         if (ok) await offersState.forceReload();
     }
 
+    let filter = getOffersFilter();
     onMount(async () => {
         let templates: Template[] = await fetchTemplates();
 
         definition = offerGrid(templates)
-            .plugin(new FilterPlugin(filterStore))
+            .plugin(new FilterPlugin(filter))
             .plugin(new StatePlugin("offers"))
             .plugin(new ChangesPlugin(x => x.id, offersState.changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
@@ -62,10 +59,6 @@
             );
     });
 
-    let filter: Filter<Offer>;
-    let filterStore = writable<Filter<Offer>>();
-    $: $filterStore = filter;
-
     let selected_image: string | undefined = undefined;
 </script>
 
@@ -73,7 +66,7 @@
     <ImageWindow bind:src={selected_image} />
 {/if}
 
-<Toolbar bind:filter markets={data.markets} />
+<Toolbar />
 {#if definition}
     <Grid {definition} bind:data={$offersState} />
 {/if}

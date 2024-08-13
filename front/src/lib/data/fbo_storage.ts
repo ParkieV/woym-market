@@ -2,8 +2,8 @@ import { fetchJSON, fetchPlain } from "$lib/fetch";
 import { showFetchModals } from "$lib/modal";
 import type { OfferBase } from "./offers";
 
-export type FboStocks = OfferBase & {
-    stocks: FboStorage[];
+export type FboStorage = OfferBase & {
+    stocks: FboStocks[];
     name_of_shop: string;
     supplier_available: boolean;
     volume: number;
@@ -13,7 +13,7 @@ export type FboStocks = OfferBase & {
     profit: number;
 };
 
-export type FboStorage = {
+export type FboStocks = {
     id: number;
     current_stock: number;
     min_stock: number;
@@ -26,13 +26,13 @@ export type FboStorage = {
     is_deliver_in_boxes: number;
 };
 
-export async function fetchFboStocks(fetch_?: typeof fetch): Promise<FboStocks[]> {
-    let promise = fetchJSON<FboStocks[]>("stocks/fbo", { fetch: fetch_ });
+export async function fetchFboStorage(fetch_?: typeof fetch): Promise<FboStorage[]> {
+    let promise = fetchJSON<FboStorage[]>("stocks/fbo", { fetch: fetch_ });
     showFetchModals(promise.then(x => x.response));
     return (await promise).data;
 }
 
-export async function patchFboStocks(changed: FboStocks[]): Promise<boolean> {
+export async function patchFboStorage(changed: FboStorage[]): Promise<boolean> {
     let promise = fetchPlain("stocks/fbo", {
         method: "PATCH",
         body: JSON.stringify(changed),

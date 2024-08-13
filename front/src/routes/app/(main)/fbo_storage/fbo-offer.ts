@@ -1,6 +1,6 @@
 import type { Column, ColumnGroup } from "$lib/datagrid/columns";
 import type { GetContextMenuItems, ValueGetterParams } from "ag-grid-enterprise";
-import type { FboStocks, FboStorage } from "$lib/data/fbo_storage";
+import type { FboStorage, FboStocks } from "$lib/data/fbo_storage";
 import {
     BooleanColumn,
     GroupColumn,
@@ -13,19 +13,19 @@ import {
 } from "$lib/datagrid/columns/types";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import { GridDefinition } from "$lib/datagrid";
-import { get, type Writable } from "svelte/store";
+import { get } from "svelte/store";
 import { userCanModify } from "$lib/data/user";
 import type { ChangeList } from "$lib/datagrid/plugins/changes";
 import { selectedContextMenuItems } from "./selected";
-import { calcToDeliver } from "./fbo-warehouse";
+import { calcToDeliver } from "./fbo-stocks";
 
 export default function fboOffersGrid(
-    changes: ChangeList<FboStocks, number>,
-    innerChanges: ChangeList<FboStorage, number>
-): GridDefinition<FboStocks> {
+    changes: ChangeList<FboStorage, number>,
+    innerChanges: ChangeList<FboStocks, number>
+): GridDefinition<FboStorage> {
     return new GridDefinition({ ...BASE_GRID_OPTIONS, getContextMenuItems }, columns());
 
-    function getContextMenuItems(): ReturnType<GetContextMenuItems<FboStocks>> {
+    function getContextMenuItems(): ReturnType<GetContextMenuItems<FboStorage>> {
         if (!get(userCanModify)) {
             return ["copy", "resetColumns"];
         } else {
@@ -122,7 +122,7 @@ function columns(): (Column | ColumnGroup)[] {
                     header: "В наличии",
                     key: "current_stock",
                     base: intColumn,
-                    valueGetter: (params: ValueGetterParams<FboStocks>) => {
+                    valueGetter: (params: ValueGetterParams<FboStorage>) => {
                         if (!params.data) return 0;
                         return params.data.stocks
                             .filter(x => x.warehouse.warehouse_type !== "cluster")
@@ -134,7 +134,7 @@ function columns(): (Column | ColumnGroup)[] {
                     header: "Мин. остаток",
                     key: "min_stock",
                     base: intColumn,
-                    valueGetter: (params: ValueGetterParams<FboStocks>) => {
+                    valueGetter: (params: ValueGetterParams<FboStorage>) => {
                         if (!params.data) return 0;
                         return params.data.stocks
                             .filter(x => x.warehouse.warehouse_type !== "cluster")
@@ -146,7 +146,7 @@ function columns(): (Column | ColumnGroup)[] {
                     header: "К поставке",
                     key: "to_deliver",
                     base: intColumn,
-                    valueGetter: (params: ValueGetterParams<FboStocks>) => {
+                    valueGetter: (params: ValueGetterParams<FboStorage>) => {
                         if (!params.data) return 0;
                         return params.data.stocks
                             .filter(x => x.warehouse.warehouse_type !== "cluster")
@@ -187,6 +187,6 @@ function columns(): (Column | ColumnGroup)[] {
     ];
 }
 
-export function calcStocksToDeliver(stock: FboStocks) {
+export function calcStocksToDeliver(stock: FboStorage) {
     return stock.stocks.reduce((sum, storage) => sum + calcToDeliver(storage), 0);
 }

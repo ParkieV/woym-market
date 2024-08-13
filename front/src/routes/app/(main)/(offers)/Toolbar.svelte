@@ -1,53 +1,52 @@
-<script lang="ts">
-    import type { Filter } from "$lib/datagrid/filters";
-    import BinaryFilter from "$lib/datagrid/filters/BinaryFilter.svelte";
-    import FilterGroup from "$lib/datagrid/filters/FilterGroup.svelte";
-    import OptionsFilter, { type Option } from "$lib/datagrid/filters/OptionsFilter.svelte";
-    import Search from "$lib/datagrid/filters/Search.svelte";
-    import TernaryFilter from "$lib/datagrid/filters/TernaryFilter.svelte";
+<script lang="ts" context="module">
+    import { derived } from "svelte/store";
     import type { Offer } from "$lib/data/offers";
+    import { filterState } from "../state";
 
-    export let markets: {
-        id: number;
-        name: string;
-        type: string;
-    }[];
+    export function getOffersFilter() {
+        return derived(filterState, state => {
+            const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"] as const;
+            let searchFilter = createSearchFilter(state.search, SEARCH_FIELDS);
 
-    let yandex = markets
-        .filter(({ type }) => type === "yandex")
-        .map(({ name }) => ({ name, selected: true }));
-    let ozon = markets
-        .filter(({ type }) => type === "ozon")
-        .map(({ name }) => ({ name, selected: true }));
-    const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"];
+            return (offer: Offer) =>
+                searchFilter(offer) &&
+                (state.supplierAvailable === null ||
+                    state.supplierAvailable === offer.supplier_available) &&
+                (!offer.hidden || state.showHidden) &&
+                state.shops
+                    .filter(x => x.selected)
+                    .map(x => x.name)
+                    .includes(offer.name_of_shop) &&
+                state.shops
+                    .filter(x => x.selected)
+                    .map(x => x.market)
+                    .includes(offer.market);
+        });
+    }
+</script>
 
-    const market_filter = (offer: Offer, opts: Option[]) =>
-        opts.every(({ name, selected }) => selected || name !== offer.name_of_shop);
-    const hidden_filter = (offer: Offer) => !offer.hidden;
-    const available_filter = (offer: Offer) => offer.supplier_available;
-
-    export let filter: Filter<Offer>;
+<script lang="ts">
+    import BinaryFilter from "$lib/filter/BinaryFilter.svelte";
+    import Search from "$lib/filter/Search.svelte";
+    import TernaryFilter from "$lib/filter/TernaryFilter.svelte";
+    import createSearchFilter from "$lib/filter/search";
+    import ShopsFilter from "$lib/filter/ShopsFilter.svelte";
+    import FilterButton from "$lib/filter/FilterButton.svelte";
 </script>
 
 <menu>
-    <FilterGroup bind:filter>
-        <div class="stores">
-            <OptionsFilter filter={market_filter} image={"/yandex.svg"} bind:options={yandex} />
-            <OptionsFilter filter={market_filter} image={"/ozon.svg"} bind:options={ozon} />
-        </div>
-        <Search placeholder="Поиск..." fields={SEARCH_FIELDS} />
-        <TernaryFilter
-            filter={available_filter}
-            image={"/package.svg"}
-            alt="Наличие у поставщика"
-        />
-        <BinaryFilter
-            filter={hidden_filter}
-            mode="disable"
-            image={"/eye-slash.svg"}
-            alt="Отображать скрытые"
-        />
-    </FilterGroup>
+    <ShopsFilter bind:options={$filterState.shops} />
+    <Search bind:value={$filterState.search} placeholder="Поиск..." />
+    <TernaryFilter
+        bind:value={$filterState.supplierAvailable}
+        image={"/package.svg"}
+        alt="Наличие у поставщика"
+    />
+    <BinaryFilter
+        bind:value={$filterState.showHidden}
+        image={"/eye-slash.svg"}
+        alt="Отображать скрытые"
+    />
 </menu>
 
 <style lang="scss">
@@ -57,13 +56,5 @@
         padding: 8px 12px;
         width: 100%;
         overflow: hidden;
-
-        > .stores {
-            flex: 1 1 400px;
-            display: flex;
-            gap: 16px;
-            overflow-x: scroll;
-            margin-right: auto;
-        }
     }
 </style>

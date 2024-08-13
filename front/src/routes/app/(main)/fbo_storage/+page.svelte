@@ -1,14 +1,13 @@
 <script lang="ts">
-    import { patchFboStocks, type FboStocks } from "$lib/data/fbo_storage";
+    import { patchFboStorage, type FboStorage } from "$lib/data/fbo_storage";
     import Footer from "../Footer.svelte";
     import Grid from "$lib/grid/Grid.svelte";
     import { get } from "svelte/store";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import fboOffersGrid, { calcStocksToDeliver } from "./fbo-offer";
     import { userCanModify } from "$lib/data/user";
-    import Toolbar from "./Toolbar.svelte";
-    import type { PageData } from "./$types";
-    import fboWarehouseGrid from "./fbo-warehouse";
+    import Toolbar, { getFboStocksFilter, getFboStorageFilter } from "./Toolbar.svelte";
+    import fboStocks from "./fbo-stocks";
     import { browser } from "$app/environment";
     import ChangesPlugin from "$lib/datagrid/plugins/changes";
     import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
@@ -17,39 +16,35 @@
     import DetailGridPlugin from "$lib/datagrid/plugins/detail";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
     import { SummaryPlugin } from "$lib/datagrid/plugins/summary";
-    import {
-        fboOffersFilter,
-        fboOffersSelection,
-        fboState,
-        fboStorageChanges,
-        fboStorageFilter,
-        fboStorageSelection
-    } from "../state";
+    import { fboStorageSelection, fboState, fboStocksChanges, fboStocksSelection } from "../state";
     import ZoomPlugin from "$lib/datagrid/plugins/zoom";
     import { onMount } from "svelte";
     import StatePlugin from "$lib/datagrid/plugins/state";
-
-    export let data: PageData;
 
     let selected_image: string | undefined = undefined;
 
     onMount(() => fboState.load());
 
     async function save() {
-        let ok = await patchFboStocks($fboState.filter(x => get(fboState.changes).isChanged(x.id)));
+        let ok = await patchFboStorage(
+            $fboState.filter(x => get(fboState.changes).isChanged(x.id))
+        );
         if (ok) {
             await fboState.forceReload();
-            fboStorageChanges.clear();
+            fboStocksChanges.clear();
         }
     }
 
+    let filter = getFboStorageFilter();
+    let detailFilter = getFboStocksFilter();
+
     const definition = (() => {
-        const detail = fboWarehouseGrid()
-            .plugin(new FilterPlugin(fboStorageFilter))
+        const detail = fboStocks()
+            .plugin(new FilterPlugin(detailFilter))
             .plugin(
                 new ChangesPlugin(
                     x => x.id,
-                    fboStorageChanges,
+                    fboStocksChanges,
                     ({ data: storage }) => {
                         let stock = get(fboState).find(x =>
                             x.stocks.some(s => s.id === storage.id)
@@ -61,23 +56,23 @@
             .plugin(new ReadonlyPlugin(!$userCanModify))
             .plugin(new ClassesPlugin())
             .plugin(
-                new RowSelectionPlugin(fboStorageSelection, {
+                new RowSelectionPlugin(fboStocksSelection, {
                     key: ({ warehouse }) => warehouse.id,
                     sync: true
                 })
             );
 
-        const master = fboOffersGrid(fboState.changes, fboStorageChanges)
-            .plugin(new FilterPlugin(fboOffersFilter))
+        const master = fboOffersGrid(fboState.changes, fboStocksChanges)
+            .plugin(new FilterPlugin(filter))
             .plugin(new StatePlugin("fbo_storage"))
             .plugin(new ChangesPlugin(x => x.id, fboState.changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
             .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(new ClassesPlugin())
-            .plugin(new RowSelectionPlugin(fboOffersSelection, { key: x => x.id }))
+            .plugin(new RowSelectionPlugin(fboStorageSelection, { key: x => x.id }))
             .plugin(new DetailGridPlugin(detail, data => data.stocks))
             .plugin(
-                new SummaryPlugin<FboStocks>({
+                new SummaryPlugin<FboStorage>({
                     sku: () => "Итого",
                     volume: ({ rows }) =>
                         rows.reduce((sum, row) => sum + row.volume * calcStocksToDeliver(row), 0),
@@ -103,7 +98,7 @@
     <ImageWindow bind:src={selected_image} />
 {/if}
 
-<Toolbar filter={fboOffersFilter} storage_filter={fboStorageFilter} markets={data.markets} />
+<Toolbar />
 {#if browser}
     <Grid {definition} bind:data={$fboState} />
 {/if}
@@ -112,6 +107,6 @@
     on:save={save}
     on:cancel={() => {
         fboState.cancel();
-        fboStorageChanges.clear();
+        fboStocksChanges.clear();
     }}
 />

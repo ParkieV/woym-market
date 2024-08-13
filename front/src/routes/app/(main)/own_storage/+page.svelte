@@ -2,8 +2,8 @@
     import Grid from "$lib/grid/Grid.svelte";
     import { onMount } from "svelte";
     import Footer from "../Footer.svelte";
-    import { patchOwnStorages, type OwnStorage } from "$lib/data/own_storage";
-    import { get, writable } from "svelte/store";
+    import { patchOwnStorages } from "$lib/data/own_storage";
+    import { get } from "svelte/store";
     import ownStorageGrid from "./grid";
     import type { GridDefinition } from "$lib/datagrid";
     import ChangesPlugin from "$lib/datagrid/plugins/changes";
@@ -13,8 +13,7 @@
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import { userCanModify } from "$lib/data/user";
     import ClassesPlugin from "$lib/datagrid/plugins/classes";
-    import type { Filter } from "$lib/datagrid/filters";
-    import Toolbar from "./Toolbar.svelte";
+    import Toolbar, { getOwnStorageFilter } from "./Toolbar.svelte";
     import type { PageData } from "./$types";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
     import { ownStorageState } from "../state";
@@ -25,10 +24,11 @@
 
     let selected_image: string | undefined = undefined;
 
+    let filter = getOwnStorageFilter();
     onMount(async () => {
         await ownStorageState.load();
         definition = ownStorageGrid(data.markets, data.storages)
-            .plugin(new FilterPlugin(filterStore))
+            .plugin(new FilterPlugin(filter))
             .plugin(new StatePlugin("own_storage"))
             .plugin(new ChangesPlugin(x => x.offer.sku, ownStorageState.changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))
@@ -42,17 +42,13 @@
         );
         if (ok) await ownStorageState.forceReload();
     }
-
-    let filter: Filter<OwnStorage>;
-    let filterStore = writable<Filter<OwnStorage>>();
-    $: $filterStore = filter;
 </script>
 
 {#if selected_image}
     <ImageWindow bind:src={selected_image} />
 {/if}
 
-<Toolbar bind:filter markets={data.markets} />
+<Toolbar />
 {#if definition && $ownStorageState}
     <Grid {definition} bind:data={$ownStorageState} />
 {/if}
