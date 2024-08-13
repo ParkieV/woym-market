@@ -7,7 +7,7 @@ export const tokenCookieName = "mpToken";
 
 export async function login(name: string, password: string): Promise<boolean> {
     let credentials = { username: name, password };
-    let promise = fetchPlain("login", {
+    let promise = fetchPlain("auth/login", {
         method: "POST",
         headers: {
             "Content-Type": "application/x-www-form-urlencoded"
