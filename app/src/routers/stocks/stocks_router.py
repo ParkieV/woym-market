@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Body
+from fastapi import APIRouter, Depends, Body, BackgroundTasks
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
@@ -33,8 +33,8 @@ async def get_warehouse(warehouse_id: int):
 
 
 @router.post('/setup', dependencies=[Depends(require_staff)])
-async def setup_fbo_stocks():
-    await service.update_warehouses_and_stocks()
+async def setup_fbo_stocks(background: BackgroundTasks):
+    background.add_task(service.update_warehouses_and_stocks)
     return {'status': 'OK'}
 
 

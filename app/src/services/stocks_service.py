@@ -36,6 +36,8 @@ async def update_warehouses_and_stocks():
     async with async_session() as session:
         # Остатки из API
         stocks = await api_wrapper.get_stocks()
+        logger.info('API stocks collected')
+
         api_stocks_df = pd.DataFrame([{
             'warehouse_name': warehouse.name,
             'warehouse_type': warehouse.warehouse_type,
@@ -92,6 +94,10 @@ async def update_warehouses_and_stocks():
         await db.relate_warehouses_with_clusters(session,
                                                  [{'name': i.name, 'related_warehouses_name': i.related_warehouses_name}
                                                   for i in stocks])
+        logger.info('Related warehouses relation filled')
+
+        await db.recalculate_stocks_for_delivery(session)
+        logger.info('Recalculate stocks for delivery')
 
     end_time = datetime.now()
 

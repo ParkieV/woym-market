@@ -1,7 +1,8 @@
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_, func, text, bindparam, literal_column, Select, insert, cast, String
+from sqlalchemy import select, update, delete, and_, func, text, bindparam, literal_column, Select, insert, cast, \
+    String, case
 from sqlalchemy.orm import selectinload, subqueryload, Load, joinedload, load_only, contains_eager
 from src.database.utils import _update_or_create_object, _get_or_create
 from src.schemas.base_api_schemas import WarehouseType
@@ -108,7 +109,11 @@ def count_delivery_items(in_stock: int, in_box: int, min_stock: int):
     return box_to_order * in_box
 
 
-async def change_offer_with_stock(session: AsyncSession, data: list[OfferWithStocksUpdate]):
+# min_stock: int
+# in_box: int
+# is_deliver_in_boxes: bool
+
+async def change_offer_with_stock(session: AsyncSession, data: list[OfferWithStocksUpdate]) -> None:
     for offer_with_stock in data:
         offer_data = offer_with_stock.model_dump()
         offer_data.pop('stocks')
@@ -117,17 +122,50 @@ async def change_offer_with_stock(session: AsyncSession, data: list[OfferWithSto
         await session.execute(stmp)
 
         for stock in offer_with_stock.stocks:
-            db_stock: OfferStockOut = await get_offer_stock_by_id(session, stock.id)
+            in_box_expr = case(
+                (stock.is_deliver_in_boxes, stock.in_box),
+                else_=1
+            )
 
-            in_box = stock.in_box if stock.is_deliver_in_boxes else 1
-            for_delivery = count_delivery_items(db_stock.current_stock, in_box, stock.min_stock)
+            for_delivery_expr = case(
+                (stock.min_stock > OfferStock.current_stock,
+                 func.ceil(
+                     (stock.min_stock - OfferStock.current_stock) /
+                     func.nullif(in_box_expr, 0)
+                 ) * in_box_expr),
+                else_=0
+            )
 
-            stock_data = stock.model_dump()
-            stmp = update(OfferStock).where(OfferStock.id == stock_data['id']).values(for_delivery=for_delivery,
-                                                                                      **stock_data)
+            stmp = update(OfferStock).where(OfferStock.id == stock.id).values(
+                in_box=stock.in_box,
+                min_stock=stock.min_stock,
+                for_delivery=for_delivery_expr,
+                is_deliver_in_boxes=stock.is_deliver_in_boxes,
+            )
             await session.execute(stmp)
 
     await session.commit()
+
+
+async def recalculate_stocks_for_delivery(session: AsyncSession) -> None:
+    in_box_expr = case(
+        (OfferStock.is_deliver_in_boxes, OfferStock.in_box),
+        else_=1
+    )
+
+    for_delivery_expr = case(
+        (OfferStock.min_stock > OfferStock.current_stock,
+         func.ceil(
+             (OfferStock.min_stock - OfferStock.current_stock) /
+             func.nullif(in_box_expr, 0)
+         ) * in_box_expr),
+        else_=0
+    )
+
+    stmp = update(OfferStock).values(
+        for_delivery=for_delivery_expr,
+    )
+    await session.execute(stmp)
 
 
 async def update_or_create_warehouse(session: AsyncSession, data: WarehouseCreate) -> (WarehouseOut, bool):
