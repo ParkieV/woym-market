@@ -10,6 +10,7 @@ export const BASE_GRID_OPTIONS: GridOptions = {
     enableRangeSelection: true,
     enableRangeHandle: true,
     suppressRowClickSelection: true,
+    animateRows: false,
 
     getContextMenuItems: () =>
         get(userCanModify) ? ["cut", "copy", "paste", "resetColumns"] : ["copy", "resetColumns"],
