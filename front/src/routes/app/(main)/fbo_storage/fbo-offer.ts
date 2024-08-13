@@ -27,12 +27,13 @@ export default function fboOffersGrid(
 
     function getContextMenuItems(): ReturnType<GetContextMenuItems<FboStocks>> {
         if (!get(userCanModify)) {
-            return ["copy"];
+            return ["copy", "resetColumns"];
         } else {
             return [
                 "cut",
                 "copy",
                 "paste",
+                "resetColumns",
                 "separator",
                 ...selectedContextMenuItems(changes, innerChanges)
             ];

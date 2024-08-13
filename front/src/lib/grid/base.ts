@@ -11,10 +11,12 @@ export const BASE_GRID_OPTIONS: GridOptions = {
     enableRangeHandle: true,
     suppressRowClickSelection: true,
 
-    getContextMenuItems: () => (get(userCanModify) ? ["cut", "copy", "paste"] : ["copy"]),
+    getContextMenuItems: () =>
+        get(userCanModify) ? ["cut", "copy", "paste", "resetColumns"] : ["copy", "resetColumns"],
     localeText: {
         cut: "Вырезать",
         copy: "Копировать",
-        paste: "Вставить"
+        paste: "Вставить",
+        resetColumns: "Сбросить колонки"
     }
 };
