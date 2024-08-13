@@ -1,4 +1,4 @@
-import type { FboStorage } from "$lib/data/fbo_storage";
+import type { FboStocks } from "$lib/data/fbo_storage";
 import { GridDefinition } from "$lib/datagrid";
 import type { Column, ColumnGroup } from "$lib/datagrid/columns";
 import {
@@ -11,7 +11,7 @@ import {
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import type { GridOptions } from "ag-grid-enterprise";
 
-export default function fboWarehouseGrid(): GridDefinition<FboStorage> {
+export default function fboStocks(): GridDefinition<FboStocks> {
     const options: GridOptions = {
         ...BASE_GRID_OPTIONS,
         rowHeight: 30,
@@ -96,7 +96,7 @@ export function calcToDeliver({
     current_stock,
     is_deliver_in_boxes,
     in_box
-}: FboStorage): number {
+}: FboStocks): number {
     let diff = Math.max(0, min_stock - current_stock);
     if (is_deliver_in_boxes) {
         let boxes_remainder = 0;

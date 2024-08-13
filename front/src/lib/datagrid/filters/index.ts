@@ -1,1 +1,0 @@
-export type Filter<T> = (data: T) => boolean;

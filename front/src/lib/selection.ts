@@ -1,5 +1,4 @@
 import { derived, writable, type Readable, type Writable } from "svelte/store";
-import type { Filter } from "./datagrid/filters";
 
 export class Selection<T, K> {
     constructor(filter: Readable<Filter<T>>) {
@@ -18,3 +17,5 @@ export class Selection<T, K> {
         this.selected.set(new Map());
     }
 }
+
+type Filter<T> = (val: T) => boolean;

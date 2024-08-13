@@ -2,7 +2,7 @@ import { fetchPlain } from "$lib/fetch";
 import { showFetchModals } from "$lib/modal";
 import { downloadFile } from "$lib/util";
 import { get } from "svelte/store";
-import { fboOffersSelection, fboStorageSelection } from "../../routes/app/(main)/state";
+import { fboStorageSelection, fboStocksSelection } from "../../routes/app/(main)/state";
 
 export abstract class Export {
     public async export(): Promise<{ ok: boolean }> {
@@ -103,8 +103,8 @@ export class SupplyExport extends Export {
     protected get body(): string {
         let data: Record<string, string | number | number[] | null> = {
             place_id: this.place_id,
-            offers_id: Array.from(get(fboOffersSelection.filtered)).map(x => x[1].id),
-            warehouses_id: Array.from(get(fboStorageSelection.filtered)).map(x => x[1].warehouse.id)
+            offers_id: Array.from(get(fboStorageSelection.filtered)).map(x => x[1].id),
+            warehouses_id: Array.from(get(fboStocksSelection.filtered)).map(x => x[1].warehouse.id)
         };
         if (this.name_of_shop) data.name_of_shop = this.name_of_shop;
         if (this.market) data.market = this.market;

@@ -1,19 +1,7 @@
-<script lang="ts" generics="T">
-    import type { Filter } from ".";
-    import type { FilterGroup } from "./FilterGroup.svelte";
-    import type { Writable } from "svelte/store";
-    import { getContext } from "svelte";
-
+<script lang="ts">
     export let value: boolean | null = null;
     export let image: string;
     export let alt: string = "";
-    export let filter: Filter<T>;
-
-    let filterGroup = getContext<Writable<FilterGroup<T>>>("filter");
-    $: filterGroup.update(group => {
-        group.set(filter, { apply: value !== null, invert: value === false });
-        return group;
-    });
 
     function next() {
         if (value === null) value = true;
