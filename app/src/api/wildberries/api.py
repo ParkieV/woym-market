@@ -71,10 +71,29 @@ class WildberriesAPI(BaseAPI):
             )
         return result
 
+    def _check_price_update_result(self, task_id: int):
+        if not task_id:
+            logger.warning('Price task_id no gotten')
+            return
+
+        url = 'https://discounts-prices-api.wildberries.ru/api/v2/history/tasks'
+        response = self.session.get(url, headers=self.auth_headers, params={'uploadID': task_id})
+
+        if not response.ok:
+            logger.error(f'Cant check price update result: {response.text}')
+
+        response_json = response.json()
+
+        if response_json.get('error', None):
+            logger.error(f'Cant check price update result: {response_json.get("errorText", "unknown error")}')
+
+        task_result_info = response_json.get('result', {})
+
+        logger.info(f'Task price upload ID({task_result_info.get("uploadID", "unknown")}) with status: {task_result_info.get("status", "unknown")} checked. \nAll goods: {task_result_info.get("overAllGoodsNumber", "unknown")}, without errors: {task_result_info.get("successGoodsNumber", "unknown")}')
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/upload/task'
-        valid_price_data = [price_data for price_data in data if price_data.is_valid_target_price()]
+        valid_price_data = [price_data for price_data in data if price_data.is_valid_target_price() and price_data.is_valid_vendor_code()]
 
         chunk_size = 1000
 
@@ -84,16 +103,26 @@ class WildberriesAPI(BaseAPI):
                     {
                         "nmID": price_data.vendor_code,
                         "price": price_data.target_price,
-                        "discount": 0
                     }
                     for price_data in valid_price_data[i:i + chunk_size]
                 ]
             }
-            # response = self.session.post(url, json=body, headers=self.auth_headers)
-            #
-            # if not response.ok:
-            #     #TODO
-            #     raise
+            response = self.session.post(url, json=body, headers=self.auth_headers)
+
+            if not response.ok:
+                logger.error(response.text)
+
+            response_json = response.json()
+
+            if not response_json.get('error', None):
+                logger.error(response_json['errorText'])
+                continue
+
+            if response_json.get('data', None):
+                self._check_price_update_result(response_json['data'].get('id', None))
+
+        logger.info(f'{self.shop_name}(wildberries) prices updated')
+
 
     def _get_offers_base_info(self):
         url = 'https://content-api.wildberries.ru/content/v2/get/cards/list?locale=ru'
