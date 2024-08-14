@@ -306,7 +306,7 @@ async def export_yandex_supply(data: pd.DataFrame, dir_path: Path):
             'barcodes': 'Штрихкоды'
         }, axis='columns', inplace=True)
         df['НДС'] = 'VAT_20'
-        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
+        file_path = dir_path / f'Склад {warehouse_name.replace("/", "|")}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
         df.to_excel(file_path, index=False, header=True, sheet_name='Поставка', startrow=1)
 
         wb = openpyxl.load_workbook(file_path)
@@ -328,7 +328,27 @@ async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
             'for_delivery': 'количество'
         }, axis='columns', inplace=True)
 
-        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
+        file_path = dir_path / f'Склад {warehouse_name.replace("/", "|")}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
+        df.to_excel(file_path, index=False)
+
+
+async def export_wildberries_supply(data: pd.DataFrame, dir_path: Path):
+    warehouses = set(data['warehouse_name'].values.tolist())
+
+    for warehouse_name in warehouses:
+        df = data[data['warehouse_name'] == warehouse_name]
+        df = df[['barcodes', 'for_delivery', 'sku']]
+
+        df['barcodes'] = df['barcodes'].apply(lambda x: x.split(', ')[0] if x else np.nan)
+        df.dropna(axis='rows', inplace=True)
+
+        df.rename({
+            'sku': 'Артикул поставщика',
+            'for_delivery': 'Количество, шт.',
+            'barcodes': 'Баркод'
+        }, axis='columns', inplace=True)
+
+        file_path = dir_path / f'Склад {warehouse_name.replace("/", "|")}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
         df.to_excel(file_path, index=False)
 
 
