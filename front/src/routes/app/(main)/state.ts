@@ -5,7 +5,7 @@ import { ChangeList } from "$lib/datagrid/plugins/changes";
 import Filter from "$lib/filter";
 import { Selection } from "$lib/selection";
 import { GridState } from "$lib/state";
-import { getOffersFilter } from "./(offers)/Toolbar.svelte";
+import { getOffersFilter } from "./offers/Toolbar.svelte";
 import { getFboStorageFilter, getFboStocksFilter } from "./fbo_storage/Toolbar.svelte";
 import { getOwnStorageFilter } from "./own_storage/Toolbar.svelte";
 
