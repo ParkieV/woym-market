@@ -144,9 +144,15 @@ class YandexMarketAPI(BaseAPI):
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 500
 
+        valid_price_data = [i for i in data if i.is_valid_target_price()]
+
+        if not valid_price_data:
+            logger.warning(f'{self._shop_name}(yandex) has no valid price data')
+            return
+
         business_id = self._get_business_id_by_campaign_id(self._entity_id)
 
-        for i in range(0, len(data), chunk_size):
+        for i in range(0, len(valid_price_data), chunk_size):
             post_data = [
                 {
                     'offerId': price_data.sku,
@@ -155,10 +161,7 @@ class YandexMarketAPI(BaseAPI):
                         'currencyId': "RUR"
                     }
                 }
-                for price_data in data[i:i + chunk_size] if price_data.is_valid_target_price()]
-
-            if not post_data:
-                continue
+                for price_data in valid_price_data[i:i + chunk_size]]
 
             body = {
                 'offers': post_data
@@ -173,7 +176,7 @@ class YandexMarketAPI(BaseAPI):
 
         self._set_cofinance_offers_price(data)
 
-        logger.info(f'{self._shop_name}(yandex) prices updated')
+        logger.info(f'{self._shop_name}(yandex) prices updated: {len(valid_price_data)} of {len(data)}')
 
     async def _get_market_prices_report(self, business_id: int) -> dict[str, dict[str, Any]]:
         response = self.session.post('https://api.partner.market.yandex.ru/reports/prices/generate',

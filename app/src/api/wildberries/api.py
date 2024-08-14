@@ -95,6 +95,10 @@ class WildberriesAPI(BaseAPI):
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/upload/task'
         valid_price_data = [price_data for price_data in data if price_data.is_valid_target_price() and price_data.is_valid_vendor_code()]
 
+        if not valid_price_data:
+            logger.warning(f'{self.shop_name}(wildberries) has no valid price data')
+            return
+
         chunk_size = 1000
 
         for i in range(0, len(valid_price_data), chunk_size):
@@ -121,7 +125,7 @@ class WildberriesAPI(BaseAPI):
             if response_json.get('data', None):
                 self._check_price_update_result(response_json['data'].get('id', None))
 
-        logger.info(f'{self.shop_name}(wildberries) prices updated')
+        logger.info(f'{self.shop_name}(wildberries) prices updated: {len(valid_price_data)} of {len(data)}')
 
 
     def _get_offers_base_info(self):

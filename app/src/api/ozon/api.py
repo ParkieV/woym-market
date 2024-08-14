@@ -91,10 +91,13 @@ class OzonAPI(BaseAPI):
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 1000
 
-        if not len(data):
+        valid_price_data = [i for i in data if i.is_valid_min_price() and i.is_valid_target_price()]
+
+        if not valid_price_data:
+            logger.warning(f'{self.shop_name}(ozon) has no valid price data')
             return
 
-        for i in range(0, len(data), chunk_size):
+        for i in range(0, len(valid_price_data), chunk_size):
             post_data = [
                 {
                     'offer_id': price.sku,
@@ -104,7 +107,7 @@ class OzonAPI(BaseAPI):
                     'price_strategy_enabled': 'UNKNOWN',
                     'min_price': str(price.min_price)
                 }
-                for price in data[i:i + chunk_size] if price.is_valid_min_price() and price.is_valid_target_price()
+                for price in valid_price_data[i:i + chunk_size]
             ]
             body = {
                 'prices': post_data
