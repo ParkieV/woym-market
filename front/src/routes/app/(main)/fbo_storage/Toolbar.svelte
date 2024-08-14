@@ -36,6 +36,7 @@
     import { derived, get } from "svelte/store";
     import type { FboStocks, FboStorage } from "$lib/data/fbo_storage";
     import createSearchFilter from "$lib/filter/search";
+    import FilterButton from "$lib/filter/FilterButton.svelte";
 </script>
 
 <menu>
@@ -55,6 +56,11 @@
         bind:value={$filterState.showHidden}
         image={"/eye-slash.svg"}
         alt="Отображать скрытые"
+    />
+    <FilterButton
+        on:click={() => filterState.reset()}
+        image={"/resetFilter.svg"}
+        alt="Сбросить фильтры"
     />
 </menu>
 
