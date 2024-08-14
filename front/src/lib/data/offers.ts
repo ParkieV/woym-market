@@ -74,6 +74,8 @@ export type Offer = OfferBase & {
     use_manual_min_price: boolean;
 
     supplier_available: boolean;
+    stop_price: number | null;
+    your_promotion_price: number | null;
 };
 
 export async function fetchOfferList(): Promise<Offer[]> {

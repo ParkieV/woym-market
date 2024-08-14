@@ -1,6 +1,7 @@
 import type { Market } from "$lib/data/markets";
 import { writable, type Writable } from "svelte/store";
 import type { ShopOption } from "./ShopsFilter.svelte";
+import type { MultiFilterEntry } from "./MultiFilter.svelte";
 
 export default class Filter {
     constructor() {
@@ -37,7 +38,20 @@ export default class Filter {
             })),
             showHidden: false,
             supplierAvailable: null,
-            hideUnmarkedWarehouses: false
+            hideUnmarkedWarehouses: false,
+            attentionMarks: {
+                targetPrice: {
+                    name: "Целевая цена",
+                    tooltip: "«Текущая цена» не равна «Целевая цена» (жёлтый)",
+                    enabled: false
+                },
+                stopPrice: {
+                    name: "Стоп цена",
+                    tooltip:
+                        "«Ваша цена по акции» / «Целевая цена» / «Текущая цена» ниже «Стоп цена» (красный)",
+                    enabled: false
+                }
+            }
         };
     }
 }
@@ -48,4 +62,10 @@ type FilterState = {
     showHidden: boolean;
     supplierAvailable: boolean | null;
     hideUnmarkedWarehouses: boolean;
+    attentionMarks: AttentionMarks;
+};
+
+type AttentionMarks = {
+    targetPrice: MultiFilterEntry;
+    stopPrice: MultiFilterEntry;
 };
