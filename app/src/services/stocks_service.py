@@ -315,7 +315,6 @@ async def export_yandex_supply(data: pd.DataFrame, dir_path: Path):
         ws.cell(1, 1, value='Данные для поставки')
         wb.save(file_path)
 
-
 async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
     warehouses = set(data['warehouse_name'].values.tolist())
 
@@ -328,7 +327,7 @@ async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
             'for_delivery': 'количество'
         }, axis='columns', inplace=True)
 
-        file_path = dir_path / f'Склад {warehouse_name.replace("/", "|")}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
+        file_path = dir_path / f'Склад {warehouse_name.replace("/", "-")}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
         df.to_excel(file_path, index=False)
 
 
@@ -348,7 +347,7 @@ async def export_wildberries_supply(data: pd.DataFrame, dir_path: Path):
             'barcodes': 'Баркод'
         }, axis='columns', inplace=True)
 
-        file_path = dir_path / f'Склад {warehouse_name.replace("/", "|")}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
+        file_path = dir_path / f'Склад {warehouse_name.replace("/", "-")}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
         df.to_excel(file_path, index=False)
 
 
@@ -368,7 +367,7 @@ async def export_wildberries_supply(data: pd.DataFrame, dir_path: Path):
             'barcodes': 'Баркод'
         }, axis='columns', inplace=True)
 
-        file_path = dir_path / f'Склад {warehouse_name}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
+        file_path = dir_path / f'Склад {warehouse_name.replace("/", "-")}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
         df.to_excel(file_path, index=False)
 
 
