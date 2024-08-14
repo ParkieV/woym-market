@@ -5,8 +5,8 @@
     import marketLogo from "$lib/components/market_logo";
     import MarketSettings from "./Market.svelte";
     import { page } from "$app/stores";
-    import { afterNavigate, invalidate, invalidateAll } from "$app/navigation";
-    import { invalidateAllState } from "../../(main)/state";
+    import { afterNavigate, invalidateAll } from "$app/navigation";
+    import { invalidateAllState } from "../../../(main)/state";
 
     export let data: PageServerData;
 
@@ -38,15 +38,15 @@
         <h1>Магазины</h1>
         <ul>
             {#each data.markets as market}
-                {#if market.name !== $page.params.name}
-                    <a href={`/app/markets/${market.name}`}>
+                {#if !(market.name === $page.data.market?.name && market.type === data.market?.type)}
+                    <a href={`/app/markets/${market.type}/${market.name}`}>
                         <li class:selected={market.name === $page.params.name}>
                             <h2>{market.name}</h2>
                             <img src={marketLogo(market)} alt={market.type} title={market.type} />
                         </li>
                     </a>
                 {:else}
-                    <li class:selected={market.name === $page.params.name}>
+                    <li class="selected">
                         <h2>{market.name}</h2>
                         <img src={marketLogo(market)} alt={market.type} title={market.type} />
                     </li>
