@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Any
 
 from fastapi import HTTPException
 from requests import Session
@@ -30,11 +31,13 @@ class WildberriesAPI(BaseAPI):
         response = self.session.get(url, headers=headers)
 
         if not response.ok:
-            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f'Ошибка проверки данных авторизации сервиса {self.shop_name}(wildberries)')
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                                f'Ошибка проверки данных авторизации сервиса {self.shop_name}(wildberries)')
 
         data = response.json()
         if not data['Ok']:
-            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f'Ошибка проверки данных(токена) авторизации сервиса {self.shop_name}(wildberries)')
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                                f'Ошибка проверки данных(токена) авторизации сервиса {self.shop_name}(wildberries)')
 
     async def get_offers_list(self) -> list[APIOffer]:
         offers = self._get_offers_base_info()
@@ -71,7 +74,7 @@ class WildberriesAPI(BaseAPI):
             )
         return result
 
-    def _check_price_update_result(self, task_id: int):
+    def _check_price_update_result(self, task_id: int) -> None:
         if not task_id:
             logger.warning('Price task_id no gotten')
             return
@@ -89,11 +92,13 @@ class WildberriesAPI(BaseAPI):
 
         task_result_info = response_json.get('result', {})
 
-        logger.info(f'Task price upload ID({task_result_info.get("uploadID", "unknown")}) with status: {task_result_info.get("status", "unknown")} checked. \nAll goods: {task_result_info.get("overAllGoodsNumber", "unknown")}, without errors: {task_result_info.get("successGoodsNumber", "unknown")}')
+        logger.info(
+            f'Task price upload ID({task_result_info.get("uploadID", "unknown")}) with status: {task_result_info.get("status", "unknown")} checked. \nAll goods: {task_result_info.get("overAllGoodsNumber", "unknown")}, without errors: {task_result_info.get("successGoodsNumber", "unknown")}')
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/upload/task'
-        valid_price_data = [price_data for price_data in data if price_data.is_valid_target_price() and price_data.is_valid_vendor_code()]
+        valid_price_data = [price_data for price_data in data if
+                            price_data.is_valid_target_price() and price_data.is_valid_vendor_code()]
 
         if not valid_price_data:
             logger.warning(f'{self.shop_name}(wildberries) has no valid price data')
@@ -114,7 +119,8 @@ class WildberriesAPI(BaseAPI):
             response = self.session.post(url, json=body, headers=self.auth_headers)
 
             if not response.ok:
-                logger.error(response.text)
+                logger.error(logger.error(f'Cant change price: {response.text}'))
+                return
 
             response_json = response.json()
 
@@ -127,8 +133,7 @@ class WildberriesAPI(BaseAPI):
 
         logger.info(f'{self.shop_name}(wildberries) prices updated: {len(valid_price_data)} of {len(data)}')
 
-
-    def _get_offers_base_info(self):
+    def _get_offers_base_info(self) -> list[dict]:
         url = 'https://content-api.wildberries.ru/content/v2/get/cards/list?locale=ru'
 
         limit = 100
@@ -155,8 +160,8 @@ class WildberriesAPI(BaseAPI):
             response = self.session.post(url, json=body, headers=self.auth_headers)
 
             if not response.ok:
-                # TODO
-                break
+                logger.error(f'Cant get offers base info: {response.text}')
+                return result
 
             response_data = response.json()
 
@@ -164,7 +169,8 @@ class WildberriesAPI(BaseAPI):
             cursor_data = response_data['cursor']
 
             for item in cards_data:
-                yandex_weight = [i for i in item.get('characteristics', []) if i.get('id', None) == self.__characteristic_ids['yandex_weight']]
+                yandex_weight = [i for i in item.get('characteristics', []) if
+                                 i.get('id', None) == self.__characteristic_ids['yandex_weight']]
                 yandex_weight = yandex_weight[0].get('value', None) if yandex_weight else None
 
                 offer = {
@@ -194,7 +200,7 @@ class WildberriesAPI(BaseAPI):
 
         return result
 
-    def _get_offers_prices(self):
+    def _get_offers_prices(self) -> dict[str, Any]:
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter'
 
         limit = 1000
@@ -205,13 +211,14 @@ class WildberriesAPI(BaseAPI):
             response = self.session.get(url, params={'limit': limit, 'offset': offset}, headers=self.auth_headers)
 
             if not response.ok:
-                # TODO
+                logger.error(f'Cant get price info: {response.text}')
                 break
 
             response_data = response.json()
             data = response_data['data']['listGoods']
 
             if not data:
+                logger.error(f'Cant get price info: {response.text}')
                 break
 
             for item in data:
@@ -243,8 +250,8 @@ class WildberriesAPI(BaseAPI):
         response = self.session.get(url, headers=self.auth_headers)
 
         if not response.ok:
-            # TODO
-            return
+            logger.error(f'Cant get warehouses: {response.text}')
+            return []
 
         response_data = response.json()
 
@@ -258,17 +265,18 @@ class WildberriesAPI(BaseAPI):
 
         return result
 
-    def _get_stocks_on_warehouse(self, warehouse_id: int,  data: dict['barcode', 'sku']) -> list[APIWarehouseOffer]:
+    def _get_stocks_on_warehouse(self, warehouse_id: int, data: dict['barcode', 'sku']) -> list[APIWarehouseOffer]:
         url = f'https://marketplace-api.wildberries.ru/api/v3/stocks/{warehouse_id}'
+        result = []
+
         body = {
             'skus': list(data.keys())
         }
         response = self.session.post(url, headers=self.auth_headers, json=body)
 
         if not response.ok:
-            # TODO
-            raise
-        result = []
+            logger.error(f'Cant get stocks on warehouse id({warehouse_id}): {response.text}')
+            return result
 
         json_data = response.json()
 
@@ -283,14 +291,14 @@ class WildberriesAPI(BaseAPI):
             ))
         return result
 
-
-    def _get_stocks(self):
+    def _get_stocks(self) -> defaultdict[str, dict[str, Any]]:
         date_from = '2000-06-20'
         url = f'https://statistics-api.wildberries.ru/api/v1/supplier/stocks?dateFrom={date_from}'
 
         response = self.session.get(url, headers=self.auth_headers)
         if not response.ok:
-            raise
+            logger.error(f'Cant get stocks: {response.text}')
+            return []
 
         response_json = response.json()
         result = defaultdict(list)
@@ -302,9 +310,8 @@ class WildberriesAPI(BaseAPI):
             result[item['warehouseName']].append(
                 {
                     'sku': item['supplierArticle'],
-                    'current_stock': item['quantity'], # может быть 'quantityFull'
+                    'current_stock': item['quantity'],  # может быть 'quantityFull'
                 }
             )
 
         return result
-
