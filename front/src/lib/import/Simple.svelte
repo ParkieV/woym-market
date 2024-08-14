@@ -1,16 +1,16 @@
 <script lang="ts">
-    import { getStoreNames, getStoreTypes } from "$lib/data/markets";
+    import { getStores, getStoreTypes, type Market } from "$lib/data/markets";
     import { onMount } from "svelte";
     import type { SimpleImport } from ".";
 
     export let data: SimpleImport;
 
     let markets: Promise<string[]> = Promise.resolve([]);
-    let shops: Promise<string[]> = Promise.resolve([]);
+    let shops: Promise<Market[]> = Promise.resolve([]);
 
     onMount(() => {
         markets = getStoreTypes();
-        shops = getStoreNames();
+        shops = getStores();
     });
 </script>
 
@@ -31,7 +31,7 @@
         <option value={null}>Все</option>
         {#await shops then shops}
             {#each shops as shop}
-                <option value={shop}>{shop}</option>
+                <option value={shop.name}>{shop.name} ({shop.type})</option>
             {/each}
         {/await}
     </select>
