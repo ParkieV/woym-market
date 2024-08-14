@@ -1,7 +1,7 @@
-from fastapi import APIRouter, status, Depends
-from src.schemas.user_schemas import *
-from src.services.user_service import *
+from fastapi import APIRouter, Depends
+
 from src.dependencies.users import get_current_user
+from src.schemas.user_schemas import *
 
 user_router = APIRouter(
     tags=['User'],

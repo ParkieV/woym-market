@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import (
     Column,
     ForeignKey,
@@ -7,13 +9,12 @@ from sqlalchemy import (
     TIMESTAMP,
     Float,
     DateTime,
-    Enum, select, func
+    select, func
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
-from datetime import datetime
+
 from .base import Base
-from src.api.factory import APITypes
 from ...schemas.base_api_schemas import WarehouseType
 
 

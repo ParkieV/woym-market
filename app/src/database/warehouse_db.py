@@ -1,25 +1,26 @@
+from collections import defaultdict
 from datetime import datetime
-
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_, func, text, bindparam, literal_column, Select, insert, cast, \
-    String, case
-from sqlalchemy.orm import selectinload, subqueryload, Load, joinedload, load_only, contains_eager
-from src.database.utils import _update_or_create_object, _get_or_create
-from src.schemas.base_api_schemas import WarehouseType
-from src.schemas.stocks.own_storages_schemas import OwnStorageAggOfferOut, OwnStorageOfferStockOut, OwnStorageOut, \
-    OwnStorageCreate, OwnStorageStockOut, OwnStorageUpdate, OwnStoragePlaceCreate, OwnStoragePlaceOut, \
-    OwnStoragePlaceUpdate
-from src.schemas.stocks.stocks_schemas import SupplyData, GeneralOrderData
-from src.schemas.stocks.fbo_schemas import OfferStockUpdate, OfferStockCreate, OfferStockOut, \
-    OfferStockWithWarehouseOut, OfferWithStocks, OfferWithStocksUpdate
-from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
-from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market
-from pydantic import BaseModel
-from src.database.models.models import Offer
 from typing import Type, TypeVar, Any
+
 from fastapi import status
 from fastapi.exceptions import HTTPException
-from collections import defaultdict
+from pydantic import BaseModel
+from sqlalchemy import select, update, and_, func, text, literal_column, insert, cast, \
+    String, case
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload, subqueryload
+
+from src.database.models.models import Offer
+from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market
+from src.database.utils import _update_or_create_object, _get_or_create
+from src.schemas.base_api_schemas import WarehouseType
+from src.schemas.stocks.fbo_schemas import OfferStockCreate, OfferStockOut, \
+    OfferStockWithWarehouseOut, OfferWithStocks, OfferWithStocksUpdate
+from src.schemas.stocks.own_storages_schemas import OwnStorageAggOfferOut, OwnStorageOfferStockOut, OwnStorageOut, \
+    OwnStorageStockOut, OwnStorageUpdate, OwnStoragePlaceCreate, OwnStoragePlaceOut, \
+    OwnStoragePlaceUpdate
+from src.schemas.stocks.stocks_schemas import SupplyData, GeneralOrderData
+from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 
 ModelSchema = TypeVar('ModelSchema', bound=Type[BaseModel])
 

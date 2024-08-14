@@ -1,10 +1,9 @@
-from sqlalchemy import delete, func, or_, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
-from src.schemas import user_schemas as schema
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from .db import async_session
-from .utils import row_list_to_dict_list, row_to_dict
-from .models.models import Users, Settings
+from .models.models import Users
 
 
 async def reg_user(login: str, password: str, is_staff: bool) -> Users | None:

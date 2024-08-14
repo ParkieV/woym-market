@@ -1,13 +1,14 @@
-from fastapi import APIRouter, File, Depends, UploadFile, status, Body
-from fastapi.responses import FileResponse
 from pathlib import PurePath, Path
+
+from fastapi import APIRouter, File, Depends, UploadFile, Body
+from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
-from src.dependencies.users import get_current_user, require_staff
+
+from src.dependencies.users import require_staff
 from src.schemas.offer_schemas import (
     OfferOut,
     OfferChange,
     ImportType,
-    ExportType,
     Market,
     PricingSchemeOut,
     PricingSchemeCreate,

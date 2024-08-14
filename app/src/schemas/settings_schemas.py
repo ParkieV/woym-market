@@ -1,6 +1,7 @@
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel, json, Json
+
+from pydantic import BaseModel
 
 from src.api.factory import APITypes
 

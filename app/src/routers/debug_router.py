@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, BackgroundTasks
 from src.schemas.offer_schemas import OfferDelete
 from src.services import offer_service, settings_service
-from src.dependencies.users import get_current_user, require_staff
-from src.schemas.settings_schemas import MarketCreate, MarketFullUpdate
+from src.dependencies.users import require_staff
+from src.schemas.settings_schemas import MarketFullUpdate
 
 debug_router = APIRouter(
     prefix='/debug',

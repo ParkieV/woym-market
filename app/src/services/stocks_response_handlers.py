@@ -1,5 +1,5 @@
-from typing import TypeVar, Callable
 from collections import defaultdict
+from typing import Callable
 
 StocksResponseHandler = Callable[[list[dict]], defaultdict]
 

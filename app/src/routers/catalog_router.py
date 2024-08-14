@@ -4,7 +4,7 @@ from fastapi import APIRouter, UploadFile, File
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
-from src.schemas.catalog_schemas import SynchronizationOffer, CatalogItem, CatalogItemUpdate
+from src.schemas.catalog_schemas import CatalogItem, CatalogItemUpdate
 from src.services import catalog_service as service
 from src.services.base_utils import clean_up_files
 

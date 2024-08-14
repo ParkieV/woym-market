@@ -1,8 +1,9 @@
 from fastapi import Depends, APIRouter
-from src.services import settings_service as service
-from src.schemas.settings_schemas import LogsOut, SettingsOut, SettingsUpdate, TableInfoOut, TableInfoUpdate, Tables, \
-    MarketOut, MarketCreate, MarketUpdate, TableInfoCreate
+
 from src.dependencies.users import get_current_user, require_staff
+from src.schemas.settings_schemas import LogsOut, SettingsOut, SettingsUpdate, TableInfoOut, TableInfoUpdate, MarketOut, \
+    MarketCreate, MarketUpdate, TableInfoCreate
+from src.services import settings_service as service
 
 settings_router = APIRouter(
     prefix='/settings',

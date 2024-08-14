@@ -6,7 +6,6 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.catalog_db import sync_catalog_items_with_offers
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.confing import config
 from logs import get_logger
@@ -54,7 +53,7 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
 
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=True)
-        await sync_catalog_items_with_offers(session)
+        # await sync_catalog_items_with_offers(session)
         await recalculate_values(session, settings, which=changes[mapping_fields])
         return await db.get_offers_by(session, changes[mapping_fields])
 
@@ -138,8 +137,8 @@ async def update_offers(user_id: int):
         await db.delete_offers(session, to_delete_df)
         logger.info(f'Offers deleted: {len(to_delete_df)}')
 
-        await sync_catalog_items_with_offers(session)
-        logger.info('Offers synchronized with catalog')
+        # await sync_catalog_items_with_offers(session)
+        # logger.info('Offers synchronized with catalog')
 
         await recalculate_values(session, settings)
         logger.info('Offers recalculated')

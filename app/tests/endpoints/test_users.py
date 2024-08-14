@@ -1,7 +1,6 @@
 import pytest
 from httpx import AsyncClient
 from starlette import status
-from contextlib import nullcontext as does_not_raise
 
 
 @pytest.mark.first

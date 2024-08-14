@@ -4,10 +4,9 @@ from fastapi import APIRouter, Depends, Body, UploadFile, File
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
-from src.services import stocks_service as service
 from src.dependencies.users import get_current_user, require_staff
-from src.schemas.stocks.fbo_schemas import OfferWithStocks, OfferWithStocksUpdate, OfferStockOut, \
-    OfferStockWithWarehouseOut, FboOfferOut
+from src.schemas.stocks.fbo_schemas import OfferWithStocks, OfferWithStocksUpdate, OfferStockWithWarehouseOut
+from src.services import stocks_service as service
 from src.services.base_utils import clean_up_files
 
 router = APIRouter(
