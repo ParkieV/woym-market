@@ -1,7 +1,7 @@
 <script lang="ts">
     import Window from "../components/windows/Window.svelte";
     import { onMount } from "svelte";
-    import { getStoreNames, getStoreTypes } from "$lib/data/markets";
+    import { getStores, getStoreTypes, type Market } from "$lib/data/markets";
     import { OwnStorageExport, SimpleExport, SupplyExport, ViolatorsExport } from ".";
     import { page } from "$app/stores";
     import { getStoragePlaces, type StoragePlace } from "$lib/data/own_storage/places";
@@ -16,13 +16,13 @@
         open = false;
     };
 
-    let name_of_shop_options: string[] = [];
+    let stores: Market[];
     let market_options: string[] = [];
     let storages: StoragePlace[] = [];
 
     onMount(async () => {
-        [name_of_shop_options, market_options, storages] = await Promise.all([
-            getStoreNames(),
+        [stores, market_options, storages] = await Promise.all([
+            getStores(),
             getStoreTypes(),
             getStoragePlaces()
         ]);
@@ -60,8 +60,8 @@
                     <span>Магазин</span>
                     <select bind:value={data.name_of_shop}>
                         <option value={null}>Все</option>
-                        {#each name_of_shop_options as option}
-                            <option value={option}>{option}</option>
+                        {#each stores as store}
+                            <option value={store.name}>{store.name} ({store.type})</option>
                         {/each}
                     </select>
                 </label>
