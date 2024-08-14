@@ -19,7 +19,7 @@
         dispatch("click");
     }}
     class:collapsed={$collapsed}
-    class:current={$page.url.pathname == path}
+    class:current={path ? $page.url.pathname.startsWith(path) : false}
     title={$collapsed ? text : undefined}
 >
     <img src={icon} alt="" />
