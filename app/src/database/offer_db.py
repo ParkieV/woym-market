@@ -29,12 +29,13 @@ async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = Non
     query = select(
         Offer,
         remaining_stocks_subuery.c.remaining_stock
-    ).outerjoin(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
+    )
 
     if filters:
         query = query.filter_by(**filters)
 
-    query = query.offset(offset)
+    query = query.outerjoin(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id).offset(offset)
+
     if limit:
         query = query.limit(limit)
 
