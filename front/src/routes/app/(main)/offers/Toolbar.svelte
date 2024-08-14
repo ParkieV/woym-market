@@ -5,6 +5,7 @@
     import TernaryFilter from "$lib/filter/TernaryFilter.svelte";
     import ShopsFilter from "$lib/filter/ShopsFilter.svelte";
     import FilterButton from "$lib/filter/FilterButton.svelte";
+    import MultiFilter from "$lib/filter/MultiFilter.svelte";
 </script>
 
 <menu>
@@ -14,6 +15,11 @@
         bind:value={$filterState.supplierAvailable}
         image={"/package.svg"}
         alt="Наличие у поставщика"
+    />
+    <MultiFilter
+        bind:value={$filterState.attentionMarks}
+        image={"/eyes.svg"}
+        alt="Признаки внимания"
     />
     <BinaryFilter
         bind:value={$filterState.showHidden}
@@ -33,6 +39,5 @@
         gap: 12px;
         padding: 8px 12px;
         width: 100%;
-        overflow: hidden;
     }
 </style>
