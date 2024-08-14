@@ -9,10 +9,12 @@ from sqlalchemy.schema import (
         ForeignKeyConstraint,
     )
 
-
-# import src.params.confing as env
+from logs import get_logger
 from ..params.confing import config
 from .models.base import Base
+
+
+logger = get_logger(__name__)
 
 
 engine = create_async_engine(
@@ -21,12 +23,6 @@ engine = create_async_engine(
     echo=False,
     pool_pre_ping=True
 )
-
-# async_session = sessionmaker(
-#     engine,
-#     expire_on_commit=False,
-#     class_=AsyncSession
-# )
 
 
 async_session = async_sessionmaker(
@@ -72,6 +68,6 @@ def db_create() -> None:
         sync_engine = create_engine(sync_url)
         drop_everything(sync_engine)
         Base.metadata.create_all(sync_engine)
-        print('Database reseted')
+        logger.warning('Database reseted')
     else:
-        print('Database up-to-date')
+        logger.info('Database up-to-date')

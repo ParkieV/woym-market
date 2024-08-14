@@ -33,10 +33,6 @@ class Config(BaseSettings):
 
     @property
     def time_zone_ino(self) -> tzinfo:
-        offset = timedelta(hours=3)
-        print(datetime.now(tz=tz.tzlocal()))
-        print(datetime.now(timezone(timedelta(hours=3))))
-        print(datetime.now())
         return timezone(timedelta(hours=3))
 
 

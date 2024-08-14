@@ -3,7 +3,7 @@ from typing import Any
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import ListFlowable, Paragraph, SimpleDocTemplate
+from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.catalog_db import sync_catalog_items_with_offers
@@ -16,7 +16,7 @@ from src.database import offer_db as db
 from src.database.settings_db import get_markets
 import src.services.offer_utils as utils
 from src.schemas.base_api_schemas import APIPriceChangeData
-from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ExportType, ImportType, Market, \
+from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ImportType, Market, \
     PricingSchemeOut, PricingSchemeCreate, BaseOffer, PricingSchemeFieldCreate, PricingSchemeFieldChange, \
     PricingSchemeChange
 import pandas as pd
@@ -71,7 +71,7 @@ async def setup_offers_data(user_id: int):
         for market in await get_markets(session):
             data = await utils.build_offers_data(yandex_offers_df[((yandex_offers_df['market'] == market.type) & (yandex_offers_df['name_of_shop'] == market.name))], setup_mode=True, settings=settings, market=market)
             await db.create_offers(session, data)
-            # logger.info(f'{market.type}({market.name}) offers created: {len(data)}')
+            logger.info(f'{market.type}({market.name}) offers created: {len(data)}')
 
 
 async def update_offers(user_id: int):
@@ -163,7 +163,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
     elif isinstance(offers, list):
         data = [i.model_dump() for i in offers]
 
-    if not len(data):
+    if len(data):
         logger.info('Skip update prices due to list is empty')
         return
 
@@ -260,7 +260,7 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
         try:
             await db.update_offers(session, df, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
         except Exception as e:
-            print(e)
+            logger.error('Error while updating offers in import offers', exc_info=e)
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
 
         await recalculate_values(session, settings, df[['sku', 'name_of_shop', 'market']])
@@ -340,7 +340,7 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
         try:
             await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
         except Exception as e:
-            print(e)
+            logger.error('Error while update price in import sizes', exc_info=True)
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
 
         await recalculate_values(session, settings)

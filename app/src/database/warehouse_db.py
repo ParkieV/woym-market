@@ -646,7 +646,6 @@ async def get_fbo_offers(session: AsyncSession):
     results = []
 
     while True:
-        print(offset)
         query = (
             select(Offer)
             .options(subqueryload(Offer.stocks).selectinload(OfferStock.warehouse))
