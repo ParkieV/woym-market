@@ -5,7 +5,7 @@ import type { MenuItemDef } from "ag-grid-enterprise";
 import { openModal } from "svelte-modals";
 import { derived, get, writable } from "svelte/store";
 import SetSelectedWindow from "./SetSelectedWindow.svelte";
-import { fboStorageSelection, fboStocksSelection } from "../state";
+import { fboStorageSelection, fboStocksSelection } from "../selection";
 
 export function selectedContextMenuItems(
     changes: ChangeList<FboStorage, number>,
