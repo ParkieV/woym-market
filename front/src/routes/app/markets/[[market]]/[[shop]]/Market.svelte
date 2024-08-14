@@ -63,9 +63,9 @@
     </section>
     <section>
         <h2>Рекомендованная розничная цена (РРЦ)</h2>
-        <p>X + «ОПТ у.е.» + «ОПТ у.е.» * Y%</p>
+        <p class="formula">X (₽) + «ОПТ» (₽) + «ОПТ» (₽) * Y%</p>
         <NumberInput
-            label="X (у. е.)"
+            label="X (₽)"
             min={0}
             readonly={!$userCanModify}
             bind:value={market.first_variable_for_recommended_retail_price}
@@ -79,9 +79,9 @@
     </section>
     <section>
         <h2>Стоп-цена</h2>
-        <p>X + «ОПТ у.е.» + «ОПТ у.е.» * Y%</p>
+        <p class="formula">X (₽) + «ОПТ» (₽) + «ОПТ» (₽) * Y%</p>
         <NumberInput
-            label="X (у. е.)"
+            label="X (₽)"
             min={0}
             readonly={!$userCanModify}
             bind:value={market.first_variable_for_stop_price}
@@ -136,6 +136,11 @@
         > p {
             font-size: 18px;
             margin: 0 0 4px 0;
+            &.formula {
+                font-family: monospace;
+                font-size: 16px;
+                margin-top: -4px;
+            }
         }
     }
 </style>
