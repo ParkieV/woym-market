@@ -6,7 +6,7 @@
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import fboOffersGrid, { calcStocksToDeliver } from "./fbo-offer";
     import { userCanModify } from "$lib/data/user";
-    import Toolbar, { getFboStocksFilter, getFboStorageFilter } from "./Toolbar.svelte";
+    import Toolbar from "./Toolbar.svelte";
     import fboStocks from "./fbo-stocks";
     import { browser } from "$app/environment";
     import ChangesPlugin from "$lib/datagrid/plugins/changes";
@@ -16,10 +16,12 @@
     import DetailGridPlugin from "$lib/datagrid/plugins/detail";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
     import { SummaryPlugin } from "$lib/datagrid/plugins/summary";
-    import { fboStorageSelection, fboState, fboStocksChanges, fboStocksSelection } from "../state";
+    import { fboState, fboStocksChanges } from "../state";
     import ZoomPlugin from "$lib/datagrid/plugins/zoom";
     import { onMount } from "svelte";
     import StatePlugin from "$lib/datagrid/plugins/state";
+    import { fboStocksFilter, fboStorageFilter } from "./filter";
+    import { fboStocksSelection, fboStorageSelection } from "../selection";
 
     let selected_image: string | undefined = undefined;
 
@@ -35,12 +37,9 @@
         }
     }
 
-    let filter = getFboStorageFilter();
-    let detailFilter = getFboStocksFilter();
-
     const definition = (() => {
         const detail = fboStocks()
-            .plugin(new FilterPlugin(detailFilter))
+            .plugin(new FilterPlugin(fboStocksFilter))
             .plugin(
                 new ChangesPlugin(
                     x => x.id,
@@ -63,7 +62,7 @@
             );
 
         const master = fboOffersGrid(fboState.changes, fboStocksChanges)
-            .plugin(new FilterPlugin(filter))
+            .plugin(new FilterPlugin(fboStorageFilter))
             .plugin(new StatePlugin("fbo_storage"))
             .plugin(new ChangesPlugin(x => x.id, fboState.changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))

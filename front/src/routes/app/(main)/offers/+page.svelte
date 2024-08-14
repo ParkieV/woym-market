@@ -14,9 +14,10 @@
     import ZoomPlugin from "$lib/datagrid/plugins/zoom";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import ClassesPlugin from "$lib/datagrid/plugins/classes";
-    import Toolbar, { getOffersFilter } from "./Toolbar.svelte";
+    import Toolbar from "./Toolbar.svelte";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
     import { offersState } from "../state";
+    import offersFilter from "./filter";
 
     onMount(() => offersState.load());
 
@@ -29,12 +30,11 @@
         if (ok) await offersState.forceReload();
     }
 
-    let filter = getOffersFilter();
     onMount(async () => {
         let templates: Template[] = await fetchTemplates();
 
         definition = offerGrid(templates)
-            .plugin(new FilterPlugin(filter))
+            .plugin(new FilterPlugin(offersFilter))
             .plugin(new StatePlugin("offers"))
             .plugin(new ChangesPlugin(x => x.id, offersState.changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))

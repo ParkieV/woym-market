@@ -13,10 +13,11 @@
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
     import { userCanModify } from "$lib/data/user";
     import ClassesPlugin from "$lib/datagrid/plugins/classes";
-    import Toolbar, { getOwnStorageFilter } from "./Toolbar.svelte";
+    import Toolbar from "./Toolbar.svelte";
     import type { PageData } from "./$types";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
     import { ownStorageState } from "../state";
+    import ownStorageFilter from "./filter";
 
     export let data: PageData;
 
@@ -24,11 +25,10 @@
 
     let selected_image: string | undefined = undefined;
 
-    let filter = getOwnStorageFilter();
     onMount(async () => {
         await ownStorageState.load();
         definition = ownStorageGrid(data.markets, data.storages)
-            .plugin(new FilterPlugin(filter))
+            .plugin(new FilterPlugin(ownStorageFilter))
             .plugin(new StatePlugin("own_storage"))
             .plugin(new ChangesPlugin(x => x.offer.sku, ownStorageState.changes))
             .plugin(new ReadonlyPlugin(!$userCanModify))

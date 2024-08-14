@@ -2,7 +2,7 @@ import { fetchPlain } from "$lib/fetch";
 import { showFetchModals } from "$lib/modal";
 import { downloadFile } from "$lib/util";
 import { get } from "svelte/store";
-import { fboStorageSelection, fboStocksSelection } from "../../routes/app/(main)/state";
+import { fboStorageSelection, fboStocksSelection } from "../../routes/app/(main)/selection";
 
 export abstract class Export {
     public async export(): Promise<{ ok: boolean }> {
