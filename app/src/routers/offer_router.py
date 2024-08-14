@@ -4,7 +4,7 @@ from fastapi import APIRouter, File, Depends, UploadFile, Body
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
-from src.dependencies.users import require_staff
+from src.dependencies.users import require_staff, get_current_user
 from src.schemas.offer_schemas import (
     OfferOut,
     OfferChange,
@@ -24,7 +24,7 @@ data_router = APIRouter(
 )
 
 
-@data_router.get('/offers', response_model=list[OfferOut], tags=['Offers'])
+@data_router.get('/offers', response_model=list[OfferOut], tags=['Offers'], dependencies=[Depends(get_current_user)])
 async def get_offers(offset: int = 0, limit: int | None = None):
     return await service.get_offers(offset=offset, limit=limit)
 
@@ -34,7 +34,7 @@ async def change_offer_fields(offers_data: list[OfferChange], current_user=Depen
     return await service.change_offers(offers_data, current_user.id)
 
 
-@data_router.get('/pricing-schemes', response_model=list[PricingSchemeOut], tags=['Pricing Schemes'])
+@data_router.get('/pricing-schemes', response_model=list[PricingSchemeOut], tags=['Pricing Schemes'], dependencies=[Depends(get_current_user)])
 async def get_pricing_schemes():
     return await service.get_pricing_schemes()
 
@@ -86,20 +86,20 @@ async def setup_offers_data(current_user=Depends(require_staff)):
     return {'status': 'OK'}
 
 
-@data_router.post('/export', dependencies=[Depends(require_staff)], tags=['Export', 'Offers'])
+@data_router.post('/export', dependencies=[Depends(get_current_user)], tags=['Export', 'Offers'])
 async def export_offers(market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
     path = Path(await service.export_offers(name_of_shop, market))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 
-@data_router.post('/import', tags=['Import'])
+@data_router.post('/import', tags=['Import'], dependencies=[Depends(require_staff)])
 async def import_offers(import_type: ImportType = Body(), data: UploadFile = File(), market: Market | None = Body(None), name_of_shop: str | None = Body(None), current_user=Depends(require_staff)):
     content = await data.read()
     await service.import_data(content, market, import_type, name_of_shop, current_user.id, PurePath(data.filename).suffix)
     return {'status': 'OK'}
 
 
-@data_router.post('/violators/export', dependencies=[Depends(require_staff)], tags=['Offers', 'Export'])
+@data_router.post('/violators/export', dependencies=[Depends(get_current_user)], tags=['Offers', 'Export'])
 async def export_violators(market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
     path = Path(await service.create_violators_file(market, name_of_shop))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data',

@@ -38,13 +38,7 @@ async def setup_fbo_stocks(background: BackgroundTasks):
     return {'status': 'OK'}
 
 
-# @router.post('/supply/export', dependencies=[Depends(require_staff)], tags=['Export'])
-# async def export_supply(warehouses_id: list[int], offers_id: list[int], market: str | None = Body(None), name_of_shop: str | None = Body(None)):
-#     path = Path(await service.export_supply(warehouses_id, offers_id, name_of_shop, market))
-#     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
-
-
-@router.post('/supply/only-own-storage/export', tags=['Supply', 'Export'], description='<h1>Только Мой склад {номер склада}</h1>')
+@router.post('/supply/only-own-storage/export', tags=['Supply', 'Export'], dependencies=[Depends(get_current_user)], description='<h1>Только Мой склад {номер склада}</h1>')
 async def export_only_own_storage_supply(
         place_id: int = Body(),
         warehouses_id: list[int] = Body(),
@@ -54,7 +48,7 @@ async def export_only_own_storage_supply(
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 
-@router.post('/supply/only-stocks/export', tags=['Supply', 'Export'], description='<h1>Без учета моих складов</h1>')
+@router.post('/supply/only-stocks/export', tags=['Supply', 'Export'], dependencies=[Depends(get_current_user)], description='<h1>Без учета моих складов</h1>')
 async def export_only_stocks_supply(
         warehouses_id: list[int] = Body(),
         offers_id: list[int] = Body(),
@@ -64,7 +58,7 @@ async def export_only_stocks_supply(
                         background=BackgroundTask(clean_up_files, str(path)))
 
 
-@router.post('/supply/with-own-storage/export', tags=['Supply', 'Export'], description='<h1>C учетом Мой склад {номер склада}</h1>')
+@router.post('/supply/with-own-storage/export', tags=['Supply', 'Export'], dependencies=[Depends(get_current_user)], description='<h1>C учетом Мой склад {номер склада}</h1>')
 async def export_with_own_storage_supply(
         place_id: int = Body(),
         warehouses_id: list[int] = Body(),
