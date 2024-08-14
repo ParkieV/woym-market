@@ -28,11 +28,17 @@
     import MarketsFilter from "$lib/filter/ShopsFilter.svelte";
     import { filterState } from "../state";
     import type { OwnStorage } from "$lib/data/own_storage";
+    import FilterButton from "$lib/filter/FilterButton.svelte";
 </script>
 
 <menu>
     <MarketsFilter bind:options={$filterState.shops} />
     <Search bind:value={$filterState.search} placeholder="Поиск..." />
+    <FilterButton
+        on:click={() => filterState.reset()}
+        image={"/resetFilter.svg"}
+        alt="Сбросить фильтры"
+    />
 </menu>
 
 <style lang="scss">

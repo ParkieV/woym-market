@@ -47,6 +47,11 @@
         image={"/eye-slash.svg"}
         alt="Отображать скрытые"
     />
+    <FilterButton
+        on:click={() => filterState.reset()}
+        image={"/resetFilter.svg"}
+        alt="Сбросить фильтры"
+    />
 </menu>
 
 <style lang="scss">
