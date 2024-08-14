@@ -27,7 +27,8 @@
 <div id="wrapper" class:collapsed={$collapsed} class:warning={show_warning}>
     <nav>
         <Header text={name} />
-        <Link text="Товары" icon="/house.svg" path="/app" />
+        <Link text="Каталог" icon="/tag.svg" path="/app/catalog" />
+        <Link text="Карточки" icon="/barcode.svg" path="/app/offers" />
         <Link text="Мои остатки" icon="/warehouse.svg" path="/app/own_storage" />
         <Link text="FBO остатки" icon="/package.svg" path="/app/fbo_storage" />
         <Spacer />
