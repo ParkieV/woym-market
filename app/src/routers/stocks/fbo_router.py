@@ -45,7 +45,7 @@ async def import_fbo(data: UploadFile = File(), name_of_shop: str | None = Body(
     return {'status': 'OK'}
 
 
-@router.post('/export', dependencies=[Depends(require_staff)], tags=['Export'])
+@router.post('/export', dependencies=[Depends(get_current_user)], tags=['Export'])
 async def export_fbo_stocks(name_of_shop: str | None = Body(None), market: str | None = Body(None)):
     path = Path(await service.export_stocks(name_of_shop, market))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))

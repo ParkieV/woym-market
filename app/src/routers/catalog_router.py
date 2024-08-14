@@ -1,9 +1,10 @@
 from pathlib import PurePath
 
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Depends
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
+from src.dependencies.users import get_current_user, require_staff
 from src.schemas.catalog_schemas import CatalogItem, CatalogItemUpdate
 from src.services import catalog_service as service
 from src.services.base_utils import clean_up_files
@@ -34,13 +35,13 @@ async def synchronize_catalog_items():
     await service.sync_catalog_items_with_offers()
 
 
-@router.post('/export', tags=["Export"])
+@router.post('/export', tags=["Export"], dependencies=[Depends(get_current_user)])
 async def export_catalog_items():
     path = await service.export_catalog_items()
     return FileResponse(path, filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 
-@router.post('/import', tags=["Import"])
+@router.post('/import', tags=["Import"], dependencies=[Depends(require_staff)])
 async def import_catalog_items(data: UploadFile = File()):
     content = await data.read()
     await service.import_catalog_items(content, PurePath(data.filename).suffix)
