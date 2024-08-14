@@ -16,8 +16,7 @@
     let collapsed = writable(true);
     setContext("collapsed", collapsed);
 
-    let name = "mp-auto-price";
-    $: name = $user?.login ?? "mp-auto-price";
+    $: name = $user?.login;
 
     $: is_dev_frontend = $page.url.hostname === "localhost" || $page.url.hostname.startsWith("dev");
     $: is_dev_backend = BaseUrl.includes("dev.oy-pro.ru");
@@ -26,7 +25,7 @@
 
 <div id="wrapper" class:collapsed={$collapsed} class:warning={show_warning}>
     <nav>
-        <Header text={name} />
+        <Header {name} />
         <Link text="Каталог" icon="/tag.svg" path="/app/catalog" />
         <Link text="Карточки" icon="/barcode.svg" path="/app/offers" />
         <Link text="Мои остатки" icon="/warehouse.svg" path="/app/own_storage" />

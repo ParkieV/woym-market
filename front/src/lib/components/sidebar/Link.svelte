@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
-    import { createEventDispatcher, getContext } from "svelte";
+    import { getContext } from "svelte";
     import type { Writable } from "svelte/store";
     import { slide } from "svelte/transition";
     import { page } from "$app/stores";
@@ -9,30 +8,45 @@
     export let icon: string;
     export let path: string | undefined = undefined;
 
-    let dispatch = createEventDispatcher<{ click: void }>();
     let collapsed = getContext<Writable<boolean>>("collapsed");
 </script>
 
-<button
-    on:click={() => {
-        if (path) goto(path);
-        dispatch("click");
-    }}
-    class:collapsed={$collapsed}
-    class:current={path ? $page.url.pathname.startsWith(path) : false}
-    title={$collapsed ? text : undefined}
->
-    <img src={icon} alt="" />
-    {#if !$collapsed}
-        <span transition:slide={{ duration: 500, axis: "x" }}>
-            {text}
-        </span>
-    {/if}
-</button>
+{#if path === undefined}
+    <button
+        on:click
+        title={$collapsed ? text : undefined}
+        class:collapsed={$collapsed}
+        class:current={path ? $page.url.pathname.startsWith(path) : false}
+    >
+        <img src={icon} alt="" />
+        {#if !$collapsed}
+            <span transition:slide={{ duration: 500, axis: "x" }}>
+                {text}
+            </span>
+        {/if}
+    </button>
+{:else}
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <a
+        on:click
+        href={path}
+        title={$collapsed ? text : undefined}
+        class:collapsed={$collapsed}
+        class:current={path ? $page.url.pathname.startsWith(path) : false}
+    >
+        <img src={icon} alt="" />
+        {#if !$collapsed}
+            <span transition:slide={{ duration: 500, axis: "x" }}>
+                {text}
+            </span>
+        {/if}
+    </a>
+{/if}
 
 <style lang="scss">
     @use "mixins" as *;
 
+    a,
     button {
         display: flex;
         justify-content: start;
@@ -41,7 +55,9 @@
         background-color: transparent;
         border: 0;
         height: 48px;
+        text-decoration: none;
         cursor: pointer;
+        font-size: 16px;
 
         &:hover {
             background-color: #4f6372;
@@ -61,7 +77,7 @@
 
         &:not(.collapsed) {
             padding: 0 20px;
-            gap: 8px;
+            gap: 12px;
         }
 
         > img {
