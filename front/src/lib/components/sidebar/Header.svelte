@@ -39,13 +39,16 @@
         > h1 {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
 
             flex: 1 0 0;
             font-size: 16px;
             margin-left: 20px;
             text-overflow: clip;
             white-space: nowrap;
+
+            font-weight: normal;
+            font-size: 18px;
 
             > img {
                 width: 24px;
