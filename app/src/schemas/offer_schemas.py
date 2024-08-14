@@ -203,6 +203,7 @@ class OfferDelete(BaseModel):
 class Market(str, Enum):
     OZON = 'ozon'
     YANDEX = 'yandex'
+    WILDBERRIES = 'wildberries'
 
 
 class ImportType(str, Enum):
