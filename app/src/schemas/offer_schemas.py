@@ -171,8 +171,12 @@ class OfferOut(OfferChange):
 
     @property
     def violator_sku(self) -> str:
+        if not self.best_place_im_link:
+            return 'Не найдено'
+
         parsed_url = urlparse(self.best_place_im_link)
         captured = parse_qs(parsed_url.query)
+
         if 'sku' in captured:
             return ', '.join(captured['sku'])
         return 'Не найден'
