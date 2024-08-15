@@ -121,7 +121,7 @@ class OfferOut(OfferChange):
     volume_difference: float | None = Field(title='Разница объемов', default=None)
 
     photo: str | None = Field(title='Фото')
-    remaining_stock: int | None = Field(title='Остатки на складах', default=None)
+    remaining_stock: int  = Field(title='Остатки на складах')
     group_sellers_amount: int | None = Field(title='Количество продавцов в группе')
     business_id: int | None = Field(title='id бизнесса')
 

@@ -27,7 +27,7 @@ def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
 
 async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None, model_schema: Type[BaseModel] = OfferOut, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
     query = select(
-        Offer,
+        Offer.__table__.columns,
         remaining_stocks_subuery.c.remaining_stock
     )
 
@@ -40,7 +40,8 @@ async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = Non
         query = query.limit(limit)
 
     offers = await session.execute(query)
-    return [model_schema.model_validate(offer, from_attributes=True) for offer in offers.unique().scalars().all()]
+    result = offers.all()
+    return [model_schema.model_validate(offer, from_attributes=True) for offer in result]
 
 
 async def create_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) -> None:
@@ -109,7 +110,7 @@ async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.D
     for offer_data in data:
         query = (
             select(
-                Offer,
+                Offer.__table__.columns,
                 remaining_stocks_subuery.c.remaining_stock
             )
             .filter_by(**offer_data)

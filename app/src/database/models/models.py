@@ -322,6 +322,6 @@ remaining_stocks_subuery = (
         func.sum(func.coalesce(OfferStock.current_stock, 0)).label('remaining_stock')
     )
     .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
-    .where(Warehouse.warehouse_type == WarehouseType.WAREHOUSE)
+    .where(Warehouse.warehouse_type == 'warehouse')
     .group_by(
         OfferStock.offer_id).subquery())
