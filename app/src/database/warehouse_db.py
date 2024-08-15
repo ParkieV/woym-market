@@ -632,36 +632,14 @@ async def fill_empty_stocks(session: AsyncSession):
 
 
 async def get_fbo_offers(session: AsyncSession):
-    # 6359 ms
+    query = (
+        select(Offer)
+        .options(subqueryload(Offer.stocks).selectinload(OfferStock.warehouse))
+    )
+    result = await session.execute(query)
+    offers = result.scalars().all()
 
-    # query = (
-    #             select(Offer)
-    #             .options(subqueryload(Offer.stocks).selectinload(OfferStock.warehouse))
-    #         )
-    # result = await session.execute(query)
-    # offers = result.scalars().all()
-    # return [OfferWithStocks.model_validate(i, from_attributes=True) for i in offers]
-
-    chunck_size = 1000
-    offset = 0
-    results = []
-
-    while True:
-        query = (
-            select(Offer)
-            .options(subqueryload(Offer.stocks).selectinload(OfferStock.warehouse))
-        ).offset(offset).limit(chunck_size)
-        result = await session.execute(query)
-        offers = result.scalars().all()
-
-        results.extend([OfferWithStocks.model_validate(i, from_attributes=True) for i in offers])
-
-        if len(offers) < chunck_size:
-            break
-
-        offset += chunck_size
-
-    return results
+    return [OfferWithStocks.model_validate(i, from_attributes=True) for i in offers]
 
 
 async def get_offer_stocks(session: AsyncSession, offer_id: int):
