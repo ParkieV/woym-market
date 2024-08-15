@@ -3,7 +3,7 @@ version: '3.9'
 services:
   app:
     container_name: app
-    restart: always
+    restart: unless-stopped
     command: python3 main.py
     env_file: ./app/.env.dev
     build:
@@ -18,7 +18,7 @@ services:
 
   frontend:
     container_name: frontend
-    restart: always
+    restart: unless-stopped
     env_file: ./front/.env.dev
     build:
       context: ./front
@@ -31,7 +31,7 @@ services:
   nginx:
     image: nginx:latest
     container_name: nginx
-    restart: always
+    restart: unless-stopped
     depends_on:
       - app
     volumes:
@@ -45,6 +45,7 @@ services:
 
   db:
     container_name: db
+    restart: unless-stopped
     image: postgres:latest
     env_file: db.env
     volumes:
