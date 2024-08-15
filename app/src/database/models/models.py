@@ -319,7 +319,7 @@ class CatalogItem(Base):
 remaining_stocks_subuery = (
     select(
         OfferStock.offer_id,
-        func.sum(OfferStock.for_delivery).label('remaining_stock')
+        func.sum(func.coalesce(OfferStock.for_delivery, 0)).label('remaining_stock')
     )
     .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
     .where(Warehouse.warehouse_type == WarehouseType.WAREHOUSE)

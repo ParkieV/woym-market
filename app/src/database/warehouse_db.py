@@ -25,17 +25,6 @@ from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 ModelSchema = TypeVar('ModelSchema', bound=Type[BaseModel])
 
 
-remaining_stocks_subuery = (
-    select(
-        OfferStock.offer_id,
-        func.sum(OfferStock.for_delivery).label('remaining_stock')
-    )
-    .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
-    .where(Warehouse.warehouse_type == WarehouseType.WAREHOUSE)
-    .group_by(
-        OfferStock.offer_id).subquery())
-
-
 async def create_warehouse(session: AsyncSession, data: WarehouseCreate,
                            model_schema: ModelSchema = WarehouseOut) -> ModelSchema:
     warehouse_db = Warehouse(**data.model_dump())
