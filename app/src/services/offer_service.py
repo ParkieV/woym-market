@@ -6,6 +6,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.database.catalog_db import sync_catalog_items_with_offers
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.confing import config
 from logs import get_logger
@@ -14,7 +15,7 @@ from src.database.db import async_session
 from src.database import offer_db as db
 from src.database.settings_db import get_markets
 import src.services.offer_utils as utils
-from src.schemas.base_api_schemas import APIPriceChangeData
+from src.schemas.base_api_schemas import APIPriceChangeData, APIOfferChangeData
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ImportType, Market, \
     PricingSchemeOut, PricingSchemeCreate, BaseOffer, PricingSchemeFieldCreate, PricingSchemeFieldChange, \
     PricingSchemeChange
@@ -27,6 +28,7 @@ from datetime import datetime
 
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
+
 
 api_wrapper = APIWrapper()
 
@@ -77,9 +79,10 @@ async def update_offers(user_id: int):
     logger.info('Start update offers')
     start_time = datetime.now()
 
-    yandex_offers = await api_wrapper.get_offers_list()
     db_offers = await get_offers()
     offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
+
+    yandex_offers = await api_wrapper.get_offers_list()
     yandex_offers_df = pd.DataFrame(yandex_offers)
 
     mapping_fields = ['sku', 'name_of_shop', 'market']
@@ -98,22 +101,23 @@ async def update_offers(user_id: int):
     to_delete_df = pd.DataFrame(to_delete, columns=mapping_fields)
 
     async with async_session() as session:
-        to_update_price_df = offers_df.copy()
-        merge_result = pd.merge(to_update_price_df[mapping_fields + CONTROL_CHANGES + [f'{i}_changed' for i in CONTROL_CHANGES]], yandex_offers_df[mapping_fields + CONTROL_CHANGES], on=mapping_fields)
-
-        # Логика для двухсторонней синхронизации полей (наши изменения в приоритете)
+        merge_df = pd.merge(to_update_df, offers_df[mapping_fields + CONTROL_CHANGES + [f'{i}_changed' for i in CONTROL_CHANGES] + ['auto_price_control']], on=mapping_fields, how='inner')
         for column in CONTROL_CHANGES:
-            merge_result[column] = np.where(
-                merge_result[f'{column}_changed'],
-                merge_result[f'{column}_x'],
-                merge_result[f'{column}_y']
+            merge_df[column] = np.where(
+                merge_df[f'{column}_changed'],
+                merge_df[f'{column}_y'],
+                merge_df[f'{column}_x']
             )
-            merge_result.drop([f'{column}_x', f'{column}_y'], axis='columns', inplace=True)
-        to_update_price_df.drop(CONTROL_CHANGES + [f'{i}_changed' for i in CONTROL_CHANGES], axis='columns', inplace=True)
-        to_update_price_df = pd.merge(merge_result, to_update_price_df, on=mapping_fields)
+            merge_df.drop([f'{column}_x', f'{column}_y'], axis='columns', inplace=True)
+
+        to_update_df = merge_df.copy()
+
+        # Обновление характеристик товаров (только измененные)
+        to_update_attributes = to_update_df.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
+        await update_offers_attributes(to_update_attributes[to_update_attributes['auto_price_control'] == True])
 
         # Обновление цен
-        await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True])
+        await update_offers_price(offers_df[offers_df['auto_price_control'] == True])
         settings = await get_user_settings(session, user_id)
 
         # Создание новых товаров
@@ -122,24 +126,26 @@ async def update_offers(user_id: int):
             await db.create_offers(session, to_create_df_chunked)
             logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df)}')
 
+        # Создать новые товары в моих остатках
         await create_own_storage_stocks(session)
         logger.info('Own storage stocks created')
 
-        # await setup_catalog_items()
-
         # Снять галочки с измененных полей
         for column in CONTROL_CHANGES:
-            to_update_df[f'{column}_changed'] = False
+            to_update_df[to_update_df['auto_price_control'] == True][f'{column}_changed'] = False
 
         await db.update_offers(session, to_update_df, mapping_columns=['name_of_shop', 'market'])
         logger.info(f'Offers updated: {len(to_update_df)}')
 
+        # Удалить товары
         await db.delete_offers(session, to_delete_df)
         logger.info(f'Offers deleted: {len(to_delete_df)}')
 
-        # await sync_catalog_items_with_offers(session)
-        # logger.info('Offers synchronized with catalog')
+        # Синхронизировать товары с каталогом
+        await sync_catalog_items_with_offers(session)
+        logger.info('Offers synchronized with catalog')
 
+        # Пересчитать все
         await recalculate_values(session, settings)
         logger.info('Offers recalculated')
 
@@ -162,7 +168,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
     elif isinstance(offers, list):
         data = [i.model_dump() for i in offers]
 
-    if len(data):
+    if not len(data):
         logger.info('Skip update prices due to list is empty')
         return
 
@@ -185,6 +191,29 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
         return
 
     await api_wrapper.change_prices(data)
+
+
+async def update_offers_attributes(offers: pd.DataFrame):
+    data = offers.to_dict('records')
+
+    if not len(data):
+        logger.info('Skip update offers attributes due to list is empty')
+        return
+
+    data = [
+        APIOfferChangeData(
+            sku=offer_data['sku'],
+            market=offer_data['market'],
+            name_of_shop=offer_data['name_of_shop'],
+            search_words=offer_data['search_words'],
+            name=offer_data['name'],
+            annotation=offer_data['annotation'],
+            barcodes=offer_data['barcodes'],
+            vendor_code=offer_data['vendor_code']
+        )
+        for offer_data in data
+    ]
+    return data
 
 
 async def recalculate_values(session: AsyncSession, settings, which=None):

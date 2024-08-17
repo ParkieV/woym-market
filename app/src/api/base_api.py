@@ -4,13 +4,10 @@ from typing import Any
 import pandas as pd
 from fastapi import HTTPException
 from requests import Response
-from src.schemas.base_api_schemas import APIOffer, APIWarehouse, APIPriceChangeData
+from src.schemas.base_api_schemas import APIOffer, APIWarehouse, APIPriceChangeData, APIOfferChangeData
 from logs import get_logger
 
 logger = get_logger(__name__)
-
-
-
 
 
 class BaseAPI(ABC):
@@ -29,6 +26,10 @@ class BaseAPI(ABC):
 
     @abstractmethod
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
+        pass
+
+    @abstractmethod
+    async def change_offers(self, data: list[APIOfferChangeData]) -> None:
         pass
 
     def _download_report(self, url_path: str) -> pd.DataFrame:

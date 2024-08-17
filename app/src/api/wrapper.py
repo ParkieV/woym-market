@@ -38,3 +38,11 @@ class APIWrapper(BaseAPI):
                 price_data = [i for i in data if i.market==market.type and i.name_of_shop==market.name]
 
                 await api.change_prices(price_data)
+
+    async def change_offers(self, data: list[APIOffer]) -> None:
+        async with async_session() as session:
+            for market in await get_markets(session, MarketFullOut):
+                api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
+                offers_data = [i for i in data if i.market==market.type and i.name_of_shop==market.name]
+                await api.change_offers(offers_data)
+

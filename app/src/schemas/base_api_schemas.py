@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Union
 
 import numpy as np
+from pydantic import BaseModel
 
 
 class WarehouseType(str, Enum):
@@ -87,3 +88,15 @@ class APIPriceChangeData:
     def is_valid_vendor_code(self) -> bool:
         return isinstance(self.vendor_code, int) and not np.isnan(self.vendor_code)
 
+
+class APIOfferChangeData(BaseModel):
+    sku: str
+    market: str
+    name_of_shop: str
+
+    name: str | None = None
+    # annotation: str | None = None
+    vendor_code: int | None = None
+    # photo: str | None = None
+    search_words: str | None = None
+    barcodes: str | None = None

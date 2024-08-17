@@ -7,7 +7,8 @@ from starlette import status
 
 from logs import get_logger
 from src.api.base_api import BaseAPI
-from src.schemas.base_api_schemas import APIPriceChangeData, APIWarehouse, APIOffer, WarehouseType, APIWarehouseOffer
+from src.schemas.base_api_schemas import APIPriceChangeData, APIWarehouse, APIOffer, WarehouseType, APIWarehouseOffer, \
+    APIOfferChangeData
 
 logger = get_logger(__name__)
 
@@ -38,6 +39,32 @@ class WildberriesAPI(BaseAPI):
         if not data['Ok']:
             raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                                 f'Ошибка проверки данных(токена) авторизации сервиса {self.shop_name}(wildberries)')
+
+    async def change_offers(self, data: list[APIOfferChangeData]) -> None:
+        url = 'https://content-api.wildberries.ru/content/v2/cards/update'
+
+        valid_offers_data = [i for i in data]
+
+        chunk_size = 3000
+
+        for i in range(0, len(valid_offers_data), chunk_size):
+            body = [
+                {
+                    'nmID': offer_data.vendor_code,
+                    'vendorCode': offer_data.sku,
+                    'title': offer_data.name,
+                    # 'description': offer_data.annotation,
+                    # 'sizes': []
+
+                }
+                for offer_data in valid_offers_data[i:i + chunk_size]
+            ]
+
+            response = self.session.post(url, json=body, headers=self.auth_headers)
+
+            if not response.ok:
+                logger.error(f'Cant update offers data: {response.text}')
+                continue
 
     async def get_offers_list(self) -> list[APIOffer]:
         offers = self._get_offers_base_info()

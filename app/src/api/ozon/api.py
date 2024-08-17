@@ -4,7 +4,8 @@ import logging
 from typing import Any
 from requests import Session
 from src.api.base_api import BaseAPI
-from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, WarehouseType
+from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, WarehouseType, \
+    APIOfferChangeData
 from dataclasses import dataclass
 from logs import get_logger
 
@@ -18,6 +19,33 @@ class OfferIdentifier:
 
 
 class OzonAPI(BaseAPI):
+    async def change_offers(self, data: list[APIOfferChangeData]) -> None:
+        url = 'https://api-seller.ozon.ru/v3/product/import'
+
+        valid_offers_data = [i for i in data]
+        chunk_size = 100
+
+        for i in range(0, len(valid_offers_data), chunk_size):
+            body = {
+                'items': [
+                    {
+                        'name': offer_data.name,
+                        # 'barcode': ''
+                        # 'images': [],
+                    }
+                    for offer_data in valid_offers_data[i:i + chunk_size]
+                ]
+            }
+            response = self.session.post(url, json=body, headers=self.auth_headers)
+
+            if not response.ok:
+                logger.error(f'Cant update offers data: {response.text}')
+                continue
+
+            response_json = response.json()
+
+            task_id = response_json['result']['task_id']
+
     def __init__(self, token: str, entity_id: int, shop_name: str):
         self.token = token
         self.shop_name = shop_name
@@ -124,9 +152,12 @@ class OzonAPI(BaseAPI):
             if response.ok:
                 for offer_result in response.json()['result']:
                     if not offer_result['updated']:
-                        logger.warning(f'Error in update offer with id - {offer_result["offer_id"]} \nErrors: {offer_result["errors"]}')
+                        logger.warning(
+                            f'Error in update offer with id - {offer_result["offer_id"]} \nErrors: {offer_result["errors"]}')
 
-            await self._set_search_words([(offer_data.sku, offer_data.search_words) for offer_data in data[i:i + chunk_size] if offer_data.is_valid_search_words()])
+            await self._set_search_words(
+                [(offer_data.sku, offer_data.search_words) for offer_data in data[i:i + chunk_size] if
+                 offer_data.is_valid_search_words()])
 
         logger.info(f'{self.shop_name}(ozon) price updated')
 
@@ -157,8 +188,10 @@ class OzonAPI(BaseAPI):
                 try:
                     price_indexes = offer.get('price_indexes', None)
 
-                    external_index_data = price_indexes.get('external_index_data', None) if price_indexes is not None else None
-                    minimal_price = external_index_data.get('minimal_price', None) if external_index_data is not None else None
+                    external_index_data = price_indexes.get('external_index_data',
+                                                            None) if price_indexes is not None else None
+                    minimal_price = external_index_data.get('minimal_price',
+                                                            None) if external_index_data is not None else None
 
                     price_index = price_indexes.get('price_index', None) if price_indexes is not None else None
 
@@ -212,7 +245,8 @@ class OzonAPI(BaseAPI):
                     unit_dimension_divider = 1
 
                 search_attributes = [i for i in offer['attributes'] if i['attribute_id'] == 22336]
-                search_words = '; '.join(['; '.join([words['value'] for words in item['values']]) for item in search_attributes])
+                search_words = '; '.join(
+                    ['; '.join([words['value'] for words in item['values']]) for item in search_attributes])
                 if len(search_words) > 255:
                     search_words = search_words[:search_words[:256].rfind(';')]
 
@@ -294,19 +328,20 @@ class OzonAPI(BaseAPI):
         for i in range(0, len(data), chunk_size):
             body = {
                 'filter': {
-                    'offer_id': [i.offer_id for i in data[i:i+chunk_size]]
+                    'offer_id': [i.offer_id for i in data[i:i + chunk_size]]
                 },
                 'limit': chunk_size
             }
-            response = self.session.post('https://api-seller.ozon.ru/v4/product/info/prices', headers=self.auth_headers, json=body)
+            response = self.session.post('https://api-seller.ozon.ru/v4/product/info/prices', headers=self.auth_headers,
+                                         json=body)
 
             data = self.validate_response(response, body=body)
-            
+
             for offer in data['result']['items']:
                 result[offer['offer_id']] = {
                     'marketing_seller_price': self.__str_to_float(offer['price'].get('marketing_seller_price', None))
                 }
-                
+
                 try:
                     commissions = offer['commissions']
 
@@ -319,7 +354,7 @@ class OzonAPI(BaseAPI):
                     ])
 
                     result[offer['offer_id']]['commissions'] = price * sales_percent / 100 + expenses
-                    
+
                 except Exception as e:
                     logger.error(f'Error in get commission for offer with sku {offer["offer_id"]}', exc_info=True)
 
@@ -334,14 +369,18 @@ class OzonAPI(BaseAPI):
         data = response.json()
         content_json = json.loads(data['document']['contentJson'])
         spoilers = [i for i in content_json['content'] if i['type'] == 'spoiler']
-        spoilers = spoilers[len(spoilers)//2:len(spoilers)+1]
+        spoilers = spoilers[len(spoilers) // 2:len(spoilers) + 1]
 
         clasters = []
 
         for spoiler in spoilers:
             claster_name = spoiler['attrs']['title']
-            warehouses = [i['content'][0]['content'][0]['text'].replace('-', ' ').title().replace('Мо ', '').replace('Спб', '') for i in spoiler['content'][0]['content']]
-            clasters.append(APIWarehouse(name=claster_name, market='ozon', offers=[], warehouse_type=WarehouseType.CLUSTER, related_warehouses_name=warehouses))
+            warehouses = [
+                i['content'][0]['content'][0]['text'].replace('-', ' ').title().replace('Мо ', '').replace('Спб', '')
+                for i in spoiler['content'][0]['content']]
+            clasters.append(
+                APIWarehouse(name=claster_name, market='ozon', offers=[], warehouse_type=WarehouseType.CLUSTER,
+                             related_warehouses_name=warehouses))
 
         return clasters
 
@@ -371,26 +410,30 @@ class OzonAPI(BaseAPI):
             ]
         }
 
-        response = self.session.post('https://api-seller.ozon.ru/v1/product/attributes/update', headers=self.auth_headers, json=body)
+        response = self.session.post('https://api-seller.ozon.ru/v1/product/attributes/update',
+                                     headers=self.auth_headers, json=body)
 
         if response.status_code != 200:
-            logging.error(f'Error in set search words. Reason: {response.reason}. Json: {response.json()}. Text: {response.text}')
+            logging.error(
+                f'Error in set search words. Reason: {response.reason}. Json: {response.json()}. Text: {response.text}')
             return
 
         response_json = response.json()
 
-        response = self.session.post('https://api-seller.ozon.ru/v1/product/import/info', headers=self.auth_headers, json={'task_id': response_json['task_id']})
+        response = self.session.post('https://api-seller.ozon.ru/v1/product/import/info', headers=self.auth_headers,
+                                     json={'task_id': response_json['task_id']})
 
         if response.status_code != 200:
-            logging.error(f'Error in check setting search words. Reason: {response.reason}. Json: {response.json()}. Text: {response.text}')
+            logging.error(
+                f'Error in check setting search words. Reason: {response.reason}. Json: {response.json()}. Text: {response.text}')
             return
 
         response_json = response.json()
 
         for item in response_json['result']['items']:
             if item['status'] == 'failed':
-                logging.error(f'Updating search words for offer with id - {item["offer_id"]}. \nErrors: {item["errors"]}')
+                logging.error(
+                    f'Updating search words for offer with id - {item["offer_id"]}. \nErrors: {item["errors"]}')
             elif item['status'] == 'pending':
                 logging.info(f'Task pending "Update search words" for offer with id - {item["offer_id"]}')
                 await asyncio.sleep(.5)
-
