@@ -76,6 +76,9 @@ class BaseOffer(BaseModel, BaseModelFields):
 
 
 class OfferChange(BaseOffer):
+    name: str | None = Field(title='Название')
+    description: str | None = Field(title='Описание')
+
     self_weight: float | None = Field(title='Вес')
     self_length: float | None = Field(title='Длина')
     self_width: float | None = Field(title='Ширина')
@@ -109,7 +112,6 @@ class OfferChange(BaseOffer):
 class OfferOut(OfferChange):
     # from yandex api
     id: int = Field(title='id')
-    name: str | None = Field(title='Название')
 
     yandex_weight: float | None = Field(title='Вес с маркета', default=0)
     yandex_length: float | None = Field(title='Длинна с маркета', default=0)
@@ -161,6 +163,10 @@ class OfferOut(OfferChange):
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')
+
+    name_changed: bool = Field(title='Название изменено пользователем')
+    description_changed: bool = Field(title='Описание изменено')
+    barcodes_changed: bool = Field(title='Штрихкоды изменены')
 
     @computed_field(title='Разница с РРЦ')
     @property

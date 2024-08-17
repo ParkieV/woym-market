@@ -34,7 +34,7 @@ api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
 
-CONTROL_CHANGES = ['search_words']
+CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes']
 
 
 async def get_offers(filters: dict[str, Any] | None = None, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
@@ -207,7 +207,7 @@ async def update_offers_attributes(offers: pd.DataFrame):
             name_of_shop=offer_data['name_of_shop'],
             search_words=offer_data['search_words'],
             name=offer_data['name'],
-            annotation=offer_data['annotation'],
+            description=offer_data['description'],
             barcodes=offer_data['barcodes'],
             vendor_code=offer_data['vendor_code']
         )

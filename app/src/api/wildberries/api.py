@@ -53,7 +53,7 @@ class WildberriesAPI(BaseAPI):
                     'nmID': offer_data.vendor_code,
                     'vendorCode': offer_data.sku,
                     'title': offer_data.name,
-                    # 'description': offer_data.annotation,
+                    # 'description': offer_data.description,
                     # 'sizes': []
 
                 }

@@ -51,7 +51,7 @@ class YandexMarketAPI(BaseAPI):
                             'offerId': offer_data.sku,
                             # 'barcodes': [],
                             'name': offer_data.name,
-                            # 'description': offer_data.annotation,
+                            # 'description': offer_data.description,
                             # 'pictures': []
 
                         }

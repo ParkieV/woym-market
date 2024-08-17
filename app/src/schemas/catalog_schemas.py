@@ -16,7 +16,7 @@ class BaseCatalogItem(BaseModel):
 
 class CatalogItemUpdate(BaseCatalogItem):
     name: str | None = Field(title='Название', default=None)
-    annotation: str | None = Field(title='Аннотация', default=None)
+    description: str | None = Field(title='Аннотация', default=None)
     search_words: str | None = Field(title='Поисковые слова', default=None)
     barcodes: str | None = Field(title='Штрихкоды', default=None)
 

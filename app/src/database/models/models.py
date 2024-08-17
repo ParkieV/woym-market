@@ -43,7 +43,12 @@ class Offer(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
 
     sku = Column(String, index=True, nullable=False) # same as id
+
     name = Column(String, nullable=True)
+    name_changed = Column(Boolean, nullable=False, default=False)
+
+    description = Column(String, nullable=True, default=None, server_default=None)
+    description_changed = Column(Boolean, nullable=False, default=False)
 
     self_weight = Column(Float, default=None, nullable=True)
     self_length = Column(Float, default=None, nullable=True)
@@ -118,6 +123,8 @@ class Offer(Base):
     pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
 
     barcodes = Column(String, nullable=True, default=None)
+    barcodes_changed = Column(Boolean, nullable=False, default=False)
+
     use_promotion_price = Column(Boolean, default=False)
     wholesale_dollar_cost_price = Column(Float, nullable=True)
     vendor_code = Column(Integer, nullable=True, default=None)
@@ -307,7 +314,7 @@ class CatalogItem(Base):
     use_promotion_price = Column(Boolean, nullable=False, default=False)
     wholesale_dollar_cost_price = Column(Float, nullable=True, default=None)
     supplier_available = Column(Boolean, nullable=False, default=False)
-    annotation = Column(String, nullable=True, default=None, server_default=None)
+    description = Column(String, nullable=True, default=None, server_default=None)
     search_words = Column(String, nullable=True, default=None, server_default=None)
     search_words_changed = Column(Boolean, nullable=False, default=False)
     name = Column(String, nullable=True, default=None, server_default=None)
