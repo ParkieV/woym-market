@@ -16,6 +16,7 @@ class APIOffer:
     sku: str
     name: str
     name_of_shop: str
+    description: str | None = None
     yandex_weight: float | None = None
     yandex_length: float | None = None
     yandex_width: float | None = None
@@ -95,7 +96,7 @@ class APIOfferChangeData(BaseModel):
     name_of_shop: str
 
     name: str | None = None
-    # description: str | None = None
+    description: str | None = None
     vendor_code: int | None = None
     # photo: str | None = None
     search_words: str | None = None

@@ -235,8 +235,11 @@ class OzonAPI(BaseAPI):
             )
 
             data = self.validate_response(response, body=body)
-
+            # 4191 description
             for offer in data['result']:
+                description_attributes = [i['values'][0] for i in offer['attributes'] if i['attribute_id'] == 4191 and len(i['values'])]
+                descriptions = '. '.join(i['value'] for i in description_attributes)
+
                 # TODO посчитать объем
                 unit_dimension_divider = 1
                 if offer['dimension_unit'] == 'mm':
@@ -255,7 +258,8 @@ class OzonAPI(BaseAPI):
                     'yandex_length': offer['depth'] / unit_dimension_divider if offer['depth'] else offer['depth'],
                     'yandex_width': offer['width'] / unit_dimension_divider if offer['width'] else offer['width'],
                     'yandex_weight': offer['weight'] / 1000 if offer['weight'] else offer['weight'],
-                    'search_words': search_words
+                    'search_words': search_words,
+                    'description': descriptions
                 }
 
         return result

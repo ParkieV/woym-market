@@ -203,6 +203,7 @@ class WildberriesAPI(BaseAPI):
                 offer = {
                     'sku': item['vendorCode'],
                     'name': item['title'],
+                    'description': item.get('description', None),
                     'name_of_shop': self.shop_name,
                     'market': 'wildberries',
                     'yandex_length': item['dimensions']['length'],

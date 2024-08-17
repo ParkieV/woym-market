@@ -114,7 +114,7 @@ async def update_offers(user_id: int):
 
         # Обновление характеристик товаров (только измененные)
         to_update_attributes = to_update_df.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
-        await update_offers_attributes(to_update_attributes[to_update_attributes['auto_price_control'] == True])
+        await update_offers_attributes(to_update_attributes)
 
         # Обновление цен
         await update_offers_price(offers_df[offers_df['auto_price_control'] == True])
@@ -168,6 +168,10 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
     elif isinstance(offers, list):
         data = [i.model_dump() for i in offers]
 
+    if not config.is_prod:
+        logger.info(f'Skip update offers attributes app mode is not PROD (current - {config.mode})')
+        return
+
     if not len(data):
         logger.info('Skip update prices due to list is empty')
         return
@@ -187,14 +191,17 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
         for offer_data in data if offer_data['total_price'] is not None
     ]
 
-    if config.is_dev:
-        return
+
 
     await api_wrapper.change_prices(data)
 
 
 async def update_offers_attributes(offers: pd.DataFrame):
     data = offers.to_dict('records')
+
+    if not config.is_prod:
+        logger.info(f'Skip update offers attributes app mode is not PROD (current - {config.mode})')
+        return
 
     if not len(data):
         logger.info('Skip update offers attributes due to list is empty')

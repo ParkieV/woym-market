@@ -159,6 +159,7 @@ class YandexMarketAPI(BaseAPI):
                 offer_data = {
                     'sku': offer['offerId'],
                     'name': offer['name'],
+                    'description': offer.get('description', None),
                     'yandex_weight': weight_dimensions.get('weight'),
                     'yandex_length': weight_dimensions.get('length'),
                     'yandex_width': weight_dimensions.get('width'),
