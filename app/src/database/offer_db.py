@@ -68,7 +68,7 @@ async def update_offers(
         mapping_columns: list[str] | None = None,
         filters: dict[str, Any] | None = None,
         endswith_sku: bool = False,
-        detect_changes: bool = False,
+        detect_changes: list[str] | None = None,
 ) -> None:
     data = _dataframe_to_valid_dict(data)
 
@@ -90,10 +90,9 @@ async def update_offers(
         else:
             stmp = stmp.where(Offer.sku == offer['sku'])
 
-        if detect_changes and 'search_words' in offer:
-            offer.update({
-                'search_words_changed': func.coalesce(Offer.search_words, 'null') != func.coalesce(offer['search_words'], 'null'),
-            })
+        if detect_changes:
+            tracked_data = {f'{i}_changed': getattr(Offer, i) for i in detect_changes if getattr(Offer, i, None)}
+            offer.update(tracked_data)
 
         stmp = stmp.values(**offer)
 

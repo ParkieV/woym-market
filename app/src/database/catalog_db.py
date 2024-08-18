@@ -58,6 +58,7 @@ async def sync_catalog_items_with_offers(session: AsyncSession, exclude_fields: 
     # Формируем словарь значений для обновления
     update_values = {col: getattr(CatalogItem, col) for col in common_columns}
 
+    # TODO нужно проверять изменилось ли значение
     stmp = (
         update(Offer)
         .where(Offer.synchronization == True, Offer.sku == CatalogItem.sku)

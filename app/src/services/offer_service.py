@@ -6,7 +6,6 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.catalog_db import sync_catalog_items_with_offers
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.confing import config
 from logs import get_logger
@@ -28,7 +27,7 @@ from datetime import datetime
 
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
-
+from src.services.catalog_service import sync_catalog_items_with_offers
 
 api_wrapper = APIWrapper()
 
@@ -54,7 +53,7 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
 
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
 
-        await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=True)
+        await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=['name', 'description', 'barcodes', 'search_words'])
         # await sync_catalog_items_with_offers(session)
         await recalculate_values(session, settings, which=changes[mapping_fields])
         return await db.get_offers_by(session, changes[mapping_fields])
@@ -79,9 +78,14 @@ async def update_offers(user_id: int):
     logger.info('Start update offers')
     start_time = datetime.now()
 
+    # Синхронизируем данные с каталогом
+    await sync_catalog_items_with_offers()
+
+    # Получаем товары из бд
     db_offers = await get_offers()
     offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
+    # Получаем товары из апи
     yandex_offers = await api_wrapper.get_offers_list()
     yandex_offers_df = pd.DataFrame(yandex_offers)
 
@@ -101,6 +105,7 @@ async def update_offers(user_id: int):
     to_delete_df = pd.DataFrame(to_delete, columns=mapping_fields)
 
     async with async_session() as session:
+        # В полях с двойной синхронизации берем наши, если были изменены, иначе из апи
         merge_df = pd.merge(to_update_df, offers_df[mapping_fields + CONTROL_CHANGES + [f'{i}_changed' for i in CONTROL_CHANGES] + ['auto_price_control']], on=mapping_fields, how='inner')
         for column in CONTROL_CHANGES:
             merge_df[column] = np.where(
