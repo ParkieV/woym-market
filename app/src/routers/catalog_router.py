@@ -1,6 +1,6 @@
 from pathlib import PurePath
 
-from fastapi import APIRouter, UploadFile, File, Depends
+from fastapi import APIRouter, UploadFile, File, Depends, Body
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
@@ -31,8 +31,8 @@ async def setup_catalog_items():
 
 
 @router.post('/synchronization', tags=["Debug"])
-async def synchronize_catalog_items():
-    await service.sync_catalog_items_with_offers()
+async def synchronize_catalog_items(skus: list[str] = Body(embed=True)):
+    await service.sync_catalog_items_with_offers(skus=skus)
 
 
 @router.post('/export', tags=["Export"], dependencies=[Depends(get_current_user)])

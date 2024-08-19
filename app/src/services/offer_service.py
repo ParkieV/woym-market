@@ -6,6 +6,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.database.catalog_db import sync_catalog_items_with_offers
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.confing import config
 from logs import get_logger
@@ -27,7 +28,7 @@ from datetime import datetime
 
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
-from src.services.catalog_service import sync_catalog_items_with_offers
+
 
 api_wrapper = APIWrapper()
 
@@ -79,7 +80,8 @@ async def update_offers(user_id: int):
     start_time = datetime.now()
 
     # Синхронизируем данные с каталогом
-    await sync_catalog_items_with_offers()
+    async with async_session() as session:
+        await sync_catalog_items_with_offers(session)
 
     # Получаем товары из бд
     db_offers = await get_offers()

@@ -47,9 +47,9 @@ async def change_catalog_items(items: list[CatalogItemUpdate]) -> None:
         await recalculate_values(session, {'id': i.id for item in items for i in item.synchronization})
 
 
-async def sync_catalog_items_with_offers(exclude_fields: list | None = None) -> None:
+async def sync_catalog_items_with_offers(skus: list[str] | None = None, exclude_fields: list | None = None) -> None:
     async with async_session() as session:
-        await db.sync_catalog_items_with_offers(session, exclude_fields=exclude_fields)
+        await db.sync_catalog_items_with_offers(session, skus=skus, exclude_fields=exclude_fields)
 
 
 async def export_catalog_items() -> Path:
