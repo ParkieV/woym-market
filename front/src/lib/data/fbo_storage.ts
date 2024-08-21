@@ -29,7 +29,20 @@ export type FboStocks = {
 export async function fetchFboStorage(fetch_?: typeof fetch): Promise<FboStorage[]> {
     let promise = fetchJSON<FboStorage[]>("stocks/fbo", { fetch: fetch_ });
     showFetchModals(promise.then(x => x.response));
-    return (await promise).data;
+    let data = (await promise).data;
+
+    data.forEach(({ stocks }) =>
+        stocks.sort(({ warehouse: a }, { warehouse: b }) => {
+            if (a.warehouse_type === b.warehouse_type) {
+                return a.name.localeCompare(b.name);
+            } else if (a.warehouse_type === "cluster") {
+                return -1;
+            } else {
+                return 1;
+            }
+        })
+    );
+    return data;
 }
 
 export async function patchFboStorage(changed: FboStorage[]): Promise<boolean> {
