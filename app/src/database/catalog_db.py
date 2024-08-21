@@ -19,19 +19,17 @@ async def change_catalog_items(session: AsyncSession, items: list[schemas.Catalo
         changed_data = item.model_dump()
         changed_data.pop('synchronization')
         
-        # TODO переписать под общий случай
-        item_stmp = update(CatalogItem).where(CatalogItem.sku == item.sku).values(
-            search_words_changed=func.coalesce(CatalogItem.search_words, 'null') != func.coalesce(item.search_words,
-                                                                                                  'null'),
-            **changed_data)
+        item_stmp = update(CatalogItem).where(CatalogItem.sku == item.sku).values(**changed_data)
         await session.execute(item_stmp)
 
     await session.commit()
 
+    await sync_catalog_items_with_offers(session, skus=[i.sku for i in items])
+
 
 async def set_offers_sync(session: AsyncSession, items: list[schemas.SynchronizationOffer]):
     for item in items:
-        stmp = update(Offer).where(Offer.sku == item.sku).values(synchronization=item.synchronization)
+        stmp = update(Offer).where(Offer.id == item.id).values(synchronization=item.synchronization)
         await session.execute(stmp)
 
     await session.commit()

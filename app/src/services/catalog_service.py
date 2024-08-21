@@ -43,7 +43,7 @@ async def get_catalog_items() -> list[CatalogItem]:
 async def change_catalog_items(items: list[CatalogItemUpdate]) -> None:
     async with async_session() as session:
         await db.change_catalog_items(session, items)
-        await db.sync_catalog_items_with_offers(session)
+        logger.info(f'Catalog items changed: {len(items)}')
         await recalculate_values(session, {'id': i.id for item in items for i in item.synchronization})
 
 
