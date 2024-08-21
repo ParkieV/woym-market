@@ -120,13 +120,11 @@ class WildberriesAPI(BaseAPI):
 
             if not response.ok:
                 logger.error(logger.error(f'Cant change price: {response.text}'))
-                return
 
             response_json = response.json()
 
             if response_json.get('error', None):
                 logger.error(response_json['errorText'])
-                continue
 
             if response_json.get('data', None):
                 self._check_price_update_result(response_json['data'].get('id', None))
