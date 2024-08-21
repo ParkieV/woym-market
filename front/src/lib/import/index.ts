@@ -63,6 +63,22 @@ export type SimpleImportProps = {
     name_of_shop: string | null;
 };
 
+export class CatalogImport extends Import {
+    protected get url(): string {
+        return "catalog/import";
+    }
+
+    protected body(file: Blob): FormData {
+        let formData = new FormData();
+        formData.append("data", file);
+        return formData;
+    }
+
+    public get valid(): boolean {
+        return true;
+    }
+}
+
 export class FboAdditionsImport extends Import {
     public props: FboAdditionsImportProps;
 

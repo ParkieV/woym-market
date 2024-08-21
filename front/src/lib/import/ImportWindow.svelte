@@ -1,7 +1,7 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
     import Window from "../components/windows/Window.svelte";
-    import { Import, SimpleImport, FboAdditionsImport, OwnStorageImport } from ".";
+    import { Import, SimpleImport, FboAdditionsImport, OwnStorageImport, CatalogImport } from ".";
     import Simple from "./Simple.svelte";
     import Warehouse from "./Warehouse.svelte";
     import OwnStorage from "./OwnStorage.svelte";
@@ -31,6 +31,7 @@
                 <option value={new SimpleImport("data/import", "table")}>Карточки: Таблица</option>
                 <option value={new SimpleImport("data/import", "sizes")}>Карточки: Размеры</option>
                 <option value={new SimpleImport("data/import", "prices")}>Карточки: Цены</option>
+                <option value={new CatalogImport()}>Каталог: Таблица</option>
                 <option value={new OwnStorageImport(null)}>Мои остатки: Таблица</option>
                 <option value={new OwnStorageImport("coming")}>Мои остатки: Приход </option>
                 <option value={new OwnStorageImport("consumption")}>Мои остатки: Расход</option>
@@ -40,6 +41,8 @@
         </label>
         {#if data instanceof SimpleImport}
             <Simple bind:data />
+        {:else if data instanceof CatalogImport}
+            <!-- No options -->
         {:else if data instanceof FboAdditionsImport}
             <Warehouse bind:data />
         {:else if data instanceof OwnStorageImport}

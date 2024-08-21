@@ -16,7 +16,7 @@
     import ClassesPlugin from "$lib/datagrid/plugins/classes";
     import Toolbar from "./Toolbar.svelte";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
-    import { offersState } from "../state";
+    import { invalidateAllState, offersState } from "../state";
     import offersFilter from "./filter";
 
     onMount(() => offersState.load());
@@ -27,7 +27,10 @@
         let ok = await patchOfferList(
             get(offersState).filter(x => get(offersState.changes).isChanged(x.id))
         );
-        if (ok) await offersState.forceReload();
+        if (ok) {
+            await invalidateAllState();
+            await offersState.forceReload();
+        }
     }
 
     onMount(async () => {

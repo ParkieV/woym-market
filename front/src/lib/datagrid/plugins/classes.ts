@@ -19,7 +19,10 @@ export default class ClassesPlugin<T> implements GridPlugin<T> {
                 } else {
                     col.cellClassRules = {
                         ...col.cellClassRules,
-                        editable: ({ colDef: { editable } }) => editable === true,
+                        editable: params =>
+                            typeof params.colDef.editable === "function"
+                                ? params.colDef.editable(params)
+                                : params.colDef.editable === true,
                         ...rules
                     };
                 }

@@ -371,6 +371,12 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
             base: new BooleanColumn(),
             editable: true
         },
+        {
+            header: "Синхронизация",
+            key: "synchronization",
+            base: new BooleanColumn(),
+            editable: true
+        },
         { header: "Скрыт", key: "hidden", base: new BooleanColumn(), editable: true }
     ];
 }
