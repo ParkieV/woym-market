@@ -90,7 +90,7 @@ class WildberriesAPI(BaseAPI):
         if response_json.get('error', None):
             logger.error(f'Cant check price update result: {response_json.get("errorText", "unknown error")}')
 
-        task_result_info = response_json.get('result', {})
+        task_result_info = response_json.get('data', {})
 
         logger.info(
             f'Task price upload ID({task_result_info.get("uploadID", "unknown")}) with status: {task_result_info.get("status", "unknown")} checked. \nAll goods: {task_result_info.get("overAllGoodsNumber", "unknown")}, without errors: {task_result_info.get("successGoodsNumber", "unknown")}')
@@ -111,7 +111,7 @@ class WildberriesAPI(BaseAPI):
                 'data': [
                     {
                         "nmID": price_data.vendor_code,
-                        "price": price_data.target_price,
+                        "price": round(price_data.target_price),
                     }
                     for price_data in valid_price_data[i:i + chunk_size]
                 ]
@@ -124,7 +124,7 @@ class WildberriesAPI(BaseAPI):
 
             response_json = response.json()
 
-            if not response_json.get('error', None):
+            if response_json.get('error', None):
                 logger.error(response_json['errorText'])
                 continue
 

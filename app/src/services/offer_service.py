@@ -162,7 +162,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
     elif isinstance(offers, list):
         data = [i.model_dump() for i in offers]
 
-    if len(data):
+    if not len(data):
         logger.info('Skip update prices due to list is empty')
         return
 
@@ -176,7 +176,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
             auto_participation_in_promotions=offer_data['auto_participation_in_promotions'],
             auto_min_price=offer_data['target_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['target_price'], offer_data['auto_min_price'])) else None,
             search_words=offer_data['search_words'],
-            vendor_code=offer_data['vendor_code']
+            vendor_code=int(offer_data['vendor_code']) if offer_data['vendor_code'] is not None and not np.isnan(offer_data['vendor_code']) else None
         )
         for offer_data in data if offer_data['total_price'] is not None
     ]
