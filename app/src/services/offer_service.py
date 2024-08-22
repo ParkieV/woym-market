@@ -402,10 +402,13 @@ async def export_offers(name_of_shop: str | None = None, market: str | None = No
 
     offers = await get_offers(filters)
 
+    exclude_columns = [f'{i}_changed' for i in CONTROL_CHANGES]
+
     df = pd.DataFrame([offer.model_dump() for offer in offers], columns=OfferOut.fields().keys())
     df['dollar_cost_price_updated_at'] = df['dollar_cost_price_updated_at'].astype('string')
     df['dollar_cost_price_updated_at'].fillna('', inplace=True)
     df['dollar_cost_price_updated_at'] = df['dollar_cost_price_updated_at'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S.%f').strftime('%d/%m/%Y') if x else x)
+    df.drop(columns=exclude_columns, errors='ignore', inplace=True)
     df.rename(columns=OfferOut.fields(), inplace=True)
     df.to_excel('data/out-offers.xlsx', index=False)
     return 'data/out-offers.xlsx'
