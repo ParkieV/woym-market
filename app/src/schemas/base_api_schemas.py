@@ -71,7 +71,6 @@ class APIPriceChangeData:
     min_price: float
     auto_participation_in_promotions: bool
     auto_min_price: float | None = None
-    search_words: str | None = None
     vendor_code: int | None = None
 
     def is_valid_target_price(self) -> bool:

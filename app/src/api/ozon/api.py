@@ -155,10 +155,6 @@ class OzonAPI(BaseAPI):
                         logger.warning(
                             f'Error in update offer with id - {offer_result["offer_id"]} \nErrors: {offer_result["errors"]}')
 
-            await self._set_search_words(
-                [(offer_data.sku, offer_data.search_words) for offer_data in data[i:i + chunk_size] if
-                 offer_data.is_valid_search_words()])
-
         logger.info(f'{self.shop_name}(ozon) price updated')
 
     def _get_offers_identifiers(self) -> list[OfferIdentifier]:
@@ -388,56 +384,56 @@ class OzonAPI(BaseAPI):
 
         return clasters
 
-    async def _set_search_words(self, data: list[tuple[str, str]]):
-        attribute_id = 22336
-
-        if not len(data):
-            return
-
-        body = {
-            'items': [
-                {
-                    'offer_id': offer_id,
-                    'attributes': [
-                        {
-                            'id': attribute_id,
-                            'complex_id': 0,
-                            'values': [
-                                {
-                                    'dictionary_value_id': 0,
-                                    'value': words if isinstance(words, str) else '',
-                                }
-                            ]
-                        }
-                    ]
-                } for offer_id, words in data
-            ]
-        }
-
-        response = self.session.post('https://api-seller.ozon.ru/v1/product/attributes/update',
-                                     headers=self.auth_headers, json=body)
-
-        if response.status_code != 200:
-            logging.error(
-                f'Error in set search words. Reason: {response.reason}. Json: {response.json()}. Text: {response.text}')
-            return
-
-        response_json = response.json()
-
-        response = self.session.post('https://api-seller.ozon.ru/v1/product/import/info', headers=self.auth_headers,
-                                     json={'task_id': response_json['task_id']})
-
-        if response.status_code != 200:
-            logging.error(
-                f'Error in check setting search words. Reason: {response.reason}. Json: {response.json()}. Text: {response.text}')
-            return
-
-        response_json = response.json()
-
-        for item in response_json['result']['items']:
-            if item['status'] == 'failed':
-                logging.error(
-                    f'Updating search words for offer with id - {item["offer_id"]}. \nErrors: {item["errors"]}')
-            elif item['status'] == 'pending':
-                logging.info(f'Task pending "Update search words" for offer with id - {item["offer_id"]}')
-                await asyncio.sleep(.5)
+    # async def _set_search_words(self, data: list[tuple[str, str]]):
+    #     attribute_id = 22336
+    #
+    #     if not len(data):
+    #         return
+    #
+    #     body = {
+    #         'items': [
+    #             {
+    #                 'offer_id': offer_id,
+    #                 'attributes': [
+    #                     {
+    #                         'id': attribute_id,
+    #                         'complex_id': 0,
+    #                         'values': [
+    #                             {
+    #                                 'dictionary_value_id': 0,
+    #                                 'value': words if isinstance(words, str) else '',
+    #                             }
+    #                         ]
+    #                     }
+    #                 ]
+    #             } for offer_id, words in data
+    #         ]
+    #     }
+    #
+    #     response = self.session.post('https://api-seller.ozon.ru/v1/product/attributes/update',
+    #                                  headers=self.auth_headers, json=body)
+    #
+    #     if response.status_code != 200:
+    #         logging.error(
+    #             f'Error in set search words. Reason: {response.reason}. Json: {response.json()}. Text: {response.text}')
+    #         return
+    #
+    #     response_json = response.json()
+    #
+    #     response = self.session.post('https://api-seller.ozon.ru/v1/product/import/info', headers=self.auth_headers,
+    #                                  json={'task_id': response_json['task_id']})
+    #
+    #     if response.status_code != 200:
+    #         logging.error(
+    #             f'Error in check setting search words. Reason: {response.reason}. Json: {response.json()}. Text: {response.text}')
+    #         return
+    #
+    #     response_json = response.json()
+    #
+    #     for item in response_json['result']['items']:
+    #         if item['status'] == 'failed':
+    #             logging.error(
+    #                 f'Updating search words for offer with id - {item["offer_id"]}. \nErrors: {item["errors"]}')
+    #         elif item['status'] == 'pending':
+    #             logging.info(f'Task pending "Update search words" for offer with id - {item["offer_id"]}')
+    #             await asyncio.sleep(.5)
