@@ -24,8 +24,8 @@
     @use "./style.scss" as *;
     button {
         @include ternary-btn;
+        @include square;
         padding: 4px;
-        aspect-ratio: 1;
         border: 0;
         border-radius: 4px;
 

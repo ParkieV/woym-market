@@ -38,3 +38,8 @@
         }
     }
 }
+
+@mixin square {
+    flex: 0 1 36px;
+    aspect-ratio: 1;
+}
