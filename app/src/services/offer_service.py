@@ -129,7 +129,7 @@ async def update_offers(user_id: int):
 
         # После обновление аттрибутов у товаров, которые требовали изменений, выставить маркеры полей в нейтральные
         for column in CONTROL_CHANGES:
-            to_update_df[column] = False
+            to_update_df[f'{column}_changed'] = False
 
         # Создание новых товаров
         for market in await get_markets(session):
