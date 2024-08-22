@@ -254,3 +254,7 @@ async def get_violators(session: AsyncSession, market: str | None = None, name_o
 
     result = (await session.execute(query)).all()
     return [ViolatorDTO.model_validate(i, from_attributes=True) for i in result]
+
+
+async def set_tracked_fields_status(session: AsyncSession):
+    pass

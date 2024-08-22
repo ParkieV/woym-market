@@ -127,6 +127,10 @@ async def update_offers(user_id: int):
         await update_offers_price(offers_df[offers_df['auto_price_control'] == True])
         settings = await get_user_settings(session, user_id)
 
+        # После обновление аттрибутов у товаров, которые требовали изменений, выставить маркеры полей в нейтральные
+        for column in CONTROL_CHANGES:
+            to_update_df[column] = False
+
         # Создание новых товаров
         for market in await get_markets(session):
             to_create_df_chunked = await utils.build_offers_data(to_create_df[((to_create_df['market'] == market.type) & (to_create_df['name_of_shop'] == market.name))], settings, market, setup_mode=True)
