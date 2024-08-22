@@ -15,22 +15,22 @@ router = APIRouter(
 )
 
 
-@router.get('', response_model=list[CatalogItem])
+@router.get('', response_model=list[CatalogItem], dependencies=[Depends(get_current_user)])
 async def get_catalog_items():
     return await service.get_catalog_items()
 
 
-@router.post('')
+@router.post('', dependencies=[Depends(require_staff)])
 async def change_catalog_items(items: list[CatalogItemUpdate]):
     await service.change_catalog_items(items)
 
 
-@router.post('/setup', tags=["Debug"])
+@router.post('/setup', tags=["Debug"], dependencies=[Depends(require_staff)])
 async def setup_catalog_items():
     await service.setup_catalog_items()
 
 
-@router.post('/synchronization', tags=["Debug"])
+@router.post('/synchronization', tags=["Debug"], dependencies=[Depends(require_staff)])
 async def synchronize_catalog_items(skus: list[str] = Body(embed=True)):
     await service.sync_catalog_items_with_offers(skus=skus)
 
