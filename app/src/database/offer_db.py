@@ -1,4 +1,5 @@
 from datetime import datetime
+from operator import or_
 
 import numpy as np
 import pandas as pd
@@ -91,7 +92,7 @@ async def update_offers(
             stmp = stmp.where(Offer.sku == offer['sku'])
 
         if detect_changes:
-            tracked_data = {f'{i}_changed': func.coalesce(getattr(Offer, i), 'unknown') != (offer[i] or 'unknown') for i in detect_changes if getattr(Offer, i, None)}
+            tracked_data = {f'{i}_changed': or_(getattr(Offer, f'{i}_changed'), (func.coalesce(getattr(Offer, i), 'unknown') != (offer[i] or 'unknown'))) for i in detect_changes if getattr(Offer, i, None)}
             offer.update(tracked_data)
 
         stmp = stmp.values(**offer)

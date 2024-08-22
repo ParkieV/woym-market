@@ -103,6 +103,7 @@ class OfferChange(BaseOffer):
     supplier_available: bool = Field(title='Наличие у поставщика')
     search_words: str | None = Field(title='Поисковые слова', max_length=255)
     use_promotion_price: bool = Field(title='Акция')
+    barcodes: str | None = Field(title='Штрихкоды')
 
     synchronization: bool = Field(title='Синхронизация с каталогом')
 
@@ -153,7 +154,6 @@ class OfferOut(OfferChange):
     best_place_im_link: str | None = Field(title='Ссылка на магазин с лучшей ценой', exclude=True)
     your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
     min_general_markets_price: float | None = Field(title='Лучшая цена среди всех площадок')
-    barcodes: str | None = Field(title='Штрихкоды')
     vendor_code: int | None = Field(title='Артикул')
     recommended_retail_price: float | None = Field(title='РРЦ')
     stop_price: float | None = Field(title='Стоп цена')
