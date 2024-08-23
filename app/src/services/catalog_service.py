@@ -10,7 +10,7 @@ from src.database.db import async_session
 from src.database import offer_db
 from src.database import catalog_db as db
 from src.schemas.catalog_schemas import CatalogItemCreate, CatalogItem, CatalogItemUpdate
-from src.services.base_utils import parce_field_names, bytes_to_data_frame
+from src.services.base_utils import parce_field_names, bytes_to_data_frame, parce_sizes_list, parce_purchase_list
 from src.services.offer_service import recalculate_values
 
 logger = get_logger(__name__)
@@ -79,11 +79,18 @@ async def import_catalog_items(file: bytes, file_extension: str = '.xlsx') -> li
     await change_catalog_items(to_update_items)
 
 
-async def import_item_sizes(file: bytes, file_extension: str = '.xlsx'):
-    pass
+async def import_item_sizes(data: bytes, file_extension: str = '.xlsx'):
+    df = parce_sizes_list(data, file_extension=file_extension)
+    to_update_data = [CatalogItemUpdate(**i) for i in df.to_dict('records')]
+    async with async_session() as session:
+        await db.change_catalog_items(session, to_update_data)
 
-async def import_item_prices(file: bytes, file_extension: str = '.xlsx'):
-    pass
+
+async def import_item_prices(data: bytes, file_extension: str = '.xlsx'):
+    df = parce_purchase_list(data, file_extension=file_extension)
+    to_update_data = [CatalogItemUpdate(**i) for i in df.to_dict('records')]
+    async with async_session() as session:
+        await db.change_catalog_items(session, to_update_data)
 
 
 

@@ -1,3 +1,4 @@
+import pandas as pd
 from sqlalchemy import select, update, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -11,13 +12,13 @@ async def get_all_catalog_items(session: AsyncSession) -> list[CatalogItem]:
             (await session.execute(catalog_query)).scalars()]
 
 
-async def change_catalog_items(session: AsyncSession, items: list[schemas.CatalogItemUpdate]) -> None:
+async def change_catalog_items(session: AsyncSession, items: list[schemas.CatalogItemUpdate] | pd.DataFrame) -> None:
     for item in items:
         synchronization_info = item.synchronization.copy()
         await set_offers_sync(session, synchronization_info)
 
-        changed_data = item.model_dump()
-        changed_data.pop('synchronization')
+        changed_data = item.model_dump(exclude_unset=True)
+        if 'synchronization' in changed_data: changed_data.pop('synchronization')
         
         item_stmp = update(CatalogItem).where(CatalogItem.sku == item.sku).values(**changed_data)
         await session.execute(item_stmp)
