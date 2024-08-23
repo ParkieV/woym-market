@@ -6,6 +6,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import src.services.base_utils
 from src.database.catalog_db import sync_catalog_items_with_offers
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.confing import config
@@ -25,7 +26,7 @@ from src.database.settings_db import update_logs, get_user_settings
 from fastapi.exceptions import HTTPException
 from fastapi import status
 from datetime import datetime
-
+from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
 
@@ -276,7 +277,7 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
 async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     required_fields = {'sku', 'market', 'name_of_shop'}
 
-    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
+    df = src.services.base_utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df.fillna({
         'note_1': '',
@@ -312,17 +313,9 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
 
 
 async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
-    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
-    df.drop(df.columns[[3, 4, 6, 7]], axis=1, inplace=True, errors='ignore')
-    df.drop([i for i in range(8)], axis=0, inplace=True, errors='ignore')
-    df.columns = ['sku', 'name', 'discount_price', 'price']
+    df = parce_purchase_list(data, file_extension=file_extension)
 
-    df['sku'] = df['sku'].astype('string')
-
-    df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
-
-    df['use_promotion_price'] = df['discount_price'].notna()
-    df['wholesale_dollar_cost_price'] = df['price']
+    now = datetime.now()
 
     async with async_session() as session:
         for _market in await get_markets(session, MarketOut):
@@ -334,14 +327,10 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
 
             chunked_df = df.copy()
 
-            chunked_df['wholesale_dollar_cost_price'] = np.where(
-                chunked_df['use_promotion_price'],
-                chunked_df['discount_price'],
-                chunked_df['wholesale_dollar_cost_price']
-            )
-            chunked_df.drop(['name', 'discount_price', 'price'], axis=1, inplace=True)
             chunked_df['market'] = _market.type
             chunked_df['name_of_shop'] = _market.name
+            chunked_df['dollar_cost_price_updated_at'] = now
+
             # Зависит от магазина
             await db.update_offers(session, chunked_df, mapping_columns=['market', 'name_of_shop'], endswith_sku=True)
 
@@ -351,25 +340,11 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
             await db.set_supplier_available(session, db_skus & import_skus, True)
             await db.set_supplier_available(session, db_skus - import_skus, False)
 
-        now = datetime.now()
-        await db.set_dollar_cost_price_updated_at(session, import_skus, now)
         await recalculate_values(session, settings)
 
 
 async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
-    df = utils.bytes_to_data_frame(data, 'Список товаров', file_extension)
-    df.drop([0, 1], axis=0, inplace=True, errors='ignore')
-    df: pd.DataFrame = df[df.columns[[2, 13, 14]]]
-    df.columns = ['sku', 'self_weight', 'sizes']
-    df[['self_length', 'self_width', 'self_height']] = df['sizes'].str.split('/', expand=True)
-    df[['self_length', 'self_width', 'self_height', 'self_weight']] = df[
-        ['self_length', 'self_width', 'self_height', 'self_weight']].astype(float)
-    df['volume'] = df['self_length'] * df['self_width'] * df['self_height'] / 1000
-    df['sku'] = df['sku'].astype('string')
-
-    df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
-    df.fillna(0, inplace=True)
-    df.drop('sizes', axis=1, inplace=True)
+    df = parce_sizes_list(data, file_extension=file_extension)
 
     mapping_columns = []
 

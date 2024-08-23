@@ -5,6 +5,8 @@ import pandas as pd
 from fastapi import HTTPException
 from starlette import status
 import openpyxl
+
+import src.services.base_utils
 from logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
@@ -141,7 +143,7 @@ async def change_own_storages(data: list[OwnStorageUpdate]):
 @error_handler('Ошибка импорта остатков магазинов.')
 async def import_offers_stocks(data, name_of_shop: str | None = None, market: str | None = None,
                                file_extension: str = 'xlsx'):
-    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
+    df = src.services.base_utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df[['note_1', 'note_2', 'note_3']] = df[['note_1', 'note_2', 'note_3']].fillna('')
 
@@ -281,7 +283,7 @@ async def export_own_storages(place_id: int) -> str:
 
 @error_handler('Ошибка импорта собственных остатков.')
 async def import_own_storages(data, place_id: int, file_extension: str = 'xlsx'):
-    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
+    df = src.services.base_utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df.rename(columns={'Мой склад': 'value'}, inplace=True)
     df = df[['sku', 'value']]
@@ -497,7 +499,7 @@ async def export_supply(export_type: SupplyExportType, warehouses: list[int], of
 
 
 async def import_fbo_data(data, name_of_shop: str | None, warehouse_id: int | None, file_extension: str) -> str:
-    df = utils.bytes_to_data_frame(data, file_extension=file_extension, header=1)
+    df = src.services.base_utils.bytes_to_data_frame(data, file_extension=file_extension, header=1)
     df.rename({
         'Ваш SKU': 'sku',
         'Можно ли поставить товар?': 'can_be_delivered',
@@ -546,7 +548,7 @@ async def change_own_storage_places(data: list[OwnStoragePlaceUpdate]):
 
 
 async def increment_own_storage_values(data, place_id: int, file_extension: str, coef: int = 1):
-    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
+    df = src.services.base_utils.bytes_to_data_frame(data, file_extension=file_extension)
 
     if any(df.columns.str.contains('unnamed', case=False)):
         df.columns = df.iloc[0]
