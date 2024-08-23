@@ -130,6 +130,8 @@ class OfferOut(OfferChange):
 
     dollar_cost_price: float | None = Field(title='Закупка у. е.', default=0)
 
+    catalog_note: str = Field(title='Примечание (Каталог)')
+
     # countable/editable values
     cost_price: float | None = Field(title='Себестоимость (Закупка у. е. * курс)')
     dollar_cost_price_updated_at: datetime | None = Field(title='Дата изменения стоимости закупки в y. e.')

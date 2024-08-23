@@ -25,7 +25,7 @@ async def setup_catalog_items() -> None:
         item_skus = set(await db.get_unique_skus(session))
         new_skus = offer_skus - item_skus
 
-        new_items = [CatalogItemCreate(sku=sku, note='Новый товар') for sku in new_skus]
+        new_items = [CatalogItemCreate(sku=sku, catalog_note='Новый товар') for sku in new_skus]
         await db.create_catalog_items(session, new_items)
 
         if new_items:
