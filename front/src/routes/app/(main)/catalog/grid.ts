@@ -56,7 +56,7 @@ function columns(markets: Market[]): (Column | ColumnGroup)[] {
                 {
                     base: new StringColumn(),
                     header: "Примечание",
-                    key: "note",
+                    key: "catalog_note",
                     editable: true,
                     columnGroupShow: "closed"
                 },
