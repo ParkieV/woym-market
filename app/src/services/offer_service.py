@@ -98,6 +98,9 @@ async def update_offers(user_id: int):
     to_delete_df = pd.DataFrame(to_delete, columns=mapping_fields)
 
     async with async_session() as session:
+        settings = await get_user_settings(session, user_id)
+        markets = await get_markets(session)
+
         to_update_price_df = offers_df.copy()
         merge_result = pd.merge(to_update_price_df[mapping_fields + CONTROL_CHANGES + [f'{i}_changed' for i in CONTROL_CHANGES]], yandex_offers_df[mapping_fields + CONTROL_CHANGES], on=mapping_fields)
 
@@ -112,12 +115,19 @@ async def update_offers(user_id: int):
         to_update_price_df.drop(CONTROL_CHANGES + [f'{i}_changed' for i in CONTROL_CHANGES], axis='columns', inplace=True)
         to_update_price_df = pd.merge(merge_result, to_update_price_df, on=mapping_fields)
 
+        # Считаем discount_base_price на основании целевой цены
+        for market in markets:
+            to_update_price_df['discount_base_price'] = np.where(
+                (to_update_price_df['market'] == market.type) & (to_update_price_df['name_of_shop'] == market.name),
+                to_update_price_df['target_price'] * market.price_before_discount,
+                to_update_price_df['discount_base_price']
+            )
+
         # Обновление цен
         await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True])
-        settings = await get_user_settings(session, user_id)
 
         # Создание новых товаров
-        for market in await get_markets(session):
+        for market in markets:
             to_create_df_chunked = await utils.build_offers_data(to_create_df[((to_create_df['market'] == market.type) & (to_create_df['name_of_shop'] == market.name))], settings, market, setup_mode=True)
             await db.create_offers(session, to_create_df_chunked)
             logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df)}')
@@ -420,12 +430,14 @@ async def create_violators_file(market: Market | None = None, name_of_shop: str 
 
         if len(violators):
             f = [
-                Paragraph(f'{i+1}. SKU: {violator.sku}, Маркетплейс: {violator.market}, Магазин: {violator.name_of_shop}, Цена: {round(violator.price)}, РРЦ: {round(violator.recommended_retail_price)}', style=ParagraphStyle('ParStyles', fontName='DejaVuSerif', leading=20))
+                Paragraph(
+                    f'{i + 1}. SKU: {violator.sku}, Маркетплейс: {violator.market}, Магазин: {violator.name_of_shop}, Цена: {round(violator.price)}, РРЦ: {round(violator.recommended_retail_price)}',
+                    style=ParagraphStyle('ParStyles', fontName='DejaVuSerif', leading=20))
                 for i, violator in enumerate(violators)]
         else:
-            f = [Paragraph('Нарушителей не найдено.', style=ParagraphStyle('ParStyles', fontName='DejaVuSerif', leading=20))]
+            f = [Paragraph('Нарушителей не найдено.',
+                           style=ParagraphStyle('ParStyles', fontName='DejaVuSerif', leading=20))]
         canvas = SimpleDocTemplate("data/violators.pdf", )
         canvas.build(f)
 
         return "data/violators.pdf"
-
