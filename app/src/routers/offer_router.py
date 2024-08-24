@@ -29,7 +29,7 @@ async def get_offers(offset: int = 0, limit: int | None = None):
     return await service.get_offers(offset=offset, limit=limit)
 
 
-@data_router.patch('/offers', response_model=list[OfferOut], tags=['Offers'])
+@data_router.patch('/offers', tags=['Offers'])
 async def change_offer_fields(offers_data: list[OfferChange], current_user=Depends(require_staff)):
     return await service.change_offers(offers_data, current_user.id)
 
