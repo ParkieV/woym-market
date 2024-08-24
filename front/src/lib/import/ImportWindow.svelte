@@ -31,7 +31,9 @@
                 <option value={new SimpleImport("data/import", "table")}>Карточки: Таблица</option>
                 <option value={new SimpleImport("data/import", "sizes")}>Карточки: Размеры</option>
                 <option value={new SimpleImport("data/import", "prices")}>Карточки: Цены</option>
-                <option value={new CatalogImport()}>Каталог: Таблица</option>
+                <option value={new CatalogImport("table")}>Каталог: Таблица</option>
+                <option value={new CatalogImport("sizes")}>Каталог: Размеры</option>
+                <option value={new CatalogImport("prices")}>Каталог: Цены</option>
                 <option value={new OwnStorageImport(null)}>Мои остатки: Таблица</option>
                 <option value={new OwnStorageImport("coming")}>Мои остатки: Приход </option>
                 <option value={new OwnStorageImport("consumption")}>Мои остатки: Расход</option>

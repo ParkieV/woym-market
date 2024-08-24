@@ -64,8 +64,15 @@ export type SimpleImportProps = {
 };
 
 export class CatalogImport extends Import {
+    constructor(public kind: "table" | "prices" | "sizes") {
+        super();
+    }
+
     protected get url(): string {
-        return "catalog/import";
+        if (this.kind === "table") return "catalog/import";
+        if (this.kind === "prices") return "catalog/import/prices";
+        if (this.kind === "sizes") return "catalog/import/sizes";
+        throw new Error("Неподдерживаемый вид импорта");
     }
 
     protected body(file: Blob): FormData {
