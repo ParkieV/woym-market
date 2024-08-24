@@ -92,6 +92,9 @@ async def import_item_prices(data: bytes, file_extension: str = '.xlsx'):
     async with async_session() as session:
         await db.change_catalog_items(session, to_update_data)
 
+        import_skus = set(df['sku'].values.tolist())
+        db_skus = set(await db.get_unique_skus(session))
 
-
+        await db.set_supplier_available(session, db_skus & import_skus, True)
+        await db.set_supplier_available(session, db_skus - import_skus, False)
 

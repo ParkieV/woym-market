@@ -1,3 +1,5 @@
+from typing import Iterable
+
 import pandas as pd
 from sqlalchemy import select, update, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -82,4 +84,12 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
         stmp = stmp.where(Offer.sku.in_(skus))
 
     await session.execute(stmp)
+    await session.commit()
+
+
+async def set_supplier_available(session: AsyncSession, skus: Iterable[str], value: bool) -> None:
+    for sku in skus:
+        stmp = update(CatalogItem).where(CatalogItem.sku.endswith(sku)).values(supplier_available=value)
+        await session.execute(stmp)
+
     await session.commit()
