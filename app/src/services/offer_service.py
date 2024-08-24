@@ -174,7 +174,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
             target_price=offer_data['target_price'],
             min_price=offer_data['manual_min_price'] if offer_data['use_manual_min_price'] else offer_data['total_price'] * offer_data['auto_min_price'] / 100,
             auto_participation_in_promotions=offer_data['auto_participation_in_promotions'],
-            auto_min_price=offer_data['target_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['target_price'], offer_data['auto_min_price'])) else None,
+            auto_min_price=offer_data['total_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['total_price'], offer_data['auto_min_price'])) else None,
             search_words=offer_data['search_words'],
             vendor_code=int(offer_data['vendor_code']) if offer_data['vendor_code'] is not None and not np.isnan(offer_data['vendor_code']) else None
         )
