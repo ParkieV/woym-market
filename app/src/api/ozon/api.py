@@ -91,7 +91,7 @@ class OzonAPI(BaseAPI):
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 1000
 
-        valid_price_data = [i for i in data if i.is_valid_min_price() and i.is_valid_target_price()]
+        valid_price_data = [i for i in data if all((i.is_valid_min_price(), i.is_valid_target_price(), i.is_valid_discount_base_price()))]
 
         if not valid_price_data:
             logger.warning(f'{self.shop_name}(ozon) has no valid price data')
@@ -105,7 +105,8 @@ class OzonAPI(BaseAPI):
                     'currency_code': 'RUB',
                     'auto_action_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
                     'price_strategy_enabled': 'UNKNOWN',
-                    'min_price': str(price.min_price)
+                    'min_price': str(price.min_price),
+                    'old_price': str(round(price.discount_base_price))
                 }
                 for price in valid_price_data[i:i + chunk_size]
             ]

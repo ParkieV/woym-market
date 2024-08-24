@@ -144,7 +144,7 @@ class YandexMarketAPI(BaseAPI):
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 500
 
-        valid_price_data = [i for i in data if i.is_valid_target_price()]
+        valid_price_data = [i for i in data if i.is_valid_target_price() and i.is_valid_discount_base_price()]
 
         if not valid_price_data:
             logger.warning(f'{self._shop_name}(yandex) has no valid price data')
@@ -158,7 +158,8 @@ class YandexMarketAPI(BaseAPI):
                     'offerId': price_data.sku,
                     'price': {
                         'value': price_data.target_price,
-                        'currencyId': "RUR"
+                        'currencyId': "RUR",
+                        'discountBase': round(price_data.discount_base_price)
                     }
                 }
                 for price_data in valid_price_data[i:i + chunk_size]]
@@ -172,7 +173,9 @@ class YandexMarketAPI(BaseAPI):
                         headers=self.auth_headers,
                         json=body
                     )
-            self.validate_response(response, body=body, raise_error=False)
+
+            if not response.ok:
+                logger.error(f'{self._shop_name}(yandex) has invalid price data: {response.text}')
 
         self._set_cofinance_offers_price(data)
 
@@ -324,7 +327,7 @@ class YandexMarketAPI(BaseAPI):
     def _set_cofinance_offers_price(self, data: list[APIPriceChangeData]):
         chunk_size = 500
         business_id = self._get_business_id_by_campaign_id(self._entity_id)
-        valid_data = [i for i in data if i.auto_min_price is not None and i.auto_min_price != np.nan]
+        valid_data = [i for i in data if i.is_valid_auto_min_price()]
 
         for i in range(0, len(data), chunk_size):
 

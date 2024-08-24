@@ -69,6 +69,7 @@ class APIPriceChangeData:
     min_price: float
     auto_participation_in_promotions: bool
     auto_min_price: float | None = None
+    discount_base_price: float | None = None
     search_words: str | None = None
     vendor_code: int | None = None
 
@@ -86,4 +87,7 @@ class APIPriceChangeData:
 
     def is_valid_vendor_code(self) -> bool:
         return isinstance(self.vendor_code, int) and not np.isnan(self.vendor_code)
+
+    def is_valid_discount_base_price(self) -> bool:
+        return isinstance(self.discount_base_price, (float, int)) and not np.isnan(self.discount_base_price)
 
