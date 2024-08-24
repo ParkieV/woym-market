@@ -119,7 +119,7 @@ async def update_offers(user_id: int):
         for market in markets:
             to_update_price_df['discount_base_price'] = np.where(
                 (to_update_price_df['market'] == market.type) & (to_update_price_df['name_of_shop'] == market.name),
-                to_update_price_df['target_price'] * market.price_before_discount,
+                to_update_price_df['target_price'] * (1.0 + market.price_before_discount / 100),
                 to_update_price_df['discount_base_price']
             )
 
