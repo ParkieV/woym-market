@@ -314,8 +314,6 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
 async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = parce_purchase_list(data, file_extension=file_extension)
 
-    now = datetime.now()
-
     async with async_session() as session:
         for _market in await get_markets(session, MarketOut):
             if name_of_shop is not None and name_of_shop != _market.name:
@@ -328,7 +326,6 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
 
             chunked_df['market'] = _market.type
             chunked_df['name_of_shop'] = _market.name
-            chunked_df['dollar_cost_price_updated_at'] = now
 
             # Зависит от магазина
             await db.update_offers(session, chunked_df, mapping_columns=['market', 'name_of_shop'], endswith_sku=True)
