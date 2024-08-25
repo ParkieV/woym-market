@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -33,13 +35,13 @@ class CatalogItemUpdate(BaseCatalogItem):
 
 
 class CatalogItemCreate(BaseModel):
-    sku: str = Field('sku')
+    sku: str = Field(title='sku')
     catalog_note: str | None = Field(title='Примечание', default=None)
 
 
 class CatalogItem(CatalogItemUpdate):
-    pass
-    # supplier_available: bool = Field(title='Наличие у поставщика')
+    supplier_available: bool = Field(title='Наличие у поставщика')
+    dollar_cost_price_updated_at: datetime | None = Field(title='Дата обновления ОПТ У.Е.')
 
 
 

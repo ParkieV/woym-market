@@ -316,6 +316,7 @@ class CatalogItem(Base):
     use_promotion_price = Column(Boolean, nullable=False, default=False)
     wholesale_dollar_cost_price = Column(Float, nullable=True, default=None)
     supplier_available = Column(Boolean, nullable=False, default=False)
+    dollar_cost_price_updated_at = Column(DateTime, nullable=True, default=None)
     description = Column(String, nullable=True, default=None, server_default=None)
     search_words = Column(String, nullable=True, default=None, server_default=None)
     search_words_changed = Column(Boolean, nullable=False, default=False)

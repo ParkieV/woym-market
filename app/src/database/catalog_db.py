@@ -89,7 +89,10 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
 
 async def set_supplier_available(session: AsyncSession, skus: Iterable[str], value: bool) -> None:
     for sku in skus:
-        stmp = update(CatalogItem).where(CatalogItem.sku.endswith(sku)).values(supplier_available=value)
+        stmp = update(CatalogItem).where(CatalogItem.sku.endswith(sku)).values(
+            supplier_available=value,
+            dollar_cost_price_updated_at=func.now() if value else CatalogItem.dollar_cost_price_updated_at,
+        )
         await session.execute(stmp)
 
     await session.commit()
