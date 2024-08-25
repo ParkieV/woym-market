@@ -7,9 +7,9 @@ import {
     StringColumn,
     dollarColumn,
     floatColumn,
-    intColumn,
     GroupColumn,
-    ImageColumn
+    ImageColumn,
+    DateColumn
 } from "$lib/datagrid/columns/types";
 import type { Market } from "$lib/data/markets";
 
@@ -103,8 +103,18 @@ function columns(markets: Market[]): (Column | ColumnGroup)[] {
                     header: "ОПТ у. е.",
                     base: dollarColumn,
                     editable: true
+                },
+                {
+                    key: "dollar_cost_price_updated_at",
+                    header: "Дата обновления ОПТ (у. е.)",
+                    base: new DateColumn()
                 }
             ]
+        },
+        {
+            key: "supplier_available",
+            header: "Наличие у поставщика",
+            base: new BooleanColumn()
         },
         {
             header: "Синхронизация",

@@ -315,7 +315,7 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 },
                 {
                     key: "dollar_cost_price_updated_at",
-                    header: "Дата обновления цены закупки (у. е.)",
+                    header: "Дата обновления ОПТ (у. е.)",
                     base: new DateColumn()
                 },
                 {
