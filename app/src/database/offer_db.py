@@ -227,7 +227,7 @@ async def set_supplier_available(session: AsyncSession, skus: Iterable[str], val
     for sku in skus:
         stmp = update(Offer).where(Offer.sku.endswith(sku)).values(
             supplier_available=value,
-            dollar_cost_price_updated_at=func.now() if value else Offer.dollar_cost_price_updated_at,
+            dollar_cost_price_updated_at=func.now(),
         )
         await session.execute(stmp)
         await session.commit()
