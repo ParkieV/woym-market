@@ -82,7 +82,7 @@ function columns(markets: Market[]): (Column | ColumnGroup)[] {
                 { header: "Ширина, см", key: "self_width", base: floatColumn, editable: true },
                 { header: "Высота, см", key: "self_height", base: floatColumn, editable: true },
                 {
-                    key: "self_volume",
+                    key: "volume",
                     header: "Объём, л",
                     base: floatColumn,
                     tooltip: "Длина * ширина * высота / 1000"

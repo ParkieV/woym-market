@@ -13,7 +13,7 @@ export type CatalogEntry = {
     self_length: number | null;
     self_width: number | null;
     self_height: number | null;
-    self_volume: number | null;
+    volume: number | null;
     use_promotion_price: boolean;
     wholesale_dollar_cost_price: number;
     synchronization: Synchronization[];

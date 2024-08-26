@@ -24,6 +24,9 @@ async def change_catalog_items(session: AsyncSession, items: list[schemas.Catalo
         
         item_stmp = update(CatalogItem).where(CatalogItem.sku == item.sku).values(**changed_data)
         await session.execute(item_stmp)
+        await session.execute(update(CatalogItem).where(CatalogItem.sku == item.sku).values(
+            volume=CatalogItem.self_width * CatalogItem.self_length * CatalogItem.self_height / 1000
+        ))
 
     await session.commit()
 
