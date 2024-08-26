@@ -42,7 +42,11 @@ async def change_catalog_items(items: list[CatalogItemUpdate]) -> None:
     async with async_session() as session:
         await db.change_catalog_items(session, items)
         logger.info(f'Catalog items changed: {len(items)}')
-        await recalculate_values(session, {'id': i.id for item in items for i in item.synchronization if i.synchronization})
+
+        to_recalculate_offer_ids = [i.id for item in items for i in item.synchronization if i.synchronization]
+
+        if to_recalculate_offer_ids:
+            await recalculate_values(session, {'id': i for i in to_recalculate_offer_ids})
 
 
 async def sync_catalog_items_with_offers(skus: list[str] | None = None, exclude_fields: list | None = None) -> None:
