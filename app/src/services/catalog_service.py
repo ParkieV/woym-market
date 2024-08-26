@@ -81,6 +81,7 @@ async def import_catalog_items(file: bytes, file_extension: str = '.xlsx') -> li
     to_update_items = [CatalogItemUpdate(**i) for i in df.to_dict('records')]
 
     await change_catalog_items(to_update_items)
+    await sync_catalog_items_with_offers(skus=[i.sku for i in to_update_items])
 
 
 async def import_item_sizes(data: bytes, file_extension: str = '.xlsx'):
@@ -101,4 +102,7 @@ async def import_item_prices(data: bytes, file_extension: str = '.xlsx'):
 
         await db.set_supplier_available(session, db_skus & import_skus, True)
         await db.set_supplier_available(session, db_skus - import_skus, False)
+
+        await db.sync_catalog_items_with_offers(session, skus=[i.sku for i in to_update_data])
+
 
