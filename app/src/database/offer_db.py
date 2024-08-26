@@ -119,7 +119,7 @@ async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.D
         )
         query_result = await session.execute(query)
         result.extend(
-            [model_schema.model_validate(offer, from_attributes=True) for offer in query_result.scalars().all()])
+            [model_schema.model_validate(offer, from_attributes=True) for offer in query_result.all()])
 
     return result
 
