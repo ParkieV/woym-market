@@ -72,7 +72,7 @@ async def import_catalog_items(file: bytes, file_extension: str = '.xlsx') -> li
 
     df['sku'] = df['sku'].astype('string')
 
-    columns = parce_field_names(CatalogItem, reverse=True)
+    columns = parce_field_names(CatalogItemUpdate, reverse=True)
 
     df = df[list(set(df.columns.values.tolist()) & set(columns.keys()))]
     df.rename(columns=columns, inplace=True)
