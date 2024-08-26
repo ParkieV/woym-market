@@ -9,7 +9,7 @@ from sqlalchemy import (
     TIMESTAMP,
     Float,
     DateTime,
-    select, func
+    select, func, BigInteger
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
@@ -129,7 +129,7 @@ class Offer(Base):
 
     use_promotion_price = Column(Boolean, default=False)
     wholesale_dollar_cost_price = Column(Float, nullable=True)
-    vendor_code = Column(Integer, nullable=True, default=None)
+    vendor_code = Column(BigInteger, nullable=True, default=None)
     search_words = Column(String, nullable=True, default=None)
     search_words_changed = Column(Boolean, default=False, nullable=False)
 

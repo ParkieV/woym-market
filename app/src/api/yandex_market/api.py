@@ -145,8 +145,9 @@ class YandexMarketAPI(BaseAPI):
             self.validate_response(response)
             data = response.json()
 
-            for offer in data['result']['offerMappings']:
-                offer = offer['offer']
+            for offer_mapping in data['result']['offerMappings']:
+                offer = offer_mapping['offer']
+                mapping = offer_mapping.get('mapping', {})
 
                 if 'weightDimensions' in offer:
                     weight_dimensions = offer['weightDimensions']
@@ -168,7 +169,8 @@ class YandexMarketAPI(BaseAPI):
                     'photo': offer['pictures'][0] if len(offer['pictures']) > 0 else None,
                     'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,
                     'business_id': business_id,
-                    'barcodes': ', '.join(offer['barcodes']) if offer['barcodes'] else None
+                    'barcodes': ', '.join(offer['barcodes']) if offer['barcodes'] else None,
+                    'vendor_code': mapping.get('marketSku', None)
 
                 }
                 offer_data['your_promotion_price'] = offer_data['current_price']
