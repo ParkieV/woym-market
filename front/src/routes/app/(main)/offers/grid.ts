@@ -46,7 +46,8 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     base: new StringColumn(),
                     key: "barcodes",
                     header: "Штрихкоды",
-                    columnGroupShow: "closed"
+                    columnGroupShow: "closed",
+                    editable: ({ data }) => (data as Offer).market !== "wildberries"
                 },
                 {
                     base: new StringColumn(),
@@ -91,7 +92,7 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     }),
                     header: "Поисковые слова",
                     key: "search_words",
-                    editable: true,
+                    editable: ({ data }) => (data as Offer).market === "ozon",
                     columnGroupShow: "closed"
                 },
                 {
