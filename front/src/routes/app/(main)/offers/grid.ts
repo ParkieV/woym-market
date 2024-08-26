@@ -40,7 +40,8 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     base: new StringColumn(),
                     header: "Название",
-                    key: "name"
+                    key: "name",
+                    editable: true
                 },
                 {
                     base: new StringColumn(),
