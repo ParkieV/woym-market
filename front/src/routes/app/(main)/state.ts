@@ -16,6 +16,11 @@ export const fboState = new GridState<FboStorage, number>(() => fetchFboStorage(
 export const fboStocksChanges = new ChangeList<FboStocks, number>();
 
 export async function invalidateAllState() {
-    Promise.all([offersState.reset(), ownStorageState.reset(), fboState.reset()]);
+    Promise.all([
+        offersState.reset(),
+        catalogState.reset(),
+        ownStorageState.reset(),
+        fboState.reset()
+    ]);
     fboStocksChanges.clear();
 }
