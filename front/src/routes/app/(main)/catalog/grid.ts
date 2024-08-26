@@ -114,7 +114,8 @@ function columns(markets: Market[]): (Column | ColumnGroup)[] {
         {
             key: "supplier_available",
             header: "Наличие у поставщика",
-            base: new BooleanColumn()
+            base: new BooleanColumn(),
+            editable: true
         },
         {
             header: "Синхронизация",
