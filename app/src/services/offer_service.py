@@ -56,7 +56,10 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
 
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=['name', 'description', 'barcodes', 'search_words'])
-        await sync_catalog_items_with_offers(session)
+
+        to_sync_skus = [i.sku for i in offers_data if i.synchronization]
+        if to_sync_skus:
+            await sync_catalog_items_with_offers(session,  skus=to_sync_skus)
         await recalculate_values(session, settings, which=changes[mapping_fields])
 
 
