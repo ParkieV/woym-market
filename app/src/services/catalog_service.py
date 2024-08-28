@@ -43,10 +43,10 @@ async def change_catalog_items(items: list[CatalogItemUpdate]) -> None:
         await db.change_catalog_items(session, items)
         logger.info(f'Catalog items changed: {len(items)}')
 
-        to_recalculate_offer_ids = [i.id for item in items for i in item.synchronization if i.synchronization]
-
-        if to_recalculate_offer_ids:
-            await recalculate_values(session, None, which=[{'id': i} for i in to_recalculate_offer_ids])
+        # to_recalculate_offer_ids = [i.id for item in items for i in item.synchronization if i.synchronization]
+        #
+        # if to_recalculate_offer_ids:
+        #     await recalculate_values(session, None, which=[{'id': i} for i in to_recalculate_offer_ids])
 
 
 async def sync_catalog_items_with_offers(skus: list[str] | None = None, exclude_fields: list | None = None) -> None:
@@ -81,7 +81,7 @@ async def import_catalog_items(file: bytes, file_extension: str = '.xlsx') -> li
     to_update_items = [CatalogItemUpdate(**i) for i in df.to_dict('records')]
 
     await change_catalog_items(to_update_items)
-    await sync_catalog_items_with_offers(skus=[i.sku for i in to_update_items])
+    # await sync_catalog_items_with_offers(skus=[i.sku for i in to_update_items])
 
 
 async def import_item_sizes(data: bytes, file_extension: str = '.xlsx'):
@@ -103,9 +103,9 @@ async def import_item_prices(data: bytes, file_extension: str = '.xlsx'):
         await db.set_supplier_available(session, db_skus & import_skus, True)
         await db.set_supplier_available(session, db_skus - import_skus, False)
 
-        await db.sync_catalog_items_with_offers(session, skus=[i.sku for i in to_update_data])
+        # await db.sync_catalog_items_with_offers(session, skus=[i.sku for i in to_update_data])
 
-    await recalculate_values(session, None)
+    # await recalculate_values(session, None)
 
 
 
