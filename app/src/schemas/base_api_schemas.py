@@ -100,3 +100,13 @@ class APIOfferChangeData(BaseModel):
     # photo: str | None = None
     search_words: str | None = None
     barcodes: str | None = None
+
+    def is_valid_barcodes(self) -> bool:
+        return True
+
+    @property
+    def valid_barcodes(self) -> list[str]:
+        if not self.is_valid_barcodes():
+            raise ValueError(f'Invalid barcodes for sku {self.sku}: "{self.barcodes}"')
+
+        return self.barcodes.replace(';', ' ').replace(',', ' ').split()

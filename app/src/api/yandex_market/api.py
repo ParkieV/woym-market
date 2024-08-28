@@ -49,9 +49,9 @@ class YandexMarketAPI(BaseAPI):
                     {
                         'offer': {
                             'offerId': offer_data.sku,
-                            # 'barcodes': [],
+                            'barcodes': [barcode for barcode in offer_data.valid_barcodes],
                             'name': offer_data.name,
-                            # 'description': offer_data.description,
+                            'description': offer_data.description,
                             # 'pictures': []
 
                         }
