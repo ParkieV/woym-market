@@ -1,7 +1,7 @@
 from typing import Iterable
 
 import pandas as pd
-from sqlalchemy import select, update, func, or_
+from sqlalchemy import select, update, func, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from src.database.models.models import CatalogItem, Offer
@@ -21,7 +21,7 @@ async def change_catalog_items(session: AsyncSession, items: list[schemas.Catalo
 
         changed_data = item.model_dump(exclude_unset=True)
         if 'synchronization' in changed_data: changed_data.pop('synchronization')
-        
+
         item_stmp = update(CatalogItem).where(CatalogItem.sku == item.sku).values(**changed_data)
         await session.execute(item_stmp)
         await session.execute(update(CatalogItem).where(CatalogItem.sku == item.sku).values(
@@ -30,7 +30,7 @@ async def change_catalog_items(session: AsyncSession, items: list[schemas.Catalo
 
     await session.commit()
 
-    await sync_catalog_items_with_offers(session, skus=[i.sku for i in items])
+    # await sync_catalog_items_with_offers(session, skus=[i.sku for i in items])
 
 
 async def set_offers_sync(session: AsyncSession, items: list[schemas.SynchronizationOffer]):
@@ -53,13 +53,14 @@ async def get_unique_skus(session: AsyncSession) -> list[str]:
     return [i[0] for i in result.all()]
 
 
-async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] | None = None, exclude_fields: list | None = None):
-    detect_changes = ['name', 'description', 'search_words', 'barcodes']
+async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] | None = None,
+                                         exclude_fields: list | None = None):
+    detect_changes = ['name', 'description', 'barcodes']
 
-    _exclude_fields = {'id', 'sku'}
+    _exclude_fields = {'id', 'sku', 'search_words'}
 
     if exclude_fields:
-        _exclude_fields.add(exclude_fields)
+        _exclude_fields.update(set(exclude_fields))
 
     offer_columns = set(Offer.__table__.columns.keys())
     catalog_columns = set(CatalogItem.__table__.columns.keys())
@@ -69,12 +70,26 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
     # Формируем словарь значений для обновления
     update_values = {col: getattr(CatalogItem, col) for col in common_columns}
 
+    # Поисквовые слова изменяются только для озона
+    update_search_words = {'search_words': case([
+        (Offer.market == 'ozon', CatalogItem.search_words)
+    ], else_=Offer.search_words)}
+
+    # Формируем словарь значений для проверки, что поле было изменено
     detect_changes_values = {
-        getattr(Offer, f'{i}_changed'): or_(getattr(Offer, f'{i}_changed'), (func.coalesce(getattr(CatalogItem, i), 'unknown') != func.coalesce(getattr(Offer, i), 'unknown')))
+        getattr(Offer, f'{i}_changed'): or_(getattr(Offer, f'{i}_changed'), (
+                    func.coalesce(getattr(CatalogItem, i), 'unknown') != func.coalesce(getattr(Offer, i), 'unknown')))
         for i in detect_changes
     }
 
+    # Поисковые слова изменяемые только для озона, поэтому тречим изменения только у него
+    detect_search_words_changes_for_ozon = {'search_words_changed': case([
+        (Offer.market == 'ozon', or_(Offer.search_words_changed, (func.coalesce(CatalogItem.search_words, 'unknown') != func.coalesce(Offer.search_words, 'unknown')))),
+    ],
+        else_=Offer.search_words_changed)}
+
     update_values.update(detect_changes_values)
+    update_values.update(detect_search_words_changes_for_ozon)
 
     stmp = (
         update(Offer)

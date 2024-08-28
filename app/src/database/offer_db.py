@@ -77,6 +77,10 @@ async def update_offers(
         if 'id' in offer.keys():
             del offer['id']
 
+        # Поисковые слова изменяются только у озона
+        if 'search_words' in offer and offer.get('market', None) != 'ozon':
+            del offer['search_words']
+
         stmp = update(Offer)
 
         if filters:
@@ -92,7 +96,7 @@ async def update_offers(
             stmp = stmp.where(Offer.sku == offer['sku'])
 
         if detect_changes:
-            tracked_data = {f'{i}_changed': or_(getattr(Offer, f'{i}_changed'), (func.coalesce(getattr(Offer, i), 'unknown') != (offer[i] or 'unknown'))) for i in detect_changes if getattr(Offer, i, None)}
+            tracked_data = {f'{i}_changed': or_(getattr(Offer, f'{i}_changed'), (func.coalesce(getattr(Offer, i), 'unknown') != (offer[i] or 'unknown'))) for i in detect_changes if getattr(Offer, i, None) and i in offer}
             offer.update(tracked_data)
 
         stmp = stmp.values(**offer)
