@@ -71,22 +71,23 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
     update_values = {col: getattr(CatalogItem, col) for col in common_columns}
 
     # Поисквовые слова изменяются только для озона
-    update_search_words = {'search_words': case([
+    update_search_words = {'search_words': case(
         (Offer.market == 'ozon', CatalogItem.search_words)
-    ], else_=Offer.search_words)}
+        , else_=Offer.search_words)}
 
     # Формируем словарь значений для проверки, что поле было изменено
     detect_changes_values = {
         getattr(Offer, f'{i}_changed'): or_(getattr(Offer, f'{i}_changed'), (
-                    func.coalesce(getattr(CatalogItem, i), 'unknown') != func.coalesce(getattr(Offer, i), 'unknown')))
+                func.coalesce(getattr(CatalogItem, i), 'unknown') != func.coalesce(getattr(Offer, i), 'unknown')))
         for i in detect_changes
     }
 
     # Поисковые слова изменяемые только для озона, поэтому тречим изменения только у него
-    detect_search_words_changes_for_ozon = {'search_words_changed': case([
-        (Offer.market == 'ozon', or_(Offer.search_words_changed, (func.coalesce(CatalogItem.search_words, 'unknown') != func.coalesce(Offer.search_words, 'unknown')))),
-    ],
-        else_=Offer.search_words_changed)}
+    detect_search_words_changes_for_ozon = {
+        'search_words_changed': case(
+            (Offer.market == 'ozon', or_(Offer.search_words_changed, (func.coalesce(CatalogItem.search_words, 'unknown') != func.coalesce(Offer.search_words,'unknown')))),
+            else_=Offer.search_words_changed)
+    }
 
     update_values.update(detect_changes_values)
     update_values.update(detect_search_words_changes_for_ozon)
