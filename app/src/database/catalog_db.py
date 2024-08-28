@@ -75,6 +75,8 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
         (Offer.market == 'ozon', CatalogItem.search_words)
         , else_=Offer.search_words)}
 
+    update_values.update(update_search_words)
+
     # Формируем словарь значений для проверки, что поле было изменено
     detect_changes_values = {
         getattr(Offer, f'{i}_changed'): or_(getattr(Offer, f'{i}_changed'), (
