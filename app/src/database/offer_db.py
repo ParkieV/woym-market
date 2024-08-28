@@ -81,6 +81,9 @@ async def update_offers(
         if 'search_words' in offer and offer.get('market', None) != 'ozon':
             del offer['search_words']
 
+        if 'barcodes' in offer and offer.get('market', None) != 'yandex':
+            del offer['search_words']
+
         stmp = update(Offer)
 
         if filters:

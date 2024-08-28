@@ -55,9 +55,9 @@ async def get_unique_skus(session: AsyncSession) -> list[str]:
 
 async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] | None = None,
                                          exclude_fields: list | None = None):
-    detect_changes = ['name', 'description', 'barcodes']
+    detect_changes = ['name', 'description']
 
-    _exclude_fields = {'id', 'sku', 'search_words'}
+    _exclude_fields = {'id', 'sku', 'search_words', 'barcodes'}
 
     if exclude_fields:
         _exclude_fields.update(set(exclude_fields))
@@ -75,6 +75,12 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
         (Offer.market == 'ozon', CatalogItem.search_words)
         , else_=Offer.search_words)}
 
+    # Штрихкоды изменяются только у яндекса
+    update_barcodes = {'barcodes': case(
+        (Offer.market == 'yandex', CatalogItem.barcodes)
+        , else_=Offer.barcodes)}
+
+    update_values.update(update_barcodes)
     update_values.update(update_search_words)
 
     # Формируем словарь значений для проверки, что поле было изменено
@@ -91,6 +97,15 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
             else_=Offer.search_words_changed)
     }
 
+    # Поисковые слова изменяемые только для озона, поэтому тречим изменения только у него
+    detect_barcodes_changes_for_yandex = {
+        'barcodes_changed': case(
+            (Offer.market == 'yandex', or_(Offer.barcodes, (
+                        func.coalesce(CatalogItem.barcodes, 'unknown') != func.coalesce(Offer.barcodes, 'unknown')))),
+            else_=Offer.barcodes)
+    }
+
+    update_values.update(detect_barcodes_changes_for_yandex)
     update_values.update(detect_changes_values)
     update_values.update(detect_search_words_changes_for_ozon)
 
