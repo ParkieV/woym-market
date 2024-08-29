@@ -83,7 +83,7 @@ class YandexDiscAPI:
 
         return meta_data.get('public_url', None)
 
-    def delete_file(self, path: Path, permanently: bool = False) -> None:
+    def delete_source(self, path: Path, permanently: bool = False) -> None:
         params = {
             'path': str(self.root / path),
             'permanently': permanently
@@ -151,6 +151,19 @@ class YandexDiscAPI:
                 return result
 
             offset += limit
+
+    def create_directory(self, path: str) -> None:
+        new_dir_path = str(self.root / path)
+        params = {
+            'path': new_dir_path
+        }
+        response = self.session.put('https://cloud-api.yandex.net/v1/disk/resources', headers=self.auth_headers, params=params)
+
+        if not response.ok:
+            logger.error(f'Cant create directory "{new_dir_path}": {response.text}')
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалось создать папку "{new_dir_path}": {response.json().get("message", "unknown")}')
+
+
 
 
 
