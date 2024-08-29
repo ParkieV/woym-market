@@ -1,5 +1,6 @@
 from pathlib import Path
-
+from datetime import datetime
+from src.params.confing import config
 from fastapi import UploadFile
 from requests import Session
 from starlette import status
@@ -26,10 +27,15 @@ class YandexDiscAPI:
     def root(self) -> Path:
         return self.root_path / self.work_dir
 
-    async def _upload_file(self, file: UploadFile, path: str = '', overwrite: bool = True) -> Path:
-        content = await file.read()
+    def _build_filename(self, filename: str) -> str:
+        ind = filename.find('.')
+        file_name = filename[:ind] + '_' + datetime.now(tz=config.time_zone_ino).strftime('%Y-%m-%d_%H:%M:%S') + filename[ind:]
+        return file_name
 
-        upload_file_path = str(self.root / path / file.filename)
+    async def _upload_file(self, file: UploadFile, path: str = '', overwrite: bool = True, keep_name: bool = False) -> Path:
+        content = await file.read()
+        filename = file.filename if keep_name else self._build_filename(file.filename)
+        upload_file_path = str(self.root / path / filename)
 
         path_query_params = {
             'overwrite': overwrite,
@@ -48,8 +54,8 @@ class YandexDiscAPI:
         upload_response = self.session.put(upload_path, data=content, headers=self.auth_headers)
 
         if upload_response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE:
-            logger.error(f'File "{file.filename}" is too large ({file.size})')
-            raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, f'Файл "{file.filename}" слишком большой')
+            logger.error(f'File "{filename}" is too large ({file.size})')
+            raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, f'Файл "{filename}" слишком большой')
 
         if not upload_response.ok:
             logger.error(f'Cant upload file "{upload_file_path}": {upload_response.text}')
@@ -98,13 +104,12 @@ class YandexDiscAPI:
             logger.error(f'Error deleting file "{str(path)}": {response.text}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ошибка при удалении файла "{str(path)}": {response.json().get("message", "unknown")}')
 
-    async def upload_file(self, file: UploadFile, path: str = '', overwrite: bool = True, publish: bool = True) -> UploadResult:
+    async def upload_file(self, file: UploadFile, path: str = '', overwrite: bool = True, publish: bool = True, keep_name: bool = False) -> UploadResult:
         result = {
             'overwrite_mode': overwrite,
-            'filename': file.filename
         }
 
-        file_path = await self._upload_file(file, path, overwrite)
+        file_path = await self._upload_file(file, path, overwrite, keep_name=keep_name)
         result['storage_path'] = str(file_path)
 
         if publish:

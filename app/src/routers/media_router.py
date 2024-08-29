@@ -29,8 +29,8 @@ async def get_all_files(path: str = Query('')):
 
 
 @router.post("/files/upload", response_model=UploadResult | None, dependencies=[Depends(require_staff)])
-async def upload_file(file: UploadFile = File(), overwrite: bool = True, publish: bool = True) -> UploadResult | None:
-    return await disk.upload_file(file, overwrite=overwrite, publish=publish)
+async def upload_file(file: UploadFile = File(), overwrite: bool = True, publish: bool = True, keep_name: bool = False) -> UploadResult | None:
+    return await disk.upload_file(file, overwrite=overwrite, publish=publish, keep_name=keep_name)
 
 
 @router.post('/dirs', dependencies=[Depends(require_staff)])

@@ -3,7 +3,6 @@ from pydantic import BaseModel
 
 class UploadResult(BaseModel):
     storage_path: str
-    filename: str | None
     href: str | None = None
     overwrite_mode: bool
 
