@@ -144,8 +144,8 @@ async def update_offers(user_id: int):
         await db.update_offers(session, to_update_df, mapping_columns=['name_of_shop', 'market'])
         logger.info(f'Offers updated: {len(to_update_df)}')
 
-        await db.delete_offers(session, to_delete_df)
-        logger.info(f'Offers deleted: {len(to_delete_df)}')
+        # await db.delete_offers(session, to_delete_df)
+        # logger.info(f'Offers deleted: {len(to_delete_df)}')
 
         # await sync_catalog_items_with_offers(session)
         # logger.info('Offers synchronized with catalog')
