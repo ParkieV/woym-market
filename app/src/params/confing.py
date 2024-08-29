@@ -11,6 +11,8 @@ class Config(BaseSettings):
     reset_db: bool
     schedule_update: bool
     mode: str
+    yandex_disk_token: str
+    yandex_disk_work_dir: str
 
     @property
     def is_dev(self) -> bool:
