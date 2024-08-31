@@ -48,7 +48,7 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     key: "barcodes",
                     header: "Штрихкоды",
                     columnGroupShow: "closed",
-                    editable: ({ data }) => (data as Offer).market !== "wildberries"
+                    editable: ({ data }) => (data as Offer).market === "yandex"
                 },
                 {
                     base: new StringColumn(),
