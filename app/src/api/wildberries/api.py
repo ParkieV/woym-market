@@ -41,7 +41,11 @@ class WildberriesAPI(BaseAPI):
                                 f'Ошибка проверки данных(токена) авторизации сервиса {self.shop_name}(wildberries)')
 
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
-        url = 'https://content-api.wildberries.ru/content/v2/cards/update'
+
+        items = self.__get_base_offer_data()
+        items = {item['vendorCode']: item for item in items}
+
+        update_url = 'https://content-api.wildberries.ru/content/v2/cards/update'
 
         valid_offers_data = [i for i in data]
 
@@ -53,14 +57,14 @@ class WildberriesAPI(BaseAPI):
                     'nmID': offer_data.vendor_code,
                     'vendorCode': offer_data.sku,
                     'title': offer_data.name,
-                    # 'description': offer_data.description,
-                    # 'sizes': []
+                    'description': offer_data.description,
+                    'sizes': items[offer_data.sku]['sizes']
 
                 }
                 for offer_data in valid_offers_data[i:i + chunk_size]
             ]
 
-            response = self.session.post(url, json=body, headers=self.auth_headers)
+            response = self.session.post(update_url, json=body, headers=self.auth_headers)
 
             if not response.ok:
                 logger.error(f'Cant update offers data: {response.text}')
@@ -160,9 +164,8 @@ class WildberriesAPI(BaseAPI):
 
         logger.info(f'{self.shop_name}(wildberries) prices updated: {len(valid_price_data)} of {len(data)}')
 
-    def _get_offers_base_info(self) -> list[dict]:
+    def __get_base_offer_data(self) -> list[dict]:
         url = 'https://content-api.wildberries.ru/content/v2/get/cards/list?locale=ru'
-
         limit = 100
         cursor = {
             "limit": limit,
@@ -195,27 +198,7 @@ class WildberriesAPI(BaseAPI):
             cards_data = response_data['cards']
             cursor_data = response_data['cursor']
 
-            for item in cards_data:
-                yandex_weight = [i for i in item.get('characteristics', []) if
-                                 i.get('id', None) == self.__characteristic_ids['yandex_weight']]
-                yandex_weight = yandex_weight[0].get('value', None) if yandex_weight else None
-
-                offer = {
-                    'sku': item['vendorCode'],
-                    'name': item['title'],
-                    'description': item.get('description', None),
-                    'name_of_shop': self.shop_name,
-                    'market': 'wildberries',
-                    'yandex_length': item['dimensions']['length'],
-                    'yandex_width': item['dimensions']['width'],
-                    'yandex_height': item['dimensions']['height'],
-                    'yandex_weight': yandex_weight,
-                    'vendor_code': item['nmID'],
-                    'photo': item['photos'][0]['big'] if item.get('photos', None) else None,
-                    'barcodes': ', '.join([', '.join(size_info['skus']) for size_info in item['sizes']])
-
-                }
-                result.append(offer)
+            result.extend(cards_data)
 
             if cursor_data['total'] < limit:
                 break
@@ -225,6 +208,33 @@ class WildberriesAPI(BaseAPI):
 
             cursor['updatedAt'] = cursor_data['updatedAt']
             cursor['nmID'] = cursor_data['nmID']
+
+        return result
+
+    def _get_offers_base_info(self) -> list[dict]:
+        items = self.__get_base_offer_data()
+        result = []
+        for item in items:
+            yandex_weight = [i for i in item.get('characteristics', []) if
+                             i.get('id', None) == self.__characteristic_ids['yandex_weight']]
+            yandex_weight = yandex_weight[0].get('value', None) if yandex_weight else None
+
+            offer = {
+                'sku': item['vendorCode'],
+                'name': item['title'],
+                'description': item.get('description', None),
+                'name_of_shop': self.shop_name,
+                'market': 'wildberries',
+                'yandex_length': item['dimensions']['length'],
+                'yandex_width': item['dimensions']['width'],
+                'yandex_height': item['dimensions']['height'],
+                'yandex_weight': yandex_weight,
+                'vendor_code': item['nmID'],
+                'photo': item['photos'][0]['big'] if item.get('photos', None) else None,
+                'barcodes': ', '.join([', '.join(size_info['skus']) for size_info in item['sizes']])
+
+            }
+            result.append(offer)
 
         return result
 

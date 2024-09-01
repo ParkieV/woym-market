@@ -85,24 +85,31 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
 
     # Формируем словарь значений для проверки, что поле было изменено
     detect_changes_values = {
-        getattr(Offer, f'{i}_changed'): or_(getattr(Offer, f'{i}_changed'), (
-                func.coalesce(getattr(CatalogItem, i), 'unknown') != func.coalesce(getattr(Offer, i), 'unknown')))
+        getattr(Offer, f'{i}_changed'): or_(
+            getattr(Offer, f'{i}_changed'),
+            (func.coalesce(getattr(CatalogItem, i), 'unknown') != func.coalesce(getattr(Offer, i), 'unknown'))
+        )
         for i in detect_changes
     }
 
     # Поисковые слова изменяемые только для озона, поэтому тречим изменения только у него
     detect_search_words_changes_for_ozon = {
         'search_words_changed': case(
-            (Offer.market == 'ozon', or_(Offer.search_words_changed, (func.coalesce(CatalogItem.search_words, 'unknown') != func.coalesce(Offer.search_words,'unknown')))),
+            (Offer.market == 'ozon', or_(
+                Offer.search_words_changed,
+                (func.coalesce(CatalogItem.search_words, 'unknown') != func.coalesce(Offer.search_words, 'unknown'))
+            )),
             else_=Offer.search_words_changed)
     }
 
-    # Поисковые слова изменяемые только для озона, поэтому тречим изменения только у него
+    # # Штрихкоды изменяемые только для яндекса, поэтому тречим изменения только у него
     detect_barcodes_changes_for_yandex = {
         'barcodes_changed': case(
-            (Offer.market == 'yandex', or_(Offer.barcodes, (
-                        func.coalesce(CatalogItem.barcodes, 'unknown') != func.coalesce(Offer.barcodes, 'unknown')))),
-            else_=Offer.barcodes)
+            (Offer.market == 'yandex', or_(
+                Offer.barcodes_changed,
+                (func.coalesce(CatalogItem.barcodes, 'unknown') != func.coalesce(Offer.barcodes, 'unknown'))
+            )),
+            else_=Offer.barcodes_changed)
     }
 
     update_values.update(detect_barcodes_changes_for_yandex)

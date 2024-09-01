@@ -20,31 +20,34 @@ class OfferIdentifier:
 
 class OzonAPI(BaseAPI):
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
-        url = 'https://api-seller.ozon.ru/v3/product/import'
-
-        valid_offers_data = [i for i in data]
-        chunk_size = 100
-
-        for i in range(0, len(valid_offers_data), chunk_size):
-            body = {
-                'items': [
-                    {
-                        'name': offer_data.name,
-                        # 'barcode': ''
-                        # 'images': [],
-                    }
-                    for offer_data in valid_offers_data[i:i + chunk_size]
-                ]
-            }
-            response = self.session.post(url, json=body, headers=self.auth_headers)
-
-            if not response.ok:
-                logger.error(f'Cant update offers data: {response.text}')
-                continue
-
-            response_json = response.json()
-
-            task_id = response_json['result']['task_id']
+        # TODO понять как работает обновление товаров на озоне
+        return
+        # url = 'https://api-seller.ozon.ru/v3/product/import'
+        #
+        # valid_offers_data = [i for i in data]
+        # chunk_size = 100
+        #
+        # for i in range(0, len(valid_offers_data), chunk_size):
+        #     body = {
+        #         'items': [
+        #             {
+        #                 'name': offer_data.name,
+        #
+        #                 # 'barcode': ''
+        #                 # 'images': [],
+        #             }
+        #             for offer_data in valid_offers_data[i:i + chunk_size]
+        #         ]
+        #     }
+        #     response = self.session.post(url, json=body, headers=self.auth_headers)
+        #
+        #     if not response.ok:
+        #         logger.error(f'Cant update offers data: {response.text}')
+        #         continue
+        #
+        #     response_json = response.json()
+        #
+        #     task_id = response_json['result']['task_id']
 
     def __init__(self, token: str, entity_id: int, shop_name: str):
         self.token = token

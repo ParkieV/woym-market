@@ -144,10 +144,6 @@ async def update_offers(user_id: int):
         await create_own_storage_stocks(session)
         logger.info('Own storage stocks created')
 
-        # Снять галочки с измененных полей
-        for column in CONTROL_CHANGES:
-            to_update_df[to_update_df['auto_price_control'] == True][f'{column}_changed'] = False
-
         await db.update_offers(session, to_update_df, mapping_columns=['name_of_shop', 'market'])
         logger.info(f'Offers updated: {len(to_update_df)}')
 
@@ -183,7 +179,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
         data = [i.model_dump() for i in offers]
 
     if not config.is_prod:
-        logger.info(f'Skip update offers attributes app mode is not PROD (current - {config.mode})')
+        logger.info(f'Skip update offers prices app mode is not PROD (current - {config.mode})')
         return
 
     if not len(data):
@@ -203,8 +199,6 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
         )
         for offer_data in data if offer_data['total_price'] is not None
     ]
-
-
 
     await api_wrapper.change_prices(data)
 
@@ -233,6 +227,9 @@ async def update_offers_attributes(offers: pd.DataFrame):
         )
         for offer_data in data
     ]
+
+    await api_wrapper.change_offers(data)
+
     return data
 
 
