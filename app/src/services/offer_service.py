@@ -82,13 +82,30 @@ async def update_offers(user_id: int):
     logger.info('Start update offers')
     start_time = datetime.now()
 
-    # Синхронизируем данные с каталогом
     async with async_session() as session:
+        # Синхронизируем данные с каталогом
         await sync_catalog_items_with_offers(session)
+
+        # Получаем настройки магазинов
+        markets = await get_markets(session)
 
     # Получаем товары из бд
     db_offers = await get_offers()
     offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
+
+    # Создаем переменную с данными для отправки цен в апи
+    to_update_price_df = offers_df.copy()
+
+    # Считаем значения, которые требуют настроек и целевой цены
+    for market in markets:
+        to_update_price_df['discount_base_price'] = np.where(
+            (to_update_price_df['market'] == market.type) & (to_update_price_df['name_of_shop'] == market.name),
+            to_update_price_df['target_price'] * (1.0 + market.price_before_discount / 100),
+            to_update_price_df['discount_base_price']
+        )
+
+    # Обновление цен
+    await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True])
 
     # Получаем товары из апи
     yandex_offers = await api_wrapper.get_offers_list()
@@ -126,8 +143,6 @@ async def update_offers(user_id: int):
         to_update_attributes = to_update_df.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
         await update_offers_attributes(to_update_attributes)
 
-        # Обновление цен
-        await update_offers_price(offers_df[offers_df['auto_price_control'] == True])
         settings = await get_user_settings(session, user_id)
 
         # После обновление аттрибутов у товаров, которые требовали изменений, выставить маркеры полей в нейтральные
@@ -135,7 +150,7 @@ async def update_offers(user_id: int):
             to_update_df[f'{column}_changed'] = False
 
         # Создание новых товаров
-        for market in await get_markets(session):
+        for market in markets:
             to_create_df_chunked = await utils.build_offers_data(to_create_df[((to_create_df['market'] == market.type) & (to_create_df['name_of_shop'] == market.name))], settings, market, setup_mode=True)
             await db.create_offers(session, to_create_df_chunked)
             logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df)}')
@@ -150,10 +165,6 @@ async def update_offers(user_id: int):
         # Удалить товары
         await db.delete_offers(session, to_delete_df)
         logger.info(f'Offers deleted: {len(to_delete_df)}')
-
-        # Синхронизировать товары с каталогом
-        await sync_catalog_items_with_offers(session)
-        logger.info('Offers synchronized with catalog')
 
         # Пересчитать все
         await recalculate_values(session, settings)
