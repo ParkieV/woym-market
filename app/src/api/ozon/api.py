@@ -20,34 +20,89 @@ class OfferIdentifier:
 
 class OzonAPI(BaseAPI):
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
-        # TODO понять как работает обновление товаров на озоне
-        return
-        # url = 'https://api-seller.ozon.ru/v3/product/import'
-        #
-        # valid_offers_data = [i for i in data]
-        # chunk_size = 100
-        #
-        # for i in range(0, len(valid_offers_data), chunk_size):
-        #     body = {
-        #         'items': [
-        #             {
-        #                 'name': offer_data.name,
-        #
-        #                 # 'barcode': ''
-        #                 # 'images': [],
-        #             }
-        #             for offer_data in valid_offers_data[i:i + chunk_size]
-        #         ]
-        #     }
-        #     response = self.session.post(url, json=body, headers=self.auth_headers)
-        #
-        #     if not response.ok:
-        #         logger.error(f'Cant update offers data: {response.text}')
-        #         continue
-        #
-        #     response_json = response.json()
-        #
-        #     task_id = response_json['result']['task_id']
+        url = 'https://api-seller.ozon.ru/v1/product/attributes/update'
+
+        valid_data = [i for i in data if all((i.is_valid_name(), i.is_valid_description(), i.is_valid_search_words()))]
+
+        if not valid_data:
+            logger.warning(f'Skip ')
+            return
+
+        body = {
+            'items': [
+                {
+                    'offer_id': item.sku,
+                    "attributes": [
+                        {
+                            "id": 22336, # поисковые слова
+                            "complex_id": 0,
+                            "values": [
+                                {
+                                    "dictionary_value_id": 0,
+                                    "value": item.search_words
+                                }
+                            ]
+                        },
+                        {
+                            "id": 4180, # название
+                            "complex_id": 0,
+                            "values": [
+                                {
+                                    "dictionary_value_id": 0,
+                                    "value": item.name
+                                }
+                            ]
+                        },
+                        {
+                            "id": 4191, # описание
+                            "complex_id": 0,
+                            "values": [
+                                {
+                                    "dictionary_value_id": 0,
+                                    "value": item.description
+                                }
+                            ]
+                        }
+                    ]
+                }
+                for item in valid_data
+            ]
+        }
+        response = self.session.post(url, headers=self.auth_headers, json=body)
+
+        if not response.ok:
+            logger.error(f'Cant update offers attributes {response.text}')
+            return
+
+        json_response = response.json()
+        task_id = json_response.get('task_id', None)
+        await asyncio.sleep(5)
+        self.check_task_status(task_id)
+
+    def check_task_status(self, task_id: int) -> bool:
+        if not task_id:
+            return
+
+        body = {
+            'task_id': task_id,
+        }
+        response = self.session.post(f'https://api-seller.ozon.ru/v1/product/import/info')
+
+        if not response.ok:
+            logger.error(f'Cant check task({task_id}) status {response.text}')
+            return
+
+        json_response = response.json()
+
+        for item_info in json_response.get('result', {}).get('items', []):
+            if item_info.get('status') == 'failed':
+                logger.error(f'Offer {item_info.get("offer_id", "unknown")} was loaded with errors: {item_info.get("errors", "unknown")}')
+
+            elif item_info.get('status') == 'pending':
+                logger.warning(f'Offer {item_info.get("offer_id", "unknown")} is still in pending')
+
+        logger.info(f'Task {task_id} checked. Total {json_response.get("result", {}).get("total", "unknown")}')
+
 
     def __init__(self, token: str, entity_id: int, shop_name: str):
         self.token = token

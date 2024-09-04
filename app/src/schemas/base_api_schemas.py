@@ -104,9 +104,19 @@ class APIOfferChangeData(BaseModel):
     def is_valid_barcodes(self) -> bool:
         return True
 
+    def is_valid_name(self) -> bool:
+        return isinstance(self.name, str)
+
+    def is_valid_description(self) -> bool:
+        return isinstance(self.description, str)
+
+    def is_valid_search_words(self) -> bool:
+        return isinstance(self.search_words, str)
+
     @property
     def valid_barcodes(self) -> list[str]:
         if not self.is_valid_barcodes():
             raise ValueError(f'Invalid barcodes for sku {self.sku}: "{self.barcodes}"')
 
         return self.barcodes.replace(';', ' ').replace(',', ' ').split()
+
