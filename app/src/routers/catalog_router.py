@@ -1,6 +1,6 @@
 from pathlib import PurePath
 
-from fastapi import APIRouter, UploadFile, File, Depends, Body
+from fastapi import APIRouter, UploadFile, File, Depends, Body, BackgroundTasks
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
@@ -26,13 +26,15 @@ async def change_catalog_items(items: list[CatalogItemUpdate]):
 
 
 @router.post('/setup', tags=["Debug"], dependencies=[Depends(require_staff)])
-async def setup_catalog_items():
-    await service.setup_catalog_items()
+async def setup_catalog_items(background: BackgroundTasks):
+    background.add_task(service.setup_catalog_items)
+    return {'status': 'OK'}
 
 
 @router.post('/synchronization', tags=["Debug"], dependencies=[Depends(require_staff)])
-async def synchronize_catalog_items(skus: list[str] = Body(embed=True)):
-    await service.sync_catalog_items_with_offers(skus=skus)
+async def synchronize_catalog_items(background: BackgroundTasks, skus: list[str] = Body(embed=True)):
+    background.add_task(service.sync_catalog_items_with_offers, skus=skus)
+    return {'status': 'OK'}
 
 
 @router.post('/export', tags=["Export"], dependencies=[Depends(get_current_user)])
@@ -45,17 +47,20 @@ async def export_catalog_items():
 async def import_catalog_items(data: UploadFile = File()):
     content = await data.read()
     await service.import_catalog_items(content, PurePath(data.filename).suffix)
+    return {'status': 'OK'}
 
 
 @router.post('/import/sizes', tags=["Import"], dependencies=[Depends(require_staff)])
 async def import_catalog_item_sizes(data: UploadFile = File()):
     content = await data.read()
     await service.import_item_sizes(content, PurePath(data.filename).suffix)
+    return {'status': 'OK'}
 
 
 @router.post('/import/prices', tags=["Import"], dependencies=[Depends(require_staff)])
 async def import_catalog_item_prices(data: UploadFile = File()):
     content = await data.read()
     await service.import_item_prices(content, PurePath(data.filename).suffix)
+    return {'status': 'OK'}
 
 

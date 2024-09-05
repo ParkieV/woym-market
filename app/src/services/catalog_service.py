@@ -11,26 +11,48 @@ from src.database import offer_db
 from src.database import catalog_db as db
 from src.schemas.catalog_schemas import CatalogItemCreate, CatalogItem, CatalogItemUpdate
 from src.services.base_utils import parce_field_names, bytes_to_data_frame, parce_sizes_list, parce_purchase_list
-from src.services.offer_service import recalculate_values
 
 logger = get_logger(__name__)
 
 
 async def setup_catalog_items() -> None:
     async with async_session() as session:
+        db_offers = await offer_db.get_offers(session)
+        db_offers_df = pd.DataFrame([i.model_dump() for i in db_offers])
+        db_offers_skus = set(db_offers_df['sku'].values.tolist())
 
-        offer_skus = set(await offer_db.get_unique_skus(session))
-        item_skus = set(await db.get_unique_skus(session))
-        new_skus = offer_skus - item_skus
+        catalog_items_skus = set(await db.get_unique_skus(session))
 
-        new_items = [CatalogItemCreate(sku=sku, catalog_note='Новый товар') for sku in new_skus]
-        await db.create_catalog_items(session, new_items)
+        to_create_skus = db_offers_skus - catalog_items_skus
 
-        if new_items:
-            logger.info(f'Catalog items created: {len(new_items)}')
+        if not to_create_skus:
+            logger.info(f'New catalog items not found')
             return
 
-        logger.info('New products not found to create catalog items')
+        to_create_items_with_cdv = db_offers_df[
+            (db_offers_df['sku'].isin(to_create_skus)) &
+            (db_offers_df['market'] == 'ozon') &
+            (db_offers_df['name_of_shop'] == 'SkrabPlus')
+            ].drop_duplicates(subset='sku')
+
+        to_create_items_with_rdv = db_offers_df[(db_offers_df['sku'].isin(to_create_skus)) & (~db_offers_df['sku'].isin(to_create_items_with_cdv['sku']))].drop_duplicates(subset='sku')
+
+        new_items_df = pd.concat([to_create_items_with_cdv, to_create_items_with_rdv])
+        new_items_df['volume'] = new_items_df['volume'].astype(float)
+        new_items_df['dollar_cost_price_updated_at'] = None
+        new_items_df.drop(columns=['synchronization'], inplace=True)
+        new_items_df['catalog_note'] = 'Новый товары'
+        new_items_df = new_items_df.replace({
+            np.nan: None
+        })
+        new_items = [CatalogItemCreate(**i) for i in new_items_df.to_dict(orient='records')]
+
+        if len(new_items) != len(to_create_skus):
+            logger.warning(f'Len of new skus and creating skus not equal: {len(new_items)} / {len(to_create_skus)}')
+
+        await db.create_catalog_items(session, new_items)
+
+        logger.info(f'Catalog items created: {len(new_items)}')
 
 
 async def get_catalog_items() -> list[CatalogItem]:
@@ -42,11 +64,6 @@ async def change_catalog_items(items: list[CatalogItemUpdate]) -> None:
     async with async_session() as session:
         await db.change_catalog_items(session, items)
         logger.info(f'Catalog items changed: {len(items)}')
-
-        # to_recalculate_offer_ids = [i.id for item in items for i in item.synchronization if i.synchronization]
-        #
-        # if to_recalculate_offer_ids:
-        #     await recalculate_values(session, None, which=[{'id': i} for i in to_recalculate_offer_ids])
 
 
 async def sync_catalog_items_with_offers(skus: list[str] | None = None, exclude_fields: list | None = None) -> None:
@@ -81,7 +98,6 @@ async def import_catalog_items(file: bytes, file_extension: str = '.xlsx') -> li
     to_update_items = [CatalogItemUpdate(**i) for i in df.to_dict('records')]
 
     await change_catalog_items(to_update_items)
-    # await sync_catalog_items_with_offers(skus=[i.sku for i in to_update_items])
 
 
 async def import_item_sizes(data: bytes, file_extension: str = '.xlsx'):
@@ -102,10 +118,3 @@ async def import_item_prices(data: bytes, file_extension: str = '.xlsx'):
 
         await db.set_supplier_available(session, db_skus & import_skus, True)
         await db.set_supplier_available(session, db_skus - import_skus, False)
-
-        # await db.sync_catalog_items_with_offers(session, skus=[i.sku for i in to_update_data])
-
-    # await recalculate_values(session, None)
-
-
-

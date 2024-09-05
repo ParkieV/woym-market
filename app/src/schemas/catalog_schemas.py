@@ -26,22 +26,20 @@ class CatalogItemUpdate(BaseCatalogItem):
     self_length: float | None = Field(title='Длина', default=None)
     self_width: float | None = Field(title='Ширина', default=None)
     self_height: float | None = Field(title='Высота', default=None)
-    catalog_note: str | None = Field(title='Примечание', default=None)
+    catalog_note: str | None = Field(title='Примечание', default='Новый товар')
     use_promotion_price: bool | None = Field(title='Акция', default=None)
     wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.', default=None)
     supplier_available: bool | None = Field(title='Наличие у поставщика', default=None)
     synchronization: list[SynchronizationOffer] = Field(title='Связанные товары', default_factory=list)
 
 
-class CatalogItemCreate(BaseModel):
-    sku: str = Field(title='sku')
-    catalog_note: str | None = Field(title='Примечание', default=None)
-
-
-class CatalogItem(CatalogItemUpdate):
-    dollar_cost_price_updated_at: datetime | None = Field(title='Дата обновления ОПТ У.Е.')
+class CatalogItemCreate(CatalogItemUpdate):
     volume: float | None = Field(title='Объем', default=None)
+    dollar_cost_price_updated_at: datetime | None = Field(title='Дата обновления ОПТ У.Е.')
 
+
+class CatalogItem(CatalogItemCreate):
+    pass
 
 
 
