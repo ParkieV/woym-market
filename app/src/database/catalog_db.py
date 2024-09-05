@@ -68,16 +68,16 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
     common_columns = (offer_columns & catalog_columns) - _exclude_fields
 
     # Формируем словарь значений для обновления
-    update_values = {col: getattr(CatalogItem, col) for col in common_columns}
+    update_values = {col: func.coalesce(getattr(CatalogItem, col), getattr(Offer, col)) for col in common_columns}
 
     # Поисквовые слова изменяются только для озона
     update_search_words = {'search_words': case(
-        (Offer.market == 'ozon', CatalogItem.search_words)
+        (Offer.market == 'ozon', func.coalesce(CatalogItem.search_words, Offer.search_words))
         , else_=Offer.search_words)}
 
     # Штрихкоды изменяются только у яндекса
     update_barcodes = {'barcodes': case(
-        (Offer.market == 'yandex', CatalogItem.barcodes)
+        (Offer.market == 'yandex', func.coalesce(CatalogItem.barcodes, Offer.barcodes))
         , else_=Offer.barcodes)}
 
     update_values.update(update_barcodes)
@@ -87,7 +87,7 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
     detect_changes_values = {
         getattr(Offer, f'{i}_changed'): or_(
             getattr(Offer, f'{i}_changed'),
-            (func.coalesce(getattr(CatalogItem, i), 'unknown') != func.coalesce(getattr(Offer, i), 'unknown'))
+            (func.coalesce(getattr(Offer, i), 'null') != func.coalesce(getattr(CatalogItem, i), getattr(Offer, i), 'null'))
         )
         for i in detect_changes
     }
@@ -97,7 +97,7 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
         'search_words_changed': case(
             (Offer.market == 'ozon', or_(
                 Offer.search_words_changed,
-                (func.coalesce(CatalogItem.search_words, 'unknown') != func.coalesce(Offer.search_words, 'unknown'))
+                (func.coalesce(Offer.search_words, 'null') != func.coalesce(CatalogItem.search_words, Offer.search_words, 'null'))
             )),
             else_=Offer.search_words_changed)
     }
@@ -107,7 +107,7 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
         'barcodes_changed': case(
             (Offer.market == 'yandex', or_(
                 Offer.barcodes_changed,
-                (func.coalesce(CatalogItem.barcodes, 'unknown') != func.coalesce(Offer.barcodes, 'unknown'))
+                (func.coalesce(Offer.barcodes, 'null') != func.coalesce(CatalogItem.barcodes, Offer.barcodes, 'null'))
             )),
             else_=Offer.barcodes_changed)
     }
