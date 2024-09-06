@@ -1,7 +1,7 @@
-from itertools import chain
-
+from src.params.confing import config
+import pandas as pd
 import pytest
-
+from datetime import datetime, timedelta
 from src.api.wildberries.api import WildberriesAPI
 from src.schemas.base_api_schemas import APIWarehouse
 from tests.marketplaces.conftest import BaseMarketplaceAPITest
@@ -46,6 +46,14 @@ class TestWildberriesAPI(BaseMarketplaceAPITest):
             # result.extend(stocks)
 
         assert len(result)
+
+    async def test_get_orders(self, api: WildberriesAPI):
+        start = datetime.now(tz=config.time_zone_ino)
+        end = start - timedelta(days=120)
+        orders = await api.get_orders(start, end)
+
+        assert isinstance(orders, list)
+        assert orders
 
 
 

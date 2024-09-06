@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from io import BytesIO
 from typing import Any
 from fastapi import HTTPException, status
@@ -10,7 +11,7 @@ import pandas as pd
 import numpy as np
 from src.api.base_api import BaseAPI
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, \
-    APIOfferChangeData
+    APIOfferChangeData, APIOrderData
 
 logger = get_logger(__name__)
 
@@ -399,3 +400,6 @@ class YandexMarketAPI(BaseAPI):
                 json=body
             )
             self.validate_response(response, raise_error=False, body=body)
+
+    async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
+        return []

@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import datetime
 from typing import Any
 
 from fastapi import HTTPException
@@ -8,7 +9,7 @@ from starlette import status
 from logs import get_logger
 from src.api.base_api import BaseAPI
 from src.schemas.base_api_schemas import APIPriceChangeData, APIWarehouse, APIOffer, WarehouseType, APIWarehouseOffer, \
-    APIOfferChangeData
+    APIOfferChangeData, APIOrderData
 
 logger = get_logger(__name__)
 
@@ -360,5 +361,38 @@ class WildberriesAPI(BaseAPI):
                     'current_stock': item['quantity'],  # может быть 'quantityFull'
                 }
             )
+
+        return result
+
+    async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
+        url = 'https://statistics-api.wildberries.ru/api/v1/supplier/orders?dateFrom=2024-08-01'
+        params = {
+            'dateFrom': from_date.strftime('%Y-%m-%d'),
+        }
+        response = self.session.get(url, headers=self.auth_headers, params=params)
+
+        if not response.ok:
+            logger.error(f'Cant get orders from {from_date}: {response.text}')
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалоь получить заказы: {response.text}')
+
+        response_json = response.json()
+        result = []
+
+        for item in response_json:
+            if item['orderType'] != 'Клиентский' and not item['isCancel']:
+                continue
+
+            order_item = APIOrderData(
+                sku=item['supplierArticle'],
+                created_at=item['date'],
+                updated_at=item.get('lastChangeDate', None),
+                warehouse_name=item['warehouseName'],
+                price=item.get('finishedPrice', None),
+                quantity=1,
+                market='wildberries',
+                name_of_shop=self.shop_name
+
+            )
+            result.append(order_item)
 
         return result
