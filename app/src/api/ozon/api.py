@@ -1,11 +1,16 @@
 import asyncio
 import json
 import logging
+from datetime import datetime
 from typing import Any
+
+from fastapi import HTTPException
 from requests import Session
+from starlette import status
+
 from src.api.base_api import BaseAPI
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, WarehouseType, \
-    APIOfferChangeData
+    APIOfferChangeData, APIOrderData
 from dataclasses import dataclass
 from logs import get_logger
 
@@ -450,56 +455,46 @@ class OzonAPI(BaseAPI):
 
         return clasters
 
-    # async def _set_search_words(self, data: list[tuple[str, str]]):
-    #     attribute_id = 22336
-    #
-    #     if not len(data):
-    #         return
-    #
-    #     body = {
-    #         'items': [
-    #             {
-    #                 'offer_id': offer_id,
-    #                 'attributes': [
-    #                     {
-    #                         'id': attribute_id,
-    #                         'complex_id': 0,
-    #                         'values': [
-    #                             {
-    #                                 'dictionary_value_id': 0,
-    #                                 'value': words if isinstance(words, str) else '',
-    #                             }
-    #                         ]
-    #                     }
-    #                 ]
-    #             } for offer_id, words in data
-    #         ]
-    #     }
-    #
-    #     response = self.session.post('https://api-seller.ozon.ru/v1/product/attributes/update',
-    #                                  headers=self.auth_headers, json=body)
-    #
-    #     if response.status_code != 200:
-    #         logging.error(
-    #             f'Error in set search words. Reason: {response.reason}. Json: {response.json()}. Text: {response.text}')
-    #         return
-    #
-    #     response_json = response.json()
-    #
-    #     response = self.session.post('https://api-seller.ozon.ru/v1/product/import/info', headers=self.auth_headers,
-    #                                  json={'task_id': response_json['task_id']})
-    #
-    #     if response.status_code != 200:
-    #         logging.error(
-    #             f'Error in check setting search words. Reason: {response.reason}. Json: {response.json()}. Text: {response.text}')
-    #         return
-    #
-    #     response_json = response.json()
-    #
-    #     for item in response_json['result']['items']:
-    #         if item['status'] == 'failed':
-    #             logging.error(
-    #                 f'Updating search words for offer with id - {item["offer_id"]}. \nErrors: {item["errors"]}')
-    #         elif item['status'] == 'pending':
-    #             logging.info(f'Task pending "Update search words" for offer with id - {item["offer_id"]}')
-    #             await asyncio.sleep(.5)
+    async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
+        url = 'https://api-seller.ozon.ru/v2/posting/fbo/list'
+        body = {
+            "dir": "ASC",
+            "filter": {
+                "since": from_date.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                "status": "delivered",
+                "to": to_date.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            },
+            "limit": 1000,
+            "offset": 0,
+            "translit": True,
+            "with": {
+                "analytics_data": True,
+                "financial_data": True
+            }
+        }
+        response = self.session.post(url, headers=self.auth_headers, json=body)
+
+        if not response.ok:
+            logger.error(f'Cant get orders from {from_date}: {response.text}')
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалось получить заказы: {response.json().get("message", "unknown")}')
+
+        json_response = response.json()
+        result = []
+
+        for order in json_response.get('result', []):
+            analytics_data = order.get('analytics_data')
+
+            for order_item in order.get('products', []):
+                order_item_data = APIOrderData(
+                    created_at=order.get('created_at'),
+                    updated_at=order.get('in_process_at', None),
+                    sku=order_item.get('offer_id'),
+                    market='ozon',
+                    name_of_shop=self.shop_name,
+                    quantity=order_item.get('quantity'),
+                    price=order_item.get('price', None),
+                    warehouse_name=analytics_data.get('warehouse_name').replace('_', ' ').replace('-', ' ').title()
+                )
+                result.append(order_item_data)
+
+        return result

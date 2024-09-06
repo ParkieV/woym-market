@@ -1,16 +1,18 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from io import BytesIO
 from typing import Any
 import pandas as pd
 from fastapi import HTTPException
-from requests import Response
-from src.schemas.base_api_schemas import APIOffer, APIWarehouse, APIPriceChangeData, APIOfferChangeData
+from requests import Response, Session
+from src.schemas.base_api_schemas import APIOffer, APIWarehouse, APIPriceChangeData, APIOfferChangeData, APIOrderData
 from logs import get_logger
 
 logger = get_logger(__name__)
 
 
 class BaseAPI(ABC):
+    session: Session
 
     @abstractmethod
     async def validate_auth_data(self, **kwargs):
@@ -30,6 +32,10 @@ class BaseAPI(ABC):
 
     @abstractmethod
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
+        pass
+
+    @abstractmethod
+    async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
         pass
 
     def _download_report(self, url_path: str) -> pd.DataFrame:

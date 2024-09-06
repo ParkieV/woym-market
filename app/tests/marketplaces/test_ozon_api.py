@@ -1,7 +1,9 @@
 import pytest
-
+from datetime import datetime, timedelta
 from src.api.ozon.api import OzonAPI
 from tests.marketplaces.conftest import BaseMarketplaceAPITest
+from src.params.confing import config
+import pandas as pd  #noqa
 
 
 @pytest.mark.parametrize(
@@ -20,7 +22,6 @@ class TestOzonAPI(BaseMarketplaceAPITest):
         attributes = api._get_offers_attributes(idents)
         assert isinstance(attributes, dict)
 
-
     # async def test_set_search_words(self, api: OzonAPI):
     #     await api._set_search_words([('28165', 'секатор; сучкорез')])
 
@@ -28,3 +29,11 @@ class TestOzonAPI(BaseMarketplaceAPITest):
         clasters = api._get_clasters_info()
         assert isinstance(clasters, list)
         assert len(clasters)
+
+    async def test_get_orders(self, api: OzonAPI):
+        end = datetime.now(tz=config.time_zone_ino)
+        start = end - timedelta(days=120)
+        orders = await api.get_orders(start, end)
+
+        assert isinstance(orders, list)
+        assert orders
