@@ -80,21 +80,22 @@ async def setup_offers_data(user_id: int):
 
 async def update_offers(user_id: int):
     logger.info('Start update offers')
+    mapping_fields = ['sku', 'name_of_shop', 'market']
     start_time = datetime.now()
 
     async with async_session() as session:
-        # Синхронизируем данные с каталогом
-        await sync_catalog_items_with_offers(session)
-
-        # Получаем настройки магазинов
         markets = await get_markets(session)
+        settings = await get_user_settings(session, user_id)
+
+        await sync_catalog_items_with_offers(session)
+        await recalculate_values(session, settings, which=[{'synchronization': True}])
 
     # Получаем товары из бд
     db_offers = await get_offers()
-    offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
+    db_offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
     # Создаем переменную с данными для отправки цен в апи
-    to_update_price_df = offers_df.copy()
+    to_update_price_df = db_offers_df.copy()
 
     # Считаем значения, которые требуют настроек и целевой цены
     for market in markets:
@@ -108,72 +109,131 @@ async def update_offers(user_id: int):
     await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True])
 
     # Получаем товары из апи
-    yandex_offers = await api_wrapper.get_offers_list()
-    yandex_offers_df = pd.DataFrame(yandex_offers)
+    api_offers = await api_wrapper.get_offers_list()
+    api_offers_df = pd.DataFrame(api_offers)
 
-    mapping_fields = ['sku', 'name_of_shop', 'market']
+    common_columns = (set(db_offers_df.columns.tolist()) & set(api_offers_df.columns.tolist())) - set(mapping_fields)
+    merged_offers = pd.merge(db_offers_df, api_offers_df, on=mapping_fields, how='outer', indicator=True, suffixes=(None, '__api'))
 
-    offers_db_identifiers = set([tuple(i.values()) for i in offers_df[mapping_fields].to_dict('records')])
-    yandex_offers_identifiers = set([tuple(i.values()) for i in yandex_offers_df[mapping_fields].to_dict('records')])
+    to_update_offers = merged_offers[merged_offers['_merge'] == 'both']
+    to_delete_offers = merged_offers[merged_offers['_merge'] == 'left_only']
+    to_create_offers = merged_offers[merged_offers['_merge'] == 'right_only']
+    to_create_offers = (
+        to_create_offers
+        .drop(columns=common_columns)
+        .drop(columns=['_merge', 'id'], errors='ignore')
+        .rename(columns={f'{column}__api': column for column in common_columns})[api_offers_df.columns.tolist()]
+    )
 
-    to_update = offers_db_identifiers & yandex_offers_identifiers
-    to_create = yandex_offers_identifiers - offers_db_identifiers
-    to_delete = offers_db_identifiers - yandex_offers_identifiers
+    # Двойная синхронизаия полей
+    for tracked_column in CONTROL_CHANGES:
+        to_update_offers[tracked_column] = np.where(
+            to_update_offers[f'{tracked_column}_changed'],
+            to_update_offers[tracked_column],
+            to_update_offers[f'{tracked_column}__api']
+        )
 
-    to_update_df = pd.merge(yandex_offers_df, pd.DataFrame(to_update, columns=mapping_fields), how='inner')
-    to_update_df[['best_place_wm', 'best_place_im', 'photo']] = to_update_df[['best_place_wm', 'best_place_im', 'photo']].astype('string')
-    to_create_df = pd.merge(yandex_offers_df, pd.DataFrame(to_create, columns=mapping_fields), how='inner')
+    # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
+    to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
+    await update_offers_attributes(to_update_attributes)
 
-    to_delete_df = pd.DataFrame(to_delete, columns=mapping_fields)
+    # Создаем новые товары
+    for market in markets:
+        to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], settings, market, setup_mode=True)
+        await db.create_offers(session, to_create_df_chunked)
+        logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df_chunked)}')
 
-    async with async_session() as session:
-        # В полях с двойной синхронизации берем наши, если были изменены, иначе из апи
-        merge_df = pd.merge(to_update_df, offers_df[mapping_fields + CONTROL_CHANGES + [f'{i}_changed' for i in CONTROL_CHANGES] + ['auto_price_control']], on=mapping_fields, how='inner')
-        for column in CONTROL_CHANGES:
-            merge_df[column] = np.where(
-                merge_df[f'{column}_changed'],
-                merge_df[f'{column}_y'],
-                merge_df[f'{column}_x']
-            )
-            merge_df.drop([f'{column}_x', f'{column}_y'], axis='columns', inplace=True)
 
-        to_update_df = merge_df.copy()
+    # Создать новые товары в моих остатках
+    await create_own_storage_stocks(session)
 
-        # Обновление характеристик товаров (только измененные)
-        to_update_attributes = to_update_df.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
-        await update_offers_attributes(to_update_attributes)
+    # Обновляем товары из апи
+    api_offers = await api_wrapper.get_offers_list()
+    api_offers_df = pd.DataFrame(api_offers)
+    await db.update_offers(session, api_offers_df, mapping_columns=['name_of_shop', 'market'])
 
-        settings = await get_user_settings(session, user_id)
+    # Удаляем товары
+    logger.warning(f"Offers to delete: {len(to_delete_offers)} \n{to_delete_offers[['sku', 'market', 'name_of_shop']].to_dict('records')}")
 
-        # После обновление аттрибутов у товаров, которые требовали изменений, выставить маркеры полей в нейтральные
-        for column in CONTROL_CHANGES:
-            to_update_df[f'{column}_changed'] = False
+    # Пересчитать все
+    await recalculate_values(session, settings)
+    logger.info('Offers recalculated')
 
-        # Создание новых товаров
-        for market in markets:
-            to_create_df_chunked = await utils.build_offers_data(to_create_df[((to_create_df['market'] == market.type) & (to_create_df['name_of_shop'] == market.name))], settings, market, setup_mode=True)
-            await db.create_offers(session, to_create_df_chunked)
-            logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df)}')
-
-        # Создать новые товары в моих остатках
-        await create_own_storage_stocks(session)
-        logger.info('Own storage stocks created')
-
-        await db.update_offers(session, to_update_df, mapping_columns=['name_of_shop', 'market'])
-        logger.info(f'Offers updated: {len(to_update_df)}')
-
-        # Удалить товары
-        await db.delete_offers(session, to_delete_df)
-        logger.info(f'Offers deleted: {len(to_delete_df)}')
-
-        # Пересчитать все
-        await recalculate_values(session, settings)
-        logger.info('Offers recalculated')
-
-        await update_logs(session, user_id, {'updated_at': datetime.now()})
+    await update_logs(session, user_id, {'updated_at': datetime.now()})
 
     _time = datetime.now() - start_time
     logger.info(f'Offers update completed in {_time}')
+
+    # Получаем товары из апи
+    # yandex_offers = await api_wrapper.get_offers_list()
+    # yandex_offers_df = pd.DataFrame(yandex_offers)
+    #
+    #
+    #
+    # offers_db_identifiers = set([tuple(i.values()) for i in offers_df[mapping_fields].to_dict('records')])
+    # yandex_offers_identifiers = set([tuple(i.values()) for i in yandex_offers_df[mapping_fields].to_dict('records')])
+    #
+    # to_update = offers_db_identifiers & yandex_offers_identifiers
+    # to_create = yandex_offers_identifiers - offers_db_identifiers
+    # to_delete = offers_db_identifiers - yandex_offers_identifiers
+    #
+    # to_update_df = pd.merge(yandex_offers_df, pd.DataFrame(to_update, columns=mapping_fields), how='inner')
+    # to_update_df[['best_place_wm', 'best_place_im', 'photo']] = to_update_df[['best_place_wm', 'best_place_im', 'photo']].astype('string')
+    # to_create_df = pd.merge(yandex_offers_df, pd.DataFrame(to_create, columns=mapping_fields), how='inner')
+    #
+    # to_delete_df = pd.DataFrame(to_delete, columns=mapping_fields)
+    #
+    # async with async_session() as session:
+    #     # В полях с двойной синхронизации берем наши, если были изменены, иначе из апи
+    #     merge_df = pd.merge(to_update_df, offers_df[mapping_fields + CONTROL_CHANGES + [f'{i}_changed' for i in CONTROL_CHANGES] + ['auto_price_control']], on=mapping_fields, how='inner')
+    #     for column in CONTROL_CHANGES:
+    #         merge_df[column] = np.where(
+    #             merge_df[f'{column}_changed'],
+    #             merge_df[f'{column}_y'],
+    #             merge_df[f'{column}_x']
+    #         )
+    #         merge_df.drop([f'{column}_x', f'{column}_y'], axis='columns', inplace=True)
+    #
+    #     to_update_df = merge_df.copy()
+    #
+    #     # Обновление характеристик товаров (только измененные)
+    #     to_update_attributes = to_update_df.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
+    #     await update_offers_attributes(to_update_attributes)
+    #
+    #     settings = await get_user_settings(session, user_id)
+    #
+    #     # После обновление аттрибутов у товаров, которые требовали изменений, выставить маркеры полей в нейтральные
+    #     for column in CONTROL_CHANGES:
+    #         to_update_df[f'{column}_changed'] = False
+    #
+    #     # Создание новых товаров
+    #     for market in markets:
+    #         to_create_df_chunked = await utils.build_offers_data(to_create_df[((to_create_df['market'] == market.type) & (to_create_df['name_of_shop'] == market.name))], settings, market, setup_mode=True)
+    #         await db.create_offers(session, to_create_df_chunked)
+    #         logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df)}')
+
+    #     # Создать новые товары в моих остатках
+    #     await create_own_storage_stocks(session)
+    #     logger.info('Own storage stocks created')
+    #
+    #     yandex_offers_df = pd.DataFrame(await api_wrapper.get_offers_list())
+    #
+    #
+    #     await db.update_offers(session, to_update_df, mapping_columns=['name_of_shop', 'market'])
+    #     logger.info(f'Offers updated: {len(to_update_df)}')
+    #
+    #     # Удалить товары
+    #     await db.delete_offers(session, to_delete_df)
+    #     logger.info(f'Offers deleted: {len(to_delete_df)}')
+    #
+    #     # Пересчитать все
+    #     await recalculate_values(session, settings)
+    #     logger.info('Offers recalculated')
+    #
+    #     await update_logs(session, user_id, {'updated_at': datetime.now()})
+    #
+    # _time = datetime.now() - start_time
+    # logger.info(f'Offers update completed in {_time}')
 
 
 async def delete_offers(offers: list[OfferDelete]):
