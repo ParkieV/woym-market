@@ -6,8 +6,6 @@
     import { user } from "$lib/data/user";
     import { setContext } from "svelte";
     import { writable } from "svelte/store";
-    import { page } from "$app/stores";
-    import { BaseUrl } from "$lib";
     import type { LayoutData } from "./$types";
 
     export let data: LayoutData;
@@ -15,19 +13,13 @@
 
     let collapsed = writable(true);
     setContext("collapsed", collapsed);
-
-    $: name = $user?.login;
-
-    $: is_dev_frontend = $page.url.hostname === "localhost" || $page.url.hostname.startsWith("dev");
-    $: is_dev_backend = BaseUrl.includes("dev.oy-pro.ru");
-    $: show_warning = is_dev_frontend && !is_dev_backend;
 </script>
 
-<div id="wrapper" class:collapsed={$collapsed} class:warning={show_warning}>
+<div id="wrapper" class:collapsed={$collapsed}>
     <nav>
-        <Header {name} />
-        <Link text="Каталог" icon="/tag.svg" path="/app/catalog" />
+        <Header name={$user?.login} />
         <Link text="Карточки" icon="/barcode.svg" path="/app/offers" />
+        <Link text="Каталог" icon="/tag.svg" path="/app/catalog" />
         <Link text="Мои остатки" icon="/warehouse.svg" path="/app/own_storage" />
         <Link text="FBO остатки" icon="/package.svg" path="/app/fbo_storage" />
         <Spacer />
@@ -35,11 +27,6 @@
         <Link text="Магазины" icon="/storefront.svg" path="/app/markets" />
         <Link text="Выход" icon="/sign-out.svg" path="/auth" on:click={logout} />
     </nav>
-    {#if show_warning}
-        <div class="dev-warning">
-            localhost или dev-сервер запущен с путём API production-сервера!
-        </div>
-    {/if}
     <slot />
 </div>
 
@@ -49,13 +36,6 @@
         grid-template-rows: minmax(0, 1fr);
         grid-template-columns: var(--sidebar-width) 1fr;
         grid-template-areas: "sidebar content";
-
-        &.warning {
-            grid-template-rows: 40px minmax(0, 1fr);
-            grid-template-areas:
-                "sidebar warning"
-                "sidebar content";
-        }
 
         width: 100%;
         height: 100%;
@@ -76,19 +56,5 @@
         color: white;
         background-color: #455561;
         overflow: hidden;
-    }
-    .dev-warning {
-        grid-area: warning;
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        height: 40px;
-
-        font-size: 20px;
-        font-weight: bold;
-        color: white;
-        background-color: rgb(172, 0, 0);
     }
 </style>

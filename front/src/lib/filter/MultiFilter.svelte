@@ -28,8 +28,8 @@
 <style lang="scss">
     @use "./style.scss" as *;
     button {
+        @include square;
         padding: 4px;
-        aspect-ratio: 1;
         border: 0;
         border-radius: 4px;
         position: relative;

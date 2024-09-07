@@ -7,11 +7,9 @@ import { fboStorageSelection, fboStocksSelection } from "../../routes/app/(main)
 export abstract class Export {
     public async export(): Promise<{ ok: boolean }> {
         try {
-            let promise = fetchPlain(this.url, {
-                method: "POST",
-                body: this.body,
-                headers: { "Content-Type": "application/json" }
-            });
+            let body = this.body;
+            let headers: HeadersInit = body === null ? [] : [["Content-Type", "application/json"]];
+            let promise = fetchPlain(this.url, { method: "POST", body, headers });
             showFetchModals(promise, "Скачивание файла...", "Ошибка экспорта");
             let response = await promise;
 
@@ -25,10 +23,12 @@ export abstract class Export {
     }
 
     protected abstract get url(): string;
-    protected abstract get body(): string;
+    protected abstract get body(): string | null;
     protected abstract get defaultFileName(): string;
 
-    public abstract get valid(): boolean;
+    public get valid(): boolean {
+        return true;
+    }
 }
 
 export class SimpleExport extends Export {
@@ -53,9 +53,19 @@ export class SimpleExport extends Export {
     protected get defaultFileName(): string {
         return "report.xlsx";
     }
+}
 
-    public get valid(): boolean {
-        return true;
+export class CatalogExport extends Export {
+    protected get url(): string {
+        return `catalog/export`;
+    }
+
+    protected get body(): string | null {
+        return null;
+    }
+
+    protected get defaultFileName() {
+        return "report.xlsx";
     }
 }
 
@@ -91,10 +101,6 @@ export class SupplyExport extends Export {
     public place_id: number | null = null;
     public name_of_shop: string | null = null;
     public market: string | null = null;
-
-    constructor() {
-        super();
-    }
 
     protected get url(): string {
         return `stocks/supply/${this.type}/export`;
@@ -141,9 +147,5 @@ export class ViolatorsExport extends Export {
 
     protected get defaultFileName() {
         return "Нарушители.pdf";
-    }
-
-    public get valid(): boolean {
-        return true;
     }
 }

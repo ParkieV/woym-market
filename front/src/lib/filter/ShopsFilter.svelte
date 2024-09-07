@@ -46,7 +46,8 @@
         flex: 1 1 400px;
         display: flex;
         gap: 16px;
-        overflow-x: scroll;
+        overflow-x: auto;
+        scrollbar-width: none;
         margin-right: auto;
 
         > div {

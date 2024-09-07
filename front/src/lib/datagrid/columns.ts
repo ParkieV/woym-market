@@ -3,6 +3,7 @@ import type {
     ColDefField,
     ColGroupDef,
     ColumnGroupShowType,
+    EditableCallback,
     ValueGetterFunc,
     ValueSetterFunc
 } from "ag-grid-enterprise";
@@ -15,7 +16,7 @@ export type Column<T = any> = {
     base: ColumnBase<T>;
     header: string;
     key: string;
-    editable?: boolean;
+    editable?: boolean | EditableCallback<T, any>;
     tooltip?: string;
     pinned?: boolean;
     columnGroupShow?: ColumnGroupShowType;
@@ -47,13 +48,11 @@ export function getColumns<T>(
             } satisfies MyColGroupDef<T>;
         }
 
-        let editable = col.editable === true;
-
         let colDef: MyColDef<T> = {
             source: col,
             field: col.key as ColDefField<T>,
             headerName: col.header,
-            editable,
+            editable: col.editable,
             cellClass: col.base.classes,
             valueGetter: col.valueGetter,
             wrapHeaderText: true,

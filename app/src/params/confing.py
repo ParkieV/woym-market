@@ -11,6 +11,10 @@ class Config(BaseSettings):
     reset_db: bool
     schedule_update: bool
     mode: str
+    yandex_disk_token: str
+    yandex_disk_work_dir: str
+    use_sentry: bool
+    sentry_sdk_dsn: str
 
     @property
     def is_dev(self) -> bool:

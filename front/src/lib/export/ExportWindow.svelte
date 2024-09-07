@@ -2,7 +2,13 @@
     import Window from "../components/windows/Window.svelte";
     import { onMount } from "svelte";
     import { getStores, getStoreTypes, type Market } from "$lib/data/markets";
-    import { OwnStorageExport, SimpleExport, SupplyExport, ViolatorsExport } from ".";
+    import {
+        CatalogExport,
+        OwnStorageExport,
+        SimpleExport,
+        SupplyExport,
+        ViolatorsExport
+    } from ".";
     import { page } from "$app/stores";
     import { getStoragePlaces, type StoragePlace } from "$lib/data/own_storage/places";
 
@@ -37,6 +43,7 @@
             <select bind:value={data}>
                 <option value={null} disabled>Не выбрано</option>
                 <option value={new SimpleExport("data/export")}>Карточки: Таблица</option>
+                <option value={new CatalogExport()}>Каталог: Таблица</option>
                 <option value={new OwnStorageExport()}>Мои остатки: Таблица</option>
                 <option value={new SimpleExport("stocks/fbo/export")}>FBO остатки: Таблица</option>
                 <option value={new ViolatorsExport()}>Нарушители РРЦ</option>
@@ -46,7 +53,7 @@
             </select>
         </label>
         {#if data !== null}
-            {#if !(data instanceof OwnStorageExport)}
+            {#if !(data instanceof OwnStorageExport || data instanceof CatalogExport)}
                 <label>
                     <span>Маркет</span>
                     <select bind:value={data.market}>

@@ -16,7 +16,7 @@
     import DetailGridPlugin from "$lib/datagrid/plugins/detail";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
     import { SummaryPlugin } from "$lib/datagrid/plugins/summary";
-    import { fboState, fboStocksChanges } from "../state";
+    import { fboState, fboStocksChanges, invalidateAllState } from "../state";
     import ZoomPlugin from "$lib/datagrid/plugins/zoom";
     import { onMount } from "svelte";
     import StatePlugin from "$lib/datagrid/plugins/state";
@@ -32,6 +32,7 @@
             $fboState.filter(x => get(fboState.changes).isChanged(x.id))
         );
         if (ok) {
+            await invalidateAllState();
             await fboState.forceReload();
             fboStocksChanges.clear();
         }

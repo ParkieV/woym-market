@@ -63,6 +63,29 @@ export type SimpleImportProps = {
     name_of_shop: string | null;
 };
 
+export class CatalogImport extends Import {
+    constructor(public kind: "table" | "prices" | "sizes") {
+        super();
+    }
+
+    protected get url(): string {
+        if (this.kind === "table") return "catalog/import";
+        if (this.kind === "prices") return "catalog/import/prices";
+        if (this.kind === "sizes") return "catalog/import/sizes";
+        throw new Error("Неподдерживаемый вид импорта");
+    }
+
+    protected body(file: Blob): FormData {
+        let formData = new FormData();
+        formData.append("data", file);
+        return formData;
+    }
+
+    public get valid(): boolean {
+        return true;
+    }
+}
+
 export class FboAdditionsImport extends Import {
     public props: FboAdditionsImportProps;
 

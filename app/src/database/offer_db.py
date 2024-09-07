@@ -1,4 +1,5 @@
 from datetime import datetime
+from operator import or_
 
 import numpy as np
 import pandas as pd
@@ -68,13 +69,20 @@ async def update_offers(
         mapping_columns: list[str] | None = None,
         filters: dict[str, Any] | None = None,
         endswith_sku: bool = False,
-        detect_changes: bool = False,
+        detect_changes: list[str] | None = None,
 ) -> None:
     data = _dataframe_to_valid_dict(data)
 
     for offer in data:
         if 'id' in offer.keys():
             del offer['id']
+
+        # Поисковые слова изменяются только у озона
+        if 'search_words' in offer and offer.get('market', None) != 'ozon':
+            del offer['search_words']
+
+        if 'barcodes' in offer and offer.get('market', None) != 'yandex':
+            del offer['barcodes']
 
         stmp = update(Offer)
 
@@ -90,10 +98,9 @@ async def update_offers(
         else:
             stmp = stmp.where(Offer.sku == offer['sku'])
 
-        if detect_changes and 'search_words' in offer:
-            offer.update({
-                'search_words_changed': func.coalesce(Offer.search_words, 'null') != func.coalesce(offer['search_words'], 'null'),
-            })
+        if detect_changes:
+            tracked_data = {f'{i}_changed': or_(getattr(Offer, f'{i}_changed'), (func.coalesce(getattr(Offer, i), 'unknown') != (offer[i] or 'unknown'))) for i in detect_changes if getattr(Offer, i, None) and i in offer}
+            offer.update(tracked_data)
 
         stmp = stmp.values(**offer)
 
@@ -225,7 +232,10 @@ async def get_unique_skus(session: AsyncSession) -> list[str]:
 
 async def set_supplier_available(session: AsyncSession, skus: Iterable[str], value: bool) -> None:
     for sku in skus:
-        stmp = update(Offer).where(Offer.sku.endswith(sku)).values(supplier_available=value)
+        stmp = update(Offer).where(Offer.sku.endswith(sku)).values(
+            supplier_available=value,
+            dollar_cost_price_updated_at=func.now(),
+        )
         await session.execute(stmp)
         await session.commit()
 
@@ -254,3 +264,7 @@ async def get_violators(session: AsyncSession, market: str | None = None, name_o
 
     result = (await session.execute(query)).all()
     return [ViolatorDTO.model_validate(i, from_attributes=True) for i in result]
+
+
+async def set_tracked_fields_status(session: AsyncSession):
+    pass

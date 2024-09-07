@@ -40,12 +40,27 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     base: new StringColumn(),
                     header: "Название",
-                    key: "name"
+                    key: "name",
+                    editable: true
                 },
                 {
                     base: new StringColumn(),
                     key: "barcodes",
                     header: "Штрихкоды",
+                    columnGroupShow: "closed",
+                    editable: ({ data }) => (data as Offer).market === "yandex"
+                },
+                {
+                    base: new StringColumn(),
+                    header: "Аннотация",
+                    key: "description",
+                    editable: true,
+                    columnGroupShow: "closed"
+                },
+                {
+                    base: new StringColumn(),
+                    header: "Примечание (Каталог)",
+                    key: "catalog_note",
                     columnGroupShow: "closed"
                 },
                 {
@@ -78,7 +93,7 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     }),
                     header: "Поисковые слова",
                     key: "search_words",
-                    editable: true,
+                    editable: ({ data }) => (data as Offer).market === "ozon",
                     columnGroupShow: "closed"
                 },
                 {
@@ -302,7 +317,7 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 },
                 {
                     key: "dollar_cost_price_updated_at",
-                    header: "Дата обновления цены закупки (у. е.)",
+                    header: "Дата обновления ОПТ (у. е.)",
                     base: new DateColumn()
                 },
                 {
@@ -368,6 +383,12 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
         {
             key: "supplier_available",
             header: "Наличие у поставщика",
+            base: new BooleanColumn(),
+            editable: true
+        },
+        {
+            header: "Синхронизация",
+            key: "synchronization",
             base: new BooleanColumn(),
             editable: true
         },

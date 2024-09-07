@@ -9,7 +9,7 @@ from sqlalchemy import (
     TIMESTAMP,
     Float,
     DateTime,
-    select, func
+    select, func, BigInteger
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
@@ -43,7 +43,12 @@ class Offer(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
 
     sku = Column(String, index=True, nullable=False) # same as id
+
     name = Column(String, nullable=True)
+    name_changed = Column(Boolean, nullable=False, default=False)
+
+    description = Column(String, nullable=True, default=None, server_default=None)
+    description_changed = Column(Boolean, nullable=False, default=False)
 
     self_weight = Column(Float, default=None, nullable=True)
     self_length = Column(Float, default=None, nullable=True)
@@ -102,6 +107,8 @@ class Offer(Base):
     current_price = Column(Float, nullable=True)
     target_price = Column(Float, nullable=True, default=None)
 
+    catalog_note = Column(String, nullable=False, default='', server_default=text("''"))
+
     # User additional fields
     note_1 = Column(String, default='', nullable=False)
     note_2 = Column(String, default='', nullable=False)
@@ -118,9 +125,11 @@ class Offer(Base):
     pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
 
     barcodes = Column(String, nullable=True, default=None)
+    barcodes_changed = Column(Boolean, nullable=False, default=False)
+
     use_promotion_price = Column(Boolean, default=False)
     wholesale_dollar_cost_price = Column(Float, nullable=True)
-    vendor_code = Column(Integer, nullable=True, default=None)
+    vendor_code = Column(BigInteger, nullable=True, default=None)
     search_words = Column(String, nullable=True, default=None)
     search_words_changed = Column(Boolean, default=False, nullable=False)
 
@@ -302,12 +311,13 @@ class CatalogItem(Base):
     self_length = Column(Float, nullable=True, default=None)
     self_width = Column(Float, nullable=True, default=None)
     self_height = Column(Float, nullable=True, default=None)
-    self_volume = Column(Float, nullable=True, default=None)
-    note = Column(String, nullable=True, server_default='Новый товар')
+    volume = Column(Float, nullable=True, default=None)
+    catalog_note = Column(String, nullable=True, server_default=text("'Новый товар'"))
     use_promotion_price = Column(Boolean, nullable=False, default=False)
     wholesale_dollar_cost_price = Column(Float, nullable=True, default=None)
     supplier_available = Column(Boolean, nullable=False, default=False)
-    annotation = Column(String, nullable=True, default=None, server_default=None)
+    dollar_cost_price_updated_at = Column(DateTime, nullable=True, default=None)
+    description = Column(String, nullable=True, default=None, server_default=None)
     search_words = Column(String, nullable=True, default=None, server_default=None)
     search_words_changed = Column(Boolean, nullable=False, default=False)
     name = Column(String, nullable=True, default=None, server_default=None)

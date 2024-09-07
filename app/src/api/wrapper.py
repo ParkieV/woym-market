@@ -1,9 +1,13 @@
+from logs import get_logger
 from .base_api import BaseAPI
 from src.schemas.base_api_schemas import APIWarehouse, APIOffer, APIPriceChangeData
 from src.database.settings_db import get_markets
 from src.api.factory import APIFactory
 from ..database.db import async_session
 from src.schemas.settings_schemas import MarketFullOut
+
+
+logger = get_logger(__name__)
 
 
 class APIWrapper(BaseAPI):
@@ -16,6 +20,8 @@ class APIWrapper(BaseAPI):
             for market in await get_markets(session, MarketFullOut):
                 api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
                 offers = await api.get_offers_list()
+                if not offers:
+                    logger.warning(f'{market.name}({market.type}) returns empty offers list')
                 result.extend(offers)
 
         return result
@@ -26,6 +32,8 @@ class APIWrapper(BaseAPI):
             for market in await get_markets(session, MarketFullOut):
                 api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
                 offers = await api.get_stocks()
+                if not offers:
+                    logger.warning(f'{market.name}({market.type}) returns empty stocks list')
                 result.extend(offers)
 
         return result
@@ -38,3 +46,11 @@ class APIWrapper(BaseAPI):
                 price_data = [i for i in data if i.market==market.type and i.name_of_shop==market.name]
 
                 await api.change_prices(price_data)
+
+    async def change_offers(self, data: list[APIOffer]) -> None:
+        async with async_session() as session:
+            for market in await get_markets(session, MarketFullOut):
+                api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
+                offers_data = [i for i in data if i.market==market.type and i.name_of_shop==market.name]
+                await api.change_offers(offers_data)
+

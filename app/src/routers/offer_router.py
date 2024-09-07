@@ -1,6 +1,6 @@
 from pathlib import PurePath, Path
 
-from fastapi import APIRouter, File, Depends, UploadFile, Body
+from fastapi import APIRouter, File, Depends, UploadFile, Body, Query
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
@@ -29,9 +29,14 @@ async def get_offers(offset: int = 0, limit: int | None = None):
     return await service.get_offers(offset=offset, limit=limit)
 
 
-@data_router.patch('/offers', response_model=list[OfferOut], tags=['Offers'])
+@data_router.patch('/offers', tags=['Offers'])
 async def change_offer_fields(offers_data: list[OfferChange], current_user=Depends(require_staff)):
     return await service.change_offers(offers_data, current_user.id)
+
+
+@data_router.put('/offers/media/images', tags=['Offers', 'Media'], dependencies=[Depends(require_staff)])
+async def add_image_to_offer(file: UploadFile = File(...), offer_id: int = Query()):
+    return file.filename, offer_id
 
 
 @data_router.get('/pricing-schemes', response_model=list[PricingSchemeOut], tags=['Pricing Schemes'], dependencies=[Depends(get_current_user)])
