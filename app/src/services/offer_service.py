@@ -135,6 +135,7 @@ async def update_offers(user_id: int):
 
     # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
     to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
+    logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
     await update_offers_attributes(to_update_attributes)
 
     # Создаем новые товары
@@ -146,6 +147,7 @@ async def update_offers(user_id: int):
 
     # Создать новые товары в моих остатках
     await create_own_storage_stocks(session)
+    logger.info('Own storage stocks created')
 
     # Обновляем товары из апи
     api_offers = await api_wrapper.get_offers_list()
@@ -155,6 +157,7 @@ async def update_offers(user_id: int):
         api_offers_df[f'{tracked_column}_changed'] = False
 
     await db.update_offers(session, api_offers_df, mapping_columns=['name_of_shop', 'market'])
+    logger.info(f'Updated db offers: {len(api_offers_df)}')
 
     # Удаляем товары
     logger.warning(f"Offers to delete: {len(to_delete_offers)} \n{to_delete_offers[['sku', 'market', 'name_of_shop']].to_dict('records')}")
