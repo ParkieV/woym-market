@@ -1,6 +1,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
@@ -21,6 +22,18 @@ from src.routers.media_router import router as media_router
 from src.database.db import db_create
 import aioschedule
 from src.params.confing import config
+
+if config.use_sentry:
+    sentry_sdk.init(
+        dsn=config.sentry_sdk_dsn,
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for tracing.
+        traces_sample_rate=1.0,
+        # Set profiles_sample_rate to 1.0 to profile 100%
+        # of sampled transactions.
+        # We recommend adjusting this value in production.
+        profiles_sample_rate=1.0,
+    )
 
 
 async def scheduler():
