@@ -23,9 +23,13 @@ class OzonAPI(BaseAPI):
         url = 'https://api-seller.ozon.ru/v1/product/attributes/update'
 
         valid_data = [i for i in data if all((i.is_valid_name(), i.is_valid_description(), i.is_valid_search_words()))]
+        invalid_data = [i for i in data if not all((i.is_valid_name(), i.is_valid_description(), i.is_valid_search_words()))]
+
+        if invalid_data:
+            logger.error(f'Invalid offers data: {len(invalid_data)} / {len(valid_data)} {invalid_data}')
 
         if not valid_data:
-            logger.warning(f'Skip ')
+            logger.warning(f'{self.shop_name}(ozon) has no valid offers data')
             return
 
         body = {
@@ -145,7 +149,6 @@ class OzonAPI(BaseAPI):
             offer['vendor_code'] = product_ids.get(offer['sku'], None)
             del offer['market_sku']
 
-        logger.info(f'{self.shop_name}(ozon) offers collected')
         return [APIOffer(**i) for i in offers]
 
     async def get_stocks(self) -> list[APIWarehouse]:
@@ -177,7 +180,11 @@ class OzonAPI(BaseAPI):
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 1000
 
-        valid_price_data = [i for i in data if i.is_valid_min_price() and i.is_valid_target_price()]
+        valid_price_data = [i for i in data if all((i.is_valid_min_price(), i.is_valid_target_price(), i.is_valid_discount_base_price()))]
+        invalid_data = [i for i in data if not all((i.is_valid_min_price(), i.is_valid_target_price(), i.is_valid_discount_base_price()))]
+
+        if invalid_data:
+            logger.warning(f'Invalid prices data: {len(invalid_data)} / {len(valid_price_data)} {invalid_data}')
 
         if not valid_price_data:
             logger.warning(f'{self.shop_name}(ozon) has no valid price data')
@@ -191,7 +198,8 @@ class OzonAPI(BaseAPI):
                     'currency_code': 'RUB',
                     'auto_action_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
                     'price_strategy_enabled': 'UNKNOWN',
-                    'min_price': str(price.min_price)
+                    'min_price': str(price.min_price),
+                    'old_price': str(round(price.discount_base_price))
                 }
                 for price in valid_price_data[i:i + chunk_size]
             ]

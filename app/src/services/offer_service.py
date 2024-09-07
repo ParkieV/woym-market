@@ -150,6 +150,10 @@ async def update_offers(user_id: int):
     # Обновляем товары из апи
     api_offers = await api_wrapper.get_offers_list()
     api_offers_df = pd.DataFrame(api_offers)
+
+    for tracked_column in CONTROL_CHANGES:
+        api_offers_df[f'{tracked_column}_changed'] = False
+
     await db.update_offers(session, api_offers_df, mapping_columns=['name_of_shop', 'market'])
 
     # Удаляем товары
@@ -196,7 +200,10 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
             min_price=offer_data['manual_min_price'] if offer_data['use_manual_min_price'] else offer_data['total_price'] * offer_data['auto_min_price'] / 100,
             auto_participation_in_promotions=offer_data['auto_participation_in_promotions'],
             auto_min_price=offer_data['target_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['target_price'], offer_data['auto_min_price'])) else None,
-            vendor_code=offer_data['vendor_code']
+            vendor_code=int(offer_data['vendor_code']) if offer_data['vendor_code'] is not None and not np.isnan(
+                offer_data['vendor_code']) else None,
+            discount_base_price=offer_data['discount_base_price']
+
         )
         for offer_data in data if offer_data['total_price'] is not None
     ]
