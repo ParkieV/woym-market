@@ -9,13 +9,14 @@ from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS,
 import pandas as pd
 import numpy as np
 from src.api.base_api import BaseAPI
-from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData
-
+from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, \
+    APIOfferChangeData
 
 logger = get_logger(__name__)
 
 
 class YandexMarketAPI(BaseAPI):
+
     def validate_auth_data(self, token: str):
         response = self.session.get('https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
         if response.status_code != 200:
@@ -33,6 +34,43 @@ class YandexMarketAPI(BaseAPI):
 
     def _get_business_id_by_campaign_id(self, campaign_id: int) -> int:
         return self._get_campaigns()[campaign_id]['business_id']
+
+    async def change_offers(self, data: list[APIOfferChangeData]) -> None:
+        valida_offer_data = [i for i in data]
+
+        business_id = self._get_business_id_by_campaign_id(self._entity_id)
+        url = f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings/update'
+
+        chunk_size = 500
+
+        for i in range(0, len(valida_offer_data), chunk_size):
+            body = {
+                'offerMappings': [
+                    {
+                        'offer': {
+                            'offerId': offer_data.sku,
+                            'barcodes': [barcode for barcode in offer_data.valid_barcodes],
+                            'name': offer_data.name,
+                            'description': offer_data.description,
+                            # 'pictures': []
+
+                        }
+                    }
+                    for offer_data in valida_offer_data[i:i + chunk_size]
+                ]
+            }
+            response = self.session.post(url, json=body, headers=self.auth_headers)
+
+            if not response.ok:
+                logger.error(f'Cant update offers data: {response.text}')
+
+            response_json = response.json()
+
+            if not response_json.get('status', None) == 'OK':
+                logger.error(f'Cant update offers data: {response_json.get("errors", "unknown")}')
+
+
+
 
     async def get_offers_list(self) -> list[APIOffer]:
         result = []
@@ -107,12 +145,14 @@ class YandexMarketAPI(BaseAPI):
             self.validate_response(response)
             data = response.json()
 
-            for offer in data['result']['offerMappings']:
-                offer = offer['offer']
+            for offer_mapping in data['result']['offerMappings']:
+                offer = offer_mapping['offer']
+                mapping = offer_mapping.get('mapping', {})
 
                 if 'weightDimensions' in offer:
                     weight_dimensions = offer['weightDimensions']
-                    volume = weight_dimensions['width'] * weight_dimensions['length'] * weight_dimensions['height'] / 1000
+                    volume = weight_dimensions['width'] * weight_dimensions['length'] * weight_dimensions[
+                        'height'] / 1000
                 else:
                     weight_dimensions = dict()
                     volume = None
@@ -120,6 +160,7 @@ class YandexMarketAPI(BaseAPI):
                 offer_data = {
                     'sku': offer['offerId'],
                     'name': offer['name'],
+                    'description': offer.get('description', None),
                     'yandex_weight': weight_dimensions.get('weight'),
                     'yandex_length': weight_dimensions.get('length'),
                     'yandex_width': weight_dimensions.get('width'),
@@ -128,7 +169,8 @@ class YandexMarketAPI(BaseAPI):
                     'photo': offer['pictures'][0] if len(offer['pictures']) > 0 else None,
                     'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,
                     'business_id': business_id,
-                    'barcodes': ', '.join(offer['barcodes']) if offer['barcodes'] else None
+                    'barcodes': ', '.join(offer['barcodes']) if offer['barcodes'] else None,
+                    'vendor_code': mapping.get('marketSku', None)
 
                 }
                 offer_data['your_promotion_price'] = offer_data['current_price']
@@ -144,7 +186,7 @@ class YandexMarketAPI(BaseAPI):
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 500
 
-        valid_price_data = [i for i in data if i.is_valid_target_price() and i.is_valid_discount_base_price()]
+        valid_price_data = [i for i in data if i.is_valid_target_price()]
 
         if not valid_price_data:
             logger.warning(f'{self._shop_name}(yandex) has no valid price data')
@@ -158,8 +200,7 @@ class YandexMarketAPI(BaseAPI):
                     'offerId': price_data.sku,
                     'price': {
                         'value': price_data.target_price,
-                        'currencyId': "RUR",
-                        'discountBase': round(price_data.discount_base_price)
+                        'currencyId': "RUR"
                     }
                 }
                 for price_data in valid_price_data[i:i + chunk_size]]
@@ -169,13 +210,11 @@ class YandexMarketAPI(BaseAPI):
             }
 
             response = self.session.post(
-                        f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
-                        headers=self.auth_headers,
-                        json=body
-                    )
-
-            if not response.ok:
-                logger.error(f'{self._shop_name}(yandex) has invalid price data: {response.text}')
+                f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
+                headers=self.auth_headers,
+                json=body
+            )
+            self.validate_response(response, body=body, raise_error=False)
 
         self._set_cofinance_offers_price(data)
 
@@ -306,7 +345,7 @@ class YandexMarketAPI(BaseAPI):
 
         for i in range(0, len(skus), chunk_size):
             body = {
-                "offerIds": skus[i:i+chunk_size],
+                "offerIds": skus[i:i + chunk_size],
             }
             response = self.session.post(
                 f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices',
@@ -327,10 +366,9 @@ class YandexMarketAPI(BaseAPI):
     def _set_cofinance_offers_price(self, data: list[APIPriceChangeData]):
         chunk_size = 500
         business_id = self._get_business_id_by_campaign_id(self._entity_id)
-        valid_data = [i for i in data if i.is_valid_auto_min_price()]
+        valid_data = [i for i in data if i.auto_min_price is not None and i.auto_min_price != np.nan]
 
         for i in range(0, len(data), chunk_size):
-
             body = {
                 'offerMappings': [
                     {
@@ -342,7 +380,7 @@ class YandexMarketAPI(BaseAPI):
                             }
                         }
                     }
-                    for price_data in valid_data[i:i+chunk_size] if price_data.is_valid_auto_min_price()
+                    for price_data in valid_data[i:i + chunk_size] if price_data.is_valid_auto_min_price()
                 ]
             }
 
@@ -352,4 +390,3 @@ class YandexMarketAPI(BaseAPI):
                 json=body
             )
             self.validate_response(response, raise_error=False, body=body)
-

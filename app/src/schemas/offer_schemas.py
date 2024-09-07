@@ -76,6 +76,9 @@ class BaseOffer(BaseModel, BaseModelFields):
 
 
 class OfferChange(BaseOffer):
+    name: str | None = Field(title='Название')
+    description: str | None = Field(title='Описание')
+
     self_weight: float | None = Field(title='Вес')
     self_length: float | None = Field(title='Длина')
     self_width: float | None = Field(title='Ширина')
@@ -100,6 +103,7 @@ class OfferChange(BaseOffer):
     supplier_available: bool = Field(title='Наличие у поставщика')
     search_words: str | None = Field(title='Поисковые слова', max_length=255)
     use_promotion_price: bool = Field(title='Акция')
+    barcodes: str | None = Field(title='Штрихкоды')
 
     synchronization: bool = Field(title='Синхронизация с каталогом')
 
@@ -109,7 +113,6 @@ class OfferChange(BaseOffer):
 class OfferOut(OfferChange):
     # from yandex api
     id: int = Field(title='id')
-    name: str | None = Field(title='Название')
 
     yandex_weight: float | None = Field(title='Вес с маркета', default=0)
     yandex_length: float | None = Field(title='Длинна с маркета', default=0)
@@ -126,6 +129,8 @@ class OfferOut(OfferChange):
     business_id: int | None = Field(title='id бизнесса')
 
     dollar_cost_price: float | None = Field(title='Закупка у. е.', default=0)
+
+    catalog_note: str = Field(title='Примечание (Каталог)')
 
     # countable/editable values
     cost_price: float | None = Field(title='Себестоимость (Закупка у. е. * курс)')
@@ -151,7 +156,6 @@ class OfferOut(OfferChange):
     best_place_im_link: str | None = Field(title='Ссылка на магазин с лучшей ценой', exclude=True)
     your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
     min_general_markets_price: float | None = Field(title='Лучшая цена среди всех площадок')
-    barcodes: str | None = Field(title='Штрихкоды')
     vendor_code: int | None = Field(title='Артикул')
     recommended_retail_price: float | None = Field(title='РРЦ')
     stop_price: float | None = Field(title='Стоп цена')
@@ -161,6 +165,10 @@ class OfferOut(OfferChange):
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')
+
+    name_changed: bool = Field(title='Название изменено пользователем')
+    description_changed: bool = Field(title='Описание изменено')
+    barcodes_changed: bool = Field(title='Штрихкоды изменены')
 
     @computed_field(title='Разница с РРЦ')
     @property

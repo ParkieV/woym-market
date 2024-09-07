@@ -1,6 +1,6 @@
 from pathlib import PurePath
 
-from fastapi import APIRouter, UploadFile, File, Depends
+from fastapi import APIRouter, UploadFile, File, Depends, Body, BackgroundTasks
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
@@ -15,24 +15,26 @@ router = APIRouter(
 )
 
 
-@router.get('', response_model=list[CatalogItem])
+@router.get('', response_model=list[CatalogItem], dependencies=[Depends(get_current_user)])
 async def get_catalog_items():
     return await service.get_catalog_items()
 
 
-@router.post('')
+@router.post('', dependencies=[Depends(require_staff)])
 async def change_catalog_items(items: list[CatalogItemUpdate]):
     await service.change_catalog_items(items)
 
 
-@router.post('/setup', tags=["Debug"])
-async def setup_catalog_items():
-    await service.setup_catalog_items()
+@router.post('/setup', tags=["Debug"], dependencies=[Depends(require_staff)])
+async def setup_catalog_items(background: BackgroundTasks):
+    background.add_task(service.setup_catalog_items)
+    return {'status': 'OK'}
 
 
-@router.post('/synchronization', tags=["Debug"])
-async def synchronize_catalog_items():
-    await service.sync_catalog_items_with_offers()
+@router.post('/synchronization', tags=["Debug"], dependencies=[Depends(require_staff)])
+async def synchronize_catalog_items(background: BackgroundTasks, skus: list[str] = Body(embed=True)):
+    background.add_task(service.sync_catalog_items_with_offers, skus=skus)
+    return {'status': 'OK'}
 
 
 @router.post('/export', tags=["Export"], dependencies=[Depends(get_current_user)])
@@ -45,4 +47,20 @@ async def export_catalog_items():
 async def import_catalog_items(data: UploadFile = File()):
     content = await data.read()
     await service.import_catalog_items(content, PurePath(data.filename).suffix)
+    return {'status': 'OK'}
+
+
+@router.post('/import/sizes', tags=["Import"], dependencies=[Depends(require_staff)])
+async def import_catalog_item_sizes(data: UploadFile = File()):
+    content = await data.read()
+    await service.import_item_sizes(content, PurePath(data.filename).suffix)
+    return {'status': 'OK'}
+
+
+@router.post('/import/prices', tags=["Import"], dependencies=[Depends(require_staff)])
+async def import_catalog_item_prices(data: UploadFile = File()):
+    content = await data.read()
+    await service.import_item_prices(content, PurePath(data.filename).suffix)
+    return {'status': 'OK'}
+
 

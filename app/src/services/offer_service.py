@@ -6,6 +6,8 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import src.services.base_utils
+from src.database.catalog_db import sync_catalog_items_with_offers
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.confing import config
 from logs import get_logger
@@ -14,7 +16,7 @@ from src.database.db import async_session
 from src.database import offer_db as db
 from src.database.settings_db import get_markets
 import src.services.offer_utils as utils
-from src.schemas.base_api_schemas import APIPriceChangeData
+from src.schemas.base_api_schemas import APIPriceChangeData, APIOfferChangeData
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ImportType, Market, \
     PricingSchemeOut, PricingSchemeCreate, BaseOffer, PricingSchemeFieldCreate, PricingSchemeFieldChange, \
     PricingSchemeChange
@@ -24,15 +26,16 @@ from src.database.settings_db import update_logs, get_user_settings
 from fastapi.exceptions import HTTPException
 from fastapi import status
 from datetime import datetime
-
+from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
+
 
 api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
 
-CONTROL_CHANGES = ['search_words']
+CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes']
 
 
 async def get_offers(filters: dict[str, Any] | None = None, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
@@ -52,10 +55,12 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
 
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
 
-        await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=True)
-        # await sync_catalog_items_with_offers(session)
+        await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=['name', 'description', 'barcodes', 'search_words'])
+
+        # to_sync_skus = [i.sku for i in offers_data if i.synchronization]
+        # if to_sync_skus:
+        #     await sync_catalog_items_with_offers(session,  skus=to_sync_skus)
         await recalculate_values(session, settings, which=changes[mapping_fields])
-        return await db.get_offers_by(session, changes[mapping_fields])
 
 
 async def setup_offers_data(user_id: int):
@@ -75,88 +80,90 @@ async def setup_offers_data(user_id: int):
 
 async def update_offers(user_id: int):
     logger.info('Start update offers')
+    mapping_fields = ['sku', 'name_of_shop', 'market']
     start_time = datetime.now()
 
-    yandex_offers = await api_wrapper.get_offers_list()
-    db_offers = await get_offers()
-    offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
-    yandex_offers_df = pd.DataFrame(yandex_offers)
-
-    mapping_fields = ['sku', 'name_of_shop', 'market']
-
-    offers_db_identifiers = set([tuple(i.values()) for i in offers_df[mapping_fields].to_dict('records')])
-    yandex_offers_identifiers = set([tuple(i.values()) for i in yandex_offers_df[mapping_fields].to_dict('records')])
-
-    to_update = offers_db_identifiers & yandex_offers_identifiers
-    to_create = yandex_offers_identifiers - offers_db_identifiers
-    to_delete = offers_db_identifiers - yandex_offers_identifiers
-
-    to_update_df = pd.merge(yandex_offers_df, pd.DataFrame(to_update, columns=mapping_fields), how='inner')
-    to_update_df[['best_place_wm', 'best_place_im', 'photo']] = to_update_df[['best_place_wm', 'best_place_im', 'photo']].astype('string')
-    to_create_df = pd.merge(yandex_offers_df, pd.DataFrame(to_create, columns=mapping_fields), how='inner')
-
-    to_delete_df = pd.DataFrame(to_delete, columns=mapping_fields)
-
     async with async_session() as session:
-        settings = await get_user_settings(session, user_id)
         markets = await get_markets(session)
+        settings = await get_user_settings(session, user_id)
 
-        to_update_price_df = offers_df.copy()
-        merge_result = pd.merge(to_update_price_df[mapping_fields + CONTROL_CHANGES + [f'{i}_changed' for i in CONTROL_CHANGES]], yandex_offers_df[mapping_fields + CONTROL_CHANGES], on=mapping_fields)
+        await sync_catalog_items_with_offers(session)
+        await recalculate_values(session, settings, which=[{'synchronization': True}])
 
-        # Логика для двухсторонней синхронизации полей (наши изменения в приоритете)
-        for column in CONTROL_CHANGES:
-            merge_result[column] = np.where(
-                merge_result[f'{column}_changed'],
-                merge_result[f'{column}_x'],
-                merge_result[f'{column}_y']
-            )
-            merge_result.drop([f'{column}_x', f'{column}_y'], axis='columns', inplace=True)
-        to_update_price_df.drop(CONTROL_CHANGES + [f'{i}_changed' for i in CONTROL_CHANGES], axis='columns', inplace=True)
-        to_update_price_df = pd.merge(merge_result, to_update_price_df, on=mapping_fields)
+    # Получаем товары из бд
+    db_offers = await get_offers()
+    db_offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
-        # Считаем discount_base_price на основании целевой цены
-        for market in markets:
-            to_update_price_df['discount_base_price'] = np.where(
-                (to_update_price_df['market'] == market.type) & (to_update_price_df['name_of_shop'] == market.name),
-                to_update_price_df['target_price'] * (1.0 + market.price_before_discount / 100),
-                to_update_price_df['discount_base_price']
-            )
+    # Создаем переменную с данными для отправки цен в апи
+    to_update_price_df = db_offers_df.copy()
 
-        # Обновление цен
-        await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True])
+    # Считаем значения, которые требуют настроек и целевой цены
+    for market in markets:
+        to_update_price_df['discount_base_price'] = np.where(
+            (to_update_price_df['market'] == market.type) & (to_update_price_df['name_of_shop'] == market.name),
+            to_update_price_df['target_price'] * (1.0 + market.price_before_discount / 100),
+            to_update_price_df['discount_base_price']
+        )
 
-        # Создание новых товаров
-        for market in markets:
-            to_create_df_chunked = await utils.build_offers_data(to_create_df[((to_create_df['market'] == market.type) & (to_create_df['name_of_shop'] == market.name))], settings, market, setup_mode=True)
-            await db.create_offers(session, to_create_df_chunked)
-            logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df)}')
+    # Обновление цен
+    await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True])
 
-        await create_own_storage_stocks(session)
-        logger.info('Own storage stocks created')
+    # Получаем товары из апи
+    api_offers = await api_wrapper.get_offers_list()
+    api_offers_df = pd.DataFrame(api_offers)
 
-        # await setup_catalog_items()
+    common_columns = (set(db_offers_df.columns.tolist()) & set(api_offers_df.columns.tolist())) - set(mapping_fields)
+    merged_offers = pd.merge(db_offers_df, api_offers_df, on=mapping_fields, how='outer', indicator=True, suffixes=(None, '__api'))
 
-        # Снять галочки с измененных полей
-        for column in CONTROL_CHANGES:
-            to_update_df[f'{column}_changed'] = False
+    to_update_offers = merged_offers[merged_offers['_merge'] == 'both']
+    to_delete_offers = merged_offers[merged_offers['_merge'] == 'left_only']
+    to_create_offers = merged_offers[merged_offers['_merge'] == 'right_only']
+    to_create_offers = (
+        to_create_offers
+        .drop(columns=common_columns)
+        .drop(columns=['_merge', 'id'], errors='ignore')
+        .rename(columns={f'{column}__api': column for column in common_columns})[api_offers_df.columns.tolist()]
+    )
 
-        await db.update_offers(session, to_update_df, mapping_columns=['name_of_shop', 'market'])
-        logger.info(f'Offers updated: {len(to_update_df)}')
+    # Двойная синхронизаия полей
+    for tracked_column in CONTROL_CHANGES:
+        to_update_offers[tracked_column] = np.where(
+            to_update_offers[f'{tracked_column}_changed'],
+            to_update_offers[tracked_column],
+            to_update_offers[f'{tracked_column}__api']
+        )
 
-        # await db.delete_offers(session, to_delete_df)
-        # logger.info(f'Offers deleted: {len(to_delete_df)}')
+    # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
+    to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
+    await update_offers_attributes(to_update_attributes)
 
-        # await sync_catalog_items_with_offers(session)
-        # logger.info('Offers synchronized with catalog')
+    # Создаем новые товары
+    for market in markets:
+        to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], settings, market, setup_mode=True)
+        await db.create_offers(session, to_create_df_chunked)
+        logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df_chunked)}')
 
-        await recalculate_values(session, settings)
-        logger.info('Offers recalculated')
 
-        await update_logs(session, user_id, {'updated_at': datetime.now()})
+    # Создать новые товары в моих остатках
+    await create_own_storage_stocks(session)
+
+    # Обновляем товары из апи
+    api_offers = await api_wrapper.get_offers_list()
+    api_offers_df = pd.DataFrame(api_offers)
+    await db.update_offers(session, api_offers_df, mapping_columns=['name_of_shop', 'market'])
+
+    # Удаляем товары
+    logger.warning(f"Offers to delete: {len(to_delete_offers)} \n{to_delete_offers[['sku', 'market', 'name_of_shop']].to_dict('records')}")
+
+    # Пересчитать все
+    await recalculate_values(session, settings)
+    logger.info('Offers recalculated')
+
+    await update_logs(session, user_id, {'updated_at': datetime.now()})
 
     _time = datetime.now() - start_time
     logger.info(f'Offers update completed in {_time}')
+
 
 
 async def delete_offers(offers: list[OfferDelete]):
@@ -172,6 +179,10 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
     elif isinstance(offers, list):
         data = [i.model_dump() for i in offers]
 
+    if not config.is_prod:
+        logger.info(f'Skip update offers prices app mode is not PROD (current - {config.mode})')
+        return
+
     if not len(data):
         logger.info('Skip update prices due to list is empty')
         return
@@ -184,18 +195,43 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
             target_price=offer_data['target_price'],
             min_price=offer_data['manual_min_price'] if offer_data['use_manual_min_price'] else offer_data['total_price'] * offer_data['auto_min_price'] / 100,
             auto_participation_in_promotions=offer_data['auto_participation_in_promotions'],
-            auto_min_price=offer_data['total_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['total_price'], offer_data['auto_min_price'])) else None,
-            search_words=offer_data['search_words'],
-            vendor_code=int(offer_data['vendor_code']) if offer_data['vendor_code'] is not None and not np.isnan(offer_data['vendor_code']) else None,
-            discount_base_price=offer_data['discount_base_price']
+            auto_min_price=offer_data['target_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['target_price'], offer_data['auto_min_price'])) else None,
+            vendor_code=offer_data['vendor_code']
         )
         for offer_data in data if offer_data['total_price'] is not None
     ]
 
-    if config.is_dev:
+    await api_wrapper.change_prices(data)
+
+
+async def update_offers_attributes(offers: pd.DataFrame):
+    data = offers.to_dict('records')
+
+    if not config.is_prod:
+        logger.info(f'Skip update offers attributes app mode is not PROD (current - {config.mode})')
         return
 
-    await api_wrapper.change_prices(data)
+    if not len(data):
+        logger.info('Skip update offers attributes due to list is empty')
+        return
+
+    data = [
+        APIOfferChangeData(
+            sku=offer_data['sku'],
+            market=offer_data['market'],
+            name_of_shop=offer_data['name_of_shop'],
+            search_words=offer_data['search_words'],
+            name=offer_data['name'],
+            description=offer_data['description'],
+            barcodes=offer_data['barcodes'],
+            vendor_code=offer_data['vendor_code']
+        )
+        for offer_data in data
+    ]
+
+    await api_wrapper.change_offers(data)
+
+    return data
 
 
 async def recalculate_values(session: AsyncSession, settings, which=None):
@@ -241,7 +277,7 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
 async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     required_fields = {'sku', 'market', 'name_of_shop'}
 
-    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
+    df = src.services.base_utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df.fillna({
         'note_1': '',
@@ -277,17 +313,7 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
 
 
 async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
-    df = utils.bytes_to_data_frame(data, file_extension=file_extension)
-    df.drop(df.columns[[3, 4, 6, 7]], axis=1, inplace=True, errors='ignore')
-    df.drop([i for i in range(8)], axis=0, inplace=True, errors='ignore')
-    df.columns = ['sku', 'name', 'discount_price', 'price']
-
-    df['sku'] = df['sku'].astype('string')
-
-    df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
-
-    df['use_promotion_price'] = df['discount_price'].notna()
-    df['wholesale_dollar_cost_price'] = df['price']
+    df = parce_purchase_list(data, file_extension=file_extension)
 
     async with async_session() as session:
         for _market in await get_markets(session, MarketOut):
@@ -299,14 +325,9 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
 
             chunked_df = df.copy()
 
-            chunked_df['wholesale_dollar_cost_price'] = np.where(
-                chunked_df['use_promotion_price'],
-                chunked_df['discount_price'],
-                chunked_df['wholesale_dollar_cost_price']
-            )
-            chunked_df.drop(['name', 'discount_price', 'price'], axis=1, inplace=True)
             chunked_df['market'] = _market.type
             chunked_df['name_of_shop'] = _market.name
+
             # Зависит от магазина
             await db.update_offers(session, chunked_df, mapping_columns=['market', 'name_of_shop'], endswith_sku=True)
 
@@ -316,25 +337,11 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
             await db.set_supplier_available(session, db_skus & import_skus, True)
             await db.set_supplier_available(session, db_skus - import_skus, False)
 
-        now = datetime.now()
-        await db.set_dollar_cost_price_updated_at(session, import_skus, now)
         await recalculate_values(session, settings)
 
 
 async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
-    df = utils.bytes_to_data_frame(data, 'Список товаров', file_extension)
-    df.drop([0, 1], axis=0, inplace=True, errors='ignore')
-    df: pd.DataFrame = df[df.columns[[2, 13, 14]]]
-    df.columns = ['sku', 'self_weight', 'sizes']
-    df[['self_length', 'self_width', 'self_height']] = df['sizes'].str.split('/', expand=True)
-    df[['self_length', 'self_width', 'self_height', 'self_weight']] = df[
-        ['self_length', 'self_width', 'self_height', 'self_weight']].astype(float)
-    df['volume'] = df['self_length'] * df['self_width'] * df['self_height'] / 1000
-    df['sku'] = df['sku'].astype('string')
-
-    df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
-    df.fillna(0, inplace=True)
-    df.drop('sizes', axis=1, inplace=True)
+    df = parce_sizes_list(data, file_extension=file_extension)
 
     mapping_columns = []
 
@@ -367,10 +374,13 @@ async def export_offers(name_of_shop: str | None = None, market: str | None = No
 
     offers = await get_offers(filters)
 
+    exclude_columns = [f'{i}_changed' for i in CONTROL_CHANGES]
+
     df = pd.DataFrame([offer.model_dump() for offer in offers], columns=OfferOut.fields().keys())
     df['dollar_cost_price_updated_at'] = df['dollar_cost_price_updated_at'].astype('string')
     df['dollar_cost_price_updated_at'].fillna('', inplace=True)
     df['dollar_cost_price_updated_at'] = df['dollar_cost_price_updated_at'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S.%f').strftime('%d/%m/%Y') if x else x)
+    df.drop(columns=exclude_columns, errors='ignore', inplace=True)
     df.rename(columns=OfferOut.fields(), inplace=True)
     df.to_excel('data/out-offers.xlsx', index=False)
     return 'data/out-offers.xlsx'
@@ -430,14 +440,12 @@ async def create_violators_file(market: Market | None = None, name_of_shop: str 
 
         if len(violators):
             f = [
-                Paragraph(
-                    f'{i + 1}. SKU: {violator.sku}, Маркетплейс: {violator.market}, Магазин: {violator.name_of_shop}, Цена: {round(violator.price)}, РРЦ: {round(violator.recommended_retail_price)}',
-                    style=ParagraphStyle('ParStyles', fontName='DejaVuSerif', leading=20))
+                Paragraph(f'{i+1}. SKU: {violator.sku}, Маркетплейс: {violator.market}, Магазин: {violator.name_of_shop}, Цена: {round(violator.price)}, РРЦ: {round(violator.recommended_retail_price)}', style=ParagraphStyle('ParStyles', fontName='DejaVuSerif', leading=20))
                 for i, violator in enumerate(violators)]
         else:
-            f = [Paragraph('Нарушителей не найдено.',
-                           style=ParagraphStyle('ParStyles', fontName='DejaVuSerif', leading=20))]
+            f = [Paragraph('Нарушителей не найдено.', style=ParagraphStyle('ParStyles', fontName='DejaVuSerif', leading=20))]
         canvas = SimpleDocTemplate("data/violators.pdf", )
         canvas.build(f)
 
         return "data/violators.pdf"
+

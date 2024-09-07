@@ -16,7 +16,7 @@
     import Toolbar from "./Toolbar.svelte";
     import type { PageData } from "./$types";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
-    import { ownStorageState } from "../state";
+    import { invalidateAllState, ownStorageState } from "../state";
     import ownStorageFilter from "./filter";
 
     export let data: PageData;
@@ -40,7 +40,10 @@
         let ok = await patchOwnStorages(
             get(ownStorageState).filter(x => get(ownStorageState.changes).isChanged(x.offer.sku))
         );
-        if (ok) await ownStorageState.forceReload();
+        if (ok) {
+            await invalidateAllState();
+            await ownStorageState.forceReload();
+        }
     }
 </script>
 

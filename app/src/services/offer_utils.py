@@ -1,7 +1,5 @@
 import pandas as pd
 import numpy as np
-from io import BytesIO
-from fastapi import HTTPException, status
 
 from src.api.factory import APITypes
 from src.database.offer_db import get_pricing_schemes
@@ -163,18 +161,6 @@ async def build_offers_data(data: pd.DataFrame, settings, market, total_price_co
     data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']] = data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']].astype('string')
 
     return data
-
-
-def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0, file_extension: str = '.xlsx', header: int = 0) -> pd.DataFrame:
-    io = BytesIO(data)
-    pd_engine = {
-        '.xlsx': 'openpyxl',
-        '.xls': 'xlrd'
-    }
-    if file_extension not in pd_engine.keys():
-        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, f'Файлы с расширением "{file_extension}" не поддерживаются')
-
-    return pd.read_excel(io, engine=pd_engine[file_extension], sheet_name=sheet_name, header=header)
 
 
 def round_values(data: pd.DataFrame) -> pd.DataFrame:

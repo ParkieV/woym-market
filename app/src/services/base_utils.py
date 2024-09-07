@@ -1,12 +1,14 @@
 import shutil
 from functools import wraps
+from io import BytesIO
 from typing import Type
-
+import numpy as np
 import pandas as pd
 from fastapi.exceptions import HTTPException
-from fastapi import status
+from fastapi import status, HTTPException
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
+from starlette import status
 
 from logs import get_logger
 from pathlib import Path
@@ -74,6 +76,18 @@ def validate_dataframe(
     return None
 
 
+def bytes_to_data_frame(data: bytes, sheet_name: str | int = 0, file_extension: str = '.xlsx', header: int = 0) -> pd.DataFrame:
+    io = BytesIO(data)
+    pd_engine = {
+        '.xlsx': 'openpyxl',
+        '.xls': 'xlrd'
+    }
+    if file_extension not in pd_engine.keys():
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, f'Файлы с расширением "{file_extension}" не поддерживаются')
+
+    return pd.read_excel(io, engine=pd_engine[file_extension], sheet_name=sheet_name, header=header)
+
+
 def parce_field_names(cls: Type[BaseModel], reverse: bool = False, exclude: list[str] | None = None):
     if exclude is None:
         exclude = []
@@ -83,6 +97,49 @@ def parce_field_names(cls: Type[BaseModel], reverse: bool = False, exclude: list
         return fields
 
     return {value: key for key, value in fields.items()}
+
+
+def parce_sizes_list(data: bytes, file_extension: str = '.xlsx') -> pd.DataFrame:
+    df = bytes_to_data_frame(data, 'Список товаров', file_extension)
+    df.drop([0, 1], axis=0, inplace=True, errors='ignore')
+    df: pd.DataFrame = df[df.columns[[2, 13, 14]]]
+    df.columns = ['sku', 'self_weight', 'sizes']
+    df[['self_length', 'self_width', 'self_height']] = df['sizes'].str.split('/', expand=True)
+    df[['self_length', 'self_width', 'self_height', 'self_weight']] = df[
+        ['self_length', 'self_width', 'self_height', 'self_weight']].astype(float)
+    df['volume'] = df['self_length'] * df['self_width'] * df['self_height'] / 1000
+    df['sku'] = df['sku'].astype('string')
+
+    df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
+    df.fillna(0, inplace=True)
+    df.drop('sizes', axis=1, inplace=True)
+
+    return df
+
+
+def parce_purchase_list(data: bytes, file_extension: str = '.xlsx') -> pd.DataFrame:
+    df = bytes_to_data_frame(data, file_extension=file_extension)
+    df.drop(df.columns[[3, 4, 6, 7]], axis=1, inplace=True, errors='ignore')
+    df.drop([i for i in range(8)], axis=0, inplace=True, errors='ignore')
+    df.columns = ['sku', 'name', 'discount_price', 'price']
+
+    df['sku'] = df['sku'].astype('string')
+
+    df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
+
+    df['use_promotion_price'] = df['discount_price'].notna()
+    df['wholesale_dollar_cost_price'] = df['price']
+
+    df['wholesale_dollar_cost_price'] = np.where(
+        df['use_promotion_price'],
+        df['discount_price'],
+        df['wholesale_dollar_cost_price']
+    )
+    df.drop(['name', 'discount_price', 'price'], axis=1, inplace=True)
+
+    return df
+
+
 
 
 

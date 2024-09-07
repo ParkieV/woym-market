@@ -36,7 +36,7 @@ class OfferStockWithWarehouseOut(OfferStockOut):
 class OfferWithStocks(BaseModel):
     id: int
     sku: str
-    name: str
+    name: str | None
     photo: str | None
     name_of_shop: str
     market: str
