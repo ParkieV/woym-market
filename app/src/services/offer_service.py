@@ -150,6 +150,10 @@ async def update_offers(user_id: int):
     # Обновляем товары из апи
     api_offers = await api_wrapper.get_offers_list()
     api_offers_df = pd.DataFrame(api_offers)
+
+    for tracked_column in CONTROL_CHANGES:
+        api_offers_df[f'{tracked_column}_changed'] = False
+
     await db.update_offers(session, api_offers_df, mapping_columns=['name_of_shop', 'market'])
 
     # Удаляем товары

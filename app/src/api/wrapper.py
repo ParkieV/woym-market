@@ -20,6 +20,7 @@ class APIWrapper(BaseAPI):
             for market in await get_markets(session, MarketFullOut):
                 api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
                 offers = await api.get_offers_list()
+                logger.info(f'{market.name}({market.type}) offers collected: {len(offers)}')
                 if not offers:
                     logger.warning(f'{market.name}({market.type}) returns empty offers list')
                 result.extend(offers)
@@ -32,6 +33,7 @@ class APIWrapper(BaseAPI):
             for market in await get_markets(session, MarketFullOut):
                 api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
                 offers = await api.get_stocks()
+                logger.info(f'{market.name}({market.type}) offer stocks collected: {len(offers)}')
                 if not offers:
                     logger.warning(f'{market.name}({market.type}) returns empty stocks list')
                 result.extend(offers)

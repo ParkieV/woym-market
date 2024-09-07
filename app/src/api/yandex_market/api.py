@@ -101,7 +101,6 @@ class YandexMarketAPI(BaseAPI):
             extended_offer.update(offer)
             result.append(extended_offer)
 
-        logger.info(f'{self._shop_name}(yandex) offers collected')
         return [APIOffer(**offer) for offer in result]
 
     def _get_campaigns(self) -> dict[int, dict[str, Any]]:

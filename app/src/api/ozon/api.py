@@ -145,7 +145,6 @@ class OzonAPI(BaseAPI):
             offer['vendor_code'] = product_ids.get(offer['sku'], None)
             del offer['market_sku']
 
-        logger.info(f'{self.shop_name}(ozon) offers collected')
         return [APIOffer(**i) for i in offers]
 
     async def get_stocks(self) -> list[APIWarehouse]:
