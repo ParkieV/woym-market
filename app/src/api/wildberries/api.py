@@ -47,7 +47,15 @@ class WildberriesAPI(BaseAPI):
 
         update_url = 'https://content-api.wildberries.ru/content/v2/cards/update'
 
-        valid_offers_data = [i for i in data]
+        valid_offers_data = [i for i in data if all((i.is_valid_name(), i.is_valid_description(), i.is_valid_vendor_code()))]
+        invalid_data = [i for i in data if not all((i.is_valid_name(), i.is_valid_description(), i.is_valid_vendor_code()))]
+
+        if invalid_data:
+            logger.warning(f'Invalid offers data: {len(invalid_data)} / {len(valid_offers_data)} {invalid_data}')
+
+        if not valid_offers_data:
+            logger.warning(f'{self.shop_name}(wildberries) has no valid offers data')
+            return
 
         chunk_size = 3000
 
@@ -128,8 +136,11 @@ class WildberriesAPI(BaseAPI):
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/upload/task'
-        valid_price_data = [price_data for price_data in data if
-                            price_data.is_valid_target_price() and price_data.is_valid_vendor_code()]
+        valid_price_data = [price_data for price_data in data if price_data.is_valid_target_price() and price_data.is_valid_vendor_code()]
+        invalid_price_data = [price_data for price_data in data if not (price_data.is_valid_target_price() and price_data.is_valid_vendor_code())]
+
+        if invalid_price_data:
+            logger.warning(f'Invalid price data: {len(invalid_price_data)} / {len(valid_price_data)} {invalid_price_data}')
 
         if not valid_price_data:
             logger.warning(f'{self.shop_name}(wildberries) has no valid price data')
