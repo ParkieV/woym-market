@@ -5,25 +5,22 @@ import pandas as pd
 from fastapi import HTTPException
 from starlette import status
 import openpyxl
-
 import src.services.base_utils
 from logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
-import src.services.offer_utils as utils
 from src.params.confing import config
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks.own_storages_schemas import OwnStorageUpdate, OwnStoragePlaceCreate, \
     OwnStoragePlaceOut, OwnStoragePlaceUpdate
-from src.schemas.stocks.fbo_schemas import OfferWithStocksUpdate
+from src.schemas.stocks.fbo_schemas import OfferWithFBOUpdate, OfferFBOStockUpdate
 from src.schemas.stocks.stocks_schemas import SupplyExportType, GeneralOrderData
 from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 from src.services.base_utils import error_handler, clean_up_files, validate_dataframe
 from datetime import datetime
 from pathlib import Path
 from shutil import make_archive
-from src.database import settings_db
 
 api_wrapper = APIWrapper()
 
@@ -111,23 +108,6 @@ async def get_warehouses():
         return await db.get_warehouses(session)
 
 
-async def get_offers_stocks():
-    async with async_session() as session:
-        return await db.get_offers_stocks(session)
-
-
-@error_handler('Не удалось получить остатки с магазинов.')
-async def get_offers_with_stocks():
-    async with async_session() as session:
-        return await db.get_offers_with_stocks(session)
-
-
-@error_handler('Не удалось обновить остатки с магазинов.')
-async def change_offer_with_stock(data: list[OfferWithStocksUpdate]):
-    async with async_session() as session:
-        await db.change_offer_with_stock(session, data)
-
-
 @error_handler('Не удалось получить собственные остатки.')
 async def get_own_storages():
     async with async_session() as session:
@@ -138,97 +118,6 @@ async def get_own_storages():
 async def change_own_storages(data: list[OwnStorageUpdate]):
     async with async_session() as session:
         await db.change_own_storages(session, data)
-
-
-@error_handler('Ошибка импорта остатков магазинов.')
-async def import_offers_stocks(data, name_of_shop: str | None = None, market: str | None = None,
-                               file_extension: str = 'xlsx'):
-    df = src.services.base_utils.bytes_to_data_frame(data, file_extension=file_extension)
-    df.rename(columns=OfferOut.reverse_fields(), inplace=True)
-    df[['note_1', 'note_2', 'note_3']] = df[['note_1', 'note_2', 'note_3']].fillna('')
-
-    if name_of_shop:
-        df = df[df['name_of_shop'] == name_of_shop]
-
-    if market:
-        df = df[df['market'] == market]
-
-    # Выбираем изменяемые колонки
-    stocks_df = df[[i for i in df.columns.values[11:].tolist() if 'мин. остаток' in i]]
-    df = df[df.columns.values[:11]]
-
-    async with async_session() as session:
-        warehouse_columns = [i.split(', ')[:2] for i in stocks_df.columns.values]
-        warehouse_columns = [i.id for i in await db.get_warehouses_by_name_and_market(session, warehouse_columns)]
-
-        # колонки остатков теперь имеют id склада
-        stocks_df.columns = warehouse_columns
-
-        df = pd.concat([df, stocks_df], axis=1)
-
-        to_update = []
-
-        for row in df.iterrows():
-            offer_series = row[1][0:11]
-            stocks_series = row[1][11:]
-
-            offer_stocks = []
-            for warehouse_id, min_stock in stocks_series.to_dict().items():
-                offer_stock = await db.get_offer_stock(session, offer_series['id'], warehouse_id)
-
-                if offer_stock:
-                    offer_stocks.append(
-                        {'id': offer_stock.id, 'min_stock': min_stock}
-                    )
-
-            offer_data = {
-                'id': offer_series['id'],
-                'note_1': offer_series['note_1'],
-                'note_2': offer_series['note_2'],
-                'note_3': offer_series['note_3'],
-                'hidden': offer_series['hidden'],
-                'stocks': offer_stocks
-            }
-            to_update.append(offer_data)
-
-        await db.change_offer_with_stock(session, [OfferWithStocksUpdate(**i) for i in to_update])
-
-
-@error_handler('Ошибка экспорта остатков магазинов.')
-async def export_stocks(name_of_shop: str | None = None, market: str | None = None) -> str:
-    offers_with_stocks = await get_offers_with_stocks()
-    warehouses = await get_warehouses()
-    warehouse_columns = []
-    for warehouse in warehouses:
-        base_name = f'{warehouse.name}, {warehouse.market}'
-        warehouse_columns.append(f'{base_name}, в наличии')
-        warehouse_columns.append(f'{base_name}, мин. остаток')
-        warehouse_columns.append(f'{base_name}, к поставке')
-
-    df = pd.DataFrame([i.model_dump() for i in offers_with_stocks])
-    df[warehouse_columns] = 0
-
-    stocks = df.pop('stocks').values.tolist()
-
-    for index, offer in enumerate(stocks):
-        for stock in offer:
-            base_column_name = f"{stock['warehouse']['name']}, {stock['warehouse']['market']}"
-
-            df.at[index, f'{base_column_name}, в наличии'] = stock['current_stock']
-            df.at[index, f'{base_column_name}, мин. остаток'] = stock['min_stock']
-            df.at[index, f'{base_column_name}, к поставке'] = stock['for_delivery']
-
-    df['id'] = df['id'].astype(int)
-
-    if name_of_shop:
-        df = df[df['name_of_shop'] == name_of_shop]
-
-    if market:
-        df = df[df['market'] == market]
-
-    df.rename(columns=OfferOut.fields(), inplace=True)
-    df.to_excel('data/stocks-fbo.xlsx', index=False)
-    return 'data/stocks-fbo.xlsx'
 
 
 @error_handler('Ошибка экспорта собственных остатков.')
@@ -317,6 +206,7 @@ async def export_yandex_supply(data: pd.DataFrame, dir_path: Path):
         ws.cell(1, 1, value='Данные для поставки')
         wb.save(file_path)
 
+
 async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
     warehouses = set(data['warehouse_name'].values.tolist())
 
@@ -327,26 +217,6 @@ async def export_ozon_supply(data: pd.DataFrame, dir_path: Path):
             'sku': 'артикул',
             'name': 'имя (необязательно)',
             'for_delivery': 'количество'
-        }, axis='columns', inplace=True)
-
-        file_path = dir_path / f'Склад {warehouse_name.replace("/", "-")}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
-        df.to_excel(file_path, index=False)
-
-
-async def export_wildberries_supply(data: pd.DataFrame, dir_path: Path):
-    warehouses = set(data['warehouse_name'].values.tolist())
-
-    for warehouse_name in warehouses:
-        df = data[data['warehouse_name'] == warehouse_name]
-        df = df[['barcodes', 'for_delivery', 'sku']]
-
-        df['barcodes'] = df['barcodes'].apply(lambda x: x.split(', ')[0] if x else np.nan)
-        df.dropna(axis='rows', inplace=True)
-
-        df.rename({
-            'sku': 'Артикул поставщика',
-            'for_delivery': 'Количество, шт.',
-            'barcodes': 'Баркод'
         }, axis='columns', inplace=True)
 
         file_path = dir_path / f'Склад {warehouse_name.replace("/", "-")}, {datetime.now(tz=config.time_zone_ino).strftime("%d.%m.%Y, %H:%M")}.xlsx'
@@ -512,24 +382,9 @@ async def import_fbo_data(data, name_of_shop: str | None, warehouse_id: int | No
         await db.update_fbo_support_data(session, df.to_dict('records'), name_of_shop, warehouse_id)
 
 
-async def get_choices_for_import_fbo_data() -> dict[str, list[dict]]:
-    async with async_session() as session:
-        warehouses = [{'id': i.id, 'name': i.name} for i in await db.get_warehouses(session)]
-        markets = [{'name': i.name} for i in await settings_db.get_markets(session)]
-
-        return {'markets': markets, 'warehouses': warehouses}
-
-
 async def get_warehouse(warehouse_id: int) -> WarehouseOut | None:
     async with async_session() as session:
         return await db.get_warehouse(session, warehouse_id)
-
-
-async def create_own_storages():
-    async with async_session() as session:
-        logger.info('Start setup own-storages')
-        await db.create_own_storage_stocks(session)
-        logger.info('Finish setup own-storages')
 
 
 async def create_own_storage_places(data: list[OwnStoragePlaceCreate]):
@@ -573,7 +428,7 @@ async def increment_own_storage_values(data, place_id: int, file_extension: str,
         await db.increment_own_storage_values(session, df.to_dict('records'), place_id)
 
 
-async def get_offer_stock(offer_id: int):
+async def get_offer_stocks(offer_id: int):
     async with async_session() as session:
         return await db.get_offer_stocks(session, offer_id)
 
@@ -581,3 +436,15 @@ async def get_offer_stock(offer_id: int):
 async def get_fbo_offers():
     async with async_session() as session:
         return await db.get_fbo_offers(session)
+
+
+async def change_fbo_offers(data: list[OfferWithFBOUpdate]):
+    async with async_session() as session:
+        await db.change_fbo_offers(session, data)
+
+
+async def change_fbo_stocks(data: list[OfferFBOStockUpdate]):
+    async with async_session() as session:
+        await db.change_fbo_stocks(session, data)
+
+

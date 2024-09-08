@@ -1,11 +1,13 @@
 from pathlib import PurePath, Path
 
-from fastapi import APIRouter, Depends, Body, UploadFile, File
+from fastapi import APIRouter, Depends, Body, UploadFile, File, HTTPException
+from starlette import status
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
 from src.dependencies.users import get_current_user, require_staff
-from src.schemas.stocks.fbo_schemas import OfferWithStocks, OfferWithStocksUpdate, OfferStockWithWarehouseOut
+from src.schemas.stocks.fbo_schemas import OfferWithFBOInfo, OfferWithFBOUpdate, OfferStockWithWarehouseOut, \
+    OfferFBOStockUpdate
 from src.services import stocks_service as service
 from src.services.base_utils import clean_up_files
 
@@ -15,19 +17,25 @@ router = APIRouter(
 )
 
 
-@router.get('', response_model=list[OfferWithStocks], dependencies=[Depends(get_current_user)])
+@router.get('/offers', response_model=list[OfferWithFBOInfo], dependencies=[Depends(get_current_user)])
 async def get_fbo_offers():
     return await service.get_fbo_offers()
 
 
-@router.get('/{offer_id}', response_model=list[OfferStockWithWarehouseOut], dependencies=[Depends(get_current_user)])
+@router.patch('/offers', dependencies=[Depends(require_staff)])
+async def change_offer(data: list[OfferWithFBOUpdate]):
+    await service.change_fbo_offers(data)
+    return {'status': 'OK'}
+
+
+@router.get('/remains/{offer_id}', response_model=list[OfferStockWithWarehouseOut], dependencies=[Depends(get_current_user)])
 async def get_fbo_stock(offer_id: int):
-    return await service.get_offer_stock(offer_id)
+    return await service.get_offer_stocks(offer_id)
 
 
-@router.patch('', dependencies=[Depends(require_staff)])
-async def change_fbo_stocks(data: list[OfferWithStocksUpdate]):
-    await service.change_offer_with_stock(data)
+@router.patch('/remains', dependencies=[Depends(require_staff)])
+async def change_offer_remain_stocks(data: list[OfferFBOStockUpdate]):
+    await service.change_fbo_stocks(data)
     return {'status': 'OK'}
 
 
@@ -38,14 +46,11 @@ async def import_fbo_additions_data(data: UploadFile = File(), name_of_shop: str
     return {'status': 'OK'}
 
 
-@router.post('/import',  dependencies=[Depends(require_staff)], tags=['Import'])
+@router.post('/import',  dependencies=[Depends(require_staff)], tags=['Import'], deprecated=True)
 async def import_fbo(data: UploadFile = File(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
-    content = await data.read()
-    await service.import_offers_stocks(content, name_of_shop, market, PurePath(data.filename).suffix)
-    return {'status': 'OK'}
+    raise HTTPException(status.HTTP_410_GONE, 'Данное действие больше недотупно. Обратитесь к администратору')
 
 
-@router.post('/export', dependencies=[Depends(get_current_user)], tags=['Export'])
+@router.post('/export', dependencies=[Depends(get_current_user)], tags=['Export'], deprecated=True)
 async def export_fbo_stocks(name_of_shop: str | None = Body(None), market: str | None = Body(None)):
-    path = Path(await service.export_stocks(name_of_shop, market))
-    return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
+    raise HTTPException(status.HTTP_410_GONE, 'Данное действие больше недотупно. Обратитесь к администратору')

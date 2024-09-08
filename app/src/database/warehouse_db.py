@@ -13,9 +13,8 @@ from sqlalchemy.orm import selectinload, subqueryload
 from src.database.models.models import Offer
 from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market
 from src.database.utils import _update_or_create_object, _get_or_create
-from src.schemas.base_api_schemas import WarehouseType
 from src.schemas.stocks.fbo_schemas import OfferStockCreate, OfferStockOut, \
-    OfferStockWithWarehouseOut, OfferWithStocks, OfferWithStocksUpdate
+    OfferStockWithWarehouseOut, OfferWithFBOInfo, OfferWithFBOUpdate, OfferFBOStockUpdate
 from src.schemas.stocks.own_storages_schemas import OwnStorageAggOfferOut, OwnStorageOfferStockOut, OwnStorageOut, \
     OwnStorageStockOut, OwnStorageUpdate, OwnStoragePlaceCreate, OwnStoragePlaceOut, \
     OwnStoragePlaceUpdate
@@ -65,22 +64,7 @@ async def create_offer_stock(session: AsyncSession, data: OfferStockCreate,
     return model_schema.model_validate(offer_stock_db, from_attributes=True)
 
 
-async def get_offers_stocks(session: AsyncSession, model_schema: ModelSchema = OfferStockWithWarehouseOut) -> list[
-    ModelSchema]:
-    query = select(OfferStock).where(OfferStock.offer_id == 1).options(selectinload(OfferStock.warehouse))
-    result = await session.execute(query)
-    return [model_schema.model_validate(offer_stock_db, from_attributes=True) for offer_stock_db in
-            result.scalars().all()]
-
-
-async def get_offer_stock_by_id(session: AsyncSession, _id: int,
-                                model_schema: ModelSchema = OfferStockOut) -> ModelSchema:
-    query = select(OfferStock).where(OfferStock.id == _id)
-    result = await session.execute(query)
-    return model_schema.model_validate(result.scalar_one(), from_attributes=True)
-
-
-async def get_offers_with_stocks(session: AsyncSession, model_schema: ModelSchema = OfferWithStocks) -> list[
+async def get_offers_with_stocks(session: AsyncSession, model_schema: ModelSchema = OfferWithFBOInfo) -> list[
     ModelSchema]:
     query = (
         select(Offer)
@@ -103,38 +87,31 @@ def count_delivery_items(in_stock: int, in_box: int, min_stock: int):
 # in_box: int
 # is_deliver_in_boxes: bool
 
-async def change_offer_with_stock(session: AsyncSession, data: list[OfferWithStocksUpdate]) -> None:
-    for offer_with_stock in data:
-        offer_data = offer_with_stock.model_dump()
-        offer_data.pop('stocks')
+async def change_fbo_stocks(session: AsyncSession, stocks: list[OfferFBOStockUpdate]) -> None:
+    for stock in stocks:
+        in_box_expr = case(
+            (stock.is_deliver_in_boxes, stock.in_box),
+            else_=1
+        )
 
-        stmp = update(Offer).where(Offer.id == offer_data['id']).values(**offer_data)
+        for_delivery_expr = case(
+            (stock.min_stock > OfferStock.current_stock,
+             func.ceil(
+                 (stock.min_stock - OfferStock.current_stock) /
+                 func.nullif(in_box_expr, 0)
+             ) * in_box_expr),
+            else_=0
+        )
+
+        stmp = update(OfferStock).where(OfferStock.id == stock.id).values(
+            in_box=stock.in_box,
+            min_stock=stock.min_stock,
+            for_delivery=for_delivery_expr,
+            is_deliver_in_boxes=stock.is_deliver_in_boxes,
+        )
         await session.execute(stmp)
 
-        for stock in offer_with_stock.stocks:
-            in_box_expr = case(
-                (stock.is_deliver_in_boxes, stock.in_box),
-                else_=1
-            )
-
-            for_delivery_expr = case(
-                (stock.min_stock > OfferStock.current_stock,
-                 func.ceil(
-                     (stock.min_stock - OfferStock.current_stock) /
-                     func.nullif(in_box_expr, 0)
-                 ) * in_box_expr),
-                else_=0
-            )
-
-            stmp = update(OfferStock).where(OfferStock.id == stock.id).values(
-                in_box=stock.in_box,
-                min_stock=stock.min_stock,
-                for_delivery=for_delivery_expr,
-                is_deliver_in_boxes=stock.is_deliver_in_boxes,
-            )
-            await session.execute(stmp)
-
-        await session.commit()
+    await session.commit()
 
 
 async def recalculate_stocks_for_delivery(session: AsyncSession) -> None:
@@ -621,14 +598,44 @@ async def fill_empty_stocks(session: AsyncSession):
 
 
 async def get_fbo_offers(session: AsyncSession):
-    query = (
-        select(Offer)
-        .options(subqueryload(Offer.stocks).selectinload(OfferStock.warehouse))
-    )
-    result = await session.execute(query)
-    offers = result.scalars().all()
+    agg_stocks_query = select(
+        OfferStock.offer_id,
+        func.sum(OfferStock.current_stock).label('total_current_stock'),
+        func.sum(OfferStock.min_stock).label('total_min_stock'),
+        func.sum(OfferStock.for_delivery).label('total_for_delivery')
+    ).group_by(OfferStock.offer_id).subquery()
 
-    return [OfferWithStocks.model_validate(i, from_attributes=True) for i in offers]
+    offers_query = select(
+        Offer.id,
+        Offer.sku,
+        Offer.name,
+        Offer.photo,
+        Offer.name_of_shop,
+        Offer.market,
+        Offer.note_1,
+        Offer.note_2,
+        Offer.note_3,
+        Offer.supplier_available,
+        Offer.margin,
+        Offer.cost_price,
+        Offer.profit,
+        Offer.self_weight,
+        Offer.volume,
+        Offer.hidden,
+        Offer.barcodes,
+        agg_stocks_query.c.total_current_stock,
+        agg_stocks_query.c.total_min_stock,
+        agg_stocks_query.c.total_for_delivery,
+        (agg_stocks_query.c.total_for_delivery * Offer.cost_price).label('total_cost_price'),
+        (agg_stocks_query.c.total_for_delivery * Offer.self_weight).label('total_weight'),
+        (agg_stocks_query.c.total_for_delivery * Offer.volume).label('total_volume'),
+        (agg_stocks_query.c.total_for_delivery * Offer.margin).label('total_margin'),
+        (agg_stocks_query.c.total_for_delivery * Offer.profit).label('total_profit'),
+
+    ).join(agg_stocks_query, agg_stocks_query.c.offer_id == Offer.id)
+
+    result = (await session.execute(offers_query)).all()
+    return [OfferWithFBOInfo.model_validate(i, from_attributes=True) for i in result]
 
 
 async def get_offer_stocks(session: AsyncSession, offer_id: int):
@@ -642,3 +649,15 @@ async def get_offer_stocks(session: AsyncSession, offer_id: int):
     )
     result = (await session.execute(query)).scalars()
     return [OfferStockWithWarehouseOut.model_validate(i, from_attributes=True) for i in result]
+
+
+async def change_fbo_offers(session: AsyncSession, data: list[OfferWithFBOUpdate]):
+    for item in data:
+        stmp = update(Offer).where(Offer.id == item.id).values(**item.model_dump())
+        await session.execute(stmp)
+
+    await session.commit()
+
+
+
+
