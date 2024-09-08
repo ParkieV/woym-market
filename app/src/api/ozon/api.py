@@ -90,7 +90,7 @@ class OzonAPI(BaseAPI):
         body = {
             'task_id': task_id,
         }
-        response = self.session.post(f'https://api-seller.ozon.ru/v1/product/import/info')
+        response = self.session.post(f'https://api-seller.ozon.ru/v1/product/import/info', json=body)
 
         if not response.ok:
             logger.error(f'Cant check task({task_id}) status {response.text}')
