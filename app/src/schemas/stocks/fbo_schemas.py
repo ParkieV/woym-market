@@ -55,11 +55,34 @@ class OfferWithFBOInfo(BaseModel):
     total_min_stock: int
     total_current_stock: int
     total_for_delivery: int
-    total_volume: float | None
-    total_cost_price: float | None
-    total_weight: float | None
-    total_margin: float | None
-    total_profit: float | None
+
+    @computed_field()
+    @property
+    def total_volume(self) -> float | None:
+        if self.volume is None:
+            return None
+        return self.total_for_delivery * self.volume
+
+    @computed_field()
+    @property
+    def total_cost_price(self) -> float | None:
+        if self.cost_price is None:
+            return None
+        return self.total_for_delivery * self.cost_price
+
+    @computed_field()
+    @property
+    def total_weight(self) -> float | None:
+        if self.self_weight is None:
+            return None
+        return self.total_for_delivery * self.self_weight
+
+    @computed_field()
+    @property
+    def total_profit(self) -> float | None:
+        if self.profit is None:
+            return None
+        return self.total_for_delivery * self.profit
 
 
 class OfferWithFBOUpdate(BaseModel):

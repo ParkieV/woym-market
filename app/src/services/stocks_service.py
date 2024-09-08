@@ -433,9 +433,9 @@ async def get_offer_stocks(offer_id: int):
         return await db.get_offer_stocks(session, offer_id)
 
 
-async def get_fbo_offers():
+async def get_fbo_offers(warehouses_id: list[int] = None):
     async with async_session() as session:
-        return await db.get_fbo_offers(session)
+        return await db.get_fbo_offers(session, warehouses_id)
 
 
 async def change_fbo_offers(data: list[OfferWithFBOUpdate]):

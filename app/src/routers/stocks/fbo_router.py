@@ -17,9 +17,9 @@ router = APIRouter(
 )
 
 
-@router.get('/offers', response_model=list[OfferWithFBOInfo], dependencies=[Depends(get_current_user)])
-async def get_fbo_offers():
-    return await service.get_fbo_offers()
+@router.post('/offers', response_model=list[OfferWithFBOInfo], dependencies=[Depends(get_current_user)])
+async def get_fbo_offers(warehouses_id: list[int] | None = Body(default=None, embed=True)):
+    return await service.get_fbo_offers(warehouses_id)
 
 
 @router.patch('/offers', dependencies=[Depends(require_staff)])

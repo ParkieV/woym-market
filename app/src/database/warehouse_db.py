@@ -509,7 +509,8 @@ async def get_all_own_storage_places(session: AsyncSession) -> list[OwnStoragePl
     return [OwnStoragePlaceOut.model_validate(i, from_attributes=True) for i in result.scalars()]
 
 
-async def get_own_storage_place(session: AsyncSession, place_id: int, allow_none: bool = False) -> OwnStoragePlaceOut | None:
+async def get_own_storage_place(session: AsyncSession, place_id: int,
+                                allow_none: bool = False) -> OwnStoragePlaceOut | None:
     query = select(OwnStoragePlace).where(OwnStoragePlace.id == place_id)
     result = (await session.execute(query)).scalar_one_or_none()
 
@@ -597,13 +598,22 @@ async def fill_empty_stocks(session: AsyncSession):
         await session.commit()
 
 
-async def get_fbo_offers(session: AsyncSession):
-    agg_stocks_query = select(
-        OfferStock.offer_id,
-        func.sum(OfferStock.current_stock).label('total_current_stock'),
-        func.sum(OfferStock.min_stock).label('total_min_stock'),
-        func.sum(OfferStock.for_delivery).label('total_for_delivery')
-    ).group_by(OfferStock.offer_id).subquery()
+async def get_fbo_offers(session: AsyncSession, warehouses_id: list[int] | None = None):
+    agg_stocks_query = (
+        select(
+            OfferStock.offer_id,
+            func.sum(OfferStock.current_stock).label('total_current_stock'),
+            func.sum(OfferStock.min_stock).label('total_min_stock'),
+            func.sum(OfferStock.for_delivery).label('total_for_delivery')
+        )
+        .join(Warehouse, OfferStock.warehouse_id == Warehouse.id)
+        .group_by(OfferStock.offer_id)
+    )
+
+    if warehouses_id:
+        agg_stocks_query = agg_stocks_query.where(Warehouse.id.in_(warehouses_id))
+
+    agg_stocks_query = agg_stocks_query.subquery()
 
     offers_query = select(
         Offer.id,
@@ -623,16 +633,11 @@ async def get_fbo_offers(session: AsyncSession):
         Offer.volume,
         Offer.hidden,
         Offer.barcodes,
-        agg_stocks_query.c.total_current_stock,
-        agg_stocks_query.c.total_min_stock,
-        agg_stocks_query.c.total_for_delivery,
-        (agg_stocks_query.c.total_for_delivery * Offer.cost_price).label('total_cost_price'),
-        (agg_stocks_query.c.total_for_delivery * Offer.self_weight).label('total_weight'),
-        (agg_stocks_query.c.total_for_delivery * Offer.volume).label('total_volume'),
-        (agg_stocks_query.c.total_for_delivery * Offer.margin).label('total_margin'),
-        (agg_stocks_query.c.total_for_delivery * Offer.profit).label('total_profit'),
+        func.coalesce(agg_stocks_query.c.total_current_stock, 0).label('total_current_stock'),
+        func.coalesce(agg_stocks_query.c.total_min_stock, 0).label('total_min_stock'),
+        func.coalesce(agg_stocks_query.c.total_for_delivery, 0).label('total_for_delivery')
 
-    ).join(agg_stocks_query, agg_stocks_query.c.offer_id == Offer.id)
+    ).join(agg_stocks_query, agg_stocks_query.c.offer_id == Offer.id, isouter=True)
 
     result = (await session.execute(offers_query)).all()
     return [OfferWithFBOInfo.model_validate(i, from_attributes=True) for i in result]
@@ -657,7 +662,3 @@ async def change_fbo_offers(session: AsyncSession, data: list[OfferWithFBOUpdate
         await session.execute(stmp)
 
     await session.commit()
-
-
-
-
