@@ -225,6 +225,8 @@ async def get_own_storages(session: AsyncSession, place_id: int | None = None) -
             func.coalesce(func.sum(OfferStock.current_stock), 0).label('stock')
         )
         .join(Offer, Offer.id == OfferStock.offer_id)
+        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .where(Warehouse.warehouse_type == 'warehouse')
         .group_by(OfferStock.offer_id, Offer.sku, Offer.market, Offer.name_of_shop)
     )
 
