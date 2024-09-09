@@ -45,7 +45,6 @@
                 <option value={new SimpleExport("data/export")}>Карточки: Таблица</option>
                 <option value={new CatalogExport()}>Каталог: Таблица</option>
                 <option value={new OwnStorageExport()}>Мои остатки: Таблица</option>
-                <option value={new SimpleExport("stocks/fbo/export")}>FBO остатки: Таблица</option>
                 <option value={new ViolatorsExport()}>Нарушители РРЦ</option>
                 {#if $page.url.pathname === "/app/fbo_storage"}
                     <option value={new SupplyExport()}>Поставка</option>
