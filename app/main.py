@@ -19,6 +19,7 @@ from src.routers.settings_router import settings_router
 from src.routers.core_router import router as core_router
 from src.routers.catalog_router import router as catalog_router
 from src.routers.media_router import router as media_router
+from src.routers.orders_router import router as orders_router
 from src.database.db import db_create
 import aioschedule
 from src.params.confing import config
@@ -74,6 +75,7 @@ app.add_middleware(
     allow_headers=['*']
 )
 
+app.include_router(orders_router)
 app.include_router(media_router)
 app.include_router(catalog_router)
 app.include_router(core_router)

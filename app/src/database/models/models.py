@@ -335,3 +335,22 @@ remaining_stocks_subuery = (
     .where(Warehouse.warehouse_type == 'warehouse')
     .group_by(
         OfferStock.offer_id).subquery())
+
+
+class Order(Base):
+    __tablename__ = 'orders'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+
+    sku = Column(String, nullable=False, index=True)
+    name_of_shop = Column(String, nullable=False, index=True)
+    market = Column(String, nullable=False, index=True)
+
+    quantity = Column(Integer, nullable=False)
+    price = Column(Float, nullable=True)
+    warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='CASCADE'), index=True)
+    warehouse = relationship(Warehouse, uselist=False)
+
+    created_at = Column(DateTime(), nullable=False)
+    updated_at = Column(DateTime, nullable=True, default=None)
+

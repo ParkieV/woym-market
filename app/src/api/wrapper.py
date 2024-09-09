@@ -1,6 +1,8 @@
+from datetime import datetime
+
 from logs import get_logger
 from .base_api import BaseAPI
-from src.schemas.base_api_schemas import APIWarehouse, APIOffer, APIPriceChangeData
+from src.schemas.base_api_schemas import APIWarehouse, APIOffer, APIPriceChangeData, APIOrderData
 from src.database.settings_db import get_markets
 from src.api.factory import APIFactory
 from ..database.db import async_session
@@ -11,6 +13,21 @@ logger = get_logger(__name__)
 
 
 class APIWrapper(BaseAPI):
+    async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
+        result = []
+        async with async_session() as session:
+            for market in await get_markets(session, MarketFullOut):
+                api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
+                orders = await api.get_orders(from_date, to_date)
+
+                if not orders:
+                    logger.warning(f'Orders list for {market.name}({market.type}) is empty')
+
+                result.extend(orders)
+
+        return result
+
+
     async def validate_auth_data(self, **kwargs):
         pass
 
