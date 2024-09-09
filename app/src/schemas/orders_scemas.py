@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class OrderCreate(BaseModel):
     sku: str
     name_of_shop: str
+    offer_id: int
     market: str
     quantity: int
     price: float | None

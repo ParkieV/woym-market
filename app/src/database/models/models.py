@@ -342,6 +342,7 @@ class Order(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
 
+    offer_id = Column(Integer, ForeignKey('offers.id', ondelete='CASCADE'), nullable=False)
     sku = Column(String, nullable=False, index=True)
     name_of_shop = Column(String, nullable=False, index=True)
     market = Column(String, nullable=False, index=True)
