@@ -1,9 +1,9 @@
 <script lang="ts">
     import { getStores, getStoreTypes, type Market } from "$lib/data/markets";
     import { onMount } from "svelte";
-    import type { SimpleImport } from ".";
+    import type { OffersImport } from ".";
 
-    export let data: SimpleImport;
+    export let data: OffersImport;
 
     let markets: Promise<string[]> = Promise.resolve([]);
     let shops: Promise<Market[]> = Promise.resolve([]);
@@ -16,7 +16,7 @@
 
 <label>
     <span>Маркет</span>
-    <select bind:value={data.props.market}>
+    <select bind:value={data.market}>
         <option value={null}>Все</option>
         {#await markets then markets}
             {#each markets as market}
@@ -27,7 +27,7 @@
 </label>
 <label>
     <span>Магазин</span>
-    <select bind:value={data.props.name_of_shop}>
+    <select bind:value={data.name_of_shop}>
         <option value={null}>Все</option>
         {#await shops then shops}
             {#each shops as shop}

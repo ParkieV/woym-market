@@ -1,8 +1,14 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
     import Window from "../components/windows/Window.svelte";
-    import { Import, SimpleImport, FboAdditionsImport, OwnStorageImport, CatalogImport } from ".";
-    import Simple from "./Simple.svelte";
+    import {
+        Import,
+        OffersImport as OffersImport,
+        FboAdditionsImport,
+        OwnStorageImport,
+        CatalogImport
+    } from ".";
+    import Offers from "./Offers.svelte";
     import Warehouse from "./Warehouse.svelte";
     import OwnStorage from "./OwnStorage.svelte";
 
@@ -28,9 +34,9 @@
             <span>Вид</span>
             <select bind:value={data}>
                 <option value={null} disabled>Не выбрано</option>
-                <option value={new SimpleImport("data/import", "table")}>Карточки: Таблица</option>
-                <option value={new SimpleImport("data/import", "sizes")}>Карточки: Размеры</option>
-                <option value={new SimpleImport("data/import", "prices")}>Карточки: Цены</option>
+                <option value={new OffersImport("table")}>Карточки: Таблица</option>
+                <option value={new OffersImport("sizes")}>Карточки: Размеры</option>
+                <option value={new OffersImport("prices")}>Карточки: Цены</option>
                 <option value={new CatalogImport("table")}>Каталог: Таблица</option>
                 <option value={new CatalogImport("sizes")}>Каталог: Размеры</option>
                 <option value={new CatalogImport("prices")}>Каталог: Цены</option>
@@ -40,8 +46,8 @@
                 <option value={new FboAdditionsImport()}>FBO остатки: Яндекс</option>
             </select>
         </label>
-        {#if data instanceof SimpleImport}
-            <Simple bind:data />
+        {#if data instanceof OffersImport}
+            <Offers bind:data />
         {:else if data instanceof CatalogImport}
             <!-- No options -->
         {:else if data instanceof FboAdditionsImport}

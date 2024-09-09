@@ -25,28 +25,23 @@ export abstract class Import {
     public abstract get valid(): boolean;
 }
 
-export class SimpleImport extends Import {
-    public props: SimpleImportProps;
-
-    constructor(url: string, type?: string) {
+export class OffersImport extends Import {
+    constructor(public import_type: "table" | "prices" | "sizes") {
         super();
-        this.props = {
-            url,
-            import_type: type,
-            market: null,
-            name_of_shop: null
-        };
     }
 
+    public market: string | null = null;
+    public name_of_shop: string | null = null;
+
     protected get url(): string {
-        return this.props.url;
+        return "data/import";
     }
 
     protected body(file: Blob): FormData {
         let formData = new FormData();
-        if (this.props.market) formData.append("market", this.props.market);
-        if (this.props.name_of_shop) formData.append("name_of_shop", this.props.name_of_shop);
-        if (this.props.import_type) formData.append("import_type", this.props.import_type);
+        if (this.market) formData.append("market", this.market);
+        if (this.name_of_shop) formData.append("name_of_shop", this.name_of_shop);
+        if (this.import_type) formData.append("import_type", this.import_type);
         formData.append("data", file);
         return formData;
     }
@@ -55,13 +50,6 @@ export class SimpleImport extends Import {
         return true;
     }
 }
-
-export type SimpleImportProps = {
-    import_type?: string;
-    url: string;
-    market: string | null;
-    name_of_shop: string | null;
-};
 
 export class CatalogImport extends Import {
     constructor(public kind: "table" | "prices" | "sizes") {
