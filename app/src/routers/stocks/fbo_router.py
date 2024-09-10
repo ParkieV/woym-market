@@ -11,7 +11,7 @@ router = APIRouter(
 )
 
 
-@router.post('',  dependencies=[Depends(get_current_user)], description='Данные о FBO остатках, аггрегированные по товарам')
+@router.post('',  dependencies=[Depends(get_current_user)], summary='Данные FBO', description='Данные о FBO остатках, аггрегированные по товарам')
 async def get_fbo_data(
         warehouse_ids: list[int] | None = Body(
             default=None,
@@ -27,13 +27,13 @@ async def get_fbo_data(
     return await service.aggregate_offers_fbo_stocks(warehouse_ids, ignore_clusters)
 
 
-@router.patch('', dependencies=[Depends(require_staff)], description='')
+@router.patch('', dependencies=[Depends(require_staff)], summary='Изменение данных об остатках товаров')
 async def change_fbo_stocks(stocks: list[OfferFBOStockUpdate]):
     await service.change_fbo_stocks(stocks)
     return {'status': 'OK'}
 
 
-@router.get('/offers/{offer_id}', response_model=list[OfferStockOut], dependencies=[Depends(get_current_user)], description='')
+@router.get('/offers/{offer_id}', response_model=list[OfferStockOut], dependencies=[Depends(get_current_user)], summary='Остатки товара', description='Список данных и настроек остатков товара по каждому складу, которые доступен для маркетплейса')
 async def get_fbo_stocks_for_offer(offer_id: int):
     return await service.get_offer_fbo_stocks(offer_id)
 
