@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.models.models import Order, Offer, OfferStock
 from src.schemas.filters.statistic_filter import OrderStatisticFilter, GroupStatFilter
-from src.schemas.orders_scemas import OrderCreate, OrderOut, OffersOrderQuantityStat
+from src.schemas.orders_scemas import OrderCreate, OrderOut, OffersOrderQuantity, OrdersQuantityPeriodStatistic
 
 
 async def create_orders(session: AsyncSession, orders: list[OrderCreate]) -> None:
@@ -35,31 +35,32 @@ def _build_quantity_offers_query(name: str, days_interval: int, offer_ids: list[
 
 
 async def aggregate_orders_quantity_by_offers(session: AsyncSession, filter: OrderStatisticFilter):
-    period_stats_queries = {
-        period.field_name: _build_quantity_offers_query(period.field_name, period.days_interval, filter.offer_ids)
-        for period in filter.periods
+    query_periods = {
+        'today': _build_quantity_offers_query('today', 0, filter.offer_ids),
+        'yesterday': _build_quantity_offers_query('yesterday', 1, filter.offer_ids),
+        'for_7_days': _build_quantity_offers_query('for_7_days', 7, filter.offer_ids),
+        'for_14_days': _build_quantity_offers_query('for_14_days', 14, filter.offer_ids),
+        'for_28_days': _build_quantity_offers_query('for_28_days', 28, filter.offer_ids),
+        'for_60_days': _build_quantity_offers_query('for_60_days', 60, filter.offer_ids),
+        'for_120_days': _build_quantity_offers_query('for_120_days', 120, filter.offer_ids),
     }
 
     main_query = select(
         Offer.id.label('offer_id'),
         *[
             func.coalesce(getattr(subquery.c, subquery_name), 0).label(subquery_name)
-            for subquery_name, subquery in period_stats_queries.items()
+            for subquery_name, subquery in query_periods.items()
         ]
     )
-    for subquery in period_stats_queries.values():
+    for subquery in query_periods.values():
         main_query = main_query.join(subquery, subquery.c.offer_id == Offer.id, isouter=True)
 
     if filter.offer_ids:
         main_query = main_query.where(Offer.id.in_(filter.offer_ids))
 
     result = (await session.execute(main_query)).all()
-    stat_model_fields = {
-        'offer_id': (int, ...)
-    }
-    stat_model_fields.update({i.field_name: (int, ...) for i in filter.periods})
-    StatModel = create_model('OrdersStatistic', **stat_model_fields)
-    return [StatModel.model_validate(i, from_attributes=True) for i in result]
+
+    return [OrdersQuantityPeriodStatistic.model_validate(i, from_attributes=True) for i in result]
 
 
 def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: list[int], warehouse_ids: list[int]):
@@ -81,9 +82,14 @@ def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: l
 
 
 async def aggregate_orders_quantity_by_warehouses(session: AsyncSession, filter: OrderStatisticFilter):
-    period_stats_queries = {
-        period.field_name: _build_quantity_warehouses_query(period.field_name, period.days_interval, filter.offer_ids, filter.warehouse_ids)
-        for period in filter.periods
+    query_periods = {
+        'today': _build_quantity_warehouses_query('today', 0, filter.offer_ids, filter.warehouse_ids),
+        'yesterday': _build_quantity_warehouses_query('yesterday', 1, filter.offer_ids, filter.warehouse_ids),
+        'for_7_days': _build_quantity_warehouses_query('for_7_days', 7, filter.offer_ids, filter.warehouse_ids),
+        'for_14_days': _build_quantity_warehouses_query('for_14_days', 14, filter.offer_ids, filter.warehouse_ids),
+        'for_28_days': _build_quantity_warehouses_query('for_28_days', 28, filter.offer_ids, filter.warehouse_ids),
+        'for_60_days': _build_quantity_warehouses_query('for_60_days', 60, filter.offer_ids, filter.warehouse_ids),
+        'for_120_days': _build_quantity_warehouses_query('for_120_days', 120, filter.offer_ids, filter.warehouse_ids),
     }
 
     main_query = select(
@@ -91,10 +97,10 @@ async def aggregate_orders_quantity_by_warehouses(session: AsyncSession, filter:
         OfferStock.warehouse_id.label('warehouse_id'),
         *[
             func.coalesce(getattr(subquery.c, subquery_name), 0).label(subquery_name)
-            for subquery_name, subquery in period_stats_queries.items()
+            for subquery_name, subquery in query_periods.items()
         ]
     )
-    for subquery in period_stats_queries.values():
+    for subquery in query_periods.values():
         main_query = main_query.join(subquery, and_(subquery.c.offer_id == OfferStock.offer_id, subquery.c.warehouse_id == OfferStock.warehouse_id), isouter=True)
 
     if filter.offer_ids:
@@ -104,10 +110,6 @@ async def aggregate_orders_quantity_by_warehouses(session: AsyncSession, filter:
         main_query = main_query.where(OfferStock.warehouse_id.in_(filter.warehouse_ids))
 
     result = (await session.execute(main_query)).all()
-    stat_model_fields = {
-        'offer_id': (int, ...),
-        'warehouse_id': (int, ...),
-    }
-    stat_model_fields.update({i.field_name: (int, ...) for i in filter.periods})
-    StatModel = create_model('OrdersStatistic', **stat_model_fields)
-    return [StatModel.model_validate(i, from_attributes=True) for i in result]
+
+    return [OrdersQuantityPeriodStatistic.model_validate(i, from_attributes=True) for i in result]
+

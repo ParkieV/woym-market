@@ -23,8 +23,20 @@ class OrderWithWarehouseOut(OrderOut):
     warehouse: WarehouseOut
 
 
-class OffersOrderQuantityStat(BaseModel):
+class OffersOrderQuantity(BaseModel):
     offer_id: int
     quantity: int
     warehouse_id: int
+
+
+class OrdersQuantityPeriodStatistic(BaseModel):
+    offer_id: int
+    warehouse_id: int | None = None
+    today: int
+    yesterday: int
+    for_7_days: int
+    for_14_days: int
+    for_28_days: int
+    for_60_days: int
+    for_120_days: int
 
