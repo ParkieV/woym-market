@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from src.database import warehouse_db, offer_db
 from src.database.db import async_session
 from src.database.models.models import Offer
+from src.schemas.filters.statistic_filter import OrderStatisticFilter
 from src.schemas.orders_scemas import OrderCreate, OrderOut
 from src.database import order_db as db
 
@@ -49,6 +50,14 @@ async def setup_orders() -> None:
 async def get_orders() -> list[OrderOut]:
     async with async_session() as session:
         return await db.get_orders(session)
+
+
+async def get_order_statistics(filter: OrderStatisticFilter):
+    async with async_session() as session:
+        if filter.group_by_warehouses:
+            return await db.aggregate_orders_quantity_by_warehouses(session, filter)
+        else:
+            return await db.aggregate_orders_quantity_by_offers(session, filter)
 
 
 

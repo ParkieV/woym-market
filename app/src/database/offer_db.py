@@ -266,5 +266,10 @@ async def get_violators(session: AsyncSession, market: str | None = None, name_o
     return [ViolatorDTO.model_validate(i, from_attributes=True) for i in result]
 
 
-async def set_tracked_fields_status(session: AsyncSession):
-    pass
+async def get_offers_fields(session: AsyncSession, columns: list):
+    query = select(
+        *columns
+    )
+    result = (await session.execute(query)).all()
+    return result
+

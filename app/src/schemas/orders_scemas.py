@@ -22,3 +22,9 @@ class OrderOut(OrderCreate):
 class OrderWithWarehouseOut(OrderOut):
     warehouse: WarehouseOut
 
+
+class OffersOrderQuantityStat(BaseModel):
+    offer_id: int
+    quantity: int
+    warehouse_id: int
+
