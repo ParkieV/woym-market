@@ -36,7 +36,7 @@ def _build_quantity_offers_query(name: str, days_interval: int, offer_ids: list[
 
 async def aggregate_orders_quantity_by_offers(session: AsyncSession, filter: OrderStatisticFilter):
     period_stats_queries = {
-        period.group_name: _build_quantity_offers_query(period.group_name, period.days_interval, filter.offer_ids)
+        period.field_name: _build_quantity_offers_query(period.field_name, period.days_interval, filter.offer_ids)
         for period in filter.periods
     }
 
@@ -57,7 +57,7 @@ async def aggregate_orders_quantity_by_offers(session: AsyncSession, filter: Ord
     stat_model_fields = {
         'offer_id': (int, ...)
     }
-    stat_model_fields.update({i.group_name: (int, ...) for i in filter.periods})
+    stat_model_fields.update({i.field_name: (int, ...) for i in filter.periods})
     StatModel = create_model('OrdersStatistic', **stat_model_fields)
     return [StatModel.model_validate(i, from_attributes=True) for i in result]
 
@@ -82,7 +82,7 @@ def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: l
 
 async def aggregate_orders_quantity_by_warehouses(session: AsyncSession, filter: OrderStatisticFilter):
     period_stats_queries = {
-        period.group_name: _build_quantity_warehouses_query(period.group_name, period.days_interval, filter.offer_ids, filter.warehouse_ids)
+        period.field_name: _build_quantity_warehouses_query(period.field_name, period.days_interval, filter.offer_ids, filter.warehouse_ids)
         for period in filter.periods
     }
 
@@ -108,6 +108,6 @@ async def aggregate_orders_quantity_by_warehouses(session: AsyncSession, filter:
         'offer_id': (int, ...),
         'warehouse_id': (int, ...),
     }
-    stat_model_fields.update({i.group_name: (int, ...) for i in filter.periods})
+    stat_model_fields.update({i.field_name: (int, ...) for i in filter.periods})
     StatModel = create_model('OrdersStatistic', **stat_model_fields)
     return [StatModel.model_validate(i, from_attributes=True) for i in result]
