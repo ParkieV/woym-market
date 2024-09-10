@@ -44,27 +44,27 @@ async def get_own_storage_places():
     return await service.get_all_own_storage_places()
 
 
-@router.post('/export', dependencies=[Depends(get_current_user)], tags=['Export'])
+@router.post('/export', dependencies=[Depends(get_current_user)], tags=['Экспорт'])
 async def export_own_storage(place_id: int = Body(embed=True)):
     path = Path(await service.export_own_storages(place_id))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 
-@router.post('/coming/import', dependencies=[Depends(require_staff)], tags=['Import'], description='Offers with increased availability')
+@router.post('/coming/import', dependencies=[Depends(require_staff)], tags=['Импорт'], description='Offers with increased availability')
 async def import_own_storage_coming(data: UploadFile = File(), place_id: int = Body()):
     content = await data.read()
     await service.increment_own_storage_values(content, place_id, PurePath(data.filename).suffix, 1)
     return {'status': 'OK'}
 
 
-@router.post('/consumption/import', dependencies=[Depends(require_staff)], tags=['Import'], description='Offers with decreased availability')
+@router.post('/consumption/import', dependencies=[Depends(require_staff)], tags=['Импорт'], description='Offers with decreased availability')
 async def import_own_storage_consumption(data: UploadFile = File(), place_id: int = Body()):
     content = await data.read()
     await service.increment_own_storage_values(content, place_id, PurePath(data.filename).suffix, -1)
     return {'status': 'OK'}
 
 
-@router.post('/import', dependencies=[Depends(require_staff)], tags=['Import'])
+@router.post('/import', dependencies=[Depends(require_staff)], tags=['Импорт'])
 async def import_own_storage(data: UploadFile = File(), place_id: int = Body()):
     content = await data.read()
     await service.import_own_storages(content, place_id, PurePath(data.filename).suffix)

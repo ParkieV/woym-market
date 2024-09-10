@@ -38,18 +38,18 @@ async def get_fbo_stocks_for_offer(offer_id: int):
     return await service.get_offer_fbo_stocks(offer_id)
 
 
-@router.post('/additions/import', dependencies=[Depends(require_staff)], tags=['Import'], description='Extended info about fbo stocks like a can_be_delivered, advice_from_the_store')
+@router.post('/additions/import', dependencies=[Depends(require_staff)], tags=['Импорт'], description='Extended info about fbo stocks like a can_be_delivered, advice_from_the_store')
 async def import_fbo_additions_data(data: UploadFile = File(), name_of_shop: str | None = Body(None), warehouse_id: int | None = Body(None)):
     content = await data.read()
     await service.import_fbo_data(content, name_of_shop, warehouse_id, PurePath(data.filename).suffix)
     return {'status': 'OK'}
 
 
-@router.post('/import',  dependencies=[Depends(require_staff)], tags=['Import'], deprecated=True)
+@router.post('/import',  dependencies=[Depends(require_staff)], tags=['Импорт'], deprecated=True)
 async def import_fbo(data: UploadFile = File(), name_of_shop: str | None = Body(None), market: str | None = Body(None)):
     raise HTTPException(status.HTTP_410_GONE, 'Данное действие больше недотупно. Обратитесь к администратору')
 
 
-@router.post('/export', dependencies=[Depends(get_current_user)], tags=['Export'], deprecated=True)
+@router.post('/export', dependencies=[Depends(get_current_user)], tags=['Экспорт'], deprecated=True)
 async def export_fbo_stocks(name_of_shop: str | None = Body(None), market: str | None = Body(None)):
     raise HTTPException(status.HTTP_410_GONE, 'Данное действие больше недотупно. Обратитесь к администратору')
