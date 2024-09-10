@@ -8,8 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func
 from sqlalchemy.orm import selectinload
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
-from .models.models import Offer, PricingScheme, PricingSchemeField, \
-    remaining_stocks_subuery
+from .models.models import Offer, PricingScheme, PricingSchemeField
 from typing import Iterable, Any, Type
 from fastapi.exceptions import HTTPException
 from fastapi import status
@@ -27,22 +26,16 @@ def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
 
 
 async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None, model_schema: Type[BaseModel] = OfferOut, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
-    query = select(
-        Offer.__table__.columns,
-        remaining_stocks_subuery.c.remaining_stock
-    )
+    query = select(Offer)
 
     if filters:
         query = query.filter_by(**filters)
 
-    query = query.outerjoin(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id).offset(offset)
-
     if limit:
         query = query.limit(limit)
 
-    offers = await session.execute(query)
-    result = offers.all()
-    return [model_schema.model_validate(offer, from_attributes=True) for offer in result]
+    offers = (await session.execute(query)).scalars()
+    return [model_schema.model_validate(offer, from_attributes=True) for offer in offers]
 
 
 async def create_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) -> None:
@@ -115,18 +108,10 @@ async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.D
 
     result = []
     for offer_data in data:
-        query = (
-            select(
-                Offer.__table__.columns,
-                remaining_stocks_subuery.c.remaining_stock
-            )
-            .filter_by(**offer_data)
-            .join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
-
-        )
-        query_result = await session.execute(query)
+        query = select(Offer).filter_by(**offer_data)
+        query_result = (await session.execute(query)).scalars()
         result.extend(
-            [model_schema.model_validate(offer, from_attributes=True) for offer in query_result.all()])
+            [model_schema.model_validate(offer, from_attributes=True) for offer in query_result])
 
     return result
 

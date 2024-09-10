@@ -326,16 +326,6 @@ class CatalogItem(Base):
     synchronization = relationship('Offer', uselist=True, primaryjoin='foreign(Offer.sku) == CatalogItem.sku')
 
 
-remaining_stocks_subuery = (
-    select(
-        OfferStock.offer_id,
-        func.sum(func.coalesce(OfferStock.current_stock, 0)).label('remaining_stock')
-    )
-    .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
-    .where(Warehouse.warehouse_type == 'warehouse')
-    .group_by(
-        OfferStock.offer_id).subquery())
-
 
 class Order(Base):
     __tablename__ = 'orders'
