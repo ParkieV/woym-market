@@ -2,6 +2,7 @@ import pandas as pd
 from fastapi import HTTPException
 from starlette import status
 
+from logs import get_logger
 from src.api.wrapper import APIWrapper
 from datetime import datetime, timedelta
 from src.database import warehouse_db, offer_db
@@ -12,6 +13,8 @@ from src.schemas.orders_scemas import OrderCreate, OrderOut
 from src.database import order_db as db
 
 api_wrapper = APIWrapper()
+
+logger = get_logger(__name__)
 
 
 async def setup_orders() -> None:
@@ -26,6 +29,9 @@ async def setup_orders() -> None:
         db_warehouses = await warehouse_db.get_warehouses(session)
         if not db_warehouses:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Для получения остатков требуется наличие складов')
+        
+        db_orders = await db.get_orders(session)
+        db_orders_df = pd.DataFrame([i.model_dump() for i in db_orders])
 
     api_orders = await api_wrapper.get_orders(start, end)
     api_orders_df = pd.DataFrame([i.model_dump() for i in api_orders])
@@ -37,14 +43,24 @@ async def setup_orders() -> None:
     offers_idents_df = pd.DataFrame(offers_idents)
     offers_idents_df.rename(columns={'id': 'offer_id'}, inplace=True)
 
-    merged_orders = pd.merge(api_orders_df, warehouses_df[['warehouse_id', 'warehouse_name']], on='warehouse_name', how='inner')
-    merged_orders = pd.merge(merged_orders, offers_idents_df, how='inner', on=['sku', 'market', 'name_of_shop'])
-    merged_orders['created_at'] = merged_orders['created_at'].apply(lambda x: x.replace(tzinfo=None))
-    merged_orders['updated_at'] = merged_orders['updated_at'].apply(lambda x: x.replace(tzinfo=None))
-    new_orders = [OrderCreate(**i) for i in merged_orders.to_dict('records')]
+    new_api_orders = pd.merge(api_orders_df, warehouses_df[['warehouse_id', 'warehouse_name']], on='warehouse_name', how='inner')
+    new_api_orders = pd.merge(new_api_orders, offers_idents_df, how='inner', on=['sku', 'market', 'name_of_shop'])
+    new_api_orders['created_at'] = new_api_orders['created_at'].apply(lambda x: x.replace(tzinfo=None))
+    new_api_orders['updated_at'] = new_api_orders['updated_at'].apply(lambda x: x.replace(tzinfo=None))
+
+    merged_orders = pd.merge(new_api_orders, db_orders_df, on=['offer_id', 'sku', 'market', 'name_of_shop', 'quantity', 'created_at', 'warehouse_id','price'], indicator=True, how='outer', suffixes=(None, '__db'))
+
+    to_create_orders = merged_orders[merged_orders['_merge'] == 'left_only']
+    to_create_orders.drop(columns=['id', '_merge'], inplace=True)
+
+    new_orders = [OrderCreate(**i) for i in to_create_orders.to_dict('records')]
+    if not new_orders:
+        logger.info('New orders not found')
+        return
 
     async with async_session() as session:
         await db.create_orders(session, new_orders)
+        logger.info(f'New orders created: {len(new_orders)}')
 
 
 async def get_orders() -> list[OrderOut]:
