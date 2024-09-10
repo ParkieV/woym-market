@@ -14,7 +14,7 @@ from src.params.confing import config
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks.own_storages_schemas import OwnStorageUpdate, OwnStoragePlaceCreate, \
     OwnStoragePlaceOut, OwnStoragePlaceUpdate
-from src.schemas.stocks.fbo_schemas import OfferWithFBOUpdate, OfferFBOStockUpdate
+from src.schemas.stocks.fbo_schemas import OfferFBOStockUpdate, OfferStockOut, AggOfferFBOStock
 from src.schemas.stocks.stocks_schemas import SupplyExportType, GeneralOrderData
 from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 from src.services.base_utils import error_handler, clean_up_files, validate_dataframe
@@ -428,19 +428,9 @@ async def increment_own_storage_values(data, place_id: int, file_extension: str,
         await db.increment_own_storage_values(session, df.to_dict('records'), place_id)
 
 
-async def get_offer_stocks(offer_id: int):
+async def get_offer_fbo_stocks(offer_id: int) -> list[OfferStockOut]:
     async with async_session() as session:
-        return await db.get_offer_stocks(session, offer_id)
-
-
-async def get_fbo_offers(warehouses_id: list[int] = None):
-    async with async_session() as session:
-        return await db.get_fbo_offers(session, warehouses_id)
-
-
-async def change_fbo_offers(data: list[OfferWithFBOUpdate]):
-    async with async_session() as session:
-        await db.change_fbo_offers(session, data)
+        return await db.get_offer_fbo_stocks(session, offer_id)
 
 
 async def change_fbo_stocks(data: list[OfferFBOStockUpdate]):
@@ -448,3 +438,6 @@ async def change_fbo_stocks(data: list[OfferFBOStockUpdate]):
         await db.change_fbo_stocks(session, data)
 
 
+async def aggregate_offers_fbo_stocks(warehouse_ids: list[int] | None = None, ignore_clusters: bool = True) -> list[AggOfferFBOStock]:
+    async with async_session() as session:
+        return await db.get_agg_fbo_data(session, warehouse_ids, ignore_clusters)

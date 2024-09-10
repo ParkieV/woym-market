@@ -1,15 +1,9 @@
-from pathlib import PurePath, Path
-
+from pathlib import PurePath
 from fastapi import APIRouter, Depends, Body, UploadFile, File, HTTPException
 from starlette import status
-from starlette.background import BackgroundTask
-from starlette.responses import FileResponse
-
 from src.dependencies.users import get_current_user, require_staff
-from src.schemas.stocks.fbo_schemas import OfferWithFBOInfo, OfferWithFBOUpdate, OfferStockWithWarehouseOut, \
-    OfferFBOStockUpdate
+from src.schemas.stocks.fbo_schemas import OfferFBOStockUpdate, OfferStockOut
 from src.services import stocks_service as service
-from src.services.base_utils import clean_up_files
 
 router = APIRouter(
     prefix='/fbo',
@@ -17,26 +11,31 @@ router = APIRouter(
 )
 
 
-@router.post('/offers', response_model=list[OfferWithFBOInfo], dependencies=[Depends(get_current_user)])
-async def get_fbo_offers(warehouses_id: list[int] | None = Body(default=None, embed=True)):
-    return await service.get_fbo_offers(warehouses_id)
+@router.post('',  dependencies=[Depends(get_current_user)], description='Данные о FBO остатках, аггрегированные по товарам')
+async def get_fbo_data(
+        warehouse_ids: list[int] | None = Body(
+            default=None,
+            title='Список ID складов',
+            description='ID складов или кластеров, по которым будет проходить аггрегация остатков. Если не передан / пуст, то аггрегация будет по всем остаткам.'
+        ),
+        ignore_clusters: bool = Body(
+            default=True,
+            title='Игнорировать кластеры',
+            description='Если true, то данные будут считаться только по складам (без учета кластеров).'
+        )
+):
+    return await service.aggregate_offers_fbo_stocks(warehouse_ids, ignore_clusters)
 
 
-@router.patch('/offers', dependencies=[Depends(require_staff)])
-async def change_offer(data: list[OfferWithFBOUpdate]):
-    await service.change_fbo_offers(data)
+@router.patch('', dependencies=[Depends(require_staff)], description='')
+async def change_fbo_stocks(stocks: list[OfferFBOStockUpdate]):
+    await service.change_fbo_stocks(stocks)
     return {'status': 'OK'}
 
 
-@router.get('/remains/{offer_id}', response_model=list[OfferStockWithWarehouseOut], dependencies=[Depends(get_current_user)])
-async def get_fbo_stock(offer_id: int):
-    return await service.get_offer_stocks(offer_id)
-
-
-@router.patch('/remains', dependencies=[Depends(require_staff)])
-async def change_offer_remain_stocks(data: list[OfferFBOStockUpdate]):
-    await service.change_fbo_stocks(data)
-    return {'status': 'OK'}
+@router.get('/offers/{offer_id}', response_model=list[OfferStockOut], dependencies=[Depends(get_current_user)], description='')
+async def get_fbo_stocks_for_offer(offer_id: int):
+    return await service.get_offer_fbo_stocks(offer_id)
 
 
 @router.post('/additions/import', dependencies=[Depends(require_staff)], tags=['Import'], description='Extended info about fbo stocks like a can_be_delivered, advice_from_the_store')

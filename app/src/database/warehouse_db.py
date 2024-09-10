@@ -5,16 +5,14 @@ from typing import Type, TypeVar, Any
 from fastapi import status
 from fastapi.exceptions import HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, update, and_, func, text, literal_column, insert, cast, \
-    String, case
+from sqlalchemy import select, update, and_, func, text, literal_column, insert, cast, String, case
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, subqueryload
+from sqlalchemy.orm import selectinload
 
 from src.database.models.models import Offer
 from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market
-from src.database.utils import _update_or_create_object, _get_or_create
-from src.schemas.stocks.fbo_schemas import OfferStockCreate, OfferStockOut, \
-    OfferStockWithWarehouseOut, OfferWithFBOInfo, OfferWithFBOUpdate, OfferFBOStockUpdate
+from src.database.utils import _update_or_create_object
+from src.schemas.stocks.fbo_schemas import OfferStockOut, OfferFBOStockUpdate, AggOfferFBOStock
 from src.schemas.stocks.own_storages_schemas import OwnStorageAggOfferOut, OwnStorageOfferStockOut, OwnStorageOut, \
     OwnStorageStockOut, OwnStorageUpdate, OwnStoragePlaceCreate, OwnStoragePlaceOut, \
     OwnStoragePlaceUpdate
@@ -22,14 +20,6 @@ from src.schemas.stocks.stocks_schemas import SupplyData, GeneralOrderData
 from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 
 ModelSchema = TypeVar('ModelSchema', bound=Type[BaseModel])
-
-
-async def create_warehouse(session: AsyncSession, data: WarehouseCreate,
-                           model_schema: ModelSchema = WarehouseOut) -> ModelSchema:
-    warehouse_db = Warehouse(**data.model_dump())
-    session.add(warehouse_db)
-    await session.commit()
-    return model_schema.model_validate(warehouse_db, from_attributes=True)
 
 
 async def get_warehouses(session: AsyncSession, model_schema: ModelSchema = WarehouseOut) -> list[ModelSchema]:
@@ -55,37 +45,6 @@ async def get_all_offers_stocks(session: AsyncSession):
     result = (await session.execute(query)).all()
     return result
 
-
-async def create_offer_stock(session: AsyncSession, data: OfferStockCreate,
-                             model_schema: ModelSchema = OfferStockOut) -> ModelSchema:
-    offer_stock_db = OfferStock(**data.model_dump())
-    session.add(offer_stock_db)
-    await session.commit()
-    return model_schema.model_validate(offer_stock_db, from_attributes=True)
-
-
-async def get_offers_with_stocks(session: AsyncSession, model_schema: ModelSchema = OfferWithFBOInfo) -> list[
-    ModelSchema]:
-    query = (
-        select(Offer)
-        .options(subqueryload(Offer.stocks).subqueryload(OfferStock.warehouse))
-    )
-    result = await session.execute(query)
-    return [model_schema.model_validate(offer, from_attributes=True) for offer in result.scalars().all()]
-
-
-def count_delivery_items(in_stock: int, in_box: int, min_stock: int):
-    if min_stock < in_stock:
-        return 0
-    to_order_sht = min_stock - in_stock
-    ost = 1 if (to_order_sht % in_box) else 0
-    box_to_order = (to_order_sht // in_box) + ost
-    return box_to_order * in_box
-
-
-# min_stock: int
-# in_box: int
-# is_deliver_in_boxes: bool
 
 async def change_fbo_stocks(session: AsyncSession, stocks: list[OfferFBOStockUpdate]) -> None:
     for stock in stocks:
@@ -251,38 +210,6 @@ async def increment_own_storage_values(session: AsyncSession, data: list[dict[st
     await session.commit()
 
 
-async def get_or_create_offer_stocks(session: AsyncSession, data: OfferStockCreate):
-    return await _get_or_create(
-        session,
-        OfferStock,
-        data,
-        and_(OfferStock.offer_id == data.offer_id,
-             OfferStock.warehouse_id == data.warehouse_id),
-        OfferStockOut
-    )
-
-
-async def get_warehouses_by_name_and_market(session: AsyncSession, data: list[list[str, str]]) -> list[WarehouseOut]:
-    results = []
-
-    for i in data:
-        query = select(Warehouse).where(and_(Warehouse.name == i[0], Warehouse.market == i[1]))
-        warehouse_db = (await session.execute(query)).scalar_one_or_none()
-
-        if warehouse_db is None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Некоректные данные для определения склада')
-
-        results.append(WarehouseOut.model_validate(warehouse_db, from_attributes=True))
-
-    return results
-
-
-async def get_offer_stock(session: AsyncSession, offer_id: int, warehouse_id: int):
-    query = select(OfferStock).where(OfferStock.offer_id == offer_id).where(OfferStock.warehouse_id == warehouse_id)
-    result = await session.execute(query)
-    return result.scalar_one_or_none()
-
-
 async def update_own_storages_by_sku(session: AsyncSession, data: list[dict], place_id: int):
     for storage in data:
         stmp = update(OwnStorage).where(OwnStorage.storage_place_id == place_id).where(
@@ -290,33 +217,6 @@ async def update_own_storages_by_sku(session: AsyncSession, data: list[dict], pl
         await session.execute(stmp)
 
     await session.commit()
-
-
-async def get_supply_data(
-        session: AsyncSession,
-        warehouses: list[int],
-        offers: list[int],
-        place_id: int = None,
-):
-    query = (
-        select(Offer.sku, Offer.name, Offer.name_of_shop, Offer.market, OfferStock.for_delivery,
-               Warehouse.name.label('warehouse_name'),
-               OwnStorage.value.label('own_storage_value'),
-               Offer.barcodes,
-               Offer.current_price)
-        .join(Offer, OfferStock.offer_id == Offer.id)
-        .join(Warehouse, OfferStock.warehouse_id == Warehouse.id)
-        .outerjoin(OwnStorage, OwnStorage.sku == Offer.sku)
-        .where(OfferStock.offer_id.in_(offers))
-        .where(Warehouse.id.in_(warehouses))
-    )
-    if place_id is not None:
-        query = query.where(OwnStorage.storage_place_id == place_id)
-
-    result = await session.execute(query)
-    return [
-        SupplyData.model_validate(i, from_attributes=True) for i in result.all()
-    ]
 
 
 async def get_supply_only_stocks(session: AsyncSession, warehouses: list[int], offers: list[int], place_id: int):
@@ -407,48 +307,6 @@ async def get_supply_only_own_storage(session: AsyncSession, warehouses: list[in
     return (
         [SupplyData.model_validate(i, from_attributes=True) for i in offers_result],
         [GeneralOrderData.model_validate(i, from_attributes=True) for i in aggregated_offers_result])
-
-
-async def get_general_order_data(
-        session: AsyncSession,
-        warehouses: list[int],
-        offers: list[int],
-        place_id: int | None = None,
-):
-    for_delivery_query = (
-        select(func.sum(OfferStock.for_delivery))
-        .where(OfferStock.offer_id == Offer.id)
-        .where(OfferStock.warehouse_id.in_(warehouses))
-    )
-
-    tb = select(
-        Offer.sku,
-        Offer.name,
-        Offer.volume,
-        Offer.cost_price,
-        Offer.self_weight,
-        for_delivery_query.label('for_delivery'),
-    ).where(Offer.id.in_(offers))
-
-    own_storage_value = (
-        select(OwnStorage.value)
-        .where(OwnStorage.sku == tb.c.sku)
-        .where(OwnStorage.storage_place_id == place_id)
-    )
-
-    query = select(
-        tb.c.sku,
-        func.string_agg(tb.c.name, literal_column("','")).label('name'),
-        func.avg(tb.c.volume).label('volume'),
-        func.avg(tb.c.cost_price).label('cost_price'),
-        func.avg(tb.c.self_weight).label('self_weight'),
-        func.sum(tb.c.for_delivery).label('for_delivery'),
-        func.sum(own_storage_value).label('own_storage_value'),
-    ).group_by(tb.c.sku)
-
-    result = (await session.execute(query)).all()
-
-    return [GeneralOrderData.model_validate(i, from_attributes=True) for i in result]
 
 
 async def update_fbo_support_data(session: AsyncSession, data: list[dict], name_of_shop: str, warehouse_id: int):
@@ -600,67 +458,28 @@ async def fill_empty_stocks(session: AsyncSession):
         await session.commit()
 
 
-async def get_fbo_offers(session: AsyncSession, warehouses_id: list[int] | None = None):
-    agg_stocks_query = (
+async def get_offer_fbo_stocks(session: AsyncSession, offer_id: int) -> list[OfferStockOut]:
+    query = select(OfferStock).where(OfferStock.offer_id == offer_id)
+    result = (await session.execute(query)).scalars()
+    return [OfferStockOut.model_validate(i, from_attributes=True) for i in result]
+
+
+async def get_agg_fbo_data(session: AsyncSession, warehouse_ids: list[int] | None = None, ignore_clusters: bool = True) -> list[AggOfferFBOStock]:
+    query = (
         select(
             OfferStock.offer_id,
-            func.sum(OfferStock.current_stock).label('total_current_stock'),
-            func.sum(OfferStock.min_stock).label('total_min_stock'),
-            func.sum(OfferStock.for_delivery).label('total_for_delivery')
+            func.sum(OfferStock.min_stock).label('min_stock'),
+            func.sum(OfferStock.current_stock).label('current_stock'),
+            func.sum(OfferStock.for_delivery).label('for_delivery')
         )
-        .join(Warehouse, OfferStock.warehouse_id == Warehouse.id)
         .group_by(OfferStock.offer_id)
     )
 
-    if warehouses_id:
-        agg_stocks_query = agg_stocks_query.where(Warehouse.id.in_(warehouses_id))
+    if warehouse_ids:
+        query = query.where(OfferStock.offer_id.in_(warehouse_ids))
 
-    agg_stocks_query = agg_stocks_query.subquery()
+    if ignore_clusters:
+        query = query.join(Warehouse, Warehouse.id == OfferStock.warehouse_id).where(Warehouse.warehouse_type == 'warehouse')
 
-    offers_query = select(
-        Offer.id,
-        Offer.sku,
-        Offer.name,
-        Offer.photo,
-        Offer.name_of_shop,
-        Offer.market,
-        Offer.note_1,
-        Offer.note_2,
-        Offer.note_3,
-        Offer.supplier_available,
-        Offer.margin,
-        Offer.cost_price,
-        Offer.profit,
-        Offer.self_weight,
-        Offer.volume,
-        Offer.hidden,
-        Offer.barcodes,
-        func.coalesce(agg_stocks_query.c.total_current_stock, 0).label('total_current_stock'),
-        func.coalesce(agg_stocks_query.c.total_min_stock, 0).label('total_min_stock'),
-        func.coalesce(agg_stocks_query.c.total_for_delivery, 0).label('total_for_delivery')
-
-    ).join(agg_stocks_query, agg_stocks_query.c.offer_id == Offer.id, isouter=True)
-
-    result = (await session.execute(offers_query)).all()
-    return [OfferWithFBOInfo.model_validate(i, from_attributes=True) for i in result]
-
-
-async def get_offer_stocks(session: AsyncSession, offer_id: int):
-    query = (
-        select(OfferStock)
-        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
-        .options(selectinload(OfferStock.warehouse))
-        .order_by(Warehouse.warehouse_type.asc())
-        .order_by(Warehouse.name.asc())
-        .where(OfferStock.offer_id == offer_id)
-    )
-    result = (await session.execute(query)).scalars()
-    return [OfferStockWithWarehouseOut.model_validate(i, from_attributes=True) for i in result]
-
-
-async def change_fbo_offers(session: AsyncSession, data: list[OfferWithFBOUpdate]):
-    for item in data:
-        stmp = update(Offer).where(Offer.id == item.id).values(**item.model_dump())
-        await session.execute(stmp)
-
-    await session.commit()
+    results = (await session.execute(query)).all()
+    return [AggOfferFBOStock.model_validate(i, from_attributes=True) for i in results]

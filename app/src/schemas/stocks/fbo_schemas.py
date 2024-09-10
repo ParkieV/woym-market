@@ -1,5 +1,4 @@
-from pydantic import BaseModel, computed_field
-
+from pydantic import BaseModel, Field
 from src.schemas.stocks.warehouses_schemas import WarehouseOut
 
 
@@ -33,125 +32,8 @@ class OfferStockWithWarehouseOut(OfferStockOut):
     warehouse: WarehouseOut
 
 
-class OfferWithFBOInfo(BaseModel):
-    id: int
-    sku: str
-    name: str | None
-    photo: str | None
-    name_of_shop: str
-    market: str
-    note_1: str
-    note_2: str
-    note_3: str
-    supplier_available: bool
-    margin: float | None
-    cost_price: float | None
-    profit: float | None
-    self_weight: float | None
-    volume: float | None
-    hidden: bool
-    barcodes: str | None
-
-    total_min_stock: int
-    total_current_stock: int
-    total_for_delivery: int
-
-    @computed_field()
-    @property
-    def total_volume(self) -> float | None:
-        if self.volume is None:
-            return None
-        return self.total_for_delivery * self.volume
-
-    @computed_field()
-    @property
-    def total_cost_price(self) -> float | None:
-        if self.cost_price is None:
-            return None
-        return self.total_for_delivery * self.cost_price
-
-    @computed_field()
-    @property
-    def total_weight(self) -> float | None:
-        if self.self_weight is None:
-            return None
-        return self.total_for_delivery * self.self_weight
-
-    @computed_field()
-    @property
-    def total_profit(self) -> float | None:
-        if self.profit is None:
-            return None
-        return self.total_for_delivery * self.profit
-
-
-class OfferWithFBOUpdate(BaseModel):
-    id: int
-    note_1: str = ''
-    note_2: str = ''
-    note_3: str = ''
-    supplier_available: bool
-    hidden: bool
-
-
-class FboOfferOut(BaseModel):
-    id: int
-    sku: str
-    name: str
-    photo: str | None
-    name_of_shop: str
-    market: str
-    note_1: str
-    note_2: str
-    note_3: str
-    supplier_available: bool
-    margin: float | None
-    cost_price: float | None
-    profit: float | None
-    self_weight: float | None
-    volume: float | None
-    hidden: bool
-    barcodes: str | None
-    total_for_delivery: int
-
-    stocks: list[OfferStockOut]
-
-    # @computed_field
-    # @property
-    # def stocks(self) -> list:
-    #     return []
-
-    @computed_field
-    @property
-    def total_volume(self) -> float | None:
-        if self.volume is None:
-            return None
-        return self.volume * self.total_for_delivery
-
-    @computed_field
-    @property
-    def total_cost_price(self) -> float | None:
-        if self.cost_price is None:
-            return None
-        return self.cost_price * self.total_for_delivery
-
-    @computed_field
-    @property
-    def total_weight(self) -> float | None:
-        if self.self_weight is None:
-            return None
-        return self.self_weight * self.total_for_delivery
-
-    @computed_field
-    @property
-    def total_margin(self) -> float | None:
-        if self.margin is None:
-            return None
-        return self.margin * self.total_for_delivery
-
-    @computed_field
-    @property
-    def total_profit(self) -> float | None:
-        if self.profit is None:
-            return None
-        return self.profit * self.total_for_delivery
+class AggOfferFBOStock(BaseModel):
+    offer_id: int = Field(title='ID карточки товара')
+    min_stock: int = Field(title='Минимальный остаток товара')
+    current_stock: int = Field(title='Текущий остаток по товару')
+    for_delivery: int = Field(title='Требуется к поставке')
