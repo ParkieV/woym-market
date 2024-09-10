@@ -7,7 +7,7 @@ from src.services import settings_service as service
 
 settings_router = APIRouter(
     prefix='/settings',
-    tags=['Settings']
+    tags=['Настройки']
 )
 
 

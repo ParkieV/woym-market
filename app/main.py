@@ -75,16 +75,17 @@ app.add_middleware(
     allow_headers=['*']
 )
 
-app.include_router(orders_router)
-app.include_router(media_router)
-app.include_router(catalog_router)
 app.include_router(core_router)
+app.include_router(offer_router)
+app.include_router(catalog_router)
+app.include_router(orders_router)
+app.include_router(stocks_router)
+app.include_router(settings_router)
+app.include_router(media_router)
 app.include_router(auth_router)
 app.include_router(user_router)
-app.include_router(settings_router)
-app.include_router(offer_router)
-app.include_router(stocks_router)
 app.include_router(debug_router)
+
 
 
 @app.exception_handler(500)

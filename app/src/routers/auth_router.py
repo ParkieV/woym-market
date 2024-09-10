@@ -5,7 +5,7 @@ from src.services.user_service import *
 
 
 auth_router = APIRouter(
-    tags=['auth'],
+    tags=['Авторизация'],
     prefix='/auth'
 )
 

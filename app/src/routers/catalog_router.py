@@ -11,7 +11,7 @@ from src.services.base_utils import clean_up_files
 
 router = APIRouter(
     prefix="/catalog",
-    tags=["Catalog"]
+    tags=['Каталов']
 )
 
 

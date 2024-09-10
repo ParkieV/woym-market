@@ -4,12 +4,12 @@ from src.dependencies.users import get_current_user
 from src.schemas.user_schemas import *
 
 user_router = APIRouter(
-    tags=['User'],
+    tags=['Пользователи'],
     prefix='/users'
 )
 
 
-@user_router.get('/me', response_model=UserOut | None)
+@user_router.get('/me', response_model=UserOut | None, summary='Текущий пользователь')
 async def get_current_authorized_user(current_user=Depends(get_current_user)):
     if current_user is None:
         return current_user

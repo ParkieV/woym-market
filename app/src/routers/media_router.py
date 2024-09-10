@@ -8,7 +8,8 @@ from src.schemas.media_schemas import UploadResult, StorageItem
 
 router = APIRouter(
     prefix="/media",
-    tags=['Media', 'Debug'],
+    tags=['Медиа', 'Debug'],
+    dependencies=[Depends(require_staff)]
 )
 
 disk = YandexDiscAPI(
@@ -17,23 +18,23 @@ disk = YandexDiscAPI(
 )
 
 
-@router.delete("", dependencies=[Depends(require_staff)])
+@router.delete("")
 async def delete_source(path: str):
     disk.delete_source(path)
     return {'status': 'OK'}
 
 
-@router.get("/files/all", response_model=list[StorageItem], dependencies=[Depends(require_staff)])
+@router.get("/files/all", response_model=list[StorageItem])
 async def get_all_files(path: str = Query('')):
     return disk.get_files(path)
 
 
-@router.post("/files/upload", response_model=UploadResult | None, dependencies=[Depends(require_staff)])
+@router.post("/files/upload", response_model=UploadResult | None)
 async def upload_file(file: UploadFile = File(), overwrite: bool = True, publish: bool = True, keep_name: bool = False) -> UploadResult | None:
     return await disk.upload_file(file, overwrite=overwrite, publish=publish, keep_name=keep_name)
 
 
-@router.post('/dirs', dependencies=[Depends(require_staff)])
+@router.post('/dirs')
 async def create_dir(path: str):
     disk.create_directory(path)
     return {'status': 'OK'}
