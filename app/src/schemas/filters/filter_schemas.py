@@ -2,4 +2,5 @@ from pydantic import BaseModel
 
 
 class BaseFilter(BaseModel):
-    pass
+    def filter(self, query):
+        raise NotImplementedError('Needs to implement filter method')

@@ -5,6 +5,7 @@ from sqlalchemy import select, func, text, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.models.models import Order, Offer, OfferStock
+from src.schemas.filters.orders_filter import OrderFilter
 from src.schemas.filters.statistic_filter import OrderStatisticFilter, GroupStatFilter
 from src.schemas.orders_scemas import OrderCreate, OrderOut, OffersOrderQuantity, OrdersQuantityPeriodStatistic
 
@@ -15,8 +16,12 @@ async def create_orders(session: AsyncSession, orders: list[OrderCreate]) -> Non
     await session.commit()
 
 
-async def get_orders(session: AsyncSession) -> list[OrderOut]:
+async def get_orders(session: AsyncSession, filter: OrderFilter | None) -> list[OrderOut]:
     query = select(Order)
+
+    if filter:
+        query = filter.filter(query)
+
     result = (await session.execute(query)).scalars()
     return [OrderOut.model_validate(i, from_attributes=True) for i in result]
 

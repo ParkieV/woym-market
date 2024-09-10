@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from src.database import warehouse_db, offer_db
 from src.database.db import async_session
 from src.database.models.models import Offer
+from src.schemas.filters.orders_filter import OrderFilter
 from src.schemas.filters.statistic_filter import OrderStatisticFilter
 from src.schemas.orders_scemas import OrderCreate, OrderOut
 from src.database import order_db as db
@@ -63,9 +64,9 @@ async def setup_orders() -> None:
         logger.info(f'New orders created: {len(new_orders)}')
 
 
-async def get_orders() -> list[OrderOut]:
+async def get_orders(filter: OrderFilter | None) -> list[OrderOut]:
     async with async_session() as session:
-        return await db.get_orders(session)
+        return await db.get_orders(session, filter)
 
 
 async def get_order_statistics(filter: OrderStatisticFilter):
