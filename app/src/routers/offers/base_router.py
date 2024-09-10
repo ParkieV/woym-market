@@ -17,17 +17,17 @@ router = APIRouter(
 )
 
 
-@router.get('', response_model=list[OfferOut], tags=['Карточки товаров'], dependencies=[Depends(get_current_user)])
+@router.get('', response_model=list[OfferOut], tags=['Карточки товаров'], dependencies=[Depends(get_current_user)], summary='Список карточек товаров')
 async def get_offers(offset: int = 0, limit: int | None = None):
     return await service.get_offers(offset=offset, limit=limit)
 
 
-@router.patch('', tags=['Карточки товаров'])
+@router.patch('', tags=['Карточки товаров'], summary='Изменение карточек товаров', description='Неуказанные параметры заменяются дефолтными')
 async def change_offer_fields(offers_data: list[OfferChange], current_user=Depends(require_staff)):
     return await service.change_offers(offers_data, current_user.id)
 
 
-@router.put('/media/images', tags=['Карточки товаров', 'Media'], dependencies=[Depends(require_staff)])
+@router.put('/media/images', tags=['Карточки товаров', 'Медиа'], dependencies=[Depends(require_staff)])
 async def add_image_to_offer(file: UploadFile = File(...), offer_id: int = Query()):
     return file.filename, offer_id
 
@@ -38,20 +38,20 @@ async def setup_offers_data(current_user=Depends(require_staff)):
     return {'status': 'OK'}
 
 
-@router.post('/export', dependencies=[Depends(get_current_user)], tags=['Экспорт', 'Карточки товаров'])
+@router.post('/export', dependencies=[Depends(get_current_user)], tags=['Экспорт', 'Карточки товаров'], summary='Экспорт карточек товаров')
 async def export_offers(market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
     path = Path(await service.export_offers(name_of_shop, market))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 
-@router.post('/import', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)])
+@router.post('/import', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт карточек товаров', description='Обновляет существующие карточки, но не создает новые или удаляет неуказанные')
 async def import_offers(import_type: ImportType = Body(), data: UploadFile = File(), market: Market | None = Body(None), name_of_shop: str | None = Body(None), current_user=Depends(require_staff)):
     content = await data.read()
     await service.import_data(content, market, import_type, name_of_shop, current_user.id, PurePath(data.filename).suffix)
     return {'status': 'OK'}
 
 
-@router.post('/violators/export', dependencies=[Depends(get_current_user)], tags=['Карточки товаров', 'Экспорт'])
+@router.post('/violators/export', dependencies=[Depends(get_current_user)], tags=['Карточки товаров', 'Экспорт'], summary='Экспорт нарушителей РРЦ')
 async def export_violators(market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
     path = Path(await service.create_violators_file(market, name_of_shop))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data',
