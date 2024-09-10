@@ -15,12 +15,12 @@ router = APIRouter(
 )
 
 
-@router.get('', response_model=list[CatalogItem], dependencies=[Depends(get_current_user)])
+@router.get('', response_model=list[CatalogItem], dependencies=[Depends(get_current_user)], summary='Список товаров каталога')
 async def get_catalog_items():
     return await service.get_catalog_items()
 
 
-@router.post('', dependencies=[Depends(require_staff)])
+@router.post('', dependencies=[Depends(require_staff)], summary='Изменение товаров каталога')
 async def change_catalog_items(items: list[CatalogItemUpdate]):
     await service.change_catalog_items(items)
 
@@ -31,33 +31,33 @@ async def setup_catalog_items(background: BackgroundTasks):
     return {'status': 'OK'}
 
 
-@router.post('/synchronization', tags=["Debug"], dependencies=[Depends(require_staff)])
+@router.post('/synchronization', tags=["Debug"], dependencies=[Depends(require_staff)], summary='Синхронизация', description='Запускает задачу синхронизации карточек товаров с каталогом')
 async def synchronize_catalog_items(background: BackgroundTasks, skus: list[str] = Body(embed=True)):
     background.add_task(service.sync_catalog_items_with_offers, skus=skus)
     return {'status': 'OK'}
 
 
-@router.post('/export', tags=['Экспорт'], dependencies=[Depends(get_current_user)])
+@router.post('/export', tags=['Экспорт'], dependencies=[Depends(get_current_user)], summary='Экспорт каталога')
 async def export_catalog_items():
     path = await service.export_catalog_items()
     return FileResponse(path, filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 
-@router.post('/import', tags=['Импорт'], dependencies=[Depends(require_staff)])
+@router.post('/import', tags=['Импорт'], dependencies=[Depends(require_staff)], summary='Импорт каталога', description='Только изменяет уже существующие товары, не создает новых и не удаляет старые')
 async def import_catalog_items(data: UploadFile = File()):
     content = await data.read()
     await service.import_catalog_items(content, PurePath(data.filename).suffix)
     return {'status': 'OK'}
 
 
-@router.post('/import/sizes', tags=['Импорт'], dependencies=[Depends(require_staff)])
+@router.post('/import/sizes', tags=['Импорт'], dependencies=[Depends(require_staff)], summary='Импорт размеров в каталог')
 async def import_catalog_item_sizes(data: UploadFile = File()):
     content = await data.read()
     await service.import_item_sizes(content, PurePath(data.filename).suffix)
     return {'status': 'OK'}
 
 
-@router.post('/import/prices', tags=['Импорт'], dependencies=[Depends(require_staff)])
+@router.post('/import/prices', tags=['Импорт'], dependencies=[Depends(require_staff)], summary='Импорт цен в каталог')
 async def import_catalog_item_prices(data: UploadFile = File()):
     content = await data.read()
     await service.import_item_prices(content, PurePath(data.filename).suffix)
