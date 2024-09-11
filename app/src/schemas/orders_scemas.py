@@ -29,9 +29,8 @@ class OffersOrderQuantity(BaseModel):
     warehouse_id: int
 
 
-class OrdersQuantityPeriodStatistic(BaseModel):
+class OrdersQuantityStatOnlyOffers(BaseModel):
     offer_id: int
-    warehouse_id: int | None = None
     today: int
     yesterday: int
     for_7_days: int
@@ -39,4 +38,8 @@ class OrdersQuantityPeriodStatistic(BaseModel):
     for_28_days: int
     for_60_days: int
     for_120_days: int
+    smart_delivery: float
+
+class OrdersQuantityStatOffersWithWarehouses(OrdersQuantityStatOnlyOffers):
+    warehouse_id: int | None = None
 

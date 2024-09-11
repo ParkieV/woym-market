@@ -260,6 +260,12 @@ class Market(Base):
     volume_threshold_for_additional_logistics = Column(Float, default=10)
     cost_of_additional_logistics_per_liter = Column(Float, default=100)
 
+    a_variable_for_smart_delivery = Column(Float, default=0, nullable=False)
+    b_variable_for_smart_delivery = Column(Float, default=0, nullable=False)
+    c_variable_for_smart_delivery = Column(Float, default=0, nullable=False)
+    d_variable_for_smart_delivery = Column(Float, default=0, nullable=False)
+    e_variable_for_smart_delivery = Column(Float, default=0, nullable=False)
+
 
 class OwnStorage(Base):
     __tablename__ = 'own_storage'
@@ -324,7 +330,6 @@ class CatalogItem(Base):
     barcodes = Column(String, nullable=True, default=None, server_default=None)
 
     synchronization = relationship('Offer', uselist=True, primaryjoin='foreign(Offer.sku) == CatalogItem.sku')
-
 
 
 class Order(Base):
