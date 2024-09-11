@@ -14,7 +14,7 @@ from src.services.base_utils import clean_up_files
 
 router = APIRouter(
     prefix="/stocks",
-    tags=['Stocks']
+    tags=['Модуль остатков']
 
 )
 
@@ -22,12 +22,12 @@ router.include_router(fbo_router)
 router.include_router(own_storage_router)
 
 
-@router.get('/warehouses', response_model=list[WarehouseOut], tags=['Warehouses'], dependencies=[Depends(get_current_user)])
+@router.get('/warehouses', response_model=list[WarehouseOut], tags=['Склады маркетплейсов'], dependencies=[Depends(get_current_user)], summary='Список складов маркетплейсов')
 async def get_warehouses_list():
     return await service.get_warehouses()
 
 
-@router.get('/warehouses/{warehouse_id}', response_model=WarehouseOut | None, tags=['Warehouses'], dependencies=[Depends(get_current_user)])
+@router.get('/warehouses/{warehouse_id}', response_model=WarehouseOut | None, tags=['Склады маркетплейсов'], dependencies=[Depends(get_current_user)], summary='Информация о складе маркетплейса')
 async def get_warehouse(warehouse_id: int):
     return await service.get_warehouse(warehouse_id)
 
@@ -38,31 +38,31 @@ async def setup_fbo_stocks(background: BackgroundTasks):
     return {'status': 'OK'}
 
 
-@router.post('/supply/only-own-storage/export', tags=['Supply', 'Экспорт'], dependencies=[Depends(get_current_user)], description='<h1>Только Мой склад {номер склада}</h1>')
+@router.post('/supply/only-own-storage/export', tags=['Поставка', 'Экспорт'], dependencies=[Depends(get_current_user)], summary='Поставка Только Мой склад')
 async def export_only_own_storage_supply(
-        place_id: int = Body(),
-        warehouses_id: list[int] = Body(),
-        offers_id: list[int] = Body()
+        place_id: int = Body(title='ID склада продавца'),
+        warehouses_id: list[int] = Body(title='ID складов маркетплейсов'),
+        offers_id: list[int] = Body(title='ID карточек товаров')
 ):
     path = Path(await service.export_supply(SupplyExportType.ONLY_OWN_STORAGE, warehouses_id, offers_id, place_id=place_id))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 
-@router.post('/supply/only-stocks/export', tags=['Supply', 'Экспорт'], dependencies=[Depends(get_current_user)], description='<h1>Без учета моих складов</h1>')
+@router.post('/supply/only-stocks/export', tags=['Поставка', 'Экспорт'], dependencies=[Depends(get_current_user)], summary='Поставка Без учета моих складов')
 async def export_only_stocks_supply(
-        warehouses_id: list[int] = Body(),
-        offers_id: list[int] = Body(),
+        warehouses_id: list[int] = Body(title='ID складов маркетплейсов'),
+        offers_id: list[int] = Body(title='ID карточек товаров'),
 ):
     path = Path(await service.export_supply(SupplyExportType.ONLY_STOCKS, warehouses_id, offers_id))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data',
                         background=BackgroundTask(clean_up_files, str(path)))
 
 
-@router.post('/supply/with-own-storage/export', tags=['Supply', 'Экспорт'], dependencies=[Depends(get_current_user)], description='<h1>C учетом Мой склад {номер склада}</h1>')
+@router.post('/supply/with-own-storage/export', tags=['Поставка', 'Экспорт'], dependencies=[Depends(get_current_user)], description='Поставка C учетом Мой склад')
 async def export_with_own_storage_supply(
-        place_id: int = Body(),
-        warehouses_id: list[int] = Body(),
-        offers_id: list[int] = Body()
+        place_id: int = Body(title='ID склада продавца'),
+        warehouses_id: list[int] = Body(title='ID складов маркетплейсов'),
+        offers_id: list[int] = Body(title='ID карточек товаров')
 ):
     path = Path(await service.export_supply(SupplyExportType.WITH_OWN_STORAGE, warehouses_id, offers_id, place_id=place_id))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data',
