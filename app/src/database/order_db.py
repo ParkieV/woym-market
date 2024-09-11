@@ -5,9 +5,10 @@ from sqlalchemy import select, func, text, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.models.models import Order, Offer, OfferStock
+from src.schemas.filters.filter_schemas import PagingFilter
 from src.schemas.filters.orders_filter import OrderFilter
-from src.schemas.filters.statistic_filter import OrderStatisticFilter, GroupStatFilter
-from src.schemas.orders_scemas import OrderCreate, OrderOut, OffersOrderQuantity, OrdersQuantityPeriodStatistic
+from src.schemas.filters.statistic_filter import OrderStatisticFilter
+from src.schemas.orders_scemas import OrderCreate, OrderOut, OrdersQuantityPeriodStatistic
 
 
 async def create_orders(session: AsyncSession, orders: list[OrderCreate]) -> None:
@@ -16,11 +17,14 @@ async def create_orders(session: AsyncSession, orders: list[OrderCreate]) -> Non
     await session.commit()
 
 
-async def get_orders(session: AsyncSession, filter: OrderFilter | None) -> list[OrderOut]:
+async def get_orders(session: AsyncSession, filter_: OrderFilter | None, paging: PagingFilter | None) -> list[OrderOut]:
     query = select(Order)
 
-    if filter:
-        query = filter.filter(query)
+    if filter_:
+        query = filter_(query)
+
+    if paging:
+        query = paging(query)
 
     result = (await session.execute(query)).scalars()
     return [OrderOut.model_validate(i, from_attributes=True) for i in result]
@@ -86,7 +90,7 @@ def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: l
     return query
 
 
-async def aggregate_orders_quantity_by_warehouses(session: AsyncSession, filter: OrderStatisticFilter):
+async def aggregate_orders_quantity_by_offers_with_warehouses(session: AsyncSession, filter: OrderStatisticFilter):
     query_periods = {
         'today': _build_quantity_warehouses_query('today', 0, filter.offer_ids, filter.warehouse_ids),
         'yesterday': _build_quantity_warehouses_query('yesterday', 1, filter.offer_ids, filter.warehouse_ids),

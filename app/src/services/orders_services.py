@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from src.database import warehouse_db, offer_db
 from src.database.db import async_session
 from src.database.models.models import Offer
+from src.schemas.filters.filter_schemas import PagingFilter
 from src.schemas.filters.orders_filter import OrderFilter
 from src.schemas.filters.statistic_filter import OrderStatisticFilter
 from src.schemas.orders_scemas import OrderCreate, OrderOut
@@ -64,18 +65,19 @@ async def setup_orders() -> None:
         logger.info(f'New orders created: {len(new_orders)}')
 
 
-async def get_orders(filter: OrderFilter | None) -> list[OrderOut]:
+async def get_orders(filter_: OrderFilter | None, paging: PagingFilter | None) -> list[OrderOut]:
     async with async_session() as session:
-        return await db.get_orders(session, filter)
+        return await db.get_orders(session, filter_, paging)
 
 
-async def get_order_statistics(filter: OrderStatisticFilter):
+async def get_order_statistics_by_offers_with_warehouses(filter_: OrderStatisticFilter):
     async with async_session() as session:
-        if filter.group_by_warehouses:
-            return await db.aggregate_orders_quantity_by_warehouses(session, filter)
-        else:
-            return await db.aggregate_orders_quantity_by_offers(session, filter)
-
+        return await db.aggregate_orders_quantity_by_offers_with_warehouses(session, filter_)
+        
+        
+async def get_orders_statistics_by_offers(filter_: OrderStatisticFilter):
+    async with async_session() as session:
+        return await db.aggregate_orders_quantity_by_offers(session, filter_)
 
 
 
