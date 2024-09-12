@@ -51,7 +51,7 @@ async def setup_orders() -> None:
     new_api_orders['created_at'] = new_api_orders['created_at'].apply(lambda x: x.replace(tzinfo=None))
     new_api_orders['updated_at'] = new_api_orders['updated_at'].apply(lambda x: x.replace(tzinfo=None))
 
-    merged_orders = pd.merge(new_api_orders, db_orders_df, on=['offer_id', 'sku', 'market', 'name_of_shop', 'quantity', 'created_at', 'warehouse_id', 'price', 'internal_order_id'], indicator=True, how='outer', suffixes=(None, '__db'))
+    merged_orders = pd.merge(new_api_orders, db_orders_df, on=['offer_id', 'internal_order_id'], indicator=True, how='outer', suffixes=(None, '__db'))
     merged_orders['warehouse_id'] = merged_orders['warehouse_id'].replace({np.nan: None})
 
     to_create_orders = merged_orders[merged_orders['_merge'] == 'left_only']
