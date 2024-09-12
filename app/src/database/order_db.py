@@ -18,8 +18,8 @@ async def create_orders(session: AsyncSession, orders: list[OrderCreate]) -> Non
     await session.commit()
 
 
-async def get_orders(session: AsyncSession, filter_: OrderFilter | None, paging: PagingFilter | None) -> list[OrderOut]:
-    query = select(Order)
+async def get_orders(session: AsyncSession, filter_: OrderFilter | None = None, paging: PagingFilter | None = None) -> list[OrderOut]:
+    query = select(Order).order_by(Order.created_at.desc())
 
     if filter_:
         query = filter_(query)
@@ -91,7 +91,7 @@ def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: l
         Order.offer_id,
         Order.warehouse_id,
         func.sum(Order.quantity).label(name),
-    ).where(Order.created_at >= text(f"NOW() - INTERVAL '{days_interval} days'"))
+    ).where(Order.warehouse_id.is_not(None)).where(Order.created_at >= text(f"NOW() - INTERVAL '{days_interval} days'"))
 
     if offer_ids:
         query = query.where(Order.offer_id.in_(offer_ids))

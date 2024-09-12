@@ -486,6 +486,7 @@ class OzonAPI(BaseAPI):
 
             for order_item in order.get('products', []):
                 order_item_data = APIOrderData(
+                    internal_order_id=str(order['order_id']),
                     created_at=order.get('created_at'),
                     updated_at=order.get('in_process_at', None),
                     sku=order_item.get('offer_id'),

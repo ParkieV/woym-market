@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Any
 from fastapi import HTTPException, status
@@ -402,4 +402,51 @@ class YandexMarketAPI(BaseAPI):
             self.validate_response(response, raise_error=False, body=body)
 
     async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
-        return []
+        if (to_date - from_date).days > 30:
+            from_date = to_date - timedelta(days=30)
+
+        url = f'https://api.partner.market.yandex.ru/campaigns/{self._entity_id}/orders'
+        params = {
+            'pageSize': 50,
+            'page': 1,
+            'fake': False,
+            'fromDate': from_date.strftime('%d-%m-%Y'),
+            'toDate': to_date.strftime('%d-%m-%Y'),
+        }
+
+        results = []
+
+        while True:
+            response = self.session.get(url, headers=self.auth_headers, params=params)
+
+            if not response.ok:
+                logger.error(f'Cant collect orders: {response.text}')
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Не удалось получить информацию о заказах')
+
+            json_response = response.json()
+
+            if not json_response['orders']:
+                break
+
+            for order in json_response['orders']:
+                for order_item in order['items']:
+                    created_at = datetime.strptime(order['creationDate'], '%d-%m-%Y %H:%M:%S')
+                    updated_at = datetime.strptime(order['updatedAt'], '%d-%m-%Y %H:%M:%S') if order.get('updatedAt', None) else None
+                    results.append(
+                        APIOrderData(
+                            internal_order_id=str(order['id']),
+                            sku=order_item['offerId'],
+                            market='yandex',
+                            name_of_shop=self._shop_name,
+                            quantity=order_item['count'],
+                            created_at=created_at,
+                            updated_at=updated_at,
+                            price=order_item['price'],
+                            warehouse_name=None
+                        )
+                    )
+
+            params['page'] += 1
+
+        return results
+

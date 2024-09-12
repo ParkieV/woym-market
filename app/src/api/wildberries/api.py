@@ -383,6 +383,7 @@ class WildberriesAPI(BaseAPI):
                 continue
 
             order_item = APIOrderData(
+                internal_order_id=str(item['gNumber']),
                 sku=item['supplierArticle'],
                 created_at=item['date'],
                 updated_at=item.get('lastChangeDate', None),

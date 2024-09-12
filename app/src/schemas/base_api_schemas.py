@@ -126,6 +126,7 @@ class APIOfferChangeData(BaseModel):
 
 
 class APIOrderData(BaseModel):
+    internal_order_id: str
     sku: str
     market: str
     name_of_shop: str
@@ -133,4 +134,4 @@ class APIOrderData(BaseModel):
     created_at: datetime
     updated_at: datetime | None
     price: float | None
-    warehouse_name: str
+    warehouse_name: str | None

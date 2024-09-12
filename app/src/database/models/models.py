@@ -336,6 +336,7 @@ class Order(Base):
     __tablename__ = 'orders'
 
     id = Column(Integer, primary_key=True, autoincrement=True, unique=True, index=True)
+    internal_order_id = Column(String, nullable=False)
 
     offer_id = Column(Integer, ForeignKey('offers.id', ondelete='CASCADE'), nullable=False)
     sku = Column(String, nullable=False, index=True)
@@ -344,7 +345,7 @@ class Order(Base):
 
     quantity = Column(Integer, nullable=False)
     price = Column(Float, nullable=True)
-    warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='CASCADE'), index=True)
+    warehouse_id = Column(Integer, ForeignKey('warehouses.id', ondelete='SET NULL'), index=True, nullable=True)
     warehouse = relationship(Warehouse, uselist=False)
 
     created_at = Column(DateTime(), nullable=False)

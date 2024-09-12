@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from fastapi import HTTPException
 from starlette import status
@@ -33,7 +34,7 @@ async def setup_orders() -> None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Для получения остатков требуется наличие складов')
         
         db_orders = await db.get_orders(session)
-        db_orders_df = pd.DataFrame([i.model_dump() for i in db_orders])
+        db_orders_df = pd.DataFrame([i.model_dump() for i in db_orders], columns=OrderOut.model_fields.keys())
 
     api_orders = await api_wrapper.get_orders(start, end)
     api_orders_df = pd.DataFrame([i.model_dump() for i in api_orders])
@@ -45,17 +46,19 @@ async def setup_orders() -> None:
     offers_idents_df = pd.DataFrame(offers_idents)
     offers_idents_df.rename(columns={'id': 'offer_id'}, inplace=True)
 
-    new_api_orders = pd.merge(api_orders_df, warehouses_df[['warehouse_id', 'warehouse_name']], on='warehouse_name', how='inner')
+    new_api_orders = pd.merge(api_orders_df, warehouses_df[['warehouse_id', 'warehouse_name']], on='warehouse_name', how='left')
     new_api_orders = pd.merge(new_api_orders, offers_idents_df, how='inner', on=['sku', 'market', 'name_of_shop'])
     new_api_orders['created_at'] = new_api_orders['created_at'].apply(lambda x: x.replace(tzinfo=None))
     new_api_orders['updated_at'] = new_api_orders['updated_at'].apply(lambda x: x.replace(tzinfo=None))
 
-    merged_orders = pd.merge(new_api_orders, db_orders_df, on=['offer_id', 'sku', 'market', 'name_of_shop', 'quantity', 'created_at', 'warehouse_id','price'], indicator=True, how='outer', suffixes=(None, '__db'))
+    merged_orders = pd.merge(new_api_orders, db_orders_df, on=['offer_id', 'sku', 'market', 'name_of_shop', 'quantity', 'created_at', 'warehouse_id', 'price', 'internal_order_id'], indicator=True, how='outer', suffixes=(None, '__db'))
+    merged_orders['warehouse_id'] = merged_orders['warehouse_id'].replace({np.nan: None})
 
     to_create_orders = merged_orders[merged_orders['_merge'] == 'left_only']
     to_create_orders.drop(columns=['id', '_merge'], inplace=True)
 
     new_orders = [OrderCreate(**i) for i in to_create_orders.to_dict('records')]
+
     if not new_orders:
         logger.info('New orders not found')
         return

@@ -4,13 +4,14 @@ from pydantic import BaseModel
 
 
 class OrderCreate(BaseModel):
+    internal_order_id: str
     sku: str
     name_of_shop: str
     offer_id: int
     market: str
     quantity: int
     price: float | None
-    warehouse_id: int
+    warehouse_id: int | None
     created_at: datetime
     updated_at: datetime | None
 
@@ -20,13 +21,13 @@ class OrderOut(OrderCreate):
 
 
 class OrderWithWarehouseOut(OrderOut):
-    warehouse: WarehouseOut
+    warehouse: WarehouseOut | None
 
 
 class OffersOrderQuantity(BaseModel):
     offer_id: int
     quantity: int
-    warehouse_id: int
+    warehouse_id: int | None
 
 
 class OrdersQuantityStatOnlyOffers(BaseModel):
@@ -39,6 +40,7 @@ class OrdersQuantityStatOnlyOffers(BaseModel):
     for_60_days: int
     for_120_days: int
     smart_delivery: float
+
 
 class OrdersQuantityStatOffersWithWarehouses(OrdersQuantityStatOnlyOffers):
     warehouse_id: int | None = None
