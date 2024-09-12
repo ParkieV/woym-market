@@ -482,6 +482,9 @@ class OzonAPI(BaseAPI):
         result = []
 
         for order in json_response.get('result', []):
+            if order['status'] == 'cancelled':
+                continue
+
             analytics_data = order.get('analytics_data')
 
             for order_item in order.get('products', []):

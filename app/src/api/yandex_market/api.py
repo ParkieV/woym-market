@@ -429,6 +429,9 @@ class YandexMarketAPI(BaseAPI):
                 break
 
             for order in json_response['orders']:
+                if order['status'] in ('CANCELLED', 'RETURNED', 'UNKNOWN'):
+                    continue
+
                 for order_item in order['items']:
                     created_at = datetime.strptime(order['creationDate'], '%d-%m-%Y %H:%M:%S')
                     updated_at = datetime.strptime(order['updatedAt'], '%d-%m-%Y %H:%M:%S') if order.get('updatedAt', None) else None
