@@ -75,14 +75,74 @@ class BaseOffer(BaseModel, BaseModelFields):
     market: str = Field(title='Площадка')
 
 
-class OfferChange(BaseOffer):
+class OfferChange(BaseModel, BaseModelFields):
+    id: int | None = Field(default=None, title='id')
+
+    sku: str | None = Field(default=None, title='sku')
+    name_of_shop: str = Field(default=None, title='Название магазина')
+    market: str = Field(default=None, title='Площадка')
+
+    name: str | None = Field(default=None, title='Название')
+    description: str | None = Field(default=None, title='Описание')
+
+    self_weight: float | None = Field(default=None, title='Вес')
+    self_length: float | None = Field(default=None, title='Длина')
+    self_width: float | None = Field(default=None, title='Ширина')
+    self_height: float | None = Field(default=None, title='Высота')
+
+    yandex_weight: float | None = Field(default=None, title='Вес c листа', description='Параметр редактируется только для Яндекс Мвркета')
+    yandex_length: float | None = Field(default=None, title='Длинна с листа', description='Параметр редактируется только для Яндекс Мвркета')
+    yandex_width: float | None = Field(default=None, title='Ширина с листа', description='Параметр редактируется только для Яндекс Мвркета')
+    yandex_height: float | None = Field(default=None, title='Высота с листа', description='Параметр редактируется только для Яндекс Мвркета')
+
+    wholesale_dollar_cost_price: float | None = Field(default=None, title='ОПТ закупка у. е.')
+
+    auto_participation_in_promotions: bool | None = Field(default=None, title='Автоучастие в акциях')
+
+    total_price_min_additional: float | None = Field(default=None, title='Мин. наценка на расчетную цену')
+    total_price_coeff: float | None = Field(default=None, title='Коэфициент расчетной цены')
+
+    note_1: str | None = Field('', title='Примечание 1')
+    note_2: str | None = Field('', title='Примечание 2')
+    note_3: str | None = Field('', title='Примечание 3')
+
+    use_manual_min_price: bool | None = Field(default=None, title='Использовать ручную мин. цену')
+    auto_min_price: float | None = Field(default=None, title='Авто мин. цена %')  # в процентах
+    manual_min_price: float | None = Field(default=None, title='Ручная мин. цена')
+    auto_price_control: bool | None = Field(default=None, title='Авто контроль цен')
+    pricing_scheme_name: str | None = Field(default=None, title='Id схемы ценообразования')
+    supplier_available: bool | None = Field(default=None, title='Наличие у поставщика')
+    search_words: str | None = Field(default=None, title='Поисковые слова', max_length=255)
+    use_promotion_price: bool | None = Field(default=None, title='Акция')
+    barcodes: str | None = Field(default=None, title='Штрихкоды')
+
+    synchronization: bool | None = Field(default=None, title='Синхронизация с каталогом')
+
+    hidden: bool | None = Field(default=None, title='Скрыт')
+
+
+class OfferOut(BaseModel, BaseModelFields):
+    # from yandex api
+    id: int = Field(title='id')
+
+    sku: str = Field(title='sku')
+    name_of_shop: str = Field(title='Название магазина')
+    market: str = Field(title='Площадка')
+
     name: str | None = Field(title='Название')
     description: str | None = Field(title='Описание')
 
     self_weight: float | None = Field(title='Вес')
+    self_weight_changed: bool = Field(title='Вес был изменен пользователем')
+
     self_length: float | None = Field(title='Длина')
+    self_length_changed: bool = Field(title='Длина была изменена пользователем')
+
     self_width: float | None = Field(title='Ширина')
+    self_width_changed: bool = Field(title='Ширина была изменена пользователем')
+
     self_height: float | None = Field(title='Высота')
+    self_height_changed: bool = Field(title='Высота была изменена пользователем')
 
     wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.')
 
@@ -108,11 +168,6 @@ class OfferChange(BaseOffer):
     synchronization: bool = Field(title='Синхронизация с каталогом')
 
     hidden: bool = Field(False, title='Скрыт')
-
-
-class OfferOut(OfferChange):
-    # from yandex api
-    id: int = Field(title='id')
 
     yandex_weight: float | None = Field(title='Вес с маркета', default=0)
     yandex_length: float | None = Field(title='Длинна с маркета', default=0)
@@ -187,7 +242,6 @@ class OfferOut(OfferChange):
         if 'sku' in captured:
             return ', '.join(captured['sku'])
         return 'Не найден'
-
 
     @computed_field()
     @property

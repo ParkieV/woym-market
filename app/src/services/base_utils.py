@@ -103,11 +103,11 @@ def parce_sizes_list(data: bytes, file_extension: str = '.xlsx') -> pd.DataFrame
     df = bytes_to_data_frame(data, 'Список товаров', file_extension)
     df.drop([0, 1], axis=0, inplace=True, errors='ignore')
     df: pd.DataFrame = df[df.columns[[2, 13, 14]]]
-    df.columns = ['sku', 'self_weight', 'sizes']
-    df[['self_length', 'self_width', 'self_height']] = df['sizes'].str.split('/', expand=True)
-    df[['self_length', 'self_width', 'self_height', 'self_weight']] = df[
-        ['self_length', 'self_width', 'self_height', 'self_weight']].astype(float)
-    df['volume'] = df['self_length'] * df['self_width'] * df['self_height'] / 1000
+    df.columns = ['sku', 'yandex_weight', 'sizes']
+    df[['yandex_length', 'yandex_width', 'yandex_height']] = df['sizes'].str.split('/', expand=True)
+    df[['yandex_length', 'yandex_width', 'yandex_height', 'yandex_weight']] = df[
+        ['yandex_length', 'yandex_width', 'yandex_height', 'yandex_weight']].astype(float)
+    df['yandex_volume'] = df['yandex_length'] * df['yandex_width'] * df['yandex_height'] / 1000
     df['sku'] = df['sku'].astype('string')
 
     df.replace(r'^\s*$', np.nan, regex=True, inplace=True)

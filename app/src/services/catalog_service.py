@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 async def setup_catalog_items() -> None:
     async with async_session() as session:
-        db_offers = await offer_db.get_offers(session)
+        db_offers = await offer_db.get_offers_list(session)
         db_offers_df = pd.DataFrame([i.model_dump() for i in db_offers])
         db_offers_skus = set(db_offers_df['sku'].values.tolist())
 

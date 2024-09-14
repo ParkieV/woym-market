@@ -5,13 +5,17 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, func
+from sqlalchemy import select, update, delete, func, and_
 from sqlalchemy.orm import selectinload
-from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
+from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, \
+    PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO, OfferChange
 from .models.models import Offer, PricingScheme, PricingSchemeField
 from typing import Iterable, Any, Type
 from fastapi.exceptions import HTTPException
 from fastapi import status
+
+from ..schemas.filters.filter_schemas import PagingFilter
+from ..schemas.filters.offers_filter import OffersSourceFilter, OffersFilter
 
 
 def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
@@ -25,17 +29,17 @@ def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
     return data
 
 
-async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None, model_schema: Type[BaseModel] = OfferOut, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
+async def get_offers_list(session: AsyncSession, paging: PagingFilter | None = None, offers_filter: OffersFilter | None = None) -> list[OfferOut]:
     query = select(Offer)
 
-    if filters:
-        query = query.filter_by(**filters)
+    if paging:
+        query = paging(query)
 
-    if limit:
-        query = query.limit(limit)
+    if offers_filter:
+        query = offers_filter(query)
 
     offers = (await session.execute(query)).scalars()
-    return [model_schema.model_validate(offer, from_attributes=True) for offer in offers]
+    return [OfferOut.model_validate(offer, from_attributes=True) for offer in offers]
 
 
 async def create_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) -> None:
@@ -100,6 +104,63 @@ async def update_offers(
         await session.execute(stmp)
 
         await session.commit()
+
+
+async def change_offers(
+        session: AsyncSession,
+        offers: list[dict],
+        mapping_fields: list[str],
+        detect_changes: list[str] | None = None,
+        offers_filter: OffersSourceFilter | None = None,
+) -> None:
+    offer_model_update_fields = {i: getattr(Offer, i) for i in mapping_fields}
+
+    for update_offer_data in offers:
+        if set(offer_model_update_fields.keys()) & set(update_offer_data.keys()) == len(mapping_fields):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Поля {mapping_fields} обязательно должны быть переданы')
+
+        if detect_changes:
+            tracked_data = {f'{i}_changed': or_(getattr(Offer, f'{i}_changed'), (func.coalesce(getattr(Offer, i), 'unknown') != (update_offer_data[i] or 'unknown'))) for i in detect_changes if getattr(Offer, i, None) and i in update_offer_data}
+            update_offer_data.update(tracked_data)
+
+        stmp = update(Offer).values(**update_offer_data)
+
+        for mapping_field in mapping_fields:
+            stmp = stmp.where(offer_model_update_fields[mapping_field] == update_offer_data[mapping_field])
+
+        if offers_filter:
+            stmp = offers_filter(stmp)
+
+        await session.execute(stmp)
+
+    await session.commit()
+
+
+async def update_offers_from_list(session: AsyncSession, data: list[OfferChange], endswith_sku: bool = True) -> None:
+    for offer in data:
+        if offer.id is not None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Поля id не должно передаваться')
+
+        offer_data = offer.model_dump(exclude_unset=True)
+        stmp = update(Offer).values(**offer_data)
+
+        if offer.market:
+            stmp = stmp.where(Offer.market == offer.market)
+
+        if offer.name_of_shop:
+            stmp = stmp.where(Offer.name_of_shop == offer.name_of_shop)
+
+        if endswith_sku:
+            stmp = stmp.where(Offer.sku.endswith(offer.sku))
+        else:
+            stmp = stmp.where(Offer.sku == offer.sku)
+
+        await session.execute(stmp)
+
+    await session.commit()
+
+
+
 
 
 async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.DataFrame,

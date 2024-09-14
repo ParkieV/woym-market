@@ -9,7 +9,8 @@ from src.schemas.offer_schemas import OfferChange, OfferOut, Market, ImportType
 from src.services import offer_service as service
 from src.services.base_utils import clean_up_files
 from .pricing_schemes_router import router as pricing_schemes_router
-
+from ...schemas.filters.filter_schemas import PagingFilter
+from ...schemas.filters.offers_filter import OffersFilter
 
 router = APIRouter(
     prefix="/offers",
@@ -17,9 +18,9 @@ router = APIRouter(
 )
 
 
-@router.get('', response_model=list[OfferOut], tags=['Карточки товаров'], dependencies=[Depends(get_current_user)], summary='Список карточек товаров')
-async def get_offers(offset: int = 0, limit: int | None = None):
-    return await service.get_offers(offset=offset, limit=limit)
+@router.post('', response_model=list[OfferOut], tags=['Карточки товаров'], dependencies=[Depends(get_current_user)], summary='Список карточек товаров')
+async def get_offers(filter: OffersFilter | None = None, paging: PagingFilter | None = None):
+    return await service.get_offers_list(paging_filter=paging, offers_filter=filter)
 
 
 @router.patch('', tags=['Карточки товаров'], summary='Изменение карточек товаров', description='Неуказанные параметры заменяются дефолтными')
@@ -39,8 +40,8 @@ async def setup_offers_data(current_user=Depends(require_staff)):
 
 
 @router.post('/export', dependencies=[Depends(get_current_user)], tags=['Экспорт', 'Карточки товаров'], summary='Экспорт карточек товаров')
-async def export_offers(market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
-    path = Path(await service.export_offers(name_of_shop, market))
+async def export_offers(filter: OffersFilter | None = Body(None)):
+    path = Path(await service.export_offers(filter))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 

@@ -51,9 +51,16 @@ class Offer(Base):
     description_changed = Column(Boolean, nullable=False, default=False)
 
     self_weight = Column(Float, default=None, nullable=True)
+    self_weight_changed = Column(Boolean, nullable=False, default=False)
+
     self_length = Column(Float, default=None, nullable=True)
+    self_length_changed = Column(Boolean, nullable=False, default=False)
+
     self_width = Column(Float, default=None, nullable=True)
+    self_width_changed = Column(Boolean, nullable=False, default=False)
+
     self_height = Column(Float, default=None, nullable=True)
+    self_height_changed = Column(Boolean, nullable=False, default=False)
 
     yandex_weight = Column(Float, nullable=True)
     yandex_length = Column(Float, nullable=True)

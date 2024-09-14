@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.services.base_utils
 from src.database.catalog_db import sync_catalog_items_with_offers
+from src.database.models.models import Offer
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.confing import config
 from logs import get_logger
@@ -17,6 +18,8 @@ from src.database import offer_db as db
 from src.database.settings_db import get_markets
 import src.services.offer_utils as utils
 from src.schemas.base_api_schemas import APIPriceChangeData, APIOfferChangeData
+from src.schemas.filters.filter_schemas import PagingFilter
+from src.schemas.filters.offers_filter import OffersFilter
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ImportType, Market, \
     PricingSchemeOut, PricingSchemeCreate, BaseOffer, PricingSchemeFieldCreate, PricingSchemeFieldChange, \
     PricingSchemeChange
@@ -38,29 +41,21 @@ logger = get_logger(__name__)
 CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes']
 
 
-async def get_offers(filters: dict[str, Any] | None = None, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
+async def get_offers_list(offers_filter: OffersFilter | None = None, paging_filter: PagingFilter | None = None) -> list[OfferOut]:
     async with async_session() as session:
-        return await db.get_offers(session, filters, offset=offset, limit=limit)
+        return await db.get_offers_list(session, paging=paging_filter, offers_filter=offers_filter)
 
 
 @error_handler('Ошибка изменения товаров')
-async def change_offers(offers_data: list[OfferChange], user_id: int):
-    mapping_fields = ['sku', 'name_of_shop', 'market']
-
-    if not offers_data:
-        return offers_data
+async def change_offers(offers: list[OfferChange], user_id: int):
+    if not offers:
+        return offers
 
     async with async_session() as session:
         settings = await get_user_settings(session, user_id)
-
-        changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
-
-        await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=['name', 'description', 'barcodes', 'search_words'])
-
-        # to_sync_skus = [i.sku for i in offers_data if i.synchronization]
-        # if to_sync_skus:
-        #     await sync_catalog_items_with_offers(session,  skus=to_sync_skus)
-        await recalculate_values(session, settings, which=changes[mapping_fields])
+        offers_data = [i.model_dump(exclude_unset=True) for i in offers]
+        await db.change_offers(session, offers=offers_data, mapping_fields=['id'], detect_changes=['name', 'description', 'barcodes', 'search_words'])
+        await recalculate_values(session, settings, offers_filter=OffersFilter(offer_ids=[i.id for i in offers]))
 
 
 async def setup_offers_data(user_id: int):
@@ -88,10 +83,10 @@ async def update_offers(user_id: int):
         settings = await get_user_settings(session, user_id)
 
         await sync_catalog_items_with_offers(session)
-        await recalculate_values(session, settings, which=[{'synchronization': True}])
+        await recalculate_values(session, settings, offers_filter=OffersFilter(synchronization=True))
 
     # Получаем товары из бд
-    db_offers = await get_offers()
+    db_offers = await get_offers_list()
     db_offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
     # Создаем переменную с данными для отправки цен в апи
@@ -156,7 +151,8 @@ async def update_offers(user_id: int):
     for tracked_column in CONTROL_CHANGES:
         api_offers_df[f'{tracked_column}_changed'] = False
 
-    await db.update_offers(session, api_offers_df, mapping_columns=['name_of_shop', 'market'])
+    # await db.update_offers(session, api_offers_df, mapping_columns=['name_of_shop', 'market'])
+    await db.change_offers(session, offers=api_offers_df.to_dict('records'), mapping_fields=['id'])
     logger.info(f'Updated db offers: {len(api_offers_df)}')
 
     # Удаляем товары
@@ -244,11 +240,8 @@ async def update_offers_attributes(offers: pd.DataFrame):
     return data
 
 
-async def recalculate_values(session: AsyncSession, settings, which=None):
-    if which is None:
-        offers = await db.get_offers(session, model_schema=OfferOut)
-    else:
-        offers = await db.get_offers_by(session, which, model_schema=OfferOut)
+async def recalculate_values(session: AsyncSession, settings, offers_filter: OffersFilter | None = None):
+    offers = await db.get_offers_list(session, offers_filter=offers_filter)
 
     df = pd.DataFrame([offer.model_dump() for offer in offers])
     df.drop('dollar_cost_price_updated_at', axis=1, inplace=True, errors='ignore')
@@ -260,9 +253,10 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
 
     for market in await get_markets(session):
         df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], settings, market)
-        df1.drop(set(df1.columns) - set(OfferOut.fields()), axis=1, inplace=True, errors='ignore')
-
-        await db.update_offers(session, df1, mapping_columns=['sku', 'name_of_shop', 'market'])
+        df1.replace({np.nan: None}, inplace=True)
+        exclude_columns = set(df1.columns.values.tolist()) - set(i.name for i in Offer.__table__.columns)
+        df1.drop(columns=exclude_columns, inplace=True)
+        await db.change_offers(session, offers=df1.to_dict('records'), mapping_fields=['id'])
 
 
 @error_handler('Ошибка импорта')
@@ -275,7 +269,7 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
             return await import_offers(data, settings, name_of_shop, market, file_extension)
 
         case ImportType.SIZES:
-            return await import_sizes(data, settings, name_of_shop, market, file_extension)
+            return await import_sizes(data, settings, name_of_shop, file_extension)
 
         case ImportType.PRICES:
             return await import_prices(data, settings, name_of_shop, market, file_extension)
@@ -314,7 +308,7 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
             [await db.check_pricing_schemes_exists(session, i) for i in set(df['pricing_scheme_name'].values.tolist())]
 
         try:
-            await db.update_offers(session, df, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
+            await db.change_offers(session, df.to_dict('records'), mapping_fields=['name_of_shop', 'market'])
         except Exception as e:
             logger.error('Error while updating offers in import offers', exc_info=e)
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
@@ -339,7 +333,7 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
             chunked_df['name_of_shop'] = _market.name
 
             # Зависит от магазина
-            await db.update_offers(session, chunked_df, mapping_columns=['market', 'name_of_shop'], endswith_sku=True)
+            await db.update_offers_from_list(session, [OfferChange(**i) for i in chunked_df.to_dict('records')])
 
             db_skus = set([i.lstrip('0') for i in await db.get_unique_skus(session)])
             import_skus = set(chunked_df['sku'].values.tolist())
@@ -350,43 +344,31 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
         await recalculate_values(session, settings)
 
 
-async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+async def import_sizes(data, settings, name_of_shop: str | None = None, file_extension: str = 'xlsx'):
     df = parce_sizes_list(data, file_extension=file_extension)
-
-    mapping_columns = []
 
     if name_of_shop:
         df['name_of_shop'] = name_of_shop
-        mapping_columns.append('name_of_shop')
 
-    if market:
-        df['market'] = market
-        mapping_columns.append('market')
+    df['market'] = 'yandex'
 
     async with async_session() as session:
         try:
-            await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
+            await db.update_offers_from_list(session, [OfferChange(**i) for i in df.to_dict('records')])
         except Exception as e:
             logger.error('Error while update price in import sizes', exc_info=True)
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
 
-        await recalculate_values(session, settings)
+        await recalculate_values(session, settings, offers_filter=OffersFilter(market='yandex'))
 
 
-async def export_offers(name_of_shop: str | None = None, market: str | None = None) -> str:
-    filters = {}
+async def export_offers(offers_filter: OffersFilter | None = None) -> str:
 
-    if name_of_shop:
-        filters['name_of_shop'] = name_of_shop
+    offers = await get_offers_list(offers_filter=offers_filter)
+    exclude_columns = []
+    exclude_columns.extend([f'{i}_changed' for i in CONTROL_CHANGES])
 
-    if market:
-        filters['market'] = market
-
-    offers = await get_offers(filters)
-
-    exclude_columns = [f'{i}_changed' for i in CONTROL_CHANGES]
-
-    df = pd.DataFrame([offer.model_dump() for offer in offers], columns=OfferOut.fields().keys())
+    df = pd.DataFrame([offer.model_dump(exclude=exclude_columns) for offer in offers])
     df['dollar_cost_price_updated_at'] = df['dollar_cost_price_updated_at'].astype('string')
     df['dollar_cost_price_updated_at'].fillna('', inplace=True)
     df['dollar_cost_price_updated_at'] = df['dollar_cost_price_updated_at'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S.%f').strftime('%d/%m/%Y') if x else x)
@@ -412,7 +394,7 @@ async def change_pricing_scheme(user_id: int, data: PricingSchemeChange):
         settings = await get_user_settings(session, user_id)
 
         await db.change_pricing_scheme(session, data)
-        await recalculate_values(session, settings, which=[{'pricing_scheme_name': data.name}])
+        await recalculate_values(session, settings, offers_filter=OffersFilter(pricing_scheme_name=data.name))
 
 
 async def delete_pricing_scheme(names: list[str]):
