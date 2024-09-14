@@ -279,8 +279,6 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
 
 
 async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
-    required_fields = {'sku', 'market', 'name_of_shop'}
-
     df = src.services.base_utils.bytes_to_data_frame(data, file_extension=file_extension)
     df.rename(columns=OfferOut.reverse_fields(), inplace=True)
     df.fillna({
@@ -288,9 +286,10 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
         'note_2': '',
         'note_3': '',
     }, inplace=True)
+    df['sku'] = df['sku'].astype('string')
 
-    if len(set(df.columns) & required_fields) != len(required_fields):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные. Следующие колонки должны быть обязательно: {", ".join(BaseOffer.fields().values())}')
+    if 'id' not in df.columns.values.tolist():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Колонка id должна присутствовать в файле')
 
     if name_of_shop:
         df = df[df['name_of_shop'] == name_of_shop]
@@ -298,22 +297,19 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
     if market:
         df = df[df['market'] == market]
 
-    columns_to_change = list(set(df.columns) & set(OfferChange.fields().keys()))
-    df = df[columns_to_change]
-
-    df[['sku', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']] = df[['sku', 'name_of_shop', 'market', 'note_1', 'note_2', 'note_3']].astype("string")
+    to_update_offers = [OfferChange(**i) for i in df.to_dict(orient='records')]
 
     async with async_session() as session:
         if 'pricing_scheme_name' in df.columns:
             [await db.check_pricing_schemes_exists(session, i) for i in set(df['pricing_scheme_name'].values.tolist())]
 
         try:
-            await db.change_offers(session, df.to_dict('records'), mapping_fields=['name_of_shop', 'market'])
+            await db.change_offers(session, [i.model_dump(exclude_unset=True) for i in to_update_offers], mapping_fields=['id'])
         except Exception as e:
             logger.error('Error while updating offers in import offers', exc_info=e)
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
 
-        await recalculate_values(session, settings, df[['sku', 'name_of_shop', 'market']])
+        await recalculate_values(session, settings, offers_filter=OffersFilter(offer_ids=df['id'].values.tolist()))
 
 
 async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):

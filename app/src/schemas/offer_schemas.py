@@ -51,21 +51,13 @@ class PricingSchemeChange(BaseModel):
 
 
 class BaseModelFields(ABC):
-    _skip_fields = [
-        'group_sellers_amount',
-        'pricing_scheme',
-        'business_id',
-        'id',
-        'remaining_stock'
-    ]
+    @classmethod
+    def fields(cls, exclude: list[str] | None = None) -> dict[str, str]:
+        return {name: field.title for name, field in cls.model_fields.items() if exclude is not None and name not in exclude}
 
     @classmethod
-    def fields(cls):
-        return {name: field.title for name, field in cls.model_fields.items() if name not in cls._skip_fields}
-
-    @classmethod
-    def reverse_fields(cls):
-        return {field.title: name for name, field in cls.model_fields.items() if name not in cls._skip_fields}
+    def reverse_fields(cls, exclude: list[str] | None = None) -> dict[str, str]:
+        return {field.title: name for name, field in cls.model_fields.items() if exclude is not None and name not in exclude}
 
 
 class BaseOffer(BaseModel, BaseModelFields):
