@@ -18,11 +18,11 @@ class APIOffer:
     name: str
     name_of_shop: str
     description: str | None = None
-    yandex_weight: float | None = None
-    yandex_length: float | None = None
-    yandex_width: float | None = None
-    yandex_height: float | None = None
-    yandex_volume: float | None = None
+    self_weight: float | None = None
+    self_length: float | None = None
+    self_width: float | None = None
+    self_height: float | None = None
+    volume: float | None = None
     photo: str | None = None
     current_price: float | None = None
     business_id: int | None = None

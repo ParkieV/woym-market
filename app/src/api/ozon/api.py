@@ -321,10 +321,10 @@ class OzonAPI(BaseAPI):
                     search_words = search_words[:search_words[:256].rfind(';')]
 
                 result[offer['offer_id']] = {
-                    'yandex_height': offer['height'] / unit_dimension_divider if offer['height'] else offer['height'],
-                    'yandex_length': offer['depth'] / unit_dimension_divider if offer['depth'] else offer['depth'],
-                    'yandex_width': offer['width'] / unit_dimension_divider if offer['width'] else offer['width'],
-                    'yandex_weight': offer['weight'] / 1000 if offer['weight'] else offer['weight'],
+                    'self_height': offer['height'] / unit_dimension_divider if offer['height'] else offer['height'],
+                    'self_length': offer['depth'] / unit_dimension_divider if offer['depth'] else offer['depth'],
+                    'self_width': offer['width'] / unit_dimension_divider if offer['width'] else offer['width'],
+                    'self_weight': offer['weight'] / 1000 if offer['weight'] else offer['weight'],
                     'search_words': search_words,
                     'description': descriptions
                 }

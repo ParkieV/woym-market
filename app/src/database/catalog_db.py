@@ -1,7 +1,7 @@
 from typing import Iterable
 
 import pandas as pd
-from sqlalchemy import select, update, func, or_, case
+from sqlalchemy import select, update, func, or_, case, cast, String, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from src.database.models.models import CatalogItem, Offer
@@ -55,7 +55,7 @@ async def get_unique_skus(session: AsyncSession) -> list[str]:
 
 async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] | None = None,
                                          exclude_fields: list | None = None):
-    detect_changes = ['name', 'description']
+    detect_changes = ['name', 'description', 'self_weight', 'self_length', 'self_width', 'self_height']
 
     _exclude_fields = {'id', 'sku', 'search_words', 'barcodes'}
 
@@ -87,7 +87,7 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
     detect_changes_values = {
         getattr(Offer, f'{i}_changed'): or_(
             getattr(Offer, f'{i}_changed'),
-            (func.coalesce(getattr(Offer, i), 'null') != func.coalesce(getattr(CatalogItem, i), getattr(Offer, i), 'null'))
+            func.concat(getattr(Offer, i), '') != func.concat(func.concat(getattr(CatalogItem, i), getattr(Offer, i)), '')
         )
         for i in detect_changes
     }
@@ -97,7 +97,7 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
         'search_words_changed': case(
             (Offer.market == 'ozon', or_(
                 Offer.search_words_changed,
-                (func.coalesce(Offer.search_words, 'null') != func.coalesce(CatalogItem.search_words, Offer.search_words, 'null'))
+                func.concat(Offer.search_words, '') != func.concat(func.coalesce(CatalogItem.search_words, Offer.search_words), '')
             )),
             else_=Offer.search_words_changed)
     }
@@ -107,7 +107,8 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
         'barcodes_changed': case(
             (Offer.market == 'yandex', or_(
                 Offer.barcodes_changed,
-                (func.coalesce(Offer.barcodes, 'null') != func.coalesce(CatalogItem.barcodes, Offer.barcodes, 'null'))
+                func.concat(Offer.barcodes, '') != func.concat(func.coalesce(CatalogItem.barcodes, Offer.barcodes), '')
+
             )),
             else_=Offer.barcodes_changed)
     }

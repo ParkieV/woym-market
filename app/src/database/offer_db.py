@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, func, and_
+from sqlalchemy import select, update, delete, func, and_, String, cast
 from sqlalchemy.orm import selectinload
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, \
     PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO, OfferChange
@@ -116,11 +116,14 @@ async def change_offers(
     offer_model_update_fields = {i: getattr(Offer, i) for i in mapping_fields}
 
     for update_offer_data in offers:
-        if set(offer_model_update_fields.keys()) & set(update_offer_data.keys()) == len(mapping_fields):
+        if (set(offer_model_update_fields.keys()) & set(update_offer_data.keys()) & set(mapping_fields)) != set(mapping_fields):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Поля {mapping_fields} обязательно должны быть переданы')
 
         if detect_changes:
-            tracked_data = {f'{i}_changed': or_(getattr(Offer, f'{i}_changed'), (func.coalesce(getattr(Offer, i), 'unknown') != (update_offer_data[i] or 'unknown'))) for i in detect_changes if getattr(Offer, i, None) and i in update_offer_data}
+            tracked_data = {
+                f'{i}_changed': func.concat(getattr(Offer, i), '') != func.concat(update_offer_data[i], '')
+                for i in detect_changes if getattr(Offer, i, None) and i in update_offer_data
+            }
             update_offer_data.update(tracked_data)
 
         stmp = update(Offer).values(**update_offer_data)

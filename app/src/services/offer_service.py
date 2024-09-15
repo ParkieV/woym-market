@@ -38,7 +38,7 @@ api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
 
-CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes']
+CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes', 'self_weight', 'self_length', 'self_width', 'self_height']
 
 
 async def get_offers_list(offers_filter: OffersFilter | None = None, paging_filter: PagingFilter | None = None) -> list[OfferOut]:
@@ -54,7 +54,7 @@ async def change_offers(offers: list[OfferChange], user_id: int):
     async with async_session() as session:
         settings = await get_user_settings(session, user_id)
         offers_data = [i.model_dump(exclude_unset=True) for i in offers]
-        await db.change_offers(session, offers=offers_data, mapping_fields=['id'], detect_changes=['name', 'description', 'barcodes', 'search_words'])
+        await db.change_offers(session, offers=offers_data, mapping_fields=['id'], detect_changes=['name', 'description', 'barcodes', 'search_words', 'self_weight', 'self_length', 'self_width', 'self_height'])
         await recalculate_values(session, settings, offers_filter=OffersFilter(offer_ids=[i.id for i in offers]))
 
 
@@ -151,8 +151,10 @@ async def update_offers(user_id: int):
     for tracked_column in CONTROL_CHANGES:
         api_offers_df[f'{tracked_column}_changed'] = False
 
+    api_offers_df.replace({np.nan: None}, inplace=True)
+
     # await db.update_offers(session, api_offers_df, mapping_columns=['name_of_shop', 'market'])
-    await db.change_offers(session, offers=api_offers_df.to_dict('records'), mapping_fields=['id'])
+    await db.change_offers(session, offers=api_offers_df.to_dict('records'), mapping_fields=['sku', 'market', 'name_of_shop'])
     logger.info(f'Updated db offers: {len(api_offers_df)}')
 
     # Удаляем товары
