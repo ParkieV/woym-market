@@ -48,8 +48,9 @@ class WildberriesAPI(BaseAPI):
 
         update_url = 'https://content-api.wildberries.ru/content/v2/cards/update'
 
-        valid_offers_data = [i for i in data if all((i.is_valid_name(), i.is_valid_description(), i.is_valid_vendor_code()))]
-        invalid_data = [i for i in data if not all((i.is_valid_name(), i.is_valid_description(), i.is_valid_vendor_code()))]
+        check_valid = lambda x: all((x.is_valid_name(), x.is_valid_description(), x.is_valid_vendor_code()))
+        valid_offers_data = [i for i in data if check_valid(i)]
+        invalid_data = [i for i in data if not check_valid(i)]
 
         if invalid_data:
             logger.warning(f'Invalid offers data: {len(invalid_data)} / {len(valid_offers_data)} {invalid_data}')
@@ -67,7 +68,12 @@ class WildberriesAPI(BaseAPI):
                     'vendorCode': offer_data.sku,
                     'title': offer_data.name,
                     'description': offer_data.description,
-                    'sizes': items[offer_data.sku]['sizes']
+                    'sizes': items[offer_data.sku]['sizes'],
+                    'dimensions': {
+                        'length': round(offer_data.self_length),
+                        'width': round(offer_data.self_width),
+                        'height': round(offer_data.self_height),
+                    },
 
                 }
                 for offer_data in valid_offers_data[i:i + chunk_size]

@@ -37,11 +37,13 @@ class YandexMarketAPI(BaseAPI):
         return self._get_campaigns()[campaign_id]['business_id']
 
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
-        valida_offer_data = [i for i in data if all((i.is_valid_name(), i.is_valid_description(), i.is_valid_barcodes()))]
-        invalid_offer_data = [i for i in data if not all((i.is_valid_name(), i.is_valid_description(), i.is_valid_barcodes()))]
+        check_valid = lambda x: all((x.is_valid_name(), x.is_valid_description(), x.is_valid_barcodes(), x.is_valid_sizes()))
+        valida_offer_data = [i for i in data if check_valid(i)]
+        invalid_offer_data = [i for i in data if not check_valid(i)]
 
         if invalid_offer_data:
-            logger.warning(f'Invalid offers data: {len(invalid_offer_data)} / {len(valida_offer_data)} {invalid_offer_data}')
+            logger.warning(
+                f'Invalid offers data: {len(invalid_offer_data)} / {len(valida_offer_data)} {invalid_offer_data}')
 
         business_id = self._get_business_id_by_campaign_id(self._entity_id)
         url = f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings/update'
@@ -57,7 +59,12 @@ class YandexMarketAPI(BaseAPI):
                             'barcodes': [barcode for barcode in offer_data.valid_barcodes],
                             'name': offer_data.name,
                             'description': offer_data.description,
-                            # 'pictures': []
+                            'weightDimensions': {
+                                'length': offer_data.self_length,
+                                'width': offer_data.self_width,
+                                'height': offer_data.self_height,
+                                'weight': offer_data.self_weight,
+                            }
 
                         }
                     }
@@ -73,9 +80,6 @@ class YandexMarketAPI(BaseAPI):
 
             if not response_json.get('status', None) == 'OK':
                 logger.error(f'Cant update offers data: {response_json.get("errors", "unknown")}')
-
-
-
 
     async def get_offers_list(self) -> list[APIOffer]:
         result = []
@@ -194,7 +198,8 @@ class YandexMarketAPI(BaseAPI):
         invalid_price_data = [i for i in data if not (i.is_valid_target_price() and i.is_valid_discount_base_price())]
 
         if invalid_price_data:
-            logger.warning(f'Invalid prices data: {len(invalid_price_data)} / {len(valid_price_data)} {invalid_price_data}')
+            logger.warning(
+                f'Invalid prices data: {len(invalid_price_data)} / {len(valid_price_data)} {invalid_price_data}')
 
         if not valid_price_data:
             logger.warning(f'{self._shop_name}(yandex) has no valid price data')
@@ -434,7 +439,8 @@ class YandexMarketAPI(BaseAPI):
 
                 for order_item in order['items']:
                     created_at = datetime.strptime(order['creationDate'], '%d-%m-%Y %H:%M:%S')
-                    updated_at = datetime.strptime(order['updatedAt'], '%d-%m-%Y %H:%M:%S') if order.get('updatedAt', None) else None
+                    updated_at = datetime.strptime(order['updatedAt'], '%d-%m-%Y %H:%M:%S') if order.get('updatedAt',
+                                                                                                         None) else None
                     results.append(
                         APIOrderData(
                             internal_order_id=str(order['id']),
@@ -452,4 +458,3 @@ class YandexMarketAPI(BaseAPI):
             params['page'] += 1
 
         return results
-

@@ -212,7 +212,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
     await api_wrapper.change_prices(data)
 
 
-async def update_offers_attributes(offers: pd.DataFrame):
+async def update_offers_attributes(offers: pd.DataFrame) -> None:
     data = offers.to_dict('records')
 
     if not config.is_prod:
@@ -223,23 +223,8 @@ async def update_offers_attributes(offers: pd.DataFrame):
         logger.info('Skip update offers attributes due to list is empty')
         return
 
-    data = [
-        APIOfferChangeData(
-            sku=offer_data['sku'],
-            market=offer_data['market'],
-            name_of_shop=offer_data['name_of_shop'],
-            search_words=offer_data['search_words'],
-            name=offer_data['name'],
-            description=offer_data['description'],
-            barcodes=offer_data['barcodes'],
-            vendor_code=offer_data['vendor_code']
-        )
-        for offer_data in data
-    ]
-
+    data = [APIOfferChangeData(**offer_data) for offer_data in data]
     await api_wrapper.change_offers(data)
-
-    return data
 
 
 async def recalculate_values(session: AsyncSession, settings, offers_filter: OffersFilter | None = None):
