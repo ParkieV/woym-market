@@ -34,7 +34,7 @@ export class OffersImport extends Import {
     public name_of_shop: string | null = null;
 
     protected get url(): string {
-        return "data/import";
+        return "offers/import";
     }
 
     protected body(file: Blob): FormData {

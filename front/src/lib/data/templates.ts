@@ -20,7 +20,7 @@ export type Template = {
 };
 
 export async function fetchTemplates(): Promise<Template[]> {
-    let r = fetchJSON<Template[]>("data/pricing-schemes");
+    let r = fetchJSON<Template[]>("offers/pricing-schemes");
     showFetchModals(r.then(x => x.response));
     let templates: Template[] = (await r).data;
     templates.sort((a, b) => (a.name > b.name ? 1 : b.name > a.name ? -1 : 0));
@@ -34,7 +34,7 @@ export async function patchTemplates(templates: Template[]): Promise<boolean> {
 }
 
 async function patchTemplate(template: Template): Promise<Response> {
-    return fetchPlain("data/pricing-schemes", {
+    return fetchPlain("offers/pricing-schemes", {
         method: "PATCH",
         body: JSON.stringify(template),
         headers: {

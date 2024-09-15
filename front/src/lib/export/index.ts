@@ -135,7 +135,7 @@ export class ViolatorsExport extends Export {
     public name_of_shop: string | null = null;
 
     protected get url(): string {
-        return "data/violators/export";
+        return "offers/violators/export";
     }
 
     protected get body(): string {

@@ -79,13 +79,13 @@ export type Offer = OfferBase & {
 };
 
 export async function fetchOfferList(): Promise<Offer[]> {
-    let offers = fetchJSON<Offer[]>("data/offers");
+    let offers = fetchJSON<Offer[]>("offers");
     showFetchModals(offers.then(x => x.response));
     return (await offers).data;
 }
 
 export async function patchOfferList(changed: Offer[]): Promise<boolean> {
-    let response = fetchPlain("data/offers", {
+    let response = fetchPlain("offers", {
         method: "PATCH",
         body: JSON.stringify(changed),
         headers: {
