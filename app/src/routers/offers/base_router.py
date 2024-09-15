@@ -23,18 +23,23 @@ async def get_offers(filter: OffersFilter | None = None, paging: PagingFilter | 
     return await service.get_offers_list(paging_filter=paging, offers_filter=filter)
 
 
-@router.patch('', tags=['Карточки товаров'], summary='Изменение карточек товаров', description='Неуказанные параметры заменяются дефолтными')
+@router.patch('', tags=['Карточки товаров'], summary='Изменение карточек товаров')
 async def change_offer_fields(offers_data: list[OfferChange], current_user=Depends(require_staff)):
+    """
+    Параметр `id` товара обязательно должен передаваться. Параметры `market`, `name_of_shop` передаются для валидации значений для конкретного.
+    """
     return await service.change_offers(offers_data, current_user.id)
 
 
-@router.put('/media/images', tags=['Карточки товаров', 'Медиа'], dependencies=[Depends(require_staff)])
+@router.put('/media/images', tags=['Карточки товаров', 'Медиа'], dependencies=[Depends(require_staff)], deprecated=True)
 async def add_image_to_offer(file: UploadFile = File(...), offer_id: int = Query()):
+    """**Реализация отложена**"""
     return file.filename, offer_id
 
 
-@router.post('/setup', tags=['Debug'])
+@router.post('/setup', tags=['Debug'], include_in_schema=False)
 async def setup_offers_data(current_user=Depends(require_staff)):
+    """Создает **все** карточки товаров, которые отдают подключенные магазины """
     await service.setup_offers_data(current_user.id)
     return {'status': 'OK'}
 

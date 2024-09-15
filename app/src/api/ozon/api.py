@@ -37,6 +37,7 @@ class OzonAPI(BaseAPI):
             logger.warning(f'{self.shop_name}(ozon) has no valid offers data')
             return
 
+        # TODO Передавать параметры для размеров и веса
         body = {
             'items': [
                 {

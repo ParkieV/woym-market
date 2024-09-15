@@ -78,21 +78,21 @@ class OfferChange(BaseModel, BaseModelFields):
     description: str | None = Field(default=None, title='Описание')
 
     self_weight: float | None = Field(default=None, title='Вес')
-    self_length: float | None = Field(default=None, title='Длина')
-    self_width: float | None = Field(default=None, title='Ширина')
-    self_height: float | None = Field(default=None, title='Высота')
+    self_length: float | None = Field(default=None, title='Длина', description='Для Wildberries требуется целое число, значение округляется автоматически.')
+    self_width: float | None = Field(default=None, title='Ширина', description='Для Wildberries требуется целое число, значение округляется автоматически.')
+    self_height: float | None = Field(default=None, title='Высота', description='Для Wildberries требуется целое число, значение округляется автоматически.')
 
-    yandex_weight: float | None = Field(default=None, title='Вес c листа', description='Параметр редактируется только для Яндекс Мвркета')
-    yandex_length: float | None = Field(default=None, title='Длинна с листа', description='Параметр редактируется только для Яндекс Мвркета')
-    yandex_width: float | None = Field(default=None, title='Ширина с листа', description='Параметр редактируется только для Яндекс Мвркета')
-    yandex_height: float | None = Field(default=None, title='Высота с листа', description='Параметр редактируется только для Яндекс Мвркета')
+    yandex_weight: float | None = Field(default=None, title='Вес c листа', description='Параметр редактируется только для Яндекс Маркета')
+    yandex_length: float | None = Field(default=None, title='Длинна с листа', description='Параметр редактируется только для Яндекс Маркета')
+    yandex_width: float | None = Field(default=None, title='Ширина с листа', description='Параметр редактируется только для Яндекс Маркета')
+    yandex_height: float | None = Field(default=None, title='Высота с листа', description='Параметр редактируется только для Яндекс Маркета')
 
     wholesale_dollar_cost_price: float | None = Field(default=None, title='ОПТ закупка у. е.')
 
     auto_participation_in_promotions: bool | None = Field(default=None, title='Автоучастие в акциях')
 
     total_price_min_additional: float | None = Field(default=None, title='Мин. наценка на расчетную цену')
-    total_price_coeff: float | None = Field(default=None, title='Коэфициент расчетной цены')
+    total_price_coeff: float | None = Field(default=None, title='Коэффициент расчетной цены')
 
     note_1: str | None = Field('', title='Примечание 1')
     note_2: str | None = Field('', title='Примечание 2')
