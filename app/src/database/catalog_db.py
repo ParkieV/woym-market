@@ -7,6 +7,8 @@ from sqlalchemy.orm import selectinload
 from src.database.models.models import CatalogItem, Offer
 from src.schemas import catalog_schemas as schemas
 
+CONTROL_CHANGES = ['self_weight', 'self_length', 'self_width', 'self_height', 'description', 'name', 'barcodes']
+
 
 async def get_all_catalog_items(session: AsyncSession) -> list[CatalogItem]:
     catalog_query = select(CatalogItem).options(selectinload(CatalogItem.synchronization))
@@ -21,6 +23,16 @@ async def change_catalog_items(session: AsyncSession, items: list[schemas.Catalo
 
         changed_data = item.model_dump(exclude_unset=True)
         if 'synchronization' in changed_data: changed_data.pop('synchronization')
+
+        track_changes = {
+            f'{column}_changed': or_(
+                getattr(CatalogItem, f'{column}_changed'),
+                func.concat(getattr(CatalogItem, column), '') != (changed_data[column] or '')
+            )
+            for column in CONTROL_CHANGES if column in changed_data
+        }
+
+        changed_data.update(track_changes)
 
         item_stmp = update(CatalogItem).where(CatalogItem.sku == item.sku).values(**changed_data)
         await session.execute(item_stmp)
