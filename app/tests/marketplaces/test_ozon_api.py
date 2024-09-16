@@ -1,6 +1,7 @@
 import pytest
 from datetime import datetime, timedelta
 from src.api.ozon.api import OzonAPI
+from src.schemas.base_api_schemas import APIOfferChangeData
 from tests.marketplaces.conftest import BaseMarketplaceAPITest
 from src.params.confing import config
 import pandas as pd  #noqa
@@ -37,3 +38,20 @@ class TestOzonAPI(BaseMarketplaceAPITest):
 
         assert isinstance(orders, list)
         assert orders
+
+    async def test_change_offers(self, api: OzonAPI):
+        data = [
+            APIOfferChangeData(
+                sku='26714',
+                market='ozon',
+                name_of_shop='Skrab',
+                name='Нож строительный',
+                description='Описание',
+                search_words='нож строительный',
+                self_weight='0.09',
+                self_length='20',
+                self_width='10',
+                self_height='4',
+            )
+        ]
+        await api.change_offers(data)

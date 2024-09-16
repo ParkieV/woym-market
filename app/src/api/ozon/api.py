@@ -24,11 +24,75 @@ class OfferIdentifier:
 
 
 class OzonAPI(BaseAPI):
-    async def change_offers(self, data: list[APIOfferChangeData]) -> None:
-        url = 'https://api-seller.ozon.ru/v1/product/attributes/update'
 
-        valid_data = [i for i in data if all((i.is_valid_name(), i.is_valid_description(), i.is_valid_search_words()))]
-        invalid_data = [i for i in data if not all((i.is_valid_name(), i.is_valid_description(), i.is_valid_search_words()))]
+    def __get_info_attributes(self, skus: list[str] | None = None) -> dict[str, dict]:
+        url = 'https://api-seller.ozon.ru/v3/products/info/attributes'
+        chunk_size = 1000
+        body = {
+            'filter': {
+                'offer_id': skus or []
+            },
+            'limit': chunk_size
+        }
+
+        results = {}
+
+        while True:
+            response = self.session.post(url, json=body, headers=self.auth_headers)
+
+            if not response.ok:
+                logger.error(f'Cant get info attributes: {response.text}')
+                continue
+
+            json_response = response.json()
+
+            for item in json_response.get('result', []):
+                results[item['offer_id']] = item
+
+            last_id = json_response.get('last_id', None)
+            if not last_id:
+                break
+
+            body['last_id'] = last_id
+
+        return results
+
+    def __get_offers_prices(self, skus: list[str] | None = None) -> dict[str, dict]:
+        url = 'https://api-seller.ozon.ru/v4/product/info/prices'
+        results = {}
+        chunk_size = 1000
+        body = {
+            "filter": {
+                "offer_id": skus or [],
+                "visibility": "ALL"
+            },
+            "limit": chunk_size
+        }
+        while True:
+            response = self.session.post(url, json=body, headers=self.auth_headers)
+            if not response.ok:
+                logger.error(f'Cant collect offers price info: {response.text}')
+                break
+
+            json_response = response.json()
+
+            for item in json_response.get('result', {}).get('items', []):
+                results[item['offer_id']] = item
+
+            last_id = json_response.get('result', {}).get('last_id', None)
+            if not last_id or json_response.get('result', {}).get('total', 0) < chunk_size:
+                break
+
+            body['last_id'] = last_id
+
+        return results
+
+    async def change_offers(self, data: list[APIOfferChangeData]) -> None:
+        url = 'https://api-seller.ozon.ru/v3/product/import'
+
+        is_valid_offer_data = lambda x: all((x.is_valid_name(), x.is_valid_description(), x.is_valid_search_words(), x.is_valid_sizes()))
+        valid_data = [i for i in data if is_valid_offer_data(i)]
+        invalid_data = [i for i in data if not is_valid_offer_data(i)]
 
         if invalid_data:
             logger.error(f'Invalid offers data: {len(invalid_data)} / {len(valid_data)} {invalid_data}')
@@ -37,66 +101,98 @@ class OzonAPI(BaseAPI):
             logger.warning(f'{self.shop_name}(ozon) has no valid offers data')
             return
 
-        # TODO Передавать параметры для размеров и веса
-        body = {
-            'items': [
-                {
-                    'offer_id': item.sku,
-                    "attributes": [
-                        {
-                            "id": 22336, # поисковые слова
-                            "complex_id": 0,
-                            "values": [
-                                {
-                                    "dictionary_value_id": 0,
-                                    "value": item.search_words
-                                }
-                            ]
-                        },
-                        {
-                            "id": 4180, # название
-                            "complex_id": 0,
-                            "values": [
-                                {
-                                    "dictionary_value_id": 0,
-                                    "value": item.name
-                                }
-                            ]
-                        },
-                        {
-                            "id": 4191, # описание
-                            "complex_id": 0,
-                            "values": [
-                                {
-                                    "dictionary_value_id": 0,
-                                    "value": item.description
-                                }
-                            ]
-                        }
-                    ]
-                }
-                for item in valid_data
-            ]
-        }
-        response = self.session.post(url, headers=self.auth_headers, json=body)
+        offers_attributes_info = self.__get_info_attributes([i.sku for i in valid_data])
+        offers_prices_info = self.__get_offers_prices([i.sku for i in valid_data])
 
-        if not response.ok:
-            logger.error(f'Cant update offers attributes {response.text}')
-            return
+        to_update_offers_data = []
+        for valid_offer in valid_data:
+            offer_price_info = offers_prices_info.get(valid_offer.sku, None)
+            offer_attributes_info = offers_attributes_info.get(valid_offer.sku, None)
 
-        json_response = response.json()
-        task_id = json_response.get('task_id', None)
-        await asyncio.sleep(5)
-        self.check_task_status(task_id)
+            if not offer_attributes_info or not offer_price_info:
+                continue
+
+            update_offer_data = offer_attributes_info
+            update_offer_data['price'] = offer_price_info['price']['price']
+            update_offer_data['old_price'] = offer_price_info['price']['old_price']
+            update_offer_data['vat'] = offer_price_info['price']['vat']
+            update_offer_data['name'] = valid_offer.name
+
+            dimension_unit = 'cm'
+            if any((valid_offer.self_height < 1, valid_offer.self_width < 1, valid_offer.self_length < 1)):
+                dimension_unit = 'mm'
+                valid_offer.self_height, valid_offer.self_width, valid_offer.self_length = valid_offer.self_height * 10, valid_offer.self_width * 10, valid_offer.self_length * 10
+
+            weight_unit = 'kg'
+            if valid_offer.self_weight < 1:
+                valid_offer.self_weight *= 1000
+                weight_unit = 'g'
+
+            update_offer_data['height'] = round(valid_offer.self_height)
+            update_offer_data['width'] = round(valid_offer.self_width)
+            update_offer_data['depth'] = round(valid_offer.self_length)
+            update_offer_data['weight'] = round(valid_offer.self_weight)
+            update_offer_data['dimension_unit'] = dimension_unit
+            update_offer_data['weight_unit'] = weight_unit
+
+            update_offer_data['attributes'] = update_offer_data['attributes'] or []
+            update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] if attr['attribute_id'] not in (22336, 4191)]
+            update_offer_data['attributes'].extend(
+                [
+                    {
+                        "id": 22336,  # поисковые слова
+                        "complex_id": 0,
+                        "values": [
+                            {
+                                "dictionary_value_id": 0,
+                                "value": valid_offer.search_words
+                            }
+                        ]
+                    },
+                    {
+                        "id": 4191,  # описание
+                        "complex_id": 0,
+                        "values": [
+                            {
+                                "dictionary_value_id": 0,
+                                "value": valid_offer.description
+                            }
+                        ]
+                    }
+                ]
+            )
+
+            to_update_offers_data.append(update_offer_data)
+
+        chunk_size = 100
+
+        for i in range(0, len(to_update_offers_data), chunk_size):
+            body = {
+                'items': [offer_data for offer_data in to_update_offers_data[i:i + chunk_size]]
+            }
+            response = self.session.post(url, json=body, headers=self.auth_headers)
+            if not response.ok:
+                logger.error(f'Cant update offers data: {response.text}')
+                continue
+
+            json_response = response.json()
+            task_id = json_response.get('result', {}).get('task_id', None)
+            if not task_id:
+                logger.error(f'Cant find task_id: {response.text}')
+                return
+
+            await asyncio.sleep(5)
+            self.check_task_status(task_id)
 
     def check_task_status(self, task_id: int) -> bool:
         if not task_id:
+
             return
 
         body = {
             'task_id': task_id,
         }
-        response = self.session.post(f'https://api-seller.ozon.ru/v1/product/import/info', json=body)
+        response = self.session.post(f'https://api-seller.ozon.ru/v1/product/import/info', json=body, headers=self.auth_headers)
 
         if not response.ok:
             logger.error(f'Cant check task({task_id}) status {response.text}')
@@ -106,13 +202,13 @@ class OzonAPI(BaseAPI):
 
         for item_info in json_response.get('result', {}).get('items', []):
             if item_info.get('status') == 'failed':
-                logger.error(f'Offer {item_info.get("offer_id", "unknown")} was loaded with errors: {item_info.get("errors", "unknown")}')
+                logger.error(
+                    f'Offer {item_info.get("offer_id", "unknown")} was loaded with errors: {item_info.get("errors", "unknown")}')
 
             elif item_info.get('status') == 'pending':
                 logger.warning(f'Offer {item_info.get("offer_id", "unknown")} is still in pending')
 
         logger.info(f'Task {task_id} checked. Total {json_response.get("result", {}).get("total", "unknown")}')
-
 
     def __init__(self, token: str, entity_id: int, shop_name: str):
         self.token = token
@@ -186,8 +282,10 @@ class OzonAPI(BaseAPI):
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 1000
 
-        valid_price_data = [i for i in data if all((i.is_valid_min_price(), i.is_valid_target_price(), i.is_valid_discount_base_price()))]
-        invalid_data = [i for i in data if not all((i.is_valid_min_price(), i.is_valid_target_price(), i.is_valid_discount_base_price()))]
+        valid_price_data = [i for i in data if
+                            all((i.is_valid_min_price(), i.is_valid_target_price(), i.is_valid_discount_base_price()))]
+        invalid_data = [i for i in data if
+                        not all((i.is_valid_min_price(), i.is_valid_target_price(), i.is_valid_discount_base_price()))]
 
         if invalid_data:
             logger.warning(f'Invalid prices data: {len(invalid_data)} / {len(valid_price_data)} {invalid_data}')
@@ -305,7 +403,8 @@ class OzonAPI(BaseAPI):
             data = self.validate_response(response, body=body)
             # 4191 description
             for offer in data['result']:
-                description_attributes = [i['values'][0] for i in offer['attributes'] if i['attribute_id'] == 4191 and len(i['values'])]
+                description_attributes = [i['values'][0] for i in offer['attributes'] if
+                                          i['attribute_id'] == 4191 and len(i['values'])]
                 descriptions = '. '.join(i['value'] for i in description_attributes)
 
                 # TODO посчитать объем
@@ -477,7 +576,8 @@ class OzonAPI(BaseAPI):
 
         if not response.ok:
             logger.error(f'Cant get orders from {from_date}: {response.text}')
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалось получить заказы: {response.json().get("message", "unknown")}')
+            raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                                f'Не удалось получить заказы: {response.json().get("message", "unknown")}')
 
         json_response = response.json()
         result = []
