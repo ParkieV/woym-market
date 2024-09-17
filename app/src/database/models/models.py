@@ -332,9 +332,16 @@ class CatalogItem(Base):
 
     volume = Column(Float, nullable=True, default=None)
     catalog_note = Column(String, nullable=True, server_default=text("'Новый товар'"))
+
     use_promotion_price = Column(Boolean, nullable=False, default=False)
+    use_promotion_price_changed = Column(Boolean, nullable=False, default=False)
+
     wholesale_dollar_cost_price = Column(Float, nullable=True, default=None)
+    wholesale_dollar_cost_price_changed = Column(Boolean, nullable=False, default=False)
+
     supplier_available = Column(Boolean, nullable=False, default=False)
+    supplier_available_changed = Column(Boolean, nullable=False, default=False)
+
     dollar_cost_price_updated_at = Column(DateTime, nullable=True, default=None)
 
     description = Column(String, nullable=True, default=None, server_default=None)

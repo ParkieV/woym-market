@@ -118,3 +118,8 @@ async def import_item_prices(data: bytes, file_extension: str = '.xlsx'):
 
         await db.set_supplier_available(session, db_skus & import_skus, True)
         await db.set_supplier_available(session, db_skus - import_skus, False)
+
+
+async def reverse_sync_catalog_items_with_offer(skus: list[str] | None = None, exclude_fields: list | None = None) -> None:
+    async with async_session() as session:
+        await db.reverse_sync_offers_with_catalog_items(session, skus, exclude_fields)

@@ -20,7 +20,7 @@ async def get_catalog_items():
     return await service.get_catalog_items()
 
 
-@router.post('', dependencies=[Depends(require_staff)], summary='Изменение товаров каталога')
+@router.patch('', dependencies=[Depends(require_staff)], summary='Изменение товаров каталога')
 async def change_catalog_items(items: list[CatalogItemUpdate]):
     await service.change_catalog_items(items)
 
@@ -31,9 +31,21 @@ async def setup_catalog_items(background: BackgroundTasks):
     return {'status': 'OK'}
 
 
-@router.post('/synchronization', tags=["Debug"], dependencies=[Depends(require_staff)], summary='Синхронизация', description='Запускает задачу синхронизации карточек товаров с каталогом')
+@router.post('/synchronization', tags=["Debug"], dependencies=[Depends(require_staff)], summary='Синхронизация')
 async def synchronize_catalog_items(background: BackgroundTasks, skus: list[str] = Body(embed=True)):
+    """
+    Запускает задачу синхронизации карточек товаров с каталогом
+    """
     background.add_task(service.sync_catalog_items_with_offers, skus=skus)
+    return {'status': 'OK'}
+
+
+@router.post('/reverse-synchronization', tags=["Debug"], dependencies=[Depends(require_staff)], summary='Обратная синхронизация')
+async def reverse_synchronize_catalog_items(background: BackgroundTasks, skus: list[str] = Body(embed=True)):
+    """
+
+    """
+    background.add_task(service.reverse_sync_catalog_items_with_offer, skus=skus)
     return {'status': 'OK'}
 
 
