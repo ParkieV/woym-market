@@ -9,7 +9,7 @@ class SynchronizationOffer(BaseModel):
     market: str = Field(title='Площадка')
     name_of_shop: str = Field(title='Название магазина')
     synchronization: bool = Field(title='Синхронизация товара с каталогом')
-    reverse_synchronization: bool = Field(title='Обратная синхронизация каталога с товаром')
+    reverse_synchronization: bool = Field(title='Обратная синхронизация каталога с товаром', description='Может быть выставлен только у одноготтовара с одинаковыми SKU.')
     # is_blocked: bool = Field(title='Доступно ли изменение синхронизации', description='Если поле false, то товар на данной площадке не представлен')
 
 

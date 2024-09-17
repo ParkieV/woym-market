@@ -7,7 +7,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.services.base_utils
-from src.database.catalog_db import sync_catalog_items_with_offers
+from src.database.catalog_db import sync_catalog_items_with_offers, reverse_sync_offers_with_catalog_items
 from src.database.models.models import Offer
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.confing import config
@@ -82,7 +82,10 @@ async def update_offers(user_id: int):
         markets = await get_markets(session)
         settings = await get_user_settings(session, user_id)
 
+        await reverse_sync_offers_with_catalog_items(session)
+        logger.info('Reverse sync completed')
         await sync_catalog_items_with_offers(session)
+        logger.info('Direct sync sync completed')
         await recalculate_values(session, settings, offers_filter=OffersFilter(synchronization=True))
 
     # Получаем товары из бд

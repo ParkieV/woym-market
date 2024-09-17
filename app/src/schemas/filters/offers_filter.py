@@ -25,6 +25,7 @@ class OffersFilter(OffersSourceFilter):
     offer_ids: list[int] | None = Field(default=None, title='ID Карточки товара в системе')
     pricing_scheme_name: str | None = Field(default=None, title='Схема ценообразования')
     synchronization: bool | None = Field(default=None, title='Синхронизация карточки товара с каталогом')
+    reverse_synchronization: bool | None = Field(default=None, title='Обратная синхронизация')
 
     def __call__(self, query, *args, **kwargs):
         query = super().__call__(query, *args, **kwargs)
