@@ -66,6 +66,7 @@ services:
       - loki
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana.ini:/etc/grafana/grafana.ini
 
 volumes:
   grafana_data:

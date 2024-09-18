@@ -27,7 +27,7 @@ async def change_catalog_items(session: AsyncSession, items: list[schemas.Catalo
                 getattr(CatalogItem, f'{column}_changed'),
                 func.concat(getattr(CatalogItem, column), '') != (changed_data[column] or '')
             )
-            for column in CatalogItem.__table__.columns.keys() if column in changed_data and getattr(CatalogItem, column, None)
+            for column in CatalogItem.__table__.columns.keys() if column in changed_data and getattr(CatalogItem, column, None) and getattr(CatalogItem, f'{column}_changed', None)
         }
 
         changed_data.update(track_changes)
@@ -44,8 +44,7 @@ async def change_catalog_items(session: AsyncSession, items: list[schemas.Catalo
 async def set_offers_sync(session: AsyncSession, items: list[schemas.SynchronizationOffer]):
     for item in items:
         stmp = update(Offer).where(Offer.id == item.id).values(
-            synchronization=item.synchronization,
-            reverse_synchronization=item.reverse_synchronization
+            synchronization=item.synchronization
         )
         await session.execute(stmp)
 
@@ -179,7 +178,7 @@ async def reverse_sync_offers_with_catalog_items(session: AsyncSession, skus: li
 
     stmp = (
         update(CatalogItem)
-        .where(Offer.reverse_synchronization == True, Offer.sku == CatalogItem.sku)
+        .where(Offer.id == CatalogItem.reverse_sync_offer_id)
         .values(update_values)
         .execution_options(synchronize_session="fetch")
     )

@@ -9,7 +9,6 @@ class SynchronizationOffer(BaseModel):
     market: str = Field(title='Площадка')
     name_of_shop: str = Field(title='Название магазина')
     synchronization: bool = Field(title='Синхронизация товара с каталогом')
-    reverse_synchronization: bool = Field(title='Обратная синхронизация каталога с товаром', description='Может быть выставлен только у одноготтовара с одинаковыми SKU.')
     # is_blocked: bool = Field(title='Доступно ли изменение синхронизации', description='Если поле false, то товар на данной площадке не представлен')
 
 
@@ -32,15 +31,7 @@ class CatalogItemUpdate(BaseCatalogItem):
     wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.', default=None)
     supplier_available: bool | None = Field(title='Наличие у поставщика', default=None)
     synchronization: list[SynchronizationOffer] = Field(title='Связанные товары', default_factory=list)
-
-    @field_validator('synchronization', mode='before')
-    @classmethod
-    def check_single_reverse_synchronization(cls, items: list[SynchronizationOffer]) -> list[SynchronizationOffer]:
-        reverse_markers = [i for i in items if i.get('reverse_synchronization', None)]
-        if len(reverse_markers) > 1:
-            raise ValueError('Синхронизировать каталог можно только с одним товаром. Выставите синхронизацию каталога только для одного товара')
-        return items
-
+    reverse_sync_offer_id: int | None = Field(default=None, title='ID карточки товара для обратной синхронизации')
 
 
 class CatalogItemCreate(CatalogItemUpdate):

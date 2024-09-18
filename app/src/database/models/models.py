@@ -141,7 +141,6 @@ class Offer(Base):
     search_words_changed = Column(Boolean, default=False, nullable=False)
 
     synchronization = Column(Boolean, default=False, nullable=False)
-    reverse_synchronization = Column(Boolean, default=False, nullable=False)
 
     stocks = relationship('OfferStock')
 
@@ -355,6 +354,8 @@ class CatalogItem(Base):
 
     barcodes = Column(String, nullable=True, default=None, server_default=None)
     barcodes_changed = Column(Boolean, nullable=False, default=False)
+
+    reverse_sync_offer_id = Column(Integer, ForeignKey('offers.id'), nullable=True, default=None)
 
     synchronization = relationship('Offer', uselist=True, primaryjoin='foreign(Offer.sku) == CatalogItem.sku')
 
