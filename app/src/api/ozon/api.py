@@ -276,8 +276,10 @@ class OzonAPI(BaseAPI):
                 }
             else:
                 temp[warehouse_stock['warehouse_name']]['offers'].append(stock)
-
-        return [APIWarehouse(**i) for i in temp.values()] + self._get_clasters_info()
+        result = [APIWarehouse(**i) for i in temp.values()]
+        result.extend(self._get_clasters_info())
+        result.append(APIWarehouse(market='ozon', name='Кластер все магазины', offers=[], warehouse_type=WarehouseType.SUPER_CLUSTER))
+        return result
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 1000

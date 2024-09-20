@@ -10,6 +10,7 @@ from pydantic import BaseModel
 class WarehouseType(str, Enum):
     WAREHOUSE = 'warehouse'
     CLUSTER = 'cluster'
+    SUPER_CLUSTER = 'super_cluster'
 
 
 @dataclass(frozen=True)

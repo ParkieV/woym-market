@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from src.api.base_api import BaseAPI
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, \
-    APIOfferChangeData, APIOrderData
+    APIOfferChangeData, APIOrderData, WarehouseType
 
 logger = get_logger(__name__)
 
@@ -317,6 +317,7 @@ class YandexMarketAPI(BaseAPI):
                 name=warehouses[warehouse_id]['name'],
             )
             result.append(warehouse)
+        result.append(APIWarehouse(name='Кластер все магазины', offers=[], warehouse_type=WarehouseType.SUPER_CLUSTER, market='yandex'))
         return result
 
     def _get_warehouses_info(self) -> dict[int, dict[str, Any]]:

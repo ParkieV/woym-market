@@ -397,6 +397,53 @@ async def create_fbo_stocks_(session: AsyncSession, data: list[dict]):
     await session.commit()
 
 
+async def recalculate_clusters(session: AsyncSession):
+    clusters_subquery = (
+        select(
+            Warehouse.parent_warehouse_id.label('id'),
+            func.sum(OfferStock.current_stock).label('current_stock')
+        )
+        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .where(Warehouse.warehouse_type == 'warehouse')
+        .group_by(Warehouse.parent_warehouse_id)
+    ).subquery('clusters_subquery')
+
+    clusters_stmp = (
+        update(OfferStock)
+        .where(OfferStock.warehouse_id == clusters_subquery.c.id)
+        .values(
+            current_stock=clusters_subquery.c.current_stock
+        )
+    )
+    await session.execute(clusters_stmp)
+
+    super_clusters_subquery = (
+        select(
+            Warehouse.id.label('id'),
+            func.sum(OfferStock.current_stock).label('current_stock')
+        )
+        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .where(Warehouse.warehouse_type == 'warehouse')
+        .group_by(Warehouse.id)
+    ).subquery('super_clusters_subquery')
+
+    super_clusters_stmp = (
+        update(OfferStock)
+        .where(OfferStock.warehouse_id == super_clusters_subquery.c.id)
+        .values(
+            current_stock=super_clusters_subquery.c.current_stock
+        )
+    )
+
+    await session.execute(super_clusters_stmp)
+
+    await session.commit()
+
+
+
+
+
+
 async def update_fbo_stocks(session: AsyncSession, data: list[dict]):
     for stock in data:
         stmp = update(OfferStock).values(current_stock=stock['current_stock']).where(OfferStock.id == stock['id'])

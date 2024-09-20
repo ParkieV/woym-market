@@ -118,6 +118,7 @@ class WildberriesAPI(BaseAPI):
                     warehouse_type=WarehouseType.WAREHOUSE
                 )
             )
+        result.append(APIWarehouse(market='wildberries', offers=[], name='Кластер все магазины', warehouse_type=WarehouseType.SUPER_CLUSTER))
         return result
 
     def _check_price_update_result(self, task_id: int) -> None:
