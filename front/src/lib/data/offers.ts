@@ -79,7 +79,12 @@ export type Offer = OfferBase & {
 };
 
 export async function fetchOfferList(): Promise<Offer[]> {
-    let offers = fetchJSON<Offer[]>("offers");
+    let offers = fetchJSON<Offer[]>("offers", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
     showFetchModals(offers.then(x => x.response));
     return (await offers).data;
 }
