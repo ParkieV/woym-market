@@ -14,7 +14,7 @@ from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehou
 from dataclasses import dataclass
 from logs import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger(__name__, tags={'marketplace_api': 'ozon'})
 
 
 @dataclass

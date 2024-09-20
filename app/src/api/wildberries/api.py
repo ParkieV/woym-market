@@ -11,7 +11,7 @@ from src.api.base_api import BaseAPI
 from src.schemas.base_api_schemas import APIPriceChangeData, APIWarehouse, APIOffer, WarehouseType, APIWarehouseOffer, \
     APIOfferChangeData, APIOrderData
 
-logger = get_logger(__name__)
+logger = get_logger(__name__, tags={'marketplace_api': 'wildberries'})
 
 
 class WildberriesAPI(BaseAPI):

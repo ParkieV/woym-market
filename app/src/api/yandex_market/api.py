@@ -13,7 +13,7 @@ from src.api.base_api import BaseAPI
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, \
     APIOfferChangeData, APIOrderData, WarehouseType
 
-logger = get_logger(__name__)
+logger = get_logger(__name__, tags={'marketplace_api': 'yandex'})
 
 
 class YandexMarketAPI(BaseAPI):
