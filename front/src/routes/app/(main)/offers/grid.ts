@@ -128,10 +128,30 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
         {
             header: "Габариты (Маркет)",
             children: [
-                { header: "Вес, кг", key: "yandex_weight", base: floatColumn },
-                { header: "Длина, см", key: "yandex_length", base: floatColumn },
-                { header: "Ширина, см", key: "yandex_width", base: floatColumn },
-                { header: "Высота, см", key: "yandex_height", base: floatColumn },
+                {
+                    header: "Вес, кг",
+                    key: "yandex_weight",
+                    base: floatColumn,
+                    editable: ({ data }) => (data as Offer).market === "yandex"
+                },
+                {
+                    header: "Длина, см",
+                    key: "yandex_length",
+                    base: floatColumn,
+                    editable: ({ data }) => (data as Offer).market === "yandex"
+                },
+                {
+                    header: "Ширина, см",
+                    key: "yandex_width",
+                    base: floatColumn,
+                    editable: ({ data }) => (data as Offer).market === "yandex"
+                },
+                {
+                    header: "Высота, см",
+                    key: "yandex_height",
+                    base: floatColumn,
+                    editable: ({ data }) => (data as Offer).market === "yandex"
+                },
                 {
                     key: "yandex_volume",
                     header: "Объём, л",
