@@ -1,0 +1,33 @@
+from pydantic import Field
+
+from src.database.models.models import Warehouse, OfferStock
+from src.schemas.filters.filter_schemas import BaseFilter
+from src.schemas.stocks.warehouses_schemas import WarehouseTypes
+
+
+class WarehousesFilter(BaseFilter):
+    warehouse_type: WarehouseTypes | None = Field(default=None, title='Тип склада')
+    market: str | None = Field(default=None, title='Маркетплейс')
+
+    def __call__(self, query, *args, **kwargs):
+        if self.warehouse_type:
+            query = query.where(Warehouse.warehouse_type == self.warehouse_type)
+
+        if self.market:
+            query = query.where(Warehouse.market == self.market)
+
+        return query
+
+
+class FBOStocksFilter(BaseFilter):
+    warehouse_ids: list[int] | None = Field(default=None, title='Id складов в системе сервиса')
+    offer_ids: list[int] | None = Field(default=None, title='Id карточек товаров')
+
+    def __call__(self, query, *args, **kwargs):
+        if self.warehouse_ids:
+            query = query.where(OfferStock.warehouse_id.in_(self.warehouse_ids))
+
+        if self.offer_ids:
+            query = query.where(OfferStock.offer_id.in_(self.offer_ids))
+
+        return query

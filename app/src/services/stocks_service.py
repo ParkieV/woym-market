@@ -13,6 +13,7 @@ from src.database import warehouse_db as db
 from src.database.models.models import Offer
 from src.database.offer_db import get_offers_fields
 from src.params.confing import config
+from src.schemas.filters.stocks_filter import WarehousesFilter
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks.own_storages_schemas import OwnStorageUpdate, OwnStoragePlaceCreate, \
     OwnStoragePlaceOut, OwnStoragePlaceUpdate
@@ -106,9 +107,9 @@ async def update_warehouses_and_stocks():
 # async def update_or_create_super_clusters():
 
 
-async def get_warehouses():
+async def get_warehouses(filter: WarehousesFilter | None = None):
     async with async_session() as session:
-        return await db.get_warehouses(session)
+        return await db.get_warehouses(session, filter_=filter)
 
 
 @error_handler('Не удалось получить собственные остатки.')

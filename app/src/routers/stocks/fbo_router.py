@@ -2,7 +2,7 @@ from pathlib import PurePath
 from fastapi import APIRouter, Depends, Body, UploadFile, File, HTTPException
 from starlette import status
 from src.dependencies.users import get_current_user, require_staff
-from src.schemas.stocks.fbo_schemas import OfferFBOStockUpdate, OfferStockOut
+from src.schemas.stocks.fbo_schemas import OfferFBOStockUpdate, OfferStockOut, AggOfferFBOStock
 from src.services import stocks_service as service
 
 router = APIRouter(
@@ -11,7 +11,7 @@ router = APIRouter(
 )
 
 
-@router.post('',  dependencies=[Depends(get_current_user)], summary='Данные FBO', description='Данные о FBO остатках, аггрегированные по товарам')
+@router.post('',  dependencies=[Depends(get_current_user)], response_model=list[AggOfferFBOStock], summary='Данные FBO', description='Данные о FBO остатках, аггрегированные по товарам')
 async def get_fbo_data(
         warehouse_ids: list[int] | None = Body(
             default=None,

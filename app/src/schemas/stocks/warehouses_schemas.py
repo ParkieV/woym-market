@@ -9,6 +9,7 @@ from src.schemas.base_api_schemas import WarehouseType
 class WarehouseTypes(str, Enum):
     WAREHOUSE = 'warehouse'
     CLUSTER = 'cluster'
+    SUPER_CLUSTER = 'super_cluster'
 
 
 class BaseWarehouse(BaseModel):

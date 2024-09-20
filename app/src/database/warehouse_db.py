@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 from src.database.models.models import Offer
 from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market
 from src.database.utils import _update_or_create_object
+from src.schemas.filters.stocks_filter import WarehousesFilter
 from src.schemas.stocks.fbo_schemas import OfferStockOut, OfferFBOStockUpdate, AggOfferFBOStock
 from src.schemas.stocks.own_storages_schemas import OwnStorageAggOfferOut, OwnStorageOfferStockOut, OwnStorageOut, \
     OwnStorageStockOut, OwnStorageUpdate, OwnStoragePlaceCreate, OwnStoragePlaceOut, \
@@ -22,8 +23,10 @@ from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 ModelSchema = TypeVar('ModelSchema', bound=Type[BaseModel])
 
 
-async def get_warehouses(session: AsyncSession, model_schema: ModelSchema = WarehouseOut) -> list[ModelSchema]:
+async def get_warehouses(session: AsyncSession, model_schema: ModelSchema = WarehouseOut, filter_: WarehousesFilter | None = None) -> list[ModelSchema]:
     query = select(Warehouse)
+    if filter_:
+        query = filter_(query)
     result = await session.execute(query)
     return [model_schema.model_validate(warehouse_db, from_attributes=True) for warehouse_db in result.scalars().all()]
 
@@ -515,16 +518,3 @@ async def get_agg_fbo_data(session: AsyncSession, warehouse_ids: list[int] | Non
     return [AggOfferFBOStock.model_validate(i, from_attributes=True) for i in results]
 
 
-async def get_agg_warehouses(session: AsyncSession):
-    query = (
-        select(
-            func.sum(OfferStock.current_stock),
-            Warehouse.market
-        )
-        .where(Warehouse.warehouse_type == 'warehouse')
-        .group_by(Warehouse.market)
-    )
-
-    result = (await session.execute(query)).all()
-
-    _update_or_create_object
