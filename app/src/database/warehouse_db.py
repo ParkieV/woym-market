@@ -392,28 +392,9 @@ async def change_own_storage_places(session: AsyncSession, data: list[OwnStorage
 
 
 async def create_fbo_stocks_(session: AsyncSession, data: list[dict]):
-    for item in data:
-        warehouse_id_query = select(Warehouse.id).where(Warehouse.name == item["warehouse_name"])
-        warehouse_id_rez = (await session.execute(warehouse_id_query)).first()
-
-        if not warehouse_id_rez:
-            continue
-
-        offer_id_query = select(Offer.id).where(
-            and_(Offer.sku == item['sku'], Offer.market == item['market'], Offer.name_of_shop == item['name_of_shop']))
-        offer_id_rez = (await session.execute(offer_id_query)).first()
-
-        if not offer_id_rez:
-            continue
-
-        stmp = insert(OfferStock).values(
-            offer_id=offer_id_rez[0],
-            current_stock=item['current_stock'],
-            warehouse_id=warehouse_id_rez[0],
-        )
-        await session.execute(stmp)
-
-        await session.commit()
+    new_db_stocks = [OfferStock(**i) for i in data]
+    session.add_all(new_db_stocks)
+    await session.commit()
 
 
 async def update_fbo_stocks(session: AsyncSession, data: list[dict]):
@@ -464,7 +445,8 @@ async def get_offer_fbo_stocks(session: AsyncSession, offer_id: int) -> list[Off
     return [OfferStockOut.model_validate(i, from_attributes=True) for i in result]
 
 
-async def get_agg_fbo_data(session: AsyncSession, warehouse_ids: list[int] | None = None, ignore_clusters: bool = True) -> list[AggOfferFBOStock]:
+async def get_agg_fbo_data(session: AsyncSession, warehouse_ids: list[int] | None = None,
+                           ignore_clusters: bool = True) -> list[AggOfferFBOStock]:
     query = (
         select(
             OfferStock.offer_id,
@@ -479,7 +461,23 @@ async def get_agg_fbo_data(session: AsyncSession, warehouse_ids: list[int] | Non
         query = query.where(OfferStock.offer_id.in_(warehouse_ids))
 
     if ignore_clusters:
-        query = query.join(Warehouse, Warehouse.id == OfferStock.warehouse_id).where(Warehouse.warehouse_type == 'warehouse')
+        query = query.join(Warehouse, Warehouse.id == OfferStock.warehouse_id).where(
+            Warehouse.warehouse_type == 'warehouse')
 
     results = (await session.execute(query)).all()
     return [AggOfferFBOStock.model_validate(i, from_attributes=True) for i in results]
+
+
+async def get_agg_warehouses(session: AsyncSession):
+    query = (
+        select(
+            func.sum(OfferStock.current_stock),
+            Warehouse.market
+        )
+        .where(Warehouse.warehouse_type == 'warehouse')
+        .group_by(Warehouse.market)
+    )
+
+    result = (await session.execute(query)).all()
+
+    _update_or_create_object

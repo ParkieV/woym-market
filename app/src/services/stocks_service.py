@@ -10,6 +10,8 @@ from logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
+from src.database.models.models import Offer
+from src.database.offer_db import get_offers_fields
 from src.params.confing import config
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks.own_storages_schemas import OwnStorageUpdate, OwnStoragePlaceCreate, \
@@ -64,23 +66,20 @@ async def update_warehouses_and_stocks():
         logger.info('Warehouses created')
 
         # Обновение остатков, у которых current_stock не совпадает с уже установленными
-        to_update_df = pd.merge(api_stocks_df_exploded, db_stocks_df, how='inner',
-                                on=('sku', 'name_of_shop', 'market', 'warehouse_name'))
-        to_update_df = to_update_df[to_update_df['current_stock_x'] != to_update_df['current_stock_y']].rename(
-            {'current_stock_x': 'current_stock'}, axis='columns')[['id', 'current_stock']]
+        merged_stocks = pd.merge(api_stocks_df_exploded, db_stocks_df, how='outer', on=('sku', 'name_of_shop', 'market', 'warehouse_name'), indicator=True, suffixes=(None, '__db'))
+        to_update_df = merged_stocks[merged_stocks['_merge'] == 'both']
+        to_update_df = to_update_df[to_update_df['current_stock'] != to_update_df['current_stock__db']][['id', 'current_stock']]
         await db.update_fbo_stocks(session, to_update_df.to_dict('records'))
         logger.info(f'FBO stocks updated: {len(to_update_df)}')
 
-        api_idents = set([tuple(i.values()) for i in
-                          api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict(
-                              'records')])
-        db_idents = set([tuple(i.values()) for i in
-                         db_stocks_df[['sku', 'name_of_shop', 'market', 'warehouse_name']].to_dict('records')])
-
-        to_create_idents = api_idents - db_idents
-        to_create_df = pd.merge(
-            pd.DataFrame(to_create_idents, columns=['sku', 'name_of_shop', 'market', 'warehouse_name']),
-            api_stocks_df_exploded, how='inner', on=('sku', 'name_of_shop', 'market', 'warehouse_name')).dropna()
+        # Создание новых остатков
+        to_create_df = merged_stocks[merged_stocks['_merge'] == 'left_only'].drop(columns=['offer_id', 'id', '_merge'])
+        offers_idents = await get_offers_fields(session, [Offer.id, Offer.sku, Offer.name_of_shop, Offer.market])
+        offers_idents_df = pd.DataFrame(offers_idents, columns=['offer_id', 'sku', 'name_of_shop', 'market'])
+        warehouses_df = pd.DataFrame([i.model_dump() for i in await db.get_warehouses(session)]).rename(columns={'name': 'warehouse_name', 'id': 'warehouse_id'})
+        to_create_df = pd.merge(to_create_df, offers_idents_df, how='inner', on=['sku', 'market', 'name_of_shop'])
+        to_create_df = pd.merge(to_create_df, warehouses_df, how='inner', on=['warehouse_name', 'market', 'warehouse_type'])
+        to_create_df = to_create_df[['offer_id', 'current_stock', 'warehouse_id']]
 
         # Создание новых остатков
         await db.create_fbo_stocks_(session, to_create_df.to_dict('records'))
@@ -101,6 +100,9 @@ async def update_warehouses_and_stocks():
     end_time = datetime.now()
 
     logger.info(f'Update warehouses and stocks completed in {end_time - start_time}')
+
+
+# async def update_or_create_super_clusters():
 
 
 async def get_warehouses():
