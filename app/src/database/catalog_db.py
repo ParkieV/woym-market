@@ -25,7 +25,7 @@ async def change_catalog_items(session: AsyncSession, items: list[schemas.Catalo
         track_changes = {
             f'{column}_changed': or_(
                 getattr(CatalogItem, f'{column}_changed'),
-                func.concat(getattr(CatalogItem, column), '') != (changed_data[column] or '')
+                func.concat(getattr(CatalogItem, column), '') != str((changed_data[column] or ''))
             )
             for column in CatalogItem.__table__.columns.keys() if column in changed_data and getattr(CatalogItem, column, None) and getattr(CatalogItem, f'{column}_changed', None)
         }
