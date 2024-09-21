@@ -7,8 +7,10 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.services.base_utils
-from src.database.catalog_db import sync_catalog_items_with_offers, reverse_sync_offers_with_catalog_items
+from src.database.catalog_db import sync_catalog_items_with_offers, reverse_sync_offers_with_catalog_items, \
+    reset_all_track_catalog_markers
 from src.database.models.models import Offer
+from src.database.offer_db import reset_all_track_offers_markers
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.confing import config
 from logs import get_logger
@@ -86,7 +88,8 @@ async def update_offers(user_id: int):
         logger.info('Reverse sync completed')
         await sync_catalog_items_with_offers(session)
         logger.info('Direct sync sync completed')
-        await recalculate_values(session, settings, offers_filter=OffersFilter(synchronization=True))
+        await recalculate_values(session, settings)
+
 
     # Получаем товары из бд
     db_offers = await get_offers_list()
@@ -136,12 +139,12 @@ async def update_offers(user_id: int):
     logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
     await update_offers_attributes(to_update_attributes)
 
-    # Создаем новые товары
-    for market in markets:
-        to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], settings, market, setup_mode=True)
-        await db.create_offers(session, to_create_df_chunked)
-        logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df_chunked)}')
-
+    async with async_session() as session:
+        # Создаем новые товары
+        for market in markets:
+            to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], settings, market, setup_mode=True)
+            await db.create_offers(session, to_create_df_chunked)
+            logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df_chunked)}')
 
     # Создать новые товары в моих остатках
     await create_own_storage_stocks(session)
@@ -150,24 +153,25 @@ async def update_offers(user_id: int):
     # Обновляем товары из апи
     api_offers = await api_wrapper.get_offers_list()
     api_offers_df = pd.DataFrame(api_offers)
-
-    for tracked_column in CONTROL_CHANGES:
-        api_offers_df[f'{tracked_column}_changed'] = False
-
     api_offers_df.replace({np.nan: None}, inplace=True)
 
-    # await db.update_offers(session, api_offers_df, mapping_columns=['name_of_shop', 'market'])
-    await db.change_offers(session, offers=api_offers_df.to_dict('records'), mapping_fields=['sku', 'market', 'name_of_shop'])
-    logger.info(f'Updated db offers: {len(api_offers_df)}')
+    async with async_session() as session:
+        # Изменяем значения карточек товаров значениями из апи
+        await db.change_offers(session, offers=api_offers_df.to_dict('records'), mapping_fields=['sku', 'market', 'name_of_shop'])
+        logger.info(f'Updated db offers: {len(api_offers_df)}')
 
-    # Удаляем товары
-    logger.warning(f"Offers to delete: {len(to_delete_offers)} \n{to_delete_offers[['sku', 'market', 'name_of_shop']].to_dict('records')}")
+        # Удаляем товары
+        if len(to_delete_offers):
+            logger.warning(f"Offers to delete: {len(to_delete_offers)} \n{to_delete_offers[['sku', 'market', 'name_of_shop']].to_dict('records')}")
 
-    # Пересчитать все
-    await recalculate_values(session, settings)
-    logger.info('Offers recalculated')
+        # Пересчитать все
+        await recalculate_values(session, settings)
+        logger.info('Offers recalculated')
 
-    await update_logs(session, user_id, {'updated_at': datetime.now()})
+        await reset_all_track_offers_markers(session)
+        await reset_all_track_catalog_markers(session)
+
+        await update_logs(session, user_id, {'updated_at': datetime.now()})
 
     _time = datetime.now() - start_time
     logger.info(f'Offers update completed in {_time}')
@@ -426,4 +430,9 @@ async def create_violators_file(market: Market | None = None, name_of_shop: str 
         canvas.build(f)
 
         return "data/violators.pdf"
+
+
+async def reset_track_markers() -> None:
+    async with async_session() as session:
+        await db.reset_all_track_offers_markers(session)
 

@@ -322,3 +322,18 @@ async def get_offers_fields(session: AsyncSession, columns: list):
     result = (await session.execute(query)).all()
     return result
 
+
+async def reset_all_track_offers_markers(session: AsyncSession):
+    stmp = update(Offer).values(
+        name_changed=False,
+        description_changed=False,
+        self_weight_changed=False,
+        self_length_changed=False,
+        self_width_changed=False,
+        self_height_changed=False,
+        barcodes_changed=False,
+        search_words_changed=False
+    )
+    await session.execute(stmp)
+    await session.commit()
+

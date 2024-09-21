@@ -23,6 +23,12 @@ async def get_offers(filter: OffersFilter | None = None, paging: PagingFilter | 
     return await service.get_offers_list(paging_filter=paging, offers_filter=filter)
 
 
+@router.post('/reset-track-markers', tags=['Debug'], dependencies=[Depends(require_staff)])
+async def reset_track_markers():
+    await service.reset_track_markers()
+    return {'status': 'OK'}
+
+
 @router.patch('', tags=['Карточки товаров'], summary='Изменение карточек товаров')
 async def change_offer_fields(offers_data: list[OfferChange], current_user=Depends(require_staff)):
     """

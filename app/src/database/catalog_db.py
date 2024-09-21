@@ -187,3 +187,22 @@ async def reverse_sync_offers_with_catalog_items(session: AsyncSession, skus: li
 
     await session.execute(stmp)
     await session.commit()
+
+
+async def reset_all_track_catalog_markers(session: AsyncSession):
+    stmp = update(CatalogItem).values(
+        self_weight_changed=False,
+        self_length_changed=False,
+        self_width_changed=False,
+        self_height_changed=False,
+        use_promotion_price_changed=False,
+        wholesale_dollar_cost_price_changed=False,
+        supplier_available_changed=False,
+        description_changed=False,
+        search_words_changed=False,
+        name_changed=False,
+        barcodes_changed=False,
+    )
+
+    await session.execute(stmp)
+    await session.commit()

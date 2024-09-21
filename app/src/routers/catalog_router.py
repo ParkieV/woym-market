@@ -25,6 +25,12 @@ async def change_catalog_items(items: list[CatalogItemUpdate]):
     await service.change_catalog_items(items)
 
 
+@router.post('/reset-track-markers', tags=['Debug'], dependencies=[Depends(require_staff)])
+async def reset_track_markers():
+    await service.reset_track_markers()
+    return {'status': 'OK'}
+
+
 @router.post('/setup', tags=["Debug"], dependencies=[Depends(require_staff)])
 async def setup_catalog_items(background: BackgroundTasks):
     background.add_task(service.setup_catalog_items)
