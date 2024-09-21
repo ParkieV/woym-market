@@ -71,11 +71,11 @@ class MarketOut(BaseModel):
     price_before_discount: float
     volume_threshold_for_additional_logistics: float
     cost_of_additional_logistics_per_liter: float
-    a_variable_for_smart_delivery: int
-    b_variable_for_smart_delivery: int
-    c_variable_for_smart_delivery: int
-    d_variable_for_smart_delivery: int
-    e_variable_for_smart_delivery: int
+    a_variable_for_smart_delivery: float
+    b_variable_for_smart_delivery: float
+    c_variable_for_smart_delivery: float
+    d_variable_for_smart_delivery: float
+    e_variable_for_smart_delivery: float
 
 
 class MarketUpdate(BaseModel):
@@ -91,11 +91,11 @@ class MarketUpdate(BaseModel):
     price_before_discount: float
     volume_threshold_for_additional_logistics: float
     cost_of_additional_logistics_per_liter: float
-    a_variable_for_smart_delivery: int
-    b_variable_for_smart_delivery: int
-    c_variable_for_smart_delivery: int
-    d_variable_for_smart_delivery: int
-    e_variable_for_smart_delivery: int
+    a_variable_for_smart_delivery: float
+    b_variable_for_smart_delivery: float
+    c_variable_for_smart_delivery: float
+    d_variable_for_smart_delivery: float
+    e_variable_for_smart_delivery: float
 
 
 class MarketFullOut(MarketOut):
