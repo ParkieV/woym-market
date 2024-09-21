@@ -109,6 +109,19 @@
             readonly={!$userCanModify}
             bind:value={market.price_before_discount}
         />
+        {#if market.type === "yandex"}
+            <p class="formula">
+                Ограничение на разницу между "целевая цена" и "цена до скидки": 5% &lt;= Разница
+                &lt;= 99%
+            </p>
+        {:else if market.type === "ozon"}
+            <p class="formula">
+                Ограничение на разницу между "целевая цена" и "цена до скидки":<br />
+                - Если цена &lt;= 400 рублей, то разница &gt;= 20 рублей<br />
+                - Если цена от 400 до 10000 рублей, то разница &gt;= 5%<br />
+                - Если цена &gt; 10000 рублей, то разница &gt;= 500<br />
+            </p>
+        {/if}
     </section>
     <section>
         <h2>Умная поставка</h2>
