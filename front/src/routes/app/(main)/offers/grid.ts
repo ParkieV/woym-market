@@ -207,6 +207,26 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     base: new ComboboxColumn<string>(
                         templates.map(t => ({ value: t.name, name: t.name }))
                     ),
+                    valueGetter: ({ data }: { data: Offer }) => {
+                        if (data.pricing_scheme_name === null) {
+                            return { name: "N/A", value: null };
+                        } else {
+                            return {
+                                name: data.pricing_scheme_name,
+                                value: data.pricing_scheme_name
+                            };
+                        }
+                    },
+                    valueSetter: ({
+                        newValue,
+                        data
+                    }: {
+                        data: Offer;
+                        newValue: { value: string | null };
+                    }) => {
+                        data.pricing_scheme_name = newValue.value;
+                        return true;
+                    },
                     editable: true
                 },
                 {

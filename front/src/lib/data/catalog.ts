@@ -17,6 +17,7 @@ export type CatalogEntry = {
     use_promotion_price: boolean;
     wholesale_dollar_cost_price: number;
     synchronization: Synchronization[];
+    reverse_sync_offer_id: number | null;
 };
 
 export type Synchronization = {
@@ -35,7 +36,7 @@ export async function fetchCatalog(): Promise<CatalogEntry[]> {
 
 export async function updateCatalog(changed: CatalogEntry[]): Promise<boolean> {
     let response = fetchPlain("catalog", {
-        method: "POST",
+        method: "PATCH",
         body: JSON.stringify(changed),
         headers: {
             "Content-Type": "application/json"

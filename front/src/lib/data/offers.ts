@@ -47,6 +47,7 @@ export type Offer = OfferBase & {
     dollar_cost_price: number | null;
     /** Minimal addition to the total price. */
     total_price_min_additional: number;
+    pricing_scheme_name: string | null;
 
     total_price_coeff: number;
     discount_base_price: number | null;
