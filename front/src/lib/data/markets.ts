@@ -35,6 +35,12 @@ export type Market = {
     volume_threshold_for_additional_logistics: number;
     /** Цена дополнительной логистики за 1 литр */
     cost_of_additional_logistics_per_liter: number;
+
+    a_variable_for_smart_delivery: number;
+    b_variable_for_smart_delivery: number;
+    c_variable_for_smart_delivery: number;
+    d_variable_for_smart_delivery: number;
+    e_variable_for_smart_delivery: number;
 };
 
 export async function getStores(init?: FetchInit): Promise<Market[]> {

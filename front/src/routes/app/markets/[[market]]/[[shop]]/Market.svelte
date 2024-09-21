@@ -110,6 +110,38 @@
             bind:value={market.price_before_discount}
         />
     </section>
+    <section>
+        <h2>Умная поставка</h2>
+        <p class="formula">
+            «заказы за 7 дней» * A + «заказы за 14 дней» * B + «заказы за 28 дней» * C + «заказы за
+            60 дней» * D + «заказы за 120 дней» * E
+        </p>
+        <NumberInput
+            label="A (Заказы за 7 дней)"
+            readonly={!$userCanModify}
+            bind:value={market.a_variable_for_smart_delivery}
+        />
+        <NumberInput
+            label="B (Заказы за 14 дней)"
+            readonly={!$userCanModify}
+            bind:value={market.b_variable_for_smart_delivery}
+        />
+        <NumberInput
+            label="C (Заказы за 28 дней)"
+            readonly={!$userCanModify}
+            bind:value={market.c_variable_for_smart_delivery}
+        />
+        <NumberInput
+            label="D (Заказы за 60 дней)"
+            readonly={!$userCanModify}
+            bind:value={market.d_variable_for_smart_delivery}
+        />
+        <NumberInput
+            label="E (Заказы за 120 дней)"
+            readonly={!$userCanModify}
+            bind:value={market.e_variable_for_smart_delivery}
+        />
+    </section>
 </form>
 
 <style lang="scss">
