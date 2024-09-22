@@ -166,10 +166,6 @@ class OfferOut(BaseModel, BaseModelFields):
     yandex_width: float | None = Field(title='Ширина с маркета', default=0)
     yandex_height: float | None = Field(title='Высота с маркета', default=0)
 
-    volume: float | None = Field(title='Объём (Длинна * ширина * высота / 1000)')
-    yandex_volume: float | None = Field(title='Объём с яндекса')
-    volume_difference: float | None = Field(title='Разница объемов', default=None)
-
     photo: str | None = Field(title='Фото')
     group_sellers_amount: int | None = Field(title='Количество продавцов в группе')
     business_id: int | None = Field(title='id бизнесса')
@@ -215,6 +211,28 @@ class OfferOut(BaseModel, BaseModelFields):
     name_changed: bool = Field(title='Название изменено пользователем')
     description_changed: bool = Field(title='Описание изменено')
     barcodes_changed: bool = Field(title='Штрихкоды изменены')
+
+    @computed_field(title='Объем', description='Длинна * ширина * высота / 1000')
+    @property
+    def volume(self) -> float | None:
+        if not all((self.self_width, self.self_height, self.self_length)):
+            return None
+
+        return self.self_width * self.self_height * self.self_length / 1000
+
+    @computed_field(title='Объём с яндекса', description='Длинна * ширина * высота / 1000 (габариты маркета)')
+    @property
+    def yandex_volume(self) -> float | None:
+        if not all((self.yandex_width, self.yandex_height, self.yandex_length)):
+            return None
+        return self.yandex_width * self.yandex_height * self.yandex_length / 1000
+
+    @computed_field(title='Разница объемов', description='Объём с яндекса / Объем')
+    @property
+    def volume_difference(self) -> float | None:
+        if not all((self.volume, self.yandex_volume)):
+            return None
+        return self.yandex_volume / self.volume
 
     @computed_field(title='Разница с РРЦ')
     @property

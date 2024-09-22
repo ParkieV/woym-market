@@ -38,7 +38,6 @@ async def setup_catalog_items() -> None:
         to_create_items_with_rdv = db_offers_df[(db_offers_df['sku'].isin(to_create_skus)) & (~db_offers_df['sku'].isin(to_create_items_with_cdv['sku']))].drop_duplicates(subset='sku')
 
         new_items_df = pd.concat([to_create_items_with_cdv, to_create_items_with_rdv])
-        new_items_df['volume'] = new_items_df['volume'].astype(float)
         new_items_df['dollar_cost_price_updated_at'] = None
         new_items_df.drop(columns=['synchronization'], inplace=True)
         new_items_df['catalog_note'] = 'Новый товары'

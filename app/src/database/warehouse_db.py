@@ -232,7 +232,7 @@ async def get_supply_only_stocks(session: AsyncSession, warehouses: list[int], o
             Offer.name_of_shop,
             Offer.barcodes,
             Offer.current_price,
-            Offer.volume,
+            (Offer.self_width * Offer.self_height * Offer.self_length / 1000).label('volume'),
             Offer.self_weight,
             Offer.cost_price,
             OfferStock.for_delivery,
@@ -276,7 +276,7 @@ async def get_supply_only_own_storage(session: AsyncSession, warehouses: list[in
             Offer.name_of_shop,
             Offer.barcodes,
             Offer.current_price,
-            Offer.volume,
+            (Offer.self_width * Offer.self_height * Offer.self_length / 1000).label('volume'),
             Offer.self_weight,
             Offer.cost_price,
             Warehouse.name.label('warehouse_name'),
@@ -441,10 +441,6 @@ async def recalculate_clusters(session: AsyncSession):
     await session.execute(super_clusters_stmp)
 
     await session.commit()
-
-
-
-
 
 
 async def update_fbo_stocks(session: AsyncSession, data: list[dict]):

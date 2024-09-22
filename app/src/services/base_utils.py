@@ -107,7 +107,6 @@ def parce_sizes_list(data: bytes, file_extension: str = '.xlsx') -> pd.DataFrame
     df[['yandex_length', 'yandex_width', 'yandex_height']] = df['sizes'].str.split('/', expand=True)
     df[['yandex_length', 'yandex_width', 'yandex_height', 'yandex_weight']] = df[
         ['yandex_length', 'yandex_width', 'yandex_height', 'yandex_weight']].astype(float)
-    df['yandex_volume'] = df['yandex_length'] * df['yandex_width'] * df['yandex_height'] / 1000
     df['sku'] = df['sku'].astype('string')
 
     df.replace(r'^\s*$', np.nan, regex=True, inplace=True)

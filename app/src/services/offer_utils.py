@@ -9,10 +9,8 @@ from src.schemas.settings_schemas import MarketOut
 
 async def calculate_offers_values(data: pd.DataFrame, settings, market_settings: MarketOut) -> pd.DataFrame:
     data = data.copy()
+    data['volume'] = data['self_width'] * data['self_height'] * data['self_length'] / 1000
 
-    data['yandex_volume'] = data['yandex_length'] * data['yandex_width'] * data['yandex_height'] / 1000
-    data['volume'] = data['self_length'] * data['self_width'] * data['self_height'] / 1000
-    data['volume_difference'] = data['yandex_volume'] / data['volume']
     data['dollar_cost_price'] = np.where(
         data['wholesale_dollar_cost_price'].isna(),
         data['dollar_cost_price'],
@@ -31,8 +29,7 @@ async def calculate_offers_values(data: pd.DataFrame, settings, market_settings:
 
     data['logistic_price'] = np.where(
         data['volume'] > market_settings.volume_threshold_for_additional_logistics,
-        np.ceil(data[
-                    'volume'] - market_settings.volume_threshold_for_additional_logistics) * market_settings.cost_of_additional_logistics_per_liter,
+        np.ceil(data['volume'] - market_settings.volume_threshold_for_additional_logistics) * market_settings.cost_of_additional_logistics_per_liter,
         0
     )
     data['logistic_price'].fillna(0, inplace=True)
@@ -53,6 +50,7 @@ async def calculate_offers_values(data: pd.DataFrame, settings, market_settings:
         0,
         data['profit'] / data['volume']
     )
+    data.drop(columns=['volume'])
 
     data['discount_base_price'] = data['current_price'] * (1.0 + market_settings.price_before_discount / 100)
 

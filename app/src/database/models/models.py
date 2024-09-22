@@ -67,10 +67,6 @@ class Offer(Base):
     yandex_width = Column(Float, nullable=True)
     yandex_height = Column(Float, nullable=True)
 
-    volume = Column(Float, default=None, nullable=True)
-    yandex_volume = Column(Float, nullable=True)
-    volume_difference = Column(Float, nullable=True, default=None)
-
     photo = Column(String, nullable=True)
     name_of_shop = Column(String, index=True)
     market = Column(String)
@@ -329,7 +325,6 @@ class CatalogItem(Base):
     self_height = Column(Float, nullable=True, default=None)
     self_height_changed = Column(Boolean, nullable=False, default=False)
 
-    volume = Column(Float, nullable=True, default=None)
     catalog_note = Column(String, nullable=True, server_default=text("'Новый товар'"))
 
     use_promotion_price = Column(Boolean, nullable=False, default=False)

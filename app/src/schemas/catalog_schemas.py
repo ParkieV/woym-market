@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator, ValidationError
+from pydantic import BaseModel, Field, field_validator, ValidationError, computed_field
 
 
 class SynchronizationOffer(BaseModel):
@@ -35,12 +35,18 @@ class CatalogItemUpdate(BaseCatalogItem):
 
 
 class CatalogItemCreate(CatalogItemUpdate):
-    volume: float | None = Field(title='Объем', default=None)
     dollar_cost_price_updated_at: datetime | None = Field(title='Дата обновления ОПТ У.Е.')
 
 
 class CatalogItem(CatalogItemCreate):
-    pass
+
+    @computed_field(title='Объем', description='Ширина * Высота * Длина / 1000')
+    @property
+    def volume(self) -> float | None:
+        if not all((self.self_width, self.self_height, self.self_length)):
+            return None
+
+        return self.self_width * self.self_height * self.self_length / 1000
 
 
 

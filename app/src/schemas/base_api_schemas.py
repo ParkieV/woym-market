@@ -23,7 +23,6 @@ class APIOffer:
     self_length: float | None = None
     self_width: float | None = None
     self_height: float | None = None
-    volume: float | None = None
     photo: str | None = None
     current_price: float | None = None
     business_id: int | None = None

@@ -156,24 +156,16 @@ class YandexMarketAPI(BaseAPI):
             for offer_mapping in data['result']['offerMappings']:
                 offer = offer_mapping['offer']
                 mapping = offer_mapping.get('mapping', {})
-
-                if 'weightDimensions' in offer:
-                    weight_dimensions = offer['weightDimensions']
-                    volume = weight_dimensions['width'] * weight_dimensions['length'] * weight_dimensions[
-                        'height'] / 1000
-                else:
-                    weight_dimensions = dict()
-                    volume = None
+                weight_dimensions = offer.get('weightDimensions', {})
 
                 offer_data = {
                     'sku': offer['offerId'],
                     'name': offer['name'],
                     'description': offer.get('description', None),
-                    'self_weight': weight_dimensions.get('weight'),
-                    'self_length': weight_dimensions.get('length'),
-                    'self_width': weight_dimensions.get('width'),
-                    'self_height': weight_dimensions.get('height'),
-                    'volume': volume,
+                    'self_weight': weight_dimensions.get('weight', None),
+                    'self_length': weight_dimensions.get('length', None),
+                    'self_width': weight_dimensions.get('width', None),
+                    'self_height': weight_dimensions.get('height', None),
                     'photo': offer['pictures'][0] if len(offer['pictures']) > 0 else None,
                     'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,
                     'business_id': business_id,
