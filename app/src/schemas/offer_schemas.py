@@ -53,11 +53,13 @@ class PricingSchemeChange(BaseModel):
 class BaseModelFields(ABC):
     @classmethod
     def fields(cls, exclude: list[str] | None = None) -> dict[str, str]:
-        return {name: field.title for name, field in cls.model_fields.items() if exclude is not None and name not in exclude}
+        return {name: field.title for name, field in cls.model_fields.items() if
+                exclude is not None and name not in exclude}
 
     @classmethod
     def reverse_fields(cls, exclude: list[str] | None = None) -> dict[str, str]:
-        return {field.title: name for name, field in cls.model_fields.items() if exclude is not None and name not in exclude}
+        return {field.title: name for name, field in cls.model_fields.items() if
+                exclude is not None and name not in exclude}
 
 
 class BaseOffer(BaseModel, BaseModelFields):
@@ -78,14 +80,21 @@ class OfferChange(BaseModel, BaseModelFields):
     description: str | None = Field(default=None, title='Описание')
 
     self_weight: float | None = Field(default=None, title='Вес')
-    self_length: float | None = Field(default=None, title='Длина', description='Для Wildberries требуется целое число, значение округляется автоматически.')
-    self_width: float | None = Field(default=None, title='Ширина', description='Для Wildberries требуется целое число, значение округляется автоматически.')
-    self_height: float | None = Field(default=None, title='Высота', description='Для Wildberries требуется целое число, значение округляется автоматически.')
+    self_length: float | None = Field(default=None, title='Длина',
+                                      description='Для Wildberries требуется целое число, значение округляется автоматически.')
+    self_width: float | None = Field(default=None, title='Ширина',
+                                     description='Для Wildberries требуется целое число, значение округляется автоматически.')
+    self_height: float | None = Field(default=None, title='Высота',
+                                      description='Для Wildberries требуется целое число, значение округляется автоматически.')
 
-    yandex_weight: float | None = Field(default=None, title='Вес c листа', description='Параметр редактируется только для Яндекс Маркета')
-    yandex_length: float | None = Field(default=None, title='Длинна с листа', description='Параметр редактируется только для Яндекс Маркета')
-    yandex_width: float | None = Field(default=None, title='Ширина с листа', description='Параметр редактируется только для Яндекс Маркета')
-    yandex_height: float | None = Field(default=None, title='Высота с листа', description='Параметр редактируется только для Яндекс Маркета')
+    yandex_weight: float | None = Field(default=None, title='Вес c листа',
+                                        description='Параметр редактируется только для Яндекс Маркета')
+    yandex_length: float | None = Field(default=None, title='Длинна с листа',
+                                        description='Параметр редактируется только для Яндекс Маркета')
+    yandex_width: float | None = Field(default=None, title='Ширина с листа',
+                                       description='Параметр редактируется только для Яндекс Маркета')
+    yandex_height: float | None = Field(default=None, title='Высота с листа',
+                                        description='Параметр редактируется только для Яндекс Маркета')
 
     wholesale_dollar_cost_price: float | None = Field(default=None, title='ОПТ закупка у. е.')
 
@@ -187,7 +196,7 @@ class OfferOut(BaseModel, BaseModelFields):
     price_index: str | None = Field(title='Индекс цены')
     volume_profitability_ratio: float | None = Field(title=r'Коэффициент прибыльности от объёма (Прибыль \ объём)')
     days_to_zero_profit: float | None = Field(title='Дней до нулевой прибыли')
-    market_discount_in_percent: float | None = Field(title=r'Скидка маркета в % (100-"цена для покупателей" * 100 \ "текущая цена")')
+    market_discount_in_percent: float | None = Field(title=r'Скидка маркета в %', description='100 - "Ваша цена для покупателей" * 100 \ "Ваша цена по акции"')
 
     attractive_price_threshold: float | None = Field(title='Порог для привлекательной цены')
     moderately_attractive_price_threshold: float | None = Field(title='Порог для умеренно привлекательной цены')

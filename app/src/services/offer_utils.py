@@ -35,7 +35,7 @@ async def calculate_offers_values(data: pd.DataFrame, market_settings: MarketOut
     data['logistic_price'].fillna(0, inplace=True)
     data['fbo'] = (data['current_price'] * (market_settings.fbo_sales_commission / 100)) + data['logistic_price']
 
-    data['market_discount_in_percent'] = 100 - data['your_price_for_buyers'] * 100 / data['current_price']
+    data['market_discount_in_percent'] = 100 - data['your_price_for_buyers'] * 100 / data['your_promotion_price']
 
     data['profit'] = np.nan
     data['days_to_zero_profit'] = np.nan
