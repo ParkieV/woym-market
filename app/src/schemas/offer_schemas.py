@@ -140,8 +140,8 @@ class OfferOut(BaseModel, BaseModelFields):
 
     auto_participation_in_promotions: bool = Field(title='Автоучастие в акциях')
 
-    total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену', default=200)
-    total_price_coeff: float = Field(title='Коэфициент расчетной цены', default=2.4)
+    total_price_min_additional: float = Field(title='Мин. наценка на расчетную цену')
+    total_price_coeff: float = Field(title='Коэфициент расчетной цены')
 
     note_1: str = Field('', title='Примечание 1')
     note_2: str = Field('', title='Примечание 2')

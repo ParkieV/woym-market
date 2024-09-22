@@ -266,6 +266,13 @@ class Market(Base):
     d_variable_for_smart_delivery = Column(Float, default=0, nullable=False)
     e_variable_for_smart_delivery = Column(Float, default=0, nullable=False)
 
+    default_auto_min_price = Column(Float, default=100, nullable=False)
+    default_auto_price_control = Column(Boolean, default=False, nullable=False)
+    default_total_price_coeff = Column(Float, default=2.4, nullable=False)
+    default_total_price_min_additional = Column(Float, default=0, nullable=False)
+    default_auto_participation_in_promotions = Column(Boolean, default=False, nullable=False)
+    default_pricing_scheme = Column(String, default=None, nullable=True)
+
 
 class OwnStorage(Base):
     __tablename__ = 'own_storage'

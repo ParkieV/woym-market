@@ -67,10 +67,9 @@ async def setup_offers_data(user_id: int):
         await db.check_pricing_schemes_exists(session, 'Y0')
         await db.check_pricing_schemes_exists(session, 'O0')
         await db.check_pricing_schemes_exists(session, 'W0')
-        settings = await get_user_settings(session, user_id)
 
         for market in await get_markets(session):
-            data = await utils.build_offers_data(yandex_offers_df[((yandex_offers_df['market'] == market.type) & (yandex_offers_df['name_of_shop'] == market.name))], setup_mode=True, settings=settings, market=market)
+            data = await utils.build_offers_data(yandex_offers_df[((yandex_offers_df['market'] == market.type) & (yandex_offers_df['name_of_shop'] == market.name))], market=market)
             await db.create_offers(session, data)
             logger.info(f'{market.type}({market.name}) offers created: {len(data)}')
 
@@ -142,7 +141,7 @@ async def update_offers(user_id: int):
     async with async_session() as session:
         # Создаем новые товары
         for market in markets:
-            to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], settings, market, setup_mode=True)
+            to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], market)
             await db.create_offers(session, to_create_df_chunked)
             logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df_chunked)}')
 
@@ -246,7 +245,7 @@ async def recalculate_values(session: AsyncSession, settings, offers_filter: Off
         return
 
     for market in await get_markets(session):
-        df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], settings, market)
+        df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], market)
         df1.replace({np.nan: None}, inplace=True)
         exclude_columns = set(df1.columns.values.tolist()) - set(i.name for i in Offer.__table__.columns)
         df1.drop(columns=exclude_columns, inplace=True)

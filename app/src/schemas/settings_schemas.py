@@ -77,6 +77,13 @@ class MarketOut(BaseModel):
     d_variable_for_smart_delivery: float
     e_variable_for_smart_delivery: float
 
+    default_auto_min_price: float
+    default_auto_price_control: bool
+    default_total_price_coeff: float
+    default_total_price_min_additional: float
+    default_auto_participation_in_promotions: bool
+    default_pricing_scheme: str | None
+
 
 class MarketUpdate(BaseModel):
     tax: float = 0
@@ -96,6 +103,13 @@ class MarketUpdate(BaseModel):
     c_variable_for_smart_delivery: float
     d_variable_for_smart_delivery: float
     e_variable_for_smart_delivery: float
+
+    default_auto_min_price: float
+    default_auto_price_control: bool
+    default_total_price_coeff: float
+    default_total_price_min_additional: float
+    default_auto_participation_in_promotions: bool
+    default_pricing_scheme: str
 
 
 class MarketFullOut(MarketOut):
