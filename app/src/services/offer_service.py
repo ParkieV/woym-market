@@ -245,7 +245,10 @@ async def recalculate_values(session: AsyncSession, settings, offers_filter: Off
         return
 
     for market in await get_markets(session):
-        df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], market)
+        df1 = df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))]
+        if not df1:
+            continue
+        df1 = await utils.calculate_offers_values(df1, market)
         df1.replace({np.nan: None}, inplace=True)
         exclude_columns = set(df1.columns.values.tolist()) - set(i.name for i in Offer.__table__.columns)
         df1.drop(columns=exclude_columns, inplace=True)

@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 import numpy as np
 
@@ -114,6 +116,10 @@ async def calculate_price(data: pd.DataFrame, market_settings: MarketOut) -> pd.
         (df['target_price'] * 1.05).round(),
         df['target_price'].round()
     )
+
+    if market_settings.consider_logistic_cost:
+        df['target_price'] = df['target_price'] + df['logistic_price'] * (np.ceil(data['self_width'] * data['self_height'] * data['self_length'] / 1000) - 1)
+
     return df
 
 

@@ -273,6 +273,8 @@ class Market(Base):
     default_auto_participation_in_promotions = Column(Boolean, default=False, nullable=False)
     default_pricing_scheme = Column(String, default=None, nullable=True)
 
+    consider_logistic_cost = Column(Boolean, default=False, nullable=False)
+
 
 class OwnStorage(Base):
     __tablename__ = 'own_storage'
