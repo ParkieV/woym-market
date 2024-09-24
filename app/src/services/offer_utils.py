@@ -150,7 +150,7 @@ async def build_offers_data(data: pd.DataFrame, market: MarketOut) -> pd.DataFra
 
     data = await calculate_offers_values(data, market)
     data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']] = data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']].astype('string')
-
+    data.drop(columns=['volume', 'yandex_volume', 'volume_difference', 'difference_from_recommended_retail_price', 'violator'], inplace=True, errors='ignore')
     return data
 
 

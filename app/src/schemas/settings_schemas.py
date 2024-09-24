@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.api.factory import APITypes
 
@@ -109,7 +109,7 @@ class MarketUpdate(BaseModel):
     default_total_price_coeff: float
     default_total_price_min_additional: float
     default_auto_participation_in_promotions: bool
-    default_pricing_scheme: str
+    default_pricing_scheme: str = Field(title='Схема ценообразования', description='Если не указана, то для новых товаров по умолчанию будет устанавливаться схема {MARKET}0')
 
 
 class MarketFullOut(MarketOut):
