@@ -95,6 +95,7 @@ async def recalculate_stocks_for_delivery(session: AsyncSession) -> None:
         for_delivery=for_delivery_expr,
     )
     await session.execute(stmp)
+    await session.commit()
 
 
 async def update_or_create_warehouse(session: AsyncSession, data: WarehouseCreate) -> (WarehouseOut, bool):
