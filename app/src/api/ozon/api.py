@@ -110,6 +110,7 @@ class OzonAPI(BaseAPI):
             offer_attributes_info = offers_attributes_info.get(valid_offer.sku, None)
 
             if not offer_attributes_info or not offer_price_info:
+                logger.info(f'Skip update offer sku={offer_attributes_info.get("offer_id", "unknown")} due to has no full data')
                 continue
 
             update_offer_data = offer_attributes_info
@@ -117,6 +118,8 @@ class OzonAPI(BaseAPI):
             update_offer_data['old_price'] = offer_price_info['price']['old_price']
             update_offer_data['vat'] = offer_price_info['price']['vat']
             update_offer_data['name'] = valid_offer.name
+            update_offer_data['images'] = update_offer_data.get('images', [])
+            update_offer_data['images'] = [i['file_name'] for i in update_offer_data['images']]
 
             dimension_unit = 'cm'
             if any((valid_offer.self_height < 1, valid_offer.self_width < 1, valid_offer.self_length < 1)):
