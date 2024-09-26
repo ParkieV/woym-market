@@ -48,7 +48,7 @@ class WildberriesAPI(BaseAPI):
 
         update_url = 'https://content-api.wildberries.ru/content/v2/cards/update'
 
-        check_valid = lambda x: all((x.is_valid_name(), x.is_valid_description(), x.is_valid_vendor_code()))
+        check_valid = lambda x: all((x.is_valid_name(), x.is_valid_description(), x.is_valid_vendor_code(), x.is_valid_sizes()))
         valid_offers_data = [i for i in data if check_valid(i)]
         invalid_data = [i for i in data if not check_valid(i)]
 
@@ -62,8 +62,16 @@ class WildberriesAPI(BaseAPI):
         chunk_size = 3000
 
         for i in range(0, len(valid_offers_data), chunk_size):
-            body = [
-                {
+            body = []
+            for offer_data in valid_offers_data[i:i + chunk_size]:
+                characteristics = items[offer_data.sku].get('characteristics', [])
+                characteristics = [i for i in characteristics if i['id'] != self.__characteristic_ids['self_weight']]
+                characteristics.append({
+                    "id": self.__characteristic_ids['self_weight'],
+                    'value': offer_data.self_weight
+                })
+
+                body_item = {
                     'nmID': offer_data.vendor_code,
                     'vendorCode': offer_data.sku,
                     'title': offer_data.name,
@@ -74,10 +82,9 @@ class WildberriesAPI(BaseAPI):
                         'width': round(offer_data.self_width),
                         'height': round(offer_data.self_height),
                     },
-
+                    'characteristics': characteristics
                 }
-                for offer_data in valid_offers_data[i:i + chunk_size]
-            ]
+                body.append(body_item)
 
             response = self.session.post(update_url, json=body, headers=self.auth_headers)
 
