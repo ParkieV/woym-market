@@ -95,7 +95,6 @@ async def recalculate_stocks_for_delivery(session: AsyncSession) -> None:
         for_delivery=for_delivery_expr,
     )
     await session.execute(stmp)
-    await session.commit()
 
 
 async def update_or_create_warehouse(session: AsyncSession, data: WarehouseCreate) -> (WarehouseOut, bool):
@@ -233,7 +232,7 @@ async def get_supply_only_stocks(session: AsyncSession, warehouses: list[int], o
             Offer.name_of_shop,
             Offer.barcodes,
             Offer.current_price,
-            (Offer.self_width * Offer.self_height * Offer.self_length / 1000).label('volume'),
+            Offer.volume,
             Offer.self_weight,
             Offer.cost_price,
             OfferStock.for_delivery,
@@ -277,7 +276,7 @@ async def get_supply_only_own_storage(session: AsyncSession, warehouses: list[in
             Offer.name_of_shop,
             Offer.barcodes,
             Offer.current_price,
-            (Offer.self_width * Offer.self_height * Offer.self_length / 1000).label('volume'),
+            Offer.volume,
             Offer.self_weight,
             Offer.cost_price,
             Warehouse.name.label('warehouse_name'),
@@ -401,47 +400,116 @@ async def create_fbo_stocks_(session: AsyncSession, data: list[dict]):
     await session.commit()
 
 
-async def recalculate_clusters(session: AsyncSession):
-    clusters_subquery = (
+async def recalculate_clusters_stocks(session: AsyncSession):
+    stocks_subquery = (
         select(
-            Warehouse.parent_warehouse_id.label('id'),
+            OfferStock.offer_id,
+            Warehouse.parent_warehouse_id,
             func.sum(OfferStock.current_stock).label('current_stock')
         )
         .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .group_by(OfferStock.offer_id, Warehouse.parent_warehouse_id)
         .where(Warehouse.warehouse_type == 'warehouse')
-        .group_by(Warehouse.parent_warehouse_id)
-    ).subquery('clusters_subquery')
+        .where(Warehouse.parent_warehouse_id != None)
+    ).subquery('stocks_subquery')
 
-    clusters_stmp = (
-        update(OfferStock)
-        .where(OfferStock.warehouse_id == clusters_subquery.c.id)
-        .values(
-            current_stock=clusters_subquery.c.current_stock
-        )
-    )
-    await session.execute(clusters_stmp)
-
-    super_clusters_subquery = (
+    current_cluster_stock_subquery = (
         select(
-            Warehouse.id.label('id'),
-            func.sum(OfferStock.current_stock).label('current_stock')
+            OfferStock.id,
+            stocks_subquery.c.current_stock
         )
-        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
-        .where(Warehouse.warehouse_type == 'warehouse')
-        .group_by(Warehouse.id)
-    ).subquery('super_clusters_subquery')
+        .select_from(stocks_subquery)
+        .join(OfferStock, and_(OfferStock.offer_id == stocks_subquery.c.offer_id, OfferStock.warehouse_id == stocks_subquery.c.parent_warehouse_id))
+    ).subquery('current_cluster_stock_subquery')
 
-    super_clusters_stmp = (
+    stmp = (
         update(OfferStock)
-        .where(OfferStock.warehouse_id == super_clusters_subquery.c.id)
-        .values(
-            current_stock=super_clusters_subquery.c.current_stock
-        )
+        .where(OfferStock.id == current_cluster_stock_subquery.c.id)
+        .values(current_stock=current_cluster_stock_subquery.c.current_stock)
     )
-
-    await session.execute(super_clusters_stmp)
-
+    await session.execute(stmp)
     await session.commit()
+
+
+async def recalculate_super_clusters_stocks(session: AsyncSession):
+    stocks_subquery = (
+        select(
+            OfferStock.offer_id,
+            func.sum(OfferStock.current_stock).label('current_stock')
+        )
+        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .group_by(OfferStock.offer_id)
+        .where(Warehouse.warehouse_type == 'warehouse')
+    ).subquery('stocks_subquery')
+
+    current_super_cluster_stock_subquery = (
+       select(
+           OfferStock.id,
+           stocks_subquery.c.current_stock
+       )
+        .join(stocks_subquery, stocks_subquery.c.offer_id == OfferStock.offer_id)
+        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .where(Warehouse.warehouse_type == 'super_cluster')
+    )
+
+    stmp = (
+        update(OfferStock)
+        .where(OfferStock.id == current_super_cluster_stock_subquery.c.id)
+        .values(current_stock=current_super_cluster_stock_subquery.c.current_stock)
+    )
+
+    await session.execute(stmp)
+    await session.commit()
+
+
+
+
+
+# async def recalculate_clusters(session: AsyncSession):
+#     clusters_subquery = (
+#         select(
+#             Warehouse.parent_warehouse_id.label('id'),
+#             func.sum(OfferStock.current_stock).label('current_stock')
+#         )
+#         .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+#         .where(Warehouse.warehouse_type == 'warehouse')
+#         .group_by(Warehouse.parent_warehouse_id)
+#     ).subquery('clusters_subquery')
+#
+#     clusters_stmp = (
+#         update(OfferStock)
+#         .where(OfferStock.warehouse_id == clusters_subquery.c.id)
+#         .values(
+#             current_stock=clusters_subquery.c.current_stock
+#         )
+#     )
+#     await session.execute(clusters_stmp)
+#
+#     super_clusters_subquery = (
+#         select(
+#             Warehouse.id.label('id'),
+#             func.sum(OfferStock.current_stock).label('current_stock')
+#         )
+#         .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+#         .where(Warehouse.warehouse_type == 'warehouse')
+#         .group_by(Warehouse.id)
+#     ).subquery('super_clusters_subquery')
+#
+#     super_clusters_stmp = (
+#         update(OfferStock)
+#         .where(OfferStock.warehouse_id == super_clusters_subquery.c.id)
+#         .values(
+#             current_stock=super_clusters_subquery.c.current_stock
+#         )
+#     )
+#
+#     await session.execute(super_clusters_stmp)
+#
+#     await session.commit()
+
+
+
+
 
 
 async def update_fbo_stocks(session: AsyncSession, data: list[dict]):
