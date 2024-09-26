@@ -95,7 +95,9 @@ async def update_warehouses_and_stocks():
                                                   for i in stocks])
         logger.info('Related warehouses relation filled')
 
-        await db.recalculate_clusters(session)
+        # await db.recalculate_clusters(session)
+        await db.recalculate_clusters_stocks(session)
+        await db.recalculate_super_clusters_stocks(session)
         await db.recalculate_stocks_for_delivery(session)
         logger.info('Recalculate stocks and clusters for delivery')
 
