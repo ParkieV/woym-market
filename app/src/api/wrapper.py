@@ -3,7 +3,7 @@ from datetime import datetime
 
 from logs import get_logger
 from .base_api import BaseAPI
-from src.schemas.base_api_schemas import APIWarehouse, APIOffer, APIPriceChangeData, APIOrderData
+from src.schemas.base_api_schemas import APIWarehouse, APIOffer, APIPriceChangeData, APIOrderData, APIOfferChangeData
 from src.database.settings_db import get_markets
 from src.api.factory import APIFactory
 from ..database.db import async_session
@@ -70,8 +70,8 @@ class APIWrapper(BaseAPI):
 
                 await api.change_prices(price_data)
 
-    async def change_offers(self, data: list[APIOffer]) -> None:
-        logger.info(f'Offers to change attributes: {[asdict(i) for i in data]}')
+    async def change_offers(self, data: list[APIOfferChangeData]) -> None:
+        logger.info(f'Offers to change attributes: {[i.model_dump() for i in data]}')
         async with async_session() as session:
             for market in await get_markets(session, MarketFullOut):
                 api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
