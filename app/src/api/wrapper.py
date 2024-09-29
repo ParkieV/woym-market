@@ -25,9 +25,7 @@ class APIWrapper(BaseAPI):
                     logger.warning(f'Orders list for {market.name}({market.type}) is empty')
 
                 result.extend(orders)
-        logger.info(f'Total get orders: {[i.model_dump() for i in result]}')
         return result
-
 
     async def validate_auth_data(self, **kwargs):
         pass
@@ -43,7 +41,6 @@ class APIWrapper(BaseAPI):
                     logger.warning(f'{market.name}({market.type}) returns empty offers list')
                 result.extend(offers)
 
-        logger.info(f'Total get offers: {[asdict(i) for i in result]}')
         return result
 
     async def get_stocks(self) -> list[APIWarehouse]:
@@ -57,11 +54,9 @@ class APIWrapper(BaseAPI):
                     logger.warning(f'{market.name}({market.type}) returns empty stocks list')
                 result.extend(offers)
 
-        logger.info(f'Total get stocks: {[asdict(i) for i in result]}')
         return result
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
-        logger.info(f'Offers to change price: {[asdict(i) for i in data]}')
         async with async_session() as session:
             for market in await get_markets(session, MarketFullOut):
                 api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
@@ -71,7 +66,6 @@ class APIWrapper(BaseAPI):
                 await api.change_prices(price_data)
 
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
-        logger.info(f'Offers to change attributes: {[i.model_dump() for i in data]}')
         async with async_session() as session:
             for market in await get_markets(session, MarketFullOut):
                 api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)

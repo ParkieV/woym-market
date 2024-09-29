@@ -24,6 +24,7 @@ class OfferIdentifier:
 
 
 class OzonAPI(BaseAPI):
+    market_type = 'Ozon'
 
     def __get_info_attributes(self, skus: list[str] | None = None) -> dict[str, dict]:
         url = 'https://api-seller.ozon.ru/v3/products/info/attributes'
@@ -38,7 +39,7 @@ class OzonAPI(BaseAPI):
         results = {}
 
         while True:
-            response = self.session.post(url, json=body, headers=self.auth_headers)
+            response = self.request('POST', url=url, body=body, headers=self.auth_headers)
 
             if not response.ok:
                 logger.error(f'Cant get info attributes: {response.text}')
@@ -69,7 +70,7 @@ class OzonAPI(BaseAPI):
             "limit": chunk_size
         }
         while True:
-            response = self.session.post(url, json=body, headers=self.auth_headers)
+            response = self.request('POST', url=url, body=body, headers=self.auth_headers)
             if not response.ok:
                 logger.error(f'Cant collect offers price info: {response.text}')
                 break
@@ -173,7 +174,7 @@ class OzonAPI(BaseAPI):
             body = {
                 'items': [offer_data for offer_data in to_update_offers_data[i:i + chunk_size]]
             }
-            response = self.session.post(url, json=body, headers=self.auth_headers)
+            response = self.request('POST', url, body=body, headers=self.auth_headers)
             if not response.ok:
                 logger.error(f'Cant update offers data: {response.text}')
                 continue
@@ -195,7 +196,7 @@ class OzonAPI(BaseAPI):
         body = {
             'task_id': task_id,
         }
-        response = self.session.post(f'https://api-seller.ozon.ru/v1/product/import/info', json=body, headers=self.auth_headers)
+        response = self.request('POST', url=f'https://api-seller.ozon.ru/v1/product/import/info', body=body, headers=self.auth_headers)
 
         if not response.ok:
             logger.error(f'Cant check task({task_id}) status {response.text}')
@@ -214,6 +215,7 @@ class OzonAPI(BaseAPI):
         logger.info(f'Task {task_id} checked. Total {json_response.get("result", {}).get("total", "unknown")}')
 
     def __init__(self, token: str, entity_id: int, shop_name: str):
+        self.name_of_shop = shop_name
         self.token = token
         self.shop_name = shop_name
         self.client_id = str(entity_id)
@@ -316,10 +318,11 @@ class OzonAPI(BaseAPI):
                 'prices': post_data
             }
 
-            response = self.session.post(
-                'https://api-seller.ozon.ru/v1/product/import/prices',
+            response = self.request(
+                'POST',
+                url='https://api-seller.ozon.ru/v1/product/import/prices',
                 headers=self.auth_headers,
-                json=body
+                body=body
             )
 
             self.validate_response(response, raise_error=False, body=body)
@@ -333,7 +336,7 @@ class OzonAPI(BaseAPI):
         logger.info(f'{self.shop_name}(ozon) price updated')
 
     def _get_offers_identifiers(self) -> list[OfferIdentifier]:
-        response = self.session.post('https://api-seller.ozon.ru/v2/product/list', headers=self.auth_headers)
+        response = self.request('POST', url='https://api-seller.ozon.ru/v2/product/list', headers=self.auth_headers)
 
         data = self.validate_response(response)['result']['items']
 
@@ -348,10 +351,11 @@ class OzonAPI(BaseAPI):
             body = {
                 'offer_id': chunk_offer_ids
             }
-            response = self.session.post(
-                'https://api-seller.ozon.ru/v2/product/info/list',
+            response = self.request(
+                'POST',
+                url='https://api-seller.ozon.ru/v2/product/info/list',
                 headers=self.auth_headers,
-                json=body
+                body=body
             )
 
             data = self.validate_response(response, body=body)
@@ -399,10 +403,11 @@ class OzonAPI(BaseAPI):
                 'limit': chunk_size
             }
 
-            response = self.session.post(
-                'https://api-seller.ozon.ru/v3/products/info/attributes',
+            response = self.request(
+                'POST',
+                url='https://api-seller.ozon.ru/v3/products/info/attributes',
                 headers=self.auth_headers,
-                json=body
+                body=body
             )
 
             data = self.validate_response(response, body=body)
@@ -453,8 +458,8 @@ class OzonAPI(BaseAPI):
             body = {
                 'skus': skus[i:i + chunk_size]
             }
-            response = self.session.post('https://api-seller.ozon.ru/v1/product/rating-by-sku',
-                                         headers=self.auth_headers, json=body)
+            response = self.request('POST', url='https://api-seller.ozon.ru/v1/product/rating-by-sku',
+                                         headers=self.auth_headers, body=body)
             data = self.validate_response(response, body=body)
             result.update({item['sku']: item['rating'] for item in data['products']})
 
@@ -471,8 +476,8 @@ class OzonAPI(BaseAPI):
                 'offset': offset,
                 'warehouse_type': 'ALL'
             }
-            response = self.session.post('https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses',
-                                         headers=self.auth_headers, json=body)
+            response = self.request('POST', url='https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses',
+                                         headers=self.auth_headers, body=body)
 
             data = self.validate_response(response, True, body)
 
@@ -508,8 +513,8 @@ class OzonAPI(BaseAPI):
                 },
                 'limit': chunk_size
             }
-            response = self.session.post('https://api-seller.ozon.ru/v4/product/info/prices', headers=self.auth_headers,
-                                         json=body)
+            response = self.request('POST', url='https://api-seller.ozon.ru/v4/product/info/prices', headers=self.auth_headers,
+                                         body=body)
 
             data = self.validate_response(response, body=body)
 
@@ -540,7 +545,7 @@ class OzonAPI(BaseAPI):
         # url = 'https://seller-edu.ozon.ru/document-manager-api.kms/api/v2/seller-edu/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
         url = 'https://seller-edu.ozon.ru/document-manager-api/seller-edu/api/v3/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
         #
-        response = self.session.get(url)
+        response = self.request('GET', url=url)
 
         data = response.json()
         content_json = json.loads(data['document']['contentJson'])
@@ -577,7 +582,7 @@ class OzonAPI(BaseAPI):
                 "financial_data": True
             }
         }
-        response = self.session.post(url, headers=self.auth_headers, json=body)
+        response = self.request('POST', url=url, headers=self.auth_headers, body=body)
 
         if not response.ok:
             logger.error(f'Cant get orders from {from_date}: {response.text}')

@@ -17,13 +17,14 @@ logger = get_logger(__name__, tags={'marketplace_api': 'yandex'})
 
 
 class YandexMarketAPI(BaseAPI):
-
+    market_type = 'Yandex'
     def validate_auth_data(self, token: str):
-        response = self.session.get('https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
+        response = self.request('GET', url='https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
         if response.status_code != 200:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Некорректные данные для инициализации API Яндекс маркта")
 
     def __init__(self, token: str, entity_id: int, shop_name: str):
+        self.name_of_shop = shop_name
         self.session = Session()
         self._token = token
         self._entity_id = entity_id  # same as campaign_id
@@ -71,7 +72,7 @@ class YandexMarketAPI(BaseAPI):
                     for offer_data in valida_offer_data[i:i + chunk_size]
                 ]
             }
-            response = self.session.post(url, json=body, headers=self.auth_headers)
+            response = self.request('POST', url=url, body=body, headers=self.auth_headers)
 
             if not response.ok:
                 logger.error(f'Cant update offers data: {response.text}')
@@ -113,7 +114,7 @@ class YandexMarketAPI(BaseAPI):
         return [APIOffer(**offer) for offer in result]
 
     def _get_campaigns(self) -> dict[int, dict[str, Any]]:
-        response = self.session.get('https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
+        response = self.request('GET', url='https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
 
         self.validate_response(response)
 
@@ -126,8 +127,9 @@ class YandexMarketAPI(BaseAPI):
         warehouses = []
         page_token = ''
         while True:
-            response = self.session.post(
-                f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offers/stocks?page_token={page_token}',
+            response = self.request(
+                'POST',
+                url=f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offers/stocks?page_token={page_token}',
                 headers=self.auth_headers
             )
             self.validate_response(response)
@@ -145,8 +147,9 @@ class YandexMarketAPI(BaseAPI):
         results = []
         page_token = ''
         while True:
-            response = self.session.post(
-                f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings?limit=200&page_token={page_token}',
+            response = self.request(
+                'POST',
+                url=f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings?limit=200&page_token={page_token}',
                 headers=self.auth_headers
             )
 
@@ -223,10 +226,11 @@ class YandexMarketAPI(BaseAPI):
                 'offers': post_data
             }
 
-            response = self.session.post(
-                f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
+            response = self.request(
+                'POST',
+                url=f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
                 headers=self.auth_headers,
-                json=body
+                body=body
             )
             if not response.ok:
                 logger.error(f'{self._shop_name}(yandex) has invalid price data: {response.text}')
@@ -236,8 +240,7 @@ class YandexMarketAPI(BaseAPI):
         logger.info(f'{self._shop_name}(yandex) prices updated: {len(valid_price_data)} of {len(data)}')
 
     async def _get_market_prices_report(self, business_id: int) -> dict[str, dict[str, Any]]:
-        response = self.session.post('https://api.partner.market.yandex.ru/reports/prices/generate',
-                                     json={'businessId': business_id}, headers=self.auth_headers)
+        response = self.request('POST', url='https://api.partner.market.yandex.ru/reports/prices/generate', body={'businessId': business_id}, headers=self.auth_headers)
 
         self.validate_response(response)
 
@@ -245,13 +248,13 @@ class YandexMarketAPI(BaseAPI):
         report_id = data['result']['reportId']
 
         while True:
-            response = self.session.get(f'https://api.partner.market.yandex.ru/reports/info/{report_id}',
+            response = self.request('GET', url=f'https://api.partner.market.yandex.ru/reports/info/{report_id}',
                                         headers=self.auth_headers)
             data = response.json()
             if data['result']['status'] == 'DONE':
 
                 output = BytesIO()
-                response = self.session.get(data['result']['file'])
+                response = self.request('GET', url=data['result']['file'])
                 output.write(response.content)
 
                 wb = openpyxl.load_workbook(output)
@@ -321,7 +324,7 @@ class YandexMarketAPI(BaseAPI):
         return result
 
     def _get_warehouses_info(self) -> dict[int, dict[str, Any]]:
-        response = self.session.get(f'https://api.partner.market.yandex.ru/warehouses', headers=self.auth_headers)
+        response = self.request('GET', url=f'https://api.partner.market.yandex.ru/warehouses', headers=self.auth_headers)
         self.validate_response(response, raise_error=True)
 
         data = response.json()
@@ -339,8 +342,9 @@ class YandexMarketAPI(BaseAPI):
         result = dict()
 
         while True:
-            response = self.session.post(
-                f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices?page_token={page_token}',
+            response = self.request(
+                'POST',
+                url=f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices?page_token={page_token}',
                 headers=self.auth_headers)
             self.validate_response(response)
 
@@ -363,10 +367,11 @@ class YandexMarketAPI(BaseAPI):
             body = {
                 "offerIds": skus[i:i + chunk_size],
             }
-            response = self.session.post(
-                f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices',
+            response = self.request(
+                'POST',
+                url=f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices',
                 headers=self.auth_headers,
-                json=body
+                body=body
             )
             self.validate_response(response)
             data = response.json()
@@ -400,10 +405,11 @@ class YandexMarketAPI(BaseAPI):
                 ]
             }
 
-            response = self.session.post(
-                f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings/update',
+            response = self.request(
+                'POST',
+                url=f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings/update',
                 headers=self.auth_headers,
-                json=body
+                body=body
             )
             self.validate_response(response, raise_error=False, body=body)
 
@@ -423,7 +429,7 @@ class YandexMarketAPI(BaseAPI):
         results = []
 
         while True:
-            response = self.session.get(url, headers=self.auth_headers, params=params)
+            response = self.request('GET', url=url, headers=self.auth_headers, params=params)
 
             if not response.ok:
                 logger.error(f'Cant collect orders: {response.text}')

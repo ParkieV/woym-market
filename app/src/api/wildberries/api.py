@@ -15,12 +15,14 @@ logger = get_logger(__name__, tags={'marketplace_api': 'wildberries'})
 
 
 class WildberriesAPI(BaseAPI):
+    market_type = 'Wildberries'
     __characteristic_ids = {
         'self_weight': 88953
     }
 
     def __init__(self, token: str, shop_name: str, *args, **kwargs):
         self.token = token
+        self.name_of_shop = shop_name
         self.shop_name = shop_name
         self.auth_headers = {
             'Authorization': self.token,
@@ -30,7 +32,7 @@ class WildberriesAPI(BaseAPI):
     async def validate_auth_data(self, **kwargs):
         url = 'https://common-api.wildberries.ru/open-utils/tokens/introspect-v2'
         headers = {'X-Introspect': self.token}
-        response = self.session.get(url, headers=headers)
+        response = self.request('GET', url=url, headers=headers)
 
         if not response.ok:
             raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -86,7 +88,7 @@ class WildberriesAPI(BaseAPI):
                 }
                 body.append(body_item)
 
-            response = self.session.post(update_url, json=body, headers=self.auth_headers)
+            response = self.request('POST', url=update_url, body=body, headers=self.auth_headers)
 
             if not response.ok:
                 logger.error(f'Cant update offers data: {response.text}')
@@ -134,7 +136,7 @@ class WildberriesAPI(BaseAPI):
             return
 
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/history/tasks'
-        response = self.session.get(url, headers=self.auth_headers, params={'uploadID': task_id})
+        response = self.request('GET', url=url, headers=self.auth_headers, params={'uploadID': task_id})
 
         if not response.ok:
             logger.error(f'Cant check price update result: {response.text}')
@@ -173,7 +175,7 @@ class WildberriesAPI(BaseAPI):
                     for price_data in valid_price_data[i:i + chunk_size]
                 ]
             }
-            response = self.session.post(url, json=body, headers=self.auth_headers)
+            response = self.request('POST', url=url, body=body, headers=self.auth_headers)
 
             if not response.ok:
                 logger.error(logger.error(f'Cant change price: {response.text}'))
@@ -211,7 +213,7 @@ class WildberriesAPI(BaseAPI):
                 }
             }
 
-            response = self.session.post(url, json=body, headers=self.auth_headers)
+            response = self.request('POST', url=url, body=body, headers=self.auth_headers)
 
             if not response.ok:
                 logger.error(f'Cant get offers base info: {response.text}')
@@ -270,7 +272,7 @@ class WildberriesAPI(BaseAPI):
         result = {}
 
         while True:
-            response = self.session.get(url, params={'limit': limit, 'offset': offset}, headers=self.auth_headers)
+            response = self.request('GET', url=url, params={'limit': limit, 'offset': offset}, headers=self.auth_headers)
 
             if not response.ok:
                 logger.error(f'Cant get price info: {response.text}')
@@ -309,7 +311,7 @@ class WildberriesAPI(BaseAPI):
         url = 'https://supplies-api.wildberries.ru/api/v1/warehouses'
         result = []
 
-        response = self.session.get(url, headers=self.auth_headers)
+        response = self.request('GET', url=url, headers=self.auth_headers)
 
         if not response.ok:
             logger.error(f'Cant get warehouses: {response.text}')
@@ -334,7 +336,7 @@ class WildberriesAPI(BaseAPI):
         body = {
             'skus': list(data.keys())
         }
-        response = self.session.post(url, headers=self.auth_headers, json=body)
+        response = self.request('POST', url=url, headers=self.auth_headers, body=body)
 
         if not response.ok:
             logger.error(f'Cant get stocks on warehouse id({warehouse_id}): {response.text}')
@@ -357,7 +359,7 @@ class WildberriesAPI(BaseAPI):
         date_from = '2000-06-20'
         url = f'https://statistics-api.wildberries.ru/api/v1/supplier/stocks?dateFrom={date_from}'
 
-        response = self.session.get(url, headers=self.auth_headers)
+        response = self.request('GET', url=url, headers=self.auth_headers)
         if not response.ok:
             logger.error(f'Cant get stocks: {response.text}')
             return []
@@ -383,7 +385,7 @@ class WildberriesAPI(BaseAPI):
         params = {
             'dateFrom': from_date.strftime('%Y-%m-%d'),
         }
-        response = self.session.get(url, headers=self.auth_headers, params=params)
+        response = self.request('GET', url=url, headers=self.auth_headers, params=params)
 
         if not response.ok:
             logger.error(f'Cant get orders from {from_date}: {response.text}')
