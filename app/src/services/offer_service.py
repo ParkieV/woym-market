@@ -56,6 +56,7 @@ async def change_offers(offers: list[OfferChange], user_id: int):
     async with async_session() as session:
         settings = await get_user_settings(session, user_id)
         offers_data = [i.model_dump(exclude_unset=True) for i in offers]
+        logger.info(f'Change offers: {offers_data}')
         await db.change_offers(session, offers=offers_data, mapping_fields=['id'], detect_changes=['name', 'description', 'barcodes', 'search_words', 'self_weight', 'self_length', 'self_width', 'self_height'])
         await recalculate_values(session, settings, offers_filter=OffersFilter(offer_ids=[i.id for i in offers]))
 
