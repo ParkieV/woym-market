@@ -47,11 +47,11 @@ class BaseAPI(ABC):
         try:
             response = self.session.request(method, url=url, headers=headers, json=body, params=params)
         except Exception as e:
-            logger.fatal(f'[FATAL] {response_log_message}', exc_info=e)
+            request_logger.fatal(f'[FATAL] {response_log_message}', exc_info=e)
             raise HTTPException(status_code=500, detail=response_log_message)
         else:
             response_status = 'OK' if response.ok else 'FAILED'
-            logger.debug(f'[{response_status}] {response_log_message} Response from API: status={response.status_code} | content={response.text}')
+            request_logger.debug(f'[{response_status}] {response_log_message} Response from API: status={response.status_code} | content={response.text}')
             return response
 
     def _download_report(self, url_path: str) -> pd.DataFrame:
