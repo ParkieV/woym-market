@@ -94,6 +94,11 @@ class WildberriesAPI(BaseAPI):
                 logger.error(f'Cant update offers data: {response.text}')
                 continue
 
+        errors = self.__errors_in_update()
+        if errors:
+            logger.error(f'Errors in offers: {errors}')
+
+
     async def get_offers_list(self) -> list[APIOffer]:
         offers = self._get_offers_base_info()
         offers_prices = self._get_offers_prices()
@@ -328,6 +333,13 @@ class WildberriesAPI(BaseAPI):
             })
 
         return result
+
+    def __errors_in_update(self) -> list[dict]:
+        url = 'https://content-api.wildberries.ru/content/v2/cards/error/list'
+        response = self.request('GET', url=url, headers=self.auth_headers)
+        json_response = response.json()
+        return json_response.get('data', [])
+
 
     def _get_stocks_on_warehouse(self, warehouse_id: int, data: dict['barcode', 'sku']) -> list[APIWarehouseOffer]:
         url = f'https://marketplace-api.wildberries.ru/api/v3/stocks/{warehouse_id}'
