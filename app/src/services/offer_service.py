@@ -137,7 +137,6 @@ async def update_offers(user_id: int):
 
     # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
     to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
-    logger.info(f'Found offers to update attributes: {to_update_attributes.to_dict("records")}')
     await update_offers_attributes(to_update_attributes)
 
     async with async_session() as session:
@@ -232,6 +231,7 @@ async def update_offers_attributes(offers: pd.DataFrame) -> None:
         return
 
     data = [APIOfferChangeData(**offer_data) for offer_data in data]
+    logger.info(f'Found offers to update attributes: {[i.model_dump() for i in data]}')
     await api_wrapper.change_offers(data)
 
 
