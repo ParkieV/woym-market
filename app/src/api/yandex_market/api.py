@@ -72,7 +72,7 @@ class YandexMarketAPI(BaseAPI):
                     for offer_data in valida_offer_data[i:i + chunk_size]
                 ]
             }
-            response = self.request('POST', url=url, body=body, headers=self.auth_headers)
+            response = self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
                 logger.error(f'Cant update offers data: {response.text}')
@@ -230,7 +230,8 @@ class YandexMarketAPI(BaseAPI):
                 'POST',
                 url=f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
                 headers=self.auth_headers,
-                body=body
+                body=body,
+                include_response_logs=True
             )
             if not response.ok:
                 logger.error(f'{self._shop_name}(yandex) has invalid price data: {response.text}')

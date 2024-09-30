@@ -88,7 +88,7 @@ class WildberriesAPI(BaseAPI):
                 }
                 body.append(body_item)
 
-            response = self.request('POST', url=update_url, body=body, headers=self.auth_headers)
+            response = self.request('POST', url=update_url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
                 logger.error(f'Cant update offers data: {response.text}')
@@ -175,7 +175,7 @@ class WildberriesAPI(BaseAPI):
                     for price_data in valid_price_data[i:i + chunk_size]
                 ]
             }
-            response = self.request('POST', url=url, body=body, headers=self.auth_headers)
+            response = self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
                 logger.error(logger.error(f'Cant change price: {response.text}'))

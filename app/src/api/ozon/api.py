@@ -174,7 +174,7 @@ class OzonAPI(BaseAPI):
             body = {
                 'items': [offer_data for offer_data in to_update_offers_data[i:i + chunk_size]]
             }
-            response = self.request('POST', url, body=body, headers=self.auth_headers)
+            response = self.request('POST', url, body=body, headers=self.auth_headers, include_response_logs=True)
             if not response.ok:
                 logger.error(f'Cant update offers data: {response.text}')
                 continue
@@ -196,7 +196,7 @@ class OzonAPI(BaseAPI):
         body = {
             'task_id': task_id,
         }
-        response = self.request('POST', url=f'https://api-seller.ozon.ru/v1/product/import/info', body=body, headers=self.auth_headers)
+        response = self.request('POST', url=f'https://api-seller.ozon.ru/v1/product/import/info', body=body, headers=self.auth_headers, include_response_logs=True)
 
         if not response.ok:
             logger.error(f'Cant check task({task_id}) status {response.text}')
@@ -322,7 +322,8 @@ class OzonAPI(BaseAPI):
                 'POST',
                 url='https://api-seller.ozon.ru/v1/product/import/prices',
                 headers=self.auth_headers,
-                body=body
+                body=body,
+                include_response_logs=True
             )
 
             self.validate_response(response, raise_error=False, body=body)

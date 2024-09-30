@@ -42,7 +42,7 @@ class BaseAPI(ABC):
     async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
         pass
 
-    def request(self, method: str, url: str, body: dict | None = None, params: dict | None = None,  headers: dict | None = None) -> Response:
+    def request(self, method: str, url: str, body: dict | None = None, params: dict | None = None,  headers: dict | None = None, include_response_logs: bool = False) -> Response:
         response_log_message = f'Request to API {self.market_type}({self.name_of_shop}): {method.upper()} {url} | body={body} | params={params} | headers={headers}.'
         try:
             response = self.session.request(method, url=url, headers=headers, json=body, params=params)
@@ -51,7 +51,8 @@ class BaseAPI(ABC):
             raise HTTPException(status_code=500, detail=response_log_message)
         else:
             response_status = 'OK' if response.ok else 'FAILED'
-            request_logger.debug(f'[{response_status}] {response_log_message} Response from API: status={response.status_code} | content={response.text}')
+            response_data = response.text if include_response_logs else '!transmission disabled'
+            request_logger.debug(f'[{response_status}] {response_log_message} Response from API: status={response.status_code} | content={response_data}')
             return response
 
     def _download_report(self, url_path: str) -> pd.DataFrame:
