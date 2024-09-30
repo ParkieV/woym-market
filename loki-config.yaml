@@ -1,0 +1,2 @@
+limits_config:
+  max_line_size: 10485760 # 10MB
