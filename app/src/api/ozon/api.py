@@ -361,6 +361,9 @@ class OzonAPI(BaseAPI):
 
             data = self.validate_response(response, body=body)
             for offer in data['result']['items']:
+                offer_status = offer.get('status', {})
+                if offer_status.get('validation_state', 'fail') == 'fail' or offer_status.get('is_failed', True):
+                    logger.warning(f'Error in offer {offer["offer_id"]} data. Status: {offer_status}')
                 try:
                     price_indexes = offer.get('price_indexes', None)
 
