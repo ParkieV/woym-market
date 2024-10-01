@@ -135,7 +135,7 @@ def parce_purchase_list(data: bytes, file_extension: str = '.xlsx') -> pd.DataFr
         df['wholesale_dollar_cost_price']
     )
     df.drop(['name', 'discount_price', 'price'], axis=1, inplace=True)
-
+    df.dropna(axis='rows', inplace=True)
     return df
 
 

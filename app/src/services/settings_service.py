@@ -40,7 +40,7 @@ async def update_settings(user_id: int, data: SettingsUpdate):
     async with async_session() as session:
         await db.update_user_settings(session, user_id, data)
         settings = await db.get_user_settings(session, user_id)
-        await recalculate_values(session, settings)
+        await recalculate_values(session)
 
 
 async def update_or_create_table(data: TableInfoUpdate):
@@ -88,7 +88,7 @@ async def change_market(_id: int, data: MarketUpdate | MarketFullUpdate, user_id
     async with async_session() as session:
         market = await db.change_market(session, _id, data)
         settings = await db.get_user_settings(session, user_id)
-        await recalculate_values(session, settings, offers_filter=OffersFilter(market=market.type, name_of_shop=market.name))
+        await recalculate_values(session, offers_filter=OffersFilter(market=market.type, name_of_shop=market.name))
 
 
 async def delete_market(_id: int):

@@ -120,6 +120,7 @@ async def change_offers(
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Поля {mapping_fields} обязательно должны быть переданы')
 
         if detect_changes:
+            # TODO нужно учитывать изначальный маркер изменения or_(*_changed, expression)
             tracked_data = {
                 f'{i}_changed': func.concat(getattr(Offer, i), '') != func.concat(update_offer_data[i], '')
                 for i in detect_changes if getattr(Offer, i, None) and i in update_offer_data
@@ -279,14 +280,34 @@ async def get_unique_skus(session: AsyncSession) -> list[str]:
     return [i[0] for i in result.all()]
 
 
-async def set_supplier_available(session: AsyncSession, skus: Iterable[str], value: bool) -> None:
-    for sku in skus:
-        stmp = update(Offer).where(Offer.sku.endswith(sku)).values(
-            supplier_available=value,
-            dollar_cost_price_updated_at=func.now(),
+async def set_supplier_available(session: AsyncSession, skus: Iterable[str], offers_source_filter: OffersSourceFilter | None = None) -> None:
+    available_stmp = (
+        update(Offer)
+        .where(Offer.sku.in_(skus))
+        .values(
+            supplier_available=True,
+            dollar_cost_price_updated_at=func.now()
         )
-        await session.execute(stmp)
-        await session.commit()
+    )
+    available_stmp = offers_source_filter(available_stmp)
+
+    await session.execute(available_stmp)
+
+    unvailable_stmp = (
+        update(Offer)
+        .where(Offer.sku.notin_(skus))
+        .values(supplier_available=False)
+    )
+
+    unvailable_stmp = offers_source_filter(unvailable_stmp)
+
+    await session.execute(unvailable_stmp)
+
+    await session.commit()
+
+
+
+
 
 
 async def set_dollar_cost_price_updated_at(session: AsyncSession, skus: Iterable[str], value: datetime) -> None:

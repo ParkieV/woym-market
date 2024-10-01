@@ -73,8 +73,8 @@ class OfferChange(BaseModel, BaseModelFields):
     id: int | None = Field(default=None, title='id')
 
     sku: str | None = Field(default=None, title='sku')
-    name_of_shop: str = Field(default=None, title='Название магазина')
-    market: str = Field(default=None, title='Площадка')
+    name_of_shop: str | None = Field(default=None, title='Название магазина')
+    market: str | None = Field(default=None, title='Площадка')
 
     name: str | None = Field(default=None, title='Название')
     description: str | None = Field(default=None, title='Описание')

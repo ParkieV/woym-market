@@ -56,11 +56,27 @@ async def export_offers(filter: OffersFilter | None = Body(None)):
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data', background=BackgroundTask(clean_up_files, str(path)))
 
 
+# @router.post('/import', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт карточек товаров', description='Обновляет существующие карточки, но не создает новые или удаляет неуказанные')
+# async def import_offers(import_type: ImportType = Body(), data: UploadFile = File(), market: Market | None = Body(None), name_of_shop: str | None = Body(None), current_user=Depends(require_staff)):
+#     content = await data.read()
+#     await service.import_data(content, market, import_type, name_of_shop, current_user.id, PurePath(data.filename).suffix)
+#     return {'status': 'OK'}
+
 @router.post('/import', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт карточек товаров', description='Обновляет существующие карточки, но не создает новые или удаляет неуказанные')
-async def import_offers(import_type: ImportType = Body(), data: UploadFile = File(), market: Market | None = Body(None), name_of_shop: str | None = Body(None), current_user=Depends(require_staff)):
+async def import_offers_table(data: UploadFile = File(), market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
     content = await data.read()
-    await service.import_data(content, market, import_type, name_of_shop, current_user.id, PurePath(data.filename).suffix)
-    return {'status': 'OK'}
+    await service.import_offers(content, market=market, name_of_shop=name_of_shop, file_extension='.xlsx')
+
+@router.post('/import/sizes', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт карточек товаров', description='Обновляет существующие карточки, но не создает новые или удаляет неуказанные')
+async def import_offers_size_list(data: UploadFile = File(), name_of_shop: str | None = Body(None)):
+    content = await data.read()
+    await service.import_sizes(content, name_of_shop='.xlsx')
+
+
+@router.post('/import/prices', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт карточек товаров', description='Обновляет существующие карточки, но не создает новые или удаляет неуказанные')
+async def import_offers_price_list(data: UploadFile = File(), market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
+    content = await data.read()
+    await service.import_prices(content, name_of_shop=name_of_shop, market=market, file_extension='.xlsx')
 
 
 @router.post('/violators/export', dependencies=[Depends(get_current_user)], tags=['Карточки товаров', 'Экспорт'], summary='Экспорт нарушителей РРЦ')
