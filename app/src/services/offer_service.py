@@ -56,6 +56,7 @@ async def change_offers(offers: list[OfferChange], user_id: int):
     async with async_session() as session:
         settings = await get_user_settings(session, user_id)
         offers_data = [i.model_dump(exclude_unset=True) for i in offers]
+        logger.info(f'Change offers: {offers_data}')
         await db.change_offers(session, offers=offers_data, mapping_fields=['id'], detect_changes=['name', 'description', 'barcodes', 'search_words', 'self_weight', 'self_length', 'self_width', 'self_height'])
         await recalculate_values(session, settings, offers_filter=OffersFilter(offer_ids=[i.id for i in offers]))
 
@@ -110,7 +111,7 @@ async def update_offers(user_id: int):
 
     # Получаем товары из апи
     api_offers = await api_wrapper.get_offers_list()
-    api_offers_df = pd.DataFrame(api_offers)
+    api_offers_df = pd.DataFrame([i.model_dump() for i in api_offers])
 
     common_columns = (set(db_offers_df.columns.tolist()) & set(api_offers_df.columns.tolist())) - set(mapping_fields)
     merged_offers = pd.merge(db_offers_df, api_offers_df, on=mapping_fields, how='outer', indicator=True, suffixes=(None, '__api'))
@@ -135,7 +136,6 @@ async def update_offers(user_id: int):
 
     # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
     to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
-    logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
     await update_offers_attributes(to_update_attributes)
 
     async with async_session() as session:
@@ -151,7 +151,7 @@ async def update_offers(user_id: int):
 
     # Обновляем товары из апи
     api_offers = await api_wrapper.get_offers_list()
-    api_offers_df = pd.DataFrame(api_offers)
+    api_offers_df = pd.DataFrame([i.model_dump() for i in api_offers])
     api_offers_df.replace({np.nan: None}, inplace=True)
 
     async with async_session() as session:
@@ -230,6 +230,7 @@ async def update_offers_attributes(offers: pd.DataFrame) -> None:
         return
 
     data = [APIOfferChangeData(**offer_data) for offer_data in data]
+    logger.info(f'Found offers to update attributes: {[i.model_dump() for i in data]}')
     await api_wrapper.change_offers(data)
 
 

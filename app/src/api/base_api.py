@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
 from io import BytesIO
@@ -9,10 +10,13 @@ from src.schemas.base_api_schemas import APIOffer, APIWarehouse, APIPriceChangeD
 from logs import get_logger
 
 logger = get_logger(__name__)
+request_logger = get_logger('requests', level=logging.DEBUG)
 
 
 class BaseAPI(ABC):
     session: Session
+    market_type: str
+    name_of_shop: str
 
     @abstractmethod
     async def validate_auth_data(self, **kwargs):
@@ -38,9 +42,22 @@ class BaseAPI(ABC):
     async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
         pass
 
+    def request(self, method: str, url: str, body: dict | None = None, params: dict | None = None,  headers: dict | None = None, include_response_logs: bool = False) -> Response:
+        response_log_message = f'Request to API {self.market_type}({self.name_of_shop}): {method.upper()} {url} | body={body} | params={params} | headers={headers}.'
+        try:
+            response = self.session.request(method, url=url, headers=headers, json=body, params=params)
+        except Exception as e:
+            request_logger.fatal(f'[FATAL] {response_log_message}', exc_info=e)
+            raise HTTPException(status_code=500, detail=response_log_message)
+        else:
+            response_status = 'OK' if response.ok else 'FAILED'
+            response_data = response.text if include_response_logs else '!transmission disabled'
+            request_logger.debug(f'[{response_status}] {response_log_message} Response from API: status={response.status_code} | content={response_data}')
+            return response
+
     def _download_report(self, url_path: str) -> pd.DataFrame:
         output = BytesIO()
-        response = self.session.get(url_path)
+        response = self.request('GET', url=url_path)
         output.write(response.content)
         return pd.read_excel(output, engine='openpyxl')
 

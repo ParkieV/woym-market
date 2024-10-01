@@ -1,15 +1,16 @@
+from dataclasses import asdict
 from datetime import datetime
 
 from logs import get_logger
 from .base_api import BaseAPI
-from src.schemas.base_api_schemas import APIWarehouse, APIOffer, APIPriceChangeData, APIOrderData
+from src.schemas.base_api_schemas import APIWarehouse, APIOffer, APIPriceChangeData, APIOrderData, APIOfferChangeData
 from src.database.settings_db import get_markets
 from src.api.factory import APIFactory
 from ..database.db import async_session
 from src.schemas.settings_schemas import MarketFullOut
 
 
-logger = get_logger(__name__)
+logger = get_logger(__name__, tags={'marketplace_api': 'api wrapper'})
 
 
 class APIWrapper(BaseAPI):
@@ -24,9 +25,7 @@ class APIWrapper(BaseAPI):
                     logger.warning(f'Orders list for {market.name}({market.type}) is empty')
 
                 result.extend(orders)
-
         return result
-
 
     async def validate_auth_data(self, **kwargs):
         pass
@@ -66,7 +65,7 @@ class APIWrapper(BaseAPI):
 
                 await api.change_prices(price_data)
 
-    async def change_offers(self, data: list[APIOffer]) -> None:
+    async def change_offers(self, data: list[APIOfferChangeData]) -> None:
         async with async_session() as session:
             for market in await get_markets(session, MarketFullOut):
                 api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)

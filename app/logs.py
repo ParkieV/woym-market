@@ -1,6 +1,6 @@
 import logging
 import sys
-from logging_loki import LokiQueueHandler, LokiHandler
+from logging_loki import LokiHandler
 
 from src.params.confing import config
 

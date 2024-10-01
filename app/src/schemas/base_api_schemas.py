@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Union
 
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class WarehouseType(str, Enum):
@@ -13,16 +13,16 @@ class WarehouseType(str, Enum):
     SUPER_CLUSTER = 'super_cluster'
 
 
-@dataclass(frozen=True)
-class APIOffer:
+class APIOffer(BaseModel):
     sku: str
     name: str
     name_of_shop: str
     description: str | None = None
     self_weight: float | None = None
-    self_length: float | None = None
-    self_width: float | None = None
-    self_height: float | None = None
+    self_length: int | None = None
+    self_width: int | None = None
+    self_height: int | None = None
+    volume: float | None = None
     photo: str | None = None
     current_price: float | None = None
     business_id: int | None = None
@@ -40,11 +40,18 @@ class APIOffer:
     barcodes: str | None = None
     your_promotion_price: float | None = None
     content_rating: float | None = None
-    price_index: float | None = None
+    price_index: str | None = None
     # артикул - product id
     vendor_code: int | None = None
     search_words: str | None = None
     market: str = 'yandex'
+
+    @field_validator('self_length', 'self_width', 'self_height', mode='before')
+    @classmethod
+    def convert_sizes(cls, value: int | None) -> int | None:
+        if value is None:
+            return None
+        return int(value)
 
 
 @dataclass
@@ -102,9 +109,17 @@ class APIOfferChangeData(BaseModel):
     search_words: str | None = None
     barcodes: str | None = None
     self_weight: float | None = None
-    self_length: float | None = None
-    self_width: float | None = None
-    self_height: float | None = None
+    self_length: int | None = None
+    self_width: int | None = None
+    self_height: int | None = None
+
+    @field_validator('self_length', 'self_width', 'self_height', mode='before')
+    @classmethod
+    def convert_sizes(cls, value: int | None) -> int | None:
+        if value is None:
+            return None
+        return int(value)
+
 
     def is_valid_vendor_code(self) -> bool:
         return isinstance(self.vendor_code, int) and not np.isnan(self.vendor_code)
@@ -122,10 +137,13 @@ class APIOfferChangeData(BaseModel):
         return isinstance(self.search_words, str)
 
     def is_valid_sizes(self) -> bool:
-        dimensions = [self.self_width, self.self_height, self.self_length, self.self_weight]
+        dimensions = [self.self_width, self.self_height, self.self_length]
+
+        if not isinstance(self.self_weight, (int, float)) or np.isnan(self.self_weight):
+            return False
 
         for i in dimensions:
-            if not isinstance(i, (int, float)) or np.isnan(i):
+            if not isinstance(i, int) or np.isnan(i):
                 return False
 
         return True
