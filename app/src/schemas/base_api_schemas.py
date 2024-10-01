@@ -40,7 +40,7 @@ class APIOffer(BaseModel):
     barcodes: str | None = None
     your_promotion_price: float | None = None
     content_rating: float | None = None
-    price_index: float | None = None
+    price_index: str | None = None
     # артикул - product id
     vendor_code: int | None = None
     search_words: str | None = None
