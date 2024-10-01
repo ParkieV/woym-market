@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Union
 
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class WarehouseType(str, Enum):
@@ -13,8 +13,7 @@ class WarehouseType(str, Enum):
     SUPER_CLUSTER = 'super_cluster'
 
 
-@dataclass(frozen=True)
-class APIOffer:
+class APIOffer(BaseModel):
     sku: str
     name: str
     name_of_shop: str
@@ -46,6 +45,13 @@ class APIOffer:
     vendor_code: int | None = None
     search_words: str | None = None
     market: str = 'yandex'
+
+    @field_validator('self_length', 'self_width', 'self_height', mode='before')
+    @classmethod
+    def convert_sizes(cls, value: int | None) -> int | None:
+        if value is None:
+            return None
+        return int(value)
 
 
 @dataclass
@@ -106,6 +112,14 @@ class APIOfferChangeData(BaseModel):
     self_length: int | None = None
     self_width: int | None = None
     self_height: int | None = None
+
+    @field_validator('self_length', 'self_width', 'self_height', mode='before')
+    @classmethod
+    def convert_sizes(cls, value: int | None) -> int | None:
+        if value is None:
+            return None
+        return int(value)
+
 
     def is_valid_vendor_code(self) -> bool:
         return isinstance(self.vendor_code, int) and not np.isnan(self.vendor_code)

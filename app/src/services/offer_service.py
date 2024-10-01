@@ -112,7 +112,7 @@ async def update_offers(user_id: int):
 
     # Получаем товары из апи
     api_offers = await api_wrapper.get_offers_list()
-    api_offers_df = pd.DataFrame(api_offers)
+    api_offers_df = pd.DataFrame([i.model_dump() for i in api_offers])
 
     common_columns = (set(db_offers_df.columns.tolist()) & set(api_offers_df.columns.tolist())) - set(mapping_fields)
     merged_offers = pd.merge(db_offers_df, api_offers_df, on=mapping_fields, how='outer', indicator=True, suffixes=(None, '__api'))
@@ -152,7 +152,7 @@ async def update_offers(user_id: int):
 
     # Обновляем товары из апи
     api_offers = await api_wrapper.get_offers_list()
-    api_offers_df = pd.DataFrame(api_offers)
+    api_offers_df = pd.DataFrame([i.model_dump() for i in api_offers])
     api_offers_df.replace({np.nan: None}, inplace=True)
 
     async with async_session() as session:
