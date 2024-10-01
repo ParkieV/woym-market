@@ -16,7 +16,7 @@ import pandas as pd  #noqa
     })]
 )
 @pytest.mark.usefixtures('api')
-class TestOzonAPI(BaseMarketplaceAPITest):
+class TestOzonAPI:
 
     async def test_get_offers_attributes(self, api: OzonAPI):
         idents = api._get_offers_identifiers()
@@ -55,3 +55,8 @@ class TestOzonAPI(BaseMarketplaceAPITest):
             )
         ]
         await api.change_offers(data)
+
+    async def test_get_offers_list(self, api: OzonAPI):
+        offers = await api.get_offers_list()
+        assert isinstance(offers, list)
+        assert offers

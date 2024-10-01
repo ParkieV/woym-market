@@ -122,22 +122,12 @@ class OzonAPI(BaseAPI):
             update_offer_data['images'] = update_offer_data.get('images', [])
             update_offer_data['images'] = [i['file_name'] for i in update_offer_data['images']]
 
-            dimension_unit = 'cm'
-            if any((valid_offer.self_height < 1, valid_offer.self_width < 1, valid_offer.self_length < 1)):
-                dimension_unit = 'mm'
-                valid_offer.self_height, valid_offer.self_width, valid_offer.self_length = valid_offer.self_height * 10, valid_offer.self_width * 10, valid_offer.self_length * 10
-
-            weight_unit = 'kg'
-            if valid_offer.self_weight < 1:
-                valid_offer.self_weight *= 1000
-                weight_unit = 'g'
-
             update_offer_data['height'] = round(valid_offer.self_height)
             update_offer_data['width'] = round(valid_offer.self_width)
             update_offer_data['depth'] = round(valid_offer.self_length)
             update_offer_data['weight'] = round(valid_offer.self_weight)
-            update_offer_data['dimension_unit'] = dimension_unit
-            update_offer_data['weight_unit'] = weight_unit
+            update_offer_data['dimension_unit'] = 'cm'
+            update_offer_data['weight_unit'] = 'kg'
 
             update_offer_data['attributes'] = update_offer_data['attributes'] or []
             update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] if attr['attribute_id'] not in (22336, 4191)]
@@ -435,9 +425,9 @@ class OzonAPI(BaseAPI):
                     search_words = search_words[:search_words[:256].rfind(';')]
 
                 result[offer['offer_id']] = {
-                    'self_height': offer['height'] / unit_dimension_divider if offer['height'] else offer['height'],
-                    'self_length': offer['depth'] / unit_dimension_divider if offer['depth'] else offer['depth'],
-                    'self_width': offer['width'] / unit_dimension_divider if offer['width'] else offer['width'],
+                    'self_height': round(offer['height'] / unit_dimension_divider if offer['height'] else offer['height']),
+                    'self_length': round(offer['depth'] / unit_dimension_divider if offer['depth'] else offer['depth']),
+                    'self_width': round(offer['width'] / unit_dimension_divider if offer['width'] else offer['width']),
                     'self_weight': offer['weight'] / 1000 if offer['weight'] else offer['weight'],
                     'search_words': search_words,
                     'description': descriptions

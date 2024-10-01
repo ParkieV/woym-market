@@ -61,9 +61,9 @@ class YandexMarketAPI(BaseAPI):
                             'name': offer_data.name,
                             'description': offer_data.description,
                             'weightDimensions': {
-                                'length': offer_data.self_length,
-                                'width': offer_data.self_width,
-                                'height': offer_data.self_height,
+                                'length': round(offer_data.self_length),
+                                'width': round(offer_data.self_width),
+                                'height': round(offer_data.self_height),
                                 'weight': offer_data.self_weight,
                             }
 
@@ -173,9 +173,9 @@ class YandexMarketAPI(BaseAPI):
                     'name': offer['name'],
                     'description': offer.get('description', None),
                     'self_weight': weight_dimensions.get('weight'),
-                    'self_length': weight_dimensions.get('length'),
-                    'self_width': weight_dimensions.get('width'),
-                    'self_height': weight_dimensions.get('height'),
+                    'self_length': round(weight_dimensions.get('length')) if weight_dimensions.get('length') else None,
+                    'self_width': round(weight_dimensions.get('width')) if weight_dimensions.get('width') else None,
+                    'self_height': round(weight_dimensions.get('height')) if weight_dimensions.get('height') else None,
                     'volume': volume,
                     'photo': offer['pictures'][0] if len(offer['pictures']) > 0 else None,
                     'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,

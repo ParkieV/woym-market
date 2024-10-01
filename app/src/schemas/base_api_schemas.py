@@ -20,9 +20,9 @@ class APIOffer:
     name_of_shop: str
     description: str | None = None
     self_weight: float | None = None
-    self_length: float | None = None
-    self_width: float | None = None
-    self_height: float | None = None
+    self_length: int | None = None
+    self_width: int | None = None
+    self_height: int | None = None
     volume: float | None = None
     photo: str | None = None
     current_price: float | None = None
@@ -103,9 +103,9 @@ class APIOfferChangeData(BaseModel):
     search_words: str | None = None
     barcodes: str | None = None
     self_weight: float | None = None
-    self_length: float | None = None
-    self_width: float | None = None
-    self_height: float | None = None
+    self_length: int | None = None
+    self_width: int | None = None
+    self_height: int | None = None
 
     def is_valid_vendor_code(self) -> bool:
         return isinstance(self.vendor_code, int) and not np.isnan(self.vendor_code)
@@ -123,10 +123,13 @@ class APIOfferChangeData(BaseModel):
         return isinstance(self.search_words, str)
 
     def is_valid_sizes(self) -> bool:
-        dimensions = [self.self_width, self.self_height, self.self_length, self.self_weight]
+        dimensions = [self.self_width, self.self_height, self.self_length]
+
+        if not isinstance(self.self_weight, (int, float)) or np.isnan(self.self_weight):
+            return False
 
         for i in dimensions:
-            if not isinstance(i, (int, float)) or np.isnan(i):
+            if not isinstance(i, int) or np.isnan(i):
                 return False
 
         return True
