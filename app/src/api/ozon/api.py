@@ -125,7 +125,7 @@ class OzonAPI(BaseAPI):
             update_offer_data['height'] = round(valid_offer.self_height)
             update_offer_data['width'] = round(valid_offer.self_width)
             update_offer_data['depth'] = round(valid_offer.self_length)
-            update_offer_data['weight'] = round(valid_offer.self_weight)
+            update_offer_data['weight'] = valid_offer.self_weight
             update_offer_data['dimension_unit'] = 'cm'
             update_offer_data['weight_unit'] = 'kg'
 
