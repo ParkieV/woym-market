@@ -120,9 +120,11 @@ async def change_offers(
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Поля {mapping_fields} обязательно должны быть переданы')
 
         if detect_changes:
-            # TODO нужно учитывать изначальный маркер изменения or_(*_changed, expression)
             tracked_data = {
-                f'{i}_changed': func.concat(getattr(Offer, i), '') != func.concat(update_offer_data[i], '')
+                f'{i}_changed': (
+                    getattr(Offer, f'{i}_changed'),
+                    func.concat(getattr(Offer, i), '') != func.concat(update_offer_data[i], '')
+                )
                 for i in detect_changes if getattr(Offer, i, None) and i in update_offer_data
             }
             update_offer_data.update(tracked_data)
