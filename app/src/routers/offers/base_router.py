@@ -62,19 +62,19 @@ async def export_offers(filter: OffersFilter | None = Body(None)):
 #     await service.import_data(content, market, import_type, name_of_shop, current_user.id, PurePath(data.filename).suffix)
 #     return {'status': 'OK'}
 
-@router.post('/import', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт карточек товаров', description='Обновляет существующие карточки, но не создает новые или удаляет неуказанные')
+@router.post('/import', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт карточек товаров', description='Обновляет существующие карточки, но не создает новые или удаляет неуказанные. Колонка id обязательно должна присутствовать.')
 async def import_offers_table(data: UploadFile = File(), market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
     content = await data.read()
     await service.import_offers(content, market=market, name_of_shop=name_of_shop, file_extension='.xlsx')
 
 
-@router.post('/import/sizes', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт карточек товаров', description='Обновляет существующие карточки, но не создает новые или удаляет неуказанные')
+@router.post('/import/sizes', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт листа размеров яндекса', description='Обновляет значения `yandex_length`, `yandex_width`, `yandex_height`, `yandex_weight`. Работает только для магазинов Яндекса.')
 async def import_offers_size_list(data: UploadFile = File(), name_of_shop: str | None = Body(None)):
     content = await data.read()
     await service.import_sizes(content, name_of_shop=name_of_shop, file_extension='.xlsx')
 
 
-@router.post('/import/prices', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт карточек товаров', description='Обновляет существующие карточки, но не создает новые или удаляет неуказанные')
+@router.post('/import/prices', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт листа закупки(цены)', description='Обновляет существующие значения `wholesale_dollar_cost_price` и `use_promotion_price`. Если есть цена по со скидкой, то берется она и выставляется галочка. Иначе берется базовая цена и галочка снимается.')
 async def import_offers_price_list(data: UploadFile = File(), market: Market | None = Body(None), name_of_shop: str | None = Body(None)):
     content = await data.read()
     await service.import_prices(content, name_of_shop=name_of_shop, market=market, file_extension='.xlsx')
