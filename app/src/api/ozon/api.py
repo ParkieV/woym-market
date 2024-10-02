@@ -138,7 +138,7 @@ class OzonAPI(BaseAPI):
                 logger.error(f'Error in offer dimension weight={weight} weight_unit={weight_unit}. Cant parse to Integer.')
                 continue
 
-            update_offer_data['weight'] = weight
+            update_offer_data['weight'] = int(weight)
             update_offer_data['weight_unit'] = weight_unit
 
             update_offer_data['attributes'] = update_offer_data['attributes'] or []
