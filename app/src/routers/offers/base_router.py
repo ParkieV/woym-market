@@ -67,10 +67,11 @@ async def import_offers_table(data: UploadFile = File(), market: Market | None =
     content = await data.read()
     await service.import_offers(content, market=market, name_of_shop=name_of_shop, file_extension='.xlsx')
 
+
 @router.post('/import/sizes', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт карточек товаров', description='Обновляет существующие карточки, но не создает новые или удаляет неуказанные')
 async def import_offers_size_list(data: UploadFile = File(), name_of_shop: str | None = Body(None)):
     content = await data.read()
-    await service.import_sizes(content, name_of_shop='.xlsx')
+    await service.import_sizes(content, name_of_shop=name_of_shop, file_extension='.xlsx')
 
 
 @router.post('/import/prices', tags=['Импорт', 'Карточки товаров'], dependencies=[Depends(require_staff)], summary='Импорт карточек товаров', description='Обновляет существующие карточки, но не создает новые или удаляет неуказанные')

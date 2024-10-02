@@ -326,6 +326,7 @@ async def import_prices(data, name_of_shop: str | None = None, market: str | Non
 
 async def import_sizes(data, name_of_shop: str | None = None, file_extension: str = 'xlsx'):
     df = parce_sizes_list(data, file_extension=file_extension)
+    df['sku'] = df['sku'].str.lstrip('0')
     offers_filter = OffersSourceFilter(
         name_of_shop=name_of_shop,
         market='yandex'
