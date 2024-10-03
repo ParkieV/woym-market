@@ -125,9 +125,21 @@ class OzonAPI(BaseAPI):
             update_offer_data['height'] = round(valid_offer.self_height)
             update_offer_data['width'] = round(valid_offer.self_width)
             update_offer_data['depth'] = round(valid_offer.self_length)
-            update_offer_data['weight'] = round(valid_offer.self_weight)
             update_offer_data['dimension_unit'] = 'cm'
-            update_offer_data['weight_unit'] = 'kg'
+
+            weight = valid_offer.self_weight
+            weight_unit = 'kg'
+
+            if weight % 1 > 0:
+                weight *= 1000
+                weight_unit = 'g'
+
+            if weight % 1 > 0:
+                logger.error(f'Error in offer dimension weight={weight} weight_unit={weight_unit}. Cant parse to Integer.')
+                continue
+
+            update_offer_data['weight'] = int(weight)
+            update_offer_data['weight_unit'] = weight_unit
 
             update_offer_data['attributes'] = update_offer_data['attributes'] or []
             update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] if attr['attribute_id'] not in (22336, 4191)]
@@ -607,3 +619,4 @@ class OzonAPI(BaseAPI):
                 result.append(order_item_data)
 
         return result
+
