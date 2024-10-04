@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette import status
 from starlette.responses import JSONResponse
 
-from logs import get_loki_handler
+from middlewares import EndpointLoggingMiddleware
 from scheduls import update_data
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
@@ -59,10 +59,10 @@ async def startup(_: FastAPI):
     yield
 
 
-app: FastAPI = FastAPI(default_response_class=ORJSONResponse, root_path='' if config.is_local else '/backend', lifespan=startup)
+app: FastAPI = FastAPI(default_response_class=ORJSONResponse, root_path='' if config.is_local else '/backend', lifespan=startup, debug=True)
 
-uvicorn_logger = logging.getLogger('uvicorn.access')
-uvicorn_logger.addHandler(get_loki_handler())
+if config.log_endpoints:
+    app.add_middleware(EndpointLoggingMiddleware)
 
 
 origins = [
