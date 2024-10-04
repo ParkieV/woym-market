@@ -68,13 +68,6 @@ async def import_catalog_items(data: UploadFile = File()):
     return {'status': 'OK'}
 
 
-@router.post('/import/sizes', tags=['Импорт'], dependencies=[Depends(require_staff)], summary='Импорт размеров в каталог')
-async def import_catalog_item_sizes(data: UploadFile = File()):
-    content = await data.read()
-    await service.import_item_sizes(content, PurePath(data.filename).suffix)
-    return {'status': 'OK'}
-
-
 @router.post('/import/prices', tags=['Импорт'], dependencies=[Depends(require_staff)], summary='Импорт цен в каталог')
 async def import_catalog_item_prices(data: UploadFile = File()):
     content = await data.read()
