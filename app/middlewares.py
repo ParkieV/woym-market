@@ -26,9 +26,9 @@ class EndpointLoggingMiddleware(BaseHTTPMiddleware):
         base_log_message = f'{request.method} {request.url} | body={request_body} | params={request.query_params} | path_params={request.path_params} | headers={request.headers}'
         try:
             response = await call_next(request)
-            print(f'[OK] {base_log_message}')
+            logger.debug(f'[OK] {base_log_message}')
         except Exception as exp:
-            print(f'[ERROR] {base_log_message}. Error message: {exp}')
+            logger.debug(f'[ERROR] {base_log_message}. Error message: {exp}')
             raise exp
 
         return response
