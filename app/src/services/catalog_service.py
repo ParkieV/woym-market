@@ -62,7 +62,6 @@ async def get_catalog_items() -> list[CatalogItem]:
 async def change_catalog_items(items: list[CatalogItemUpdate]) -> None:
     async with async_session() as session:
         await db.change_catalog_items(session, items)
-        logger.info(f'Catalog items changed: {len(items)}')
 
 
 async def sync_catalog_items_with_offers(skus: list[str] | None = None, exclude_fields: list | None = None) -> None:
@@ -99,24 +98,12 @@ async def import_catalog_items(file: bytes, file_extension: str = '.xlsx') -> li
     await change_catalog_items(to_update_items)
 
 
-async def import_item_sizes(data: bytes, file_extension: str = '.xlsx'):
-    df = parce_sizes_list(data, file_extension=file_extension)
-    to_update_data = [CatalogItemUpdate(**i) for i in df.to_dict('records')]
-    async with async_session() as session:
-        await db.change_catalog_items(session, to_update_data)
-
-
 async def import_item_prices(data: bytes, file_extension: str = '.xlsx'):
     df = parce_purchase_list(data, file_extension=file_extension)
     to_update_data = [CatalogItemUpdate(**i) for i in df.to_dict('records')]
     async with async_session() as session:
         await db.change_catalog_items(session, to_update_data)
-
-        import_skus = set(df['sku'].values.tolist())
-        db_skus = set(await db.get_unique_skus(session))
-
-        await db.set_supplier_available(session, db_skus & import_skus, True)
-        await db.set_supplier_available(session, db_skus - import_skus, False)
+        await db.set_supplier_available(session, [i.sku for i in to_update_data])
 
 
 async def reverse_sync_catalog_items_with_offer(skus: list[str] | None = None, exclude_fields: list | None = None) -> None:
