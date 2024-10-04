@@ -16,6 +16,7 @@ class Config(BaseSettings):
     use_sentry: bool
     sentry_sdk_dsn: str
     loki_url: str
+    log_endpoints: bool
 
     @property
     def is_dev(self) -> bool:
