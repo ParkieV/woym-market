@@ -166,12 +166,12 @@
     <section>
         <h2>Значения по умолчанию</h2>
         {#await fetchTemplates() then templates}
-        <SelectInput
-            label="Схема ценообразования"
-            readonly={!$userCanModify}
-            bind:value={market.default_pricing_scheme}
-            options={templates.map(x => x.name)}
-        />
+            <SelectInput
+                label="Схема ценообразования"
+                readonly={!$userCanModify}
+                bind:value={market.default_pricing_scheme}
+                options={templates.map(x => x.name)}
+            />
         {/await}
         <NumberInput
             label="Авто мин цена %"

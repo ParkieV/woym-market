@@ -72,27 +72,27 @@
             .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(new ClassesPlugin())
             .plugin(new RowSelectionPlugin(fboStorageSelection, { key: x => x.id }))
-            .plugin(new DetailGridPlugin(detail, data => fetchFboStorage(data.id)))
-            // TODO
-            // .plugin(
-            //     new SummaryPlugin<FboStorage>({
-            //         sku: () => "Итого",
-            //         volume: ({ rows }) =>
-            //             rows.reduce((sum, row) => sum + row.volume * calcStocksToDeliver(row), 0),
-            //         self_weight: ({ rows }) =>
-            //             rows.reduce(
-            //                 (sum, row) => sum + row.self_weight * calcStocksToDeliver(row),
-            //                 0
-            //             ),
-            //         cost_price: ({ rows }) =>
-            //             rows.reduce(
-            //                 (sum, row) => sum + row.cost_price * calcStocksToDeliver(row),
-            //                 0
-            //             ),
-            //         profit: ({ rows }) =>
-            //             rows.reduce((sum, row) => sum + row.profit * calcStocksToDeliver(row), 0)
-            //     })
-            // );
+            .plugin(new DetailGridPlugin(detail, data => fetchFboStorage(data.id)));
+        // TODO
+        // .plugin(
+        //     new SummaryPlugin<FboStorage>({
+        //         sku: () => "Итого",
+        //         volume: ({ rows }) =>
+        //             rows.reduce((sum, row) => sum + row.volume * calcStocksToDeliver(row), 0),
+        //         self_weight: ({ rows }) =>
+        //             rows.reduce(
+        //                 (sum, row) => sum + row.self_weight * calcStocksToDeliver(row),
+        //                 0
+        //             ),
+        //         cost_price: ({ rows }) =>
+        //             rows.reduce(
+        //                 (sum, row) => sum + row.cost_price * calcStocksToDeliver(row),
+        //                 0
+        //             ),
+        //         profit: ({ rows }) =>
+        //             rows.reduce((sum, row) => sum + row.profit * calcStocksToDeliver(row), 0)
+        //     })
+        // );
         return master;
     })();
 </script>

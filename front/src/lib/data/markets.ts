@@ -42,13 +42,13 @@ export type Market = {
     d_variable_for_smart_delivery: number;
     e_variable_for_smart_delivery: number;
 
-    default_auto_min_price: number,
-    default_auto_price_control: boolean,
-    default_total_price_coeff: number,
-    default_total_price_min_additional: number,
-    default_auto_participation_in_promotions: boolean,
-    default_pricing_scheme: string | null,
-    consider_logistic_cost: boolean
+    default_auto_min_price: number;
+    default_auto_price_control: boolean;
+    default_total_price_coeff: number;
+    default_total_price_min_additional: number;
+    default_auto_participation_in_promotions: boolean;
+    default_pricing_scheme: string | null;
+    consider_logistic_cost: boolean;
 };
 
 export async function getStores(init?: FetchInit): Promise<Market[]> {
