@@ -26,7 +26,7 @@ export abstract class Import {
 }
 
 export class OffersImport extends Import {
-    constructor(public import_type: "table" | "prices" | "sizes") {
+    constructor(public kind: "table" | "prices" | "sizes") {
         super();
     }
 
@@ -34,14 +34,17 @@ export class OffersImport extends Import {
     public name_of_shop: string | null = null;
 
     protected get url(): string {
-        return "offers/import";
+        if (this.kind === "table") return "import";
+        if (this.kind === "prices") return "import/prices";
+        if (this.kind === "sizes") return "import/sizes";
+        throw new Error("Неподдерживаемый вид импорта");
     }
 
     protected body(file: Blob): FormData {
         let formData = new FormData();
         if (this.market) formData.append("market", this.market);
         if (this.name_of_shop) formData.append("name_of_shop", this.name_of_shop);
-        if (this.import_type) formData.append("import_type", this.import_type);
+        if (this.kind) formData.append("import_type", this.kind);
         formData.append("data", file);
         return formData;
     }

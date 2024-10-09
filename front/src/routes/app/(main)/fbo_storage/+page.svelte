@@ -22,6 +22,7 @@
     import StatePlugin from "$lib/datagrid/plugins/state";
     import { fboStocksFilter, fboStorageFilter } from "./filter";
     import { fboStocksSelection, fboStorageSelection } from "../selection";
+    import { fetchFboStorage } from "$lib/data/fbo_stocks";
 
     let selected_image: string | undefined = undefined;
 
@@ -41,18 +42,19 @@
     const definition = (() => {
         const detail = fboStocks()
             .plugin(new FilterPlugin(fboStocksFilter))
-            .plugin(
-                new ChangesPlugin(
-                    x => x.id,
-                    fboStocksChanges,
-                    ({ data: storage }) => {
-                        let stock = get(fboState).find(x =>
-                            x.stocks.some(s => s.id === storage.id)
-                        );
-                        if (stock) fboState.changes.add(stock.id);
-                    }
-                )
-            )
+            // TODO
+            // .plugin(
+            //     new ChangesPlugin(
+            //         x => x.id,
+            //         fboStocksChanges,
+            //         ({ data: storage }) => {
+            //             let stock = get(fboState).find(x =>
+            //                 x.stocks.some(s => s.id === storage.id)
+            //             );
+            //             if (stock) fboState.changes.add(stock.id);
+            //         }
+            //     )
+            // )
             .plugin(new ReadonlyPlugin(!$userCanModify))
             .plugin(new ClassesPlugin())
             .plugin(
@@ -70,26 +72,27 @@
             .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(new ClassesPlugin())
             .plugin(new RowSelectionPlugin(fboStorageSelection, { key: x => x.id }))
-            .plugin(new DetailGridPlugin(detail, data => data.stocks))
-            .plugin(
-                new SummaryPlugin<FboStorage>({
-                    sku: () => "Итого",
-                    volume: ({ rows }) =>
-                        rows.reduce((sum, row) => sum + row.volume * calcStocksToDeliver(row), 0),
-                    self_weight: ({ rows }) =>
-                        rows.reduce(
-                            (sum, row) => sum + row.self_weight * calcStocksToDeliver(row),
-                            0
-                        ),
-                    cost_price: ({ rows }) =>
-                        rows.reduce(
-                            (sum, row) => sum + row.cost_price * calcStocksToDeliver(row),
-                            0
-                        ),
-                    profit: ({ rows }) =>
-                        rows.reduce((sum, row) => sum + row.profit * calcStocksToDeliver(row), 0)
-                })
-            );
+            .plugin(new DetailGridPlugin(detail, data => fetchFboStorage(data.id)))
+            // TODO
+            // .plugin(
+            //     new SummaryPlugin<FboStorage>({
+            //         sku: () => "Итого",
+            //         volume: ({ rows }) =>
+            //             rows.reduce((sum, row) => sum + row.volume * calcStocksToDeliver(row), 0),
+            //         self_weight: ({ rows }) =>
+            //             rows.reduce(
+            //                 (sum, row) => sum + row.self_weight * calcStocksToDeliver(row),
+            //                 0
+            //             ),
+            //         cost_price: ({ rows }) =>
+            //             rows.reduce(
+            //                 (sum, row) => sum + row.cost_price * calcStocksToDeliver(row),
+            //                 0
+            //             ),
+            //         profit: ({ rows }) =>
+            //             rows.reduce((sum, row) => sum + row.profit * calcStocksToDeliver(row), 0)
+            //     })
+            // );
         return master;
     })();
 </script>

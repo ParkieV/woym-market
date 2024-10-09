@@ -1,4 +1,4 @@
-import type { FboStorage, FboStocks } from "$lib/data/fbo_storage";
+import type { FboStorage } from "$lib/data/fbo_storage";
 import type { ChangeList } from "$lib/datagrid/plugins/changes";
 import { num_word } from "$lib/util";
 import type { MenuItemDef } from "ag-grid-enterprise";
@@ -6,6 +6,7 @@ import { openModal } from "svelte-modals";
 import { derived, get, writable } from "svelte/store";
 import SetSelectedWindow from "./SetSelectedWindow.svelte";
 import { fboStorageSelection, fboStocksSelection } from "../selection";
+import type { FboStocks } from "$lib/data/fbo_stocks";
 
 export function selectedContextMenuItems(
     changes: ChangeList<FboStorage, number>,

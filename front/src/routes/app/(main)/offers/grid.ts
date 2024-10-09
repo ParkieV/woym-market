@@ -427,6 +427,24 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
             editable: true
         },
         {
+            header: "Статистика",
+            children: [
+                { key: "statistics.today", header: "Сегодня", base: floatColumn },
+                { key: "statistics.yesterday", header: "Вчера", base: floatColumn },
+                { key: "statistics.for_7_days", header: "7 дней", base: floatColumn },
+                { key: "statistics.for_14_days", header: "14 дней", base: floatColumn },
+                { key: "statistics.for_28_days", header: "28 дней", base: floatColumn },
+                { key: "statistics.for_60_days", header: "60 дней", base: floatColumn },
+                { key: "statistics.for_120_days", header: "120 дней", base: floatColumn },
+                { key: "statistics.smart_delivery", header: "Умная поставка", base: floatColumn },
+                {
+                    key: "statistics.use_smart_delivery",
+                    header: "Использовать умную поставку",
+                    base: new BooleanColumn()
+                }
+            ]
+        },
+        {
             header: "Синхронизация",
             key: "synchronization",
             base: new BooleanColumn(),

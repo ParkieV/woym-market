@@ -12,7 +12,7 @@ export type Warehouse = {
 export type WarehouseType = "warehouse" | "cluster";
 
 export async function getWarehouses(init?: FetchInit): Promise<Warehouse[]> {
-    let promise = fetchJSON<Warehouse[]>("stocks/warehouses", init);
+    let promise = fetchJSON<Warehouse[]>("stocks/warehouses", { ...init, method: "POST" });
     showFetchModals(
         promise.then(x => x.response),
         undefined,

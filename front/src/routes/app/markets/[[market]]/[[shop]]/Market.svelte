@@ -3,6 +3,9 @@
     import { createEventDispatcher, onMount } from "svelte";
     import NumberInput from "./NumberInput.svelte";
     import { userCanModify } from "$lib/data/user";
+    import BooleanInput from "./BooleanInput.svelte";
+    import SelectInput from "./SelectInput.svelte";
+    import { fetchTemplates } from "$lib/data/templates";
 
     export let market: Market;
     export let invalid: boolean;
@@ -59,6 +62,11 @@
             min={0}
             readonly={!$userCanModify}
             bind:value={market.cost_of_additional_logistics_per_liter}
+        />
+        <BooleanInput
+            label="Учитывать в целевой цене товара стоимость дополнительной логистики"
+            readonly={!$userCanModify}
+            bind:value={market.consider_logistic_cost}
         />
     </section>
     <section>
@@ -153,6 +161,42 @@
             label="E (Заказы за 120 дней)"
             readonly={!$userCanModify}
             bind:value={market.e_variable_for_smart_delivery}
+        />
+    </section>
+    <section>
+        <h2>Значения по умолчанию</h2>
+        {#await fetchTemplates() then templates}
+        <SelectInput
+            label="Схема ценообразования"
+            readonly={!$userCanModify}
+            bind:value={market.default_pricing_scheme}
+            options={templates.map(x => x.name)}
+        />
+        {/await}
+        <NumberInput
+            label="Авто мин цена %"
+            readonly={!$userCanModify}
+            bind:value={market.default_auto_min_price}
+        />
+        <BooleanInput
+            label="Авто контроль цен"
+            readonly={!$userCanModify}
+            bind:value={market.default_auto_price_control}
+        />
+        <NumberInput
+            label="Коэффициент расчётной цены"
+            readonly={!$userCanModify}
+            bind:value={market.default_total_price_coeff}
+        />
+        <NumberInput
+            label="Минимальная наценка расчётной цены"
+            readonly={!$userCanModify}
+            bind:value={market.default_total_price_min_additional}
+        />
+        <BooleanInput
+            label="Автоучастие в акциях"
+            readonly={!$userCanModify}
+            bind:value={market.default_auto_participation_in_promotions}
         />
     </section>
 </form>

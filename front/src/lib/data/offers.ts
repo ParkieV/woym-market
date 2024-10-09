@@ -1,6 +1,7 @@
 import { fetchJSON, fetchPlain } from "$lib/fetch";
 import { showFetchModals } from "$lib/modal";
 import type { DateString } from "$lib/util";
+import { getStatisticsOnlyOffers } from "./statistics";
 
 /** Basic information about the offer. */
 export type OfferBase = {

@@ -2,9 +2,10 @@
     import { selectedDisplayInfo } from "./selected";
     import type { ChangeList } from "$lib/datagrid/plugins/changes";
     import type { Readable } from "svelte/store";
-    import type { FboStorage, FboStocks } from "$lib/data/fbo_storage";
+    import type { FboStorage } from "$lib/data/fbo_storage";
     import type { GridApi, IRowNode } from "ag-grid-enterprise";
     import Window from "$lib/components/windows/Window.svelte";
+    import type { FboStocks } from "$lib/data/fbo_stocks";
 
     export let isOpen: boolean;
     let target: number;

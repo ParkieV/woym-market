@@ -1,4 +1,4 @@
-import type { FboStocks } from "$lib/data/fbo_storage";
+import type { FboStocks } from "$lib/data/fbo_stocks";
 import { GridDefinition } from "$lib/datagrid";
 import type { Column, ColumnGroup } from "$lib/datagrid/columns";
 import {
@@ -6,6 +6,7 @@ import {
     DateColumn,
     NumberColumn,
     StringColumn,
+    floatColumn,
     intColumn
 } from "$lib/datagrid/columns/types";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
@@ -28,13 +29,17 @@ function columns(): (Column | ColumnGroup)[] {
             header: "Склад",
             key: "warehouse.name",
             pinned: true,
+            valueGetter: ({ data }: { data: FboStocks }) => {
+                // TODO: no warehouse id
+                return { warehouse_type: "super_warehouse", name: "Test" };
+            },
             base: {
-                cellRenderer: ({ data, value }) => {
-                    const url = "/graph.svg";
+                cellRenderer: ({ value }) => {
+                    if (value.warehouse_type === "warehouse") return value.name;
+                    const url = value.warehouse_type === "cluster" ? "/graph.svg" : "/globe.svg";
                     const style = "height: 16px; margin: 0 1px -3px 0;";
                     const img = `<img style=\"${style}\" src=\"${url}\" />`;
-                    if (data.warehouse.warehouse_type === "cluster") return `${img} ${value}`;
-                    else return `${value}`;
+                    return `${img} ${value.name}`;
                 }
             }
         },
@@ -87,6 +92,24 @@ function columns(): (Column | ColumnGroup)[] {
             header: "Поставлять коробками",
             base: new BooleanColumn(),
             editable: true
+        },
+        {
+            header: "Статистика",
+            children: [
+                { key: "statistics.today", header: "Сегодня", base: floatColumn },
+                { key: "statistics.yesterday", header: "Вчера", base: floatColumn },
+                { key: "statistics.for_7_days", header: "7 дней", base: floatColumn },
+                { key: "statistics.for_14_days", header: "14 дней", base: floatColumn },
+                { key: "statistics.for_28_days", header: "28 дней", base: floatColumn },
+                { key: "statistics.for_60_days", header: "60 дней", base: floatColumn },
+                { key: "statistics.for_120_days", header: "120 дней", base: floatColumn },
+                { key: "statistics.smart_delivery", header: "Умная поставка", base: floatColumn },
+                {
+                    key: "statistics.use_smart_delivery",
+                    header: "Использовать умную поставку",
+                    base: new BooleanColumn()
+                }
+            ]
         }
     ];
 }

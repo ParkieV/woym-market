@@ -1,6 +1,6 @@
 import type { Column, ColumnGroup } from "$lib/datagrid/columns";
 import type { GetContextMenuItems, ValueGetterParams } from "ag-grid-enterprise";
-import type { FboStorage, FboStocks } from "$lib/data/fbo_storage";
+import type { FboStorage } from "$lib/data/fbo_storage";
 import {
     BooleanColumn,
     GroupColumn,
@@ -18,6 +18,7 @@ import { userCanModify } from "$lib/data/user";
 import type { ChangeList } from "$lib/datagrid/plugins/changes";
 import { selectedContextMenuItems } from "./selected";
 import { calcToDeliver } from "./fbo-stocks";
+import type { FboStocks } from "$lib/data/fbo_stocks";
 
 export default function fboOffersGrid(
     changes: ChangeList<FboStorage, number>,
@@ -118,41 +119,41 @@ function columns(): (Column | ColumnGroup)[] {
         {
             header: "Остатки",
             children: [
-                {
-                    header: "В наличии",
-                    key: "current_stock",
-                    base: intColumn,
-                    valueGetter: (params: ValueGetterParams<FboStorage>) => {
-                        if (!params.data) return 0;
-                        return params.data.stocks
-                            .filter(x => x.warehouse.warehouse_type !== "cluster")
-                            .map(x => x.current_stock)
-                            .reduce((a, b) => a + b, 0);
-                    }
-                },
-                {
-                    header: "Мин. остаток",
-                    key: "min_stock",
-                    base: intColumn,
-                    valueGetter: (params: ValueGetterParams<FboStorage>) => {
-                        if (!params.data) return 0;
-                        return params.data.stocks
-                            .filter(x => x.warehouse.warehouse_type !== "cluster")
-                            .map(x => x.min_stock)
-                            .reduce((a, b) => a + b, 0);
-                    }
-                },
-                {
-                    header: "К поставке",
-                    key: "to_deliver",
-                    base: intColumn,
-                    valueGetter: (params: ValueGetterParams<FboStorage>) => {
-                        if (!params.data) return 0;
-                        return params.data.stocks
-                            .filter(x => x.warehouse.warehouse_type !== "cluster")
-                            .reduce((sum, storage) => sum + calcToDeliver(storage), 0);
-                    }
-                },
+                // {
+                //     header: "В наличии",
+                //     key: "current_stock",
+                //     base: intColumn,
+                //     valueGetter: (params: ValueGetterParams<FboStorage>) => {
+                //         if (!params.data) return 0;
+                //         return params.data.stocks
+                //             .filter(x => x.warehouse.warehouse_type !== "cluster")
+                //             .map(x => x.current_stock)
+                //             .reduce((a, b) => a + b, 0);
+                //     }
+                // },
+                // {
+                //     header: "Мин. остаток",
+                //     key: "min_stock",
+                //     base: intColumn,
+                //     valueGetter: (params: ValueGetterParams<FboStorage>) => {
+                //         if (!params.data) return 0;
+                //         return params.data.stocks
+                //             .filter(x => x.warehouse.warehouse_type !== "cluster")
+                //             .map(x => x.min_stock)
+                //             .reduce((a, b) => a + b, 0);
+                //     }
+                // },
+                // {
+                //     header: "К поставке",
+                //     key: "to_deliver",
+                //     base: intColumn,
+                //     valueGetter: (params: ValueGetterParams<FboStorage>) => {
+                //         if (!params.data) return 0;
+                //         return params.data.stocks
+                //             .filter(x => x.warehouse.warehouse_type !== "cluster")
+                //             .reduce((sum, storage) => sum + calcToDeliver(storage), 0);
+                //     }
+                // },
                 {
                     key: "supplier_available",
                     header: "Наличие у поставщика",
@@ -180,6 +181,24 @@ function columns(): (Column | ColumnGroup)[] {
                     header: "Предполагаемая прибыль",
                     base: floatColumn,
                     valueGetter: e => e.data.profit * e.getValue("to_deliver")
+                }
+            ]
+        },
+        {
+            header: "Статистика",
+            children: [
+                { key: "statistics.today", header: "Сегодня", base: floatColumn },
+                { key: "statistics.yesterday", header: "Вчера", base: floatColumn },
+                { key: "statistics.for_7_days", header: "7 дней", base: floatColumn },
+                { key: "statistics.for_14_days", header: "14 дней", base: floatColumn },
+                { key: "statistics.for_28_days", header: "28 дней", base: floatColumn },
+                { key: "statistics.for_60_days", header: "60 дней", base: floatColumn },
+                { key: "statistics.for_120_days", header: "120 дней", base: floatColumn },
+                { key: "statistics.smart_delivery", header: "Умная поставка", base: floatColumn },
+                {
+                    key: "statistics.use_smart_delivery",
+                    header: "Использовать умную поставку",
+                    base: new BooleanColumn()
                 }
             ]
         },

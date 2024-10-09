@@ -1,8 +1,9 @@
 import { filterState } from "../state";
 import { derived, get } from "svelte/store";
-import type { FboStocks, FboStorage } from "$lib/data/fbo_storage";
+import type { FboStorage } from "$lib/data/fbo_storage";
 import createSearchFilter from "$lib/filter/search";
 import { fboStocksSelection } from "../selection";
+import type { FboStocks } from "$lib/data/fbo_stocks";
 
 export const fboStorageFilter = derived(filterState, state => {
     const SEARCH_FIELDS = ["sku", "name", "note_1", "note_2", "note_3"] as const;
