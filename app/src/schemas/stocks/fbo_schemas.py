@@ -24,7 +24,7 @@ class OfferStockCreate(BaseOfferStock):
     warehouse_id: int
 
 
-class OfferStockOut(BaseOfferStock):
+class OfferStockOut(OfferStockCreate):
     id: int
 
 
