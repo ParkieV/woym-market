@@ -38,7 +38,11 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     key: "photo"
                 },
                 {
-                    base: new StringColumn(),
+                    base: new StringColumn({
+                        kind: "agLargeTextCellEditor",
+                        cols: 80,
+                        rows: 4
+                    }),
                     header: "Название",
                     key: "name",
                     editable: true
@@ -51,7 +55,11 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     editable: ({ data }) => (data as Offer).market === "yandex"
                 },
                 {
-                    base: new StringColumn(),
+                    base: new StringColumn({
+                        kind: "agLargeTextCellEditor",
+                        cols: 80,
+                        rows: 4
+                    }),
                     header: "Аннотация",
                     key: "description",
                     editable: true,

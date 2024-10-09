@@ -35,7 +35,11 @@ function columns(markets: Market[]): (Column | ColumnGroup)[] {
                     key: "photo"
                 },
                 {
-                    base: new StringColumn(),
+                    base: new StringColumn({
+                        kind: "agLargeTextCellEditor",
+                        cols: 80,
+                        rows: 4
+                    }),
                     header: "Название",
                     key: "name",
                     editable: true
@@ -48,7 +52,11 @@ function columns(markets: Market[]): (Column | ColumnGroup)[] {
                     editable: true
                 },
                 {
-                    base: new StringColumn(),
+                    base: new StringColumn({
+                        kind: "agLargeTextCellEditor",
+                        cols: 80,
+                        rows: 4
+                    }),
                     header: "Аннотация",
                     key: "description",
                     editable: true,

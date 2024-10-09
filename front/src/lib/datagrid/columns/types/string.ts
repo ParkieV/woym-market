@@ -26,4 +26,4 @@ export default class StringColumn implements ColumnBase<any> {
 
 export type TextEditor =
     | { kind: "agTextCellEditor"; maxLength: number }
-    | { kind: "agLargeTextCellEditor"; rows: number; cols: number; maxLength: number };
+    | { kind: "agLargeTextCellEditor"; rows: number; cols: number; maxLength?: number };
