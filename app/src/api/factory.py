@@ -3,7 +3,7 @@ from typing import Type
 from .base_api import BaseAPI
 from fastapi.exceptions import HTTPException
 from fastapi import status
-from .yandex_market.api import YandexMarketAPI
+from .yandex.api import YandexMarketAPI
 from .ozon.api import OzonAPI
 from .wildberries.api import WildberriesAPI
 

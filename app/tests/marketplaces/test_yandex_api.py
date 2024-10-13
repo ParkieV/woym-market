@@ -1,5 +1,5 @@
 import pytest
-from src.api.yandex_market.api import YandexMarketAPI
+from src.api.yandex.api import YandexMarketAPI
 from tests.marketplaces.conftest import BaseMarketplaceAPITest
 
 

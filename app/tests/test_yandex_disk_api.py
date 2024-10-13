@@ -1,6 +1,6 @@
 import pytest
 from src.params.confing import config
-from src.api.yandex_market.disk import YandexDiscAPI
+from src.api.yandex.disk import YandexDiscAPI
 
 
 class TestYandexDiskAPI:

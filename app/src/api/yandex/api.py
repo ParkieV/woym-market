@@ -12,6 +12,7 @@ import numpy as np
 from src.api.base_api import BaseAPI
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, \
     APIOfferChangeData, APIOrderData, WarehouseType
+from math import ceil
 
 logger = get_logger(__name__, tags={'marketplace_api': 'yandex'})
 
@@ -61,9 +62,9 @@ class YandexMarketAPI(BaseAPI):
                             'name': offer_data.name,
                             'description': offer_data.description,
                             'weightDimensions': {
-                                'length': round(offer_data.self_length),
-                                'width': round(offer_data.self_width),
-                                'height': round(offer_data.self_height),
+                                'length': ceil(offer_data.self_length),
+                                'width': ceil(offer_data.self_width),
+                                'height': ceil(offer_data.self_height),
                                 'weight': offer_data.self_weight,
                             }
 
@@ -173,9 +174,9 @@ class YandexMarketAPI(BaseAPI):
                     'name': offer['name'],
                     'description': offer.get('description', None),
                     'self_weight': weight_dimensions.get('weight'),
-                    'self_length': round(weight_dimensions.get('length')) if weight_dimensions.get('length') else None,
-                    'self_width': round(weight_dimensions.get('width')) if weight_dimensions.get('width') else None,
-                    'self_height': round(weight_dimensions.get('height')) if weight_dimensions.get('height') else None,
+                    'self_length': ceil(weight_dimensions.get('length')) if weight_dimensions.get('length') else None,
+                    'self_width': ceil(weight_dimensions.get('width')) if weight_dimensions.get('width') else None,
+                    'self_height': ceil(weight_dimensions.get('height')) if weight_dimensions.get('height') else None,
                     'volume': volume,
                     'photo': offer['pictures'][0] if len(offer['pictures']) > 0 else None,
                     'current_price': offer['basicPrice']['value'] if 'basicPrice' in offer else None,

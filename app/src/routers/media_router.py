@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Depends, Query, HTTPException
 from starlette import status
 
-from src.api.yandex_market.disk import YandexDiscAPI
+from src.api.yandex.disk import YandexDiscAPI
 from src.dependencies.users import require_staff
 from src.params.confing import config
 from src.schemas.media_schemas import UploadResult, StorageItem

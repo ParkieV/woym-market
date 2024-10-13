@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
+from math import ceil
 from typing import Any
 
 from fastapi import HTTPException
@@ -80,9 +81,9 @@ class WildberriesAPI(BaseAPI):
                     'description': offer_data.description,
                     'sizes': items[offer_data.sku]['sizes'],
                     'dimensions': {
-                        'length': round(offer_data.self_length),
-                        'width': round(offer_data.self_width),
-                        'height': round(offer_data.self_height),
+                        'length': ceil(offer_data.self_length),
+                        'width': ceil(offer_data.self_width),
+                        'height': ceil(offer_data.self_height),
                     },
                     'characteristics': characteristics
                 }
@@ -256,9 +257,9 @@ class WildberriesAPI(BaseAPI):
                 'description': item.get('description', None),
                 'name_of_shop': self.shop_name,
                 'market': 'wildberries',
-                'self_length': round(item['dimensions']['length']),
-                'self_width': round(item['dimensions']['width']),
-                'self_height': round(item['dimensions']['height']),
+                'self_length': ceil(item['dimensions']['length']),
+                'self_width': ceil(item['dimensions']['width']),
+                'self_height': ceil(item['dimensions']['height']),
                 'self_weight': self_weight,
                 'vendor_code': item['nmID'],
                 'photo': item['photos'][0]['big'] if item.get('photos', None) else None,
