@@ -76,6 +76,7 @@ class Offer(Base):
     # countable/editable values
     dollar_cost_price = Column(Float, nullable=True)
     dollar_cost_price_updated_at = Column(DateTime, nullable=True, default=None)
+    dollar_cost_price_updated_at_changed = Column(Boolean, nullable=False, default=False, server_default=false())
     cost_price = Column(Float, nullable=True)
     total_price_coeff = Column(Float)
     total_price_min_additional = Column(Float)
@@ -88,6 +89,7 @@ class Offer(Base):
     content_rating = Column(Float, nullable=True)
     price_index = Column(String, nullable=True)
     supplier_available = Column(Boolean, default=False)
+    supplier_available_changed = Column(Boolean, default=False, nullable=False, server_default=false())
     volume_profitability_ratio = Column(Float, nullable=True, default=None)
     days_to_zero_profit = Column(Float, nullable=True, default=None)
     market_discount_in_percent = Column(Float, nullable=True, default=None)
@@ -131,7 +133,11 @@ class Offer(Base):
     barcodes_changed = Column(Boolean, nullable=False, default=False)
 
     use_promotion_price = Column(Boolean, default=False)
+    use_promotion_price_changed = Column(Boolean, nullable=False, default=False, server_default=false())
+
     wholesale_dollar_cost_price = Column(Float, nullable=True)
+    wholesale_dollar_cost_price_changed = Column(Boolean, nullable=False, default=False, server_default=false())
+
     vendor_code = Column(BigInteger, nullable=True, default=None)
     search_words = Column(String, nullable=True, default=None)
     search_words_changed = Column(Boolean, default=False, nullable=False)
@@ -338,15 +344,16 @@ class CatalogItem(Base):
     catalog_note = Column(String, nullable=True, server_default=text("'Новый товар'"))
 
     use_promotion_price = Column(Boolean, nullable=False, default=False)
-    use_promotion_price_changed = Column(Boolean, nullable=False, default=False)
+    use_promotion_price_changed = Column(Boolean, nullable=False, default=False, server_default=false())
 
     wholesale_dollar_cost_price = Column(Float, nullable=True, default=None)
     wholesale_dollar_cost_price_changed = Column(Boolean, nullable=False, default=False)
 
     supplier_available = Column(Boolean, nullable=False, default=False)
-    supplier_available_changed = Column(Boolean, nullable=False, default=False)
+    supplier_available_changed = Column(Boolean, nullable=False, default=False, server_default=false())
 
     dollar_cost_price_updated_at = Column(DateTime, nullable=True, default=None)
+    dollar_cost_price_updated_at_changed = Column(Boolean, nullable=False, default=False, server_default=false())
 
     description = Column(String, nullable=True, default=None, server_default=None)
     description_changed = Column(Boolean, nullable=False, default=False)
