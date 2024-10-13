@@ -11,6 +11,8 @@ from sqlalchemy.orm import selectinload
 
 from src.database.models.models import Offer
 from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market
+from src.database.order_db import _build_smart_delivery_query, _build_quantity_offers_query, \
+    _build_quantity_warehouses_query
 from src.database.utils import _update_or_create_object
 from src.schemas.filters.stocks_filter import WarehousesFilter
 from src.schemas.stocks.fbo_schemas import OfferStockOut, OfferFBOStockUpdate, AggOfferFBOStock
@@ -23,7 +25,8 @@ from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 ModelSchema = TypeVar('ModelSchema', bound=Type[BaseModel])
 
 
-async def get_warehouses(session: AsyncSession, model_schema: ModelSchema = WarehouseOut, filter_: WarehousesFilter | None = None) -> list[ModelSchema]:
+async def get_warehouses(session: AsyncSession, model_schema: ModelSchema = WarehouseOut,
+                         filter_: WarehousesFilter | None = None) -> list[ModelSchema]:
     query = select(Warehouse)
     if filter_:
         query = filter_(query)
@@ -222,7 +225,74 @@ async def update_own_storages_by_sku(session: AsyncSession, data: list[dict], pl
     await session.commit()
 
 
+def build_supply_raw_for_delivery_query(warehouses: list[int] | None = None, offers: list[int] | None = None,):
+    query_periods = {
+        'today': _build_quantity_warehouses_query('today', 0, None, None),
+        'yesterday': _build_quantity_warehouses_query('yesterday', 1, None, None),
+        'for_7_days': _build_quantity_warehouses_query('for_7_days', 7, None, None),
+        'for_14_days': _build_quantity_warehouses_query('for_14_days', 14, None, None),
+        'for_28_days': _build_quantity_warehouses_query('for_28_days', 28, None, None),
+        'for_60_days': _build_quantity_warehouses_query('for_60_days', 60, None, None),
+        'for_120_days': _build_quantity_warehouses_query('for_120_days', 120, None, None),
+    }
+    stocks_subquery = (
+        select(
+            OfferStock.offer_id.label('offer_id'),
+            OfferStock.warehouse_id.label('warehouse_id'),
+            OfferStock.current_stock.label('current_stock'),
+            OfferStock.is_deliver_in_boxes.label('is_deliver_in_boxes'),
+            OfferStock.in_box.label('in_box'),
+            case(
+                (OfferStock.use_smart_delivery, _build_smart_delivery_query(query_periods)),
+                else_=OfferStock.min_stock
+            ).label('min_stock'),
+
+        )
+        .select_from(OfferStock)
+        .join(Offer, Offer.id == OfferStock.offer_id)
+        .join(Market, and_(Market.name == Offer.name_of_shop, Market.type == Offer.market))
+    )
+
+    for subquery in query_periods.values():
+        stocks_subquery = stocks_subquery.join(subquery, and_(subquery.c.offer_id == OfferStock.offer_id, subquery.c.warehouse_id == OfferStock.warehouse_id), isouter=True)
+
+    stocks_subquery = stocks_subquery.subquery()
+
+    in_box_expr = case(
+        (stocks_subquery.c.is_deliver_in_boxes, stocks_subquery.c.in_box),
+        else_=1
+    )
+
+    for_delivery_expr = case(
+        (stocks_subquery.c.min_stock > stocks_subquery.c.current_stock,
+         func.ceil(
+             (stocks_subquery.c.min_stock - stocks_subquery.c.current_stock) /
+             func.nullif(in_box_expr, 0)
+         ) * in_box_expr),
+        else_=0
+    )
+
+    query = (
+        select(
+            stocks_subquery.c.offer_id,
+            stocks_subquery.c.warehouse_id,
+            for_delivery_expr.label('for_delivery')
+        )
+        .select_from(stocks_subquery)
+    )
+
+    if offers:
+        query = query.where(stocks_subquery.c.offer_id.in_(offers))
+
+    if warehouses:
+        query = query.where(stocks_subquery.c.warehouse_id.in_(warehouses))
+
+    return query.subquery()
+
+
 async def get_supply_only_stocks(session: AsyncSession, warehouses: list[int], offers: list[int], place_id: int):
+    offer_stocks_subquery = build_supply_raw_for_delivery_query(warehouses, offers)
+
     offers_query = (
         select(
             Offer.sku,
@@ -232,15 +302,15 @@ async def get_supply_only_stocks(session: AsyncSession, warehouses: list[int], o
             Offer.name_of_shop,
             Offer.barcodes,
             Offer.current_price,
-            Offer.volume,
+            (Offer.self_weight * Offer.self_length * Offer.self_height / 1000).label('volume'),
             Offer.self_weight,
             Offer.cost_price,
-            OfferStock.for_delivery,
+            offer_stocks_subquery.c.for_delivery,
             Warehouse.name.label('warehouse_name'),
-            OfferStock.for_delivery.label('base_for_delivery')
+            offer_stocks_subquery.c.for_delivery.label('base_for_delivery')
         )
-        .join(OfferStock, OfferStock.offer_id == Offer.id)
-        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .join(offer_stocks_subquery, offer_stocks_subquery.c.offer_id == Offer.id)
+        .join(Warehouse, Warehouse.id == offer_stocks_subquery.c.warehouse_id)
         .where(Warehouse.id.in_(warehouses))
         .where(Offer.id.in_(offers)))
 
@@ -264,6 +334,8 @@ async def get_supply_only_stocks(session: AsyncSession, warehouses: list[int], o
 
 
 async def get_supply_only_own_storage(session: AsyncSession, warehouses: list[int], offers: list[int], place_id: int):
+    offer_stocks_subquery = build_supply_raw_for_delivery_query(warehouses, offers)
+
     own_storage_query = (select(OwnStorage.value).where(OwnStorage.storage_place_id == place_id).where(
         OwnStorage.sku == Offer.sku)).label('own_storage_value')
 
@@ -276,17 +348,17 @@ async def get_supply_only_own_storage(session: AsyncSession, warehouses: list[in
             Offer.name_of_shop,
             Offer.barcodes,
             Offer.current_price,
-            Offer.volume,
+            (Offer.self_weight * Offer.self_length * Offer.self_height / 1000).label('volume'),
             Offer.self_weight,
             Offer.cost_price,
             Warehouse.name.label('warehouse_name'),
-            func.greatest(0, func.least(OfferStock.for_delivery, (own_storage_query - func.coalesce(
-                func.sum(OfferStock.for_delivery).over(partition_by=Offer.sku, order_by=OfferStock.for_delivery.desc(),
+            func.greatest(0, func.least(offer_stocks_subquery.c.for_delivery, (own_storage_query - func.coalesce(
+                func.sum(offer_stocks_subquery.c.for_delivery).over(partition_by=Offer.sku, order_by=offer_stocks_subquery.c.for_delivery.desc(),
                                                        rows=(None, -1)), 0)))).label('for_delivery'),
-            OfferStock.for_delivery.label('base_for_delivery')
+            offer_stocks_subquery.c.for_delivery.label('base_for_delivery')
         )
-        .join(OfferStock, OfferStock.offer_id == Offer.id)
-        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .join(offer_stocks_subquery, offer_stocks_subquery.c.offer_id == Offer.id)
+        .join(Warehouse, Warehouse.id == offer_stocks_subquery.c.warehouse_id)
         .where(Warehouse.id.in_(warehouses))
         .where(Offer.id.in_(offers))
     )
@@ -419,7 +491,8 @@ async def recalculate_clusters_stocks(session: AsyncSession):
             stocks_subquery.c.current_stock
         )
         .select_from(stocks_subquery)
-        .join(OfferStock, and_(OfferStock.offer_id == stocks_subquery.c.offer_id, OfferStock.warehouse_id == stocks_subquery.c.parent_warehouse_id))
+        .join(OfferStock, and_(OfferStock.offer_id == stocks_subquery.c.offer_id,
+                               OfferStock.warehouse_id == stocks_subquery.c.parent_warehouse_id))
     ).subquery('current_cluster_stock_subquery')
 
     stmp = (
@@ -443,10 +516,10 @@ async def recalculate_super_clusters_stocks(session: AsyncSession):
     ).subquery('stocks_subquery')
 
     current_super_cluster_stock_subquery = (
-       select(
-           OfferStock.id,
-           stocks_subquery.c.current_stock
-       )
+        select(
+            OfferStock.id,
+            stocks_subquery.c.current_stock
+        )
         .join(stocks_subquery, stocks_subquery.c.offer_id == OfferStock.offer_id)
         .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
         .where(Warehouse.warehouse_type == 'super_cluster')
@@ -460,9 +533,6 @@ async def recalculate_super_clusters_stocks(session: AsyncSession):
 
     await session.execute(stmp)
     await session.commit()
-
-
-
 
 
 # async def recalculate_clusters(session: AsyncSession):
@@ -506,10 +576,6 @@ async def recalculate_super_clusters_stocks(session: AsyncSession):
 #     await session.execute(super_clusters_stmp)
 #
 #     await session.commit()
-
-
-
-
 
 
 async def update_fbo_stocks(session: AsyncSession, data: list[dict]):
@@ -581,5 +647,3 @@ async def get_agg_fbo_data(session: AsyncSession, warehouse_ids: list[int] | Non
 
     results = (await session.execute(query)).all()
     return [AggOfferFBOStock.model_validate(i, from_attributes=True) for i in results]
-
-

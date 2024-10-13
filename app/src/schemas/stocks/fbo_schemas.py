@@ -10,6 +10,7 @@ class BaseOfferStock(BaseModel):
     advice_from_the_store: str = ''
     in_box: int = 1
     is_deliver_in_boxes: bool = False
+    use_smart_delivery: bool = False
 
 
 class OfferFBOStockUpdate(BaseModel):
@@ -17,6 +18,7 @@ class OfferFBOStockUpdate(BaseModel):
     min_stock: int
     in_box: int
     is_deliver_in_boxes: bool
+    use_smart_delivery: bool
 
 
 class OfferStockCreate(BaseOfferStock):

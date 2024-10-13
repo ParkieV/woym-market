@@ -9,7 +9,7 @@ from sqlalchemy import (
     TIMESTAMP,
     Float,
     DateTime,
-    select, func, BigInteger
+    select, func, BigInteger, false
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
@@ -235,6 +235,7 @@ class OfferStock(Base):
     is_deliver_in_boxes = Column(Boolean, default=False)
     min_stock = Column(Integer, default=0)
     for_delivery = Column(Integer, default=0)
+    use_smart_delivery = Column(Boolean, default=False, server_default=false())
 
 
 class Market(Base):

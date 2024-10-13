@@ -31,7 +31,7 @@ async def get_orders(session: AsyncSession, filter_: OrderFilter | None = None, 
     return [OrderOut.model_validate(i, from_attributes=True) for i in result]
 
 
-def _build_quantity_offers_query(name: str, days_interval: int, offer_ids: list[int]):
+def _build_quantity_offers_query(name: str, days_interval: int, offer_ids: list[int] | None = None):
     query = select(
         Order.offer_id,
         func.sum(Order.quantity).label(name),
@@ -86,7 +86,7 @@ def _build_smart_delivery_query(period_queries: dict):
     return sum([var * func.coalesce(getattr(period_queries[period_name].c, period_name), 0) for var, period_name in zip(market_variables, period_names)])
 
 
-def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: list[int], warehouse_ids: list[int]):
+def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: list[int] | None = None, warehouse_ids: list[int] | None = None):
     query = select(
         Order.offer_id,
         Order.warehouse_id,
