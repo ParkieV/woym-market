@@ -4,7 +4,7 @@
     import Grid from "$lib/grid/Grid.svelte";
     import { get } from "svelte/store";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
-    import fboOffersGrid, { calcStocksToDeliver } from "./fbo-offer";
+    import fboOffersGrid from "./fbo-offer";
     import { userCanModify } from "$lib/data/user";
     import Toolbar from "./Toolbar.svelte";
     import fboStocks from "./fbo-stocks";
@@ -23,7 +23,9 @@
     import { fboStocksFilter, fboStorageFilter } from "./filter";
     import { fboStocksSelection, fboStorageSelection } from "../selection";
     import { fetchFboStorage } from "$lib/data/fbo_stocks";
+    import type { PageData } from "./$types";
 
+    export let data: PageData;
     let selected_image: string | undefined = undefined;
 
     onMount(() => fboState.load());
@@ -40,26 +42,25 @@
     }
 
     const definition = (() => {
-        const detail = fboStocks()
+        const detail = fboStocks(data.warehouses)
             .plugin(new FilterPlugin(fboStocksFilter))
-            // TODO
-            // .plugin(
-            //     new ChangesPlugin(
-            //         x => x.id,
-            //         fboStocksChanges,
-            //         ({ data: storage }) => {
-            //             let stock = get(fboState).find(x =>
-            //                 x.stocks.some(s => s.id === storage.id)
-            //             );
-            //             if (stock) fboState.changes.add(stock.id);
-            //         }
-            //     )
-            // )
+            .plugin(
+                new ChangesPlugin(
+                    x => x.id,
+                    fboStocksChanges,
+                    ({ data: storage }) => {
+                        let stock = get(fboState).find(x =>
+                            x.stocks.some(s => s.id === storage.id)
+                        );
+                        if (stock) fboState.changes.add(stock.id);
+                    }
+                )
+            )
             .plugin(new ReadonlyPlugin(!$userCanModify))
             .plugin(new ClassesPlugin())
             .plugin(
                 new RowSelectionPlugin(fboStocksSelection, {
-                    key: ({ warehouse }) => warehouse.id,
+                    key: ({ warehouse_id }) => warehouse_id,
                     sync: true
                 })
             );

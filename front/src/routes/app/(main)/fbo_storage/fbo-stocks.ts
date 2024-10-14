@@ -11,30 +11,31 @@ import {
 } from "$lib/datagrid/columns/types";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import type { GridOptions } from "ag-grid-enterprise";
+import type { Warehouse } from "$lib/data/warehouse";
 
-export default function fboStocks(): GridDefinition<FboStocks> {
+export default function fboStocks(warehouses: Warehouse[]): GridDefinition<FboStocks> {
     const options: GridOptions = {
         ...BASE_GRID_OPTIONS,
         rowHeight: 30,
         autoSizeStrategy: { type: "fitCellContents" },
         suppressMovableColumns: true
     };
-    const definition = new GridDefinition(options, columns());
+    const definition = new GridDefinition(options, columns(warehouses));
     return definition;
 }
 
-function columns(): (Column | ColumnGroup)[] {
+function columns(warehouses: Warehouse[]): (Column | ColumnGroup)[] {
     return [
         {
             header: "Склад",
             key: "warehouse.name",
             pinned: true,
             valueGetter: ({ data }: { data: FboStocks }) => {
-                // TODO: no warehouse id
-                return { warehouse_type: "super_warehouse", name: "Test" };
+                return warehouses.find(x => x.id === data.warehouse_id);
             },
             base: {
                 cellRenderer: ({ value }) => {
+                    console.log(value);
                     if (value.warehouse_type === "warehouse") return value.name;
                     const url = value.warehouse_type === "cluster" ? "/graph.svg" : "/globe.svg";
                     const style = "height: 16px; margin: 0 1px -3px 0;";
@@ -107,7 +108,8 @@ function columns(): (Column | ColumnGroup)[] {
                 {
                     key: "statistics.use_smart_delivery",
                     header: "Использовать умную поставку",
-                    base: new BooleanColumn()
+                    base: new BooleanColumn(),
+                    editable: true
                 }
             ]
         }
