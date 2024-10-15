@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pydantic import create_model
-from sqlalchemy import select, func, text, and_
+from sqlalchemy import select, func, text, and_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -91,7 +91,7 @@ def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: l
     warehouses_query = (
         select(
             Order.offer_id,
-            Order.warehouse_id,
+            Order.warehouse_id.label('warehouse_id'),
             func.sum(Order.quantity).label(name),
         )
         .join(Warehouse, Warehouse.id == Order.warehouse_id)
@@ -110,7 +110,7 @@ def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: l
 
     clusters_query = (
         select(
-            Warehouse.parent_warehouse_id,
+            Warehouse.parent_warehouse_id.label('warehouse_id'),
             Order.offer_id,
             func.sum(Order.quantity).label(name)
         )
@@ -131,7 +131,7 @@ def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: l
         select(
             Order.offer_id,
             func.sum(Order.quantity).label(name),
-            Warehouse.id
+            Warehouse.id.label('warehouse_id')
         )
         .join(Offer, Offer.id == Order.offer_id)
         .join(Warehouse, and_(Warehouse.warehouse_type == 'super_cluster', Warehouse.market == Offer.market))
@@ -151,38 +151,159 @@ def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: l
 
 
 async def aggregate_orders_quantity_by_offers_with_warehouses(session: AsyncSession, filter: OrderStatisticFilter):
-    query_periods = {
-        'today': _build_quantity_warehouses_query('today', 0, filter.offer_ids, filter.warehouse_ids),
-        'yesterday': _build_quantity_warehouses_query('yesterday', 1, filter.offer_ids, filter.warehouse_ids),
-        'for_7_days': _build_quantity_warehouses_query('for_7_days', 7, filter.offer_ids, filter.warehouse_ids),
-        'for_14_days': _build_quantity_warehouses_query('for_14_days', 14, filter.offer_ids, filter.warehouse_ids),
-        'for_28_days': _build_quantity_warehouses_query('for_28_days', 28, filter.offer_ids, filter.warehouse_ids),
-        'for_60_days': _build_quantity_warehouses_query('for_60_days', 60, filter.offer_ids, filter.warehouse_ids),
-        'for_120_days': _build_quantity_warehouses_query('for_120_days', 120, filter.offer_ids, filter.warehouse_ids),
-    }
+    # query_periods = {
+    #     'today': _build_quantity_warehouses_query('today', 0, filter.offer_ids, filter.warehouse_ids),
+    #     'yesterday': _build_quantity_warehouses_query('yesterday', 1, filter.offer_ids, filter.warehouse_ids),
+    #     'for_7_days': _build_quantity_warehouses_query('for_7_days', 7, filter.offer_ids, filter.warehouse_ids),
+    #     'for_14_days': _build_quantity_warehouses_query('for_14_days', 14, filter.offer_ids, filter.warehouse_ids),
+    #     'for_28_days': _build_quantity_warehouses_query('for_28_days', 28, filter.offer_ids, filter.warehouse_ids),
+    #     'for_60_days': _build_quantity_warehouses_query('for_60_days', 60, filter.offer_ids, filter.warehouse_ids),
+    #     'for_120_days': _build_quantity_warehouses_query('for_120_days', 120, filter.offer_ids, filter.warehouse_ids),
+    # }
+    #
+    # main_query = (
+    #     select(
+    #         OfferStock.offer_id.label('offer_id'),
+    #         OfferStock.warehouse_id.label('warehouse_id'),
+    #         *[func.coalesce(getattr(subquery.c, subquery_name), 0).label(subquery_name)
+    #           for subquery_name, subquery in query_periods.items()],
+    #         _build_smart_delivery_query(query_periods).label('smart_delivery')
+    #     )
+    #     .select_from(OfferStock)
+    #     .join(Offer, Offer.id == OfferStock.offer_id)
+    #     .join(Market, and_(Market.name == Offer.name_of_shop, Market.type == Offer.market))
+    # )
+    # for subquery in query_periods.values():
+    #     main_query = main_query.join(subquery, and_(subquery.c.offer_id == OfferStock.offer_id,
+    #                                                 subquery.c.warehouse_id == OfferStock.warehouse_id), isouter=True)
+    #
+    # if filter.offer_ids:
+    #     main_query = main_query.where(OfferStock.offer_id.in_(filter.offer_ids))
+    #
+    # if filter.warehouse_ids:
+    #     main_query = main_query.where(OfferStock.warehouse_id.in_(filter.warehouse_ids))
+    #
+    # result = (await session.execute(main_query)).all()
+    # SUM(CASE WHEN created_at >= NOW() - INTERVAL '24 DAY' THEN quanity ELSE 0 END) AS orders_last_24_days
+    orders_query_by_clusters = _get_orders_query_by_clusters()
+    orders_query_by_warehouses = _get_orders_query_by_warehouses()
+    orders_query_by_super_clusters = _get_orders_query_by_super_clusters()
+
+
+
+    orders_query = orders_query_by_warehouses.union(orders_query_by_super_clusters)
+    # orders_query = orders_query_by_clusters
+    orders_query = orders_query.subquery()
 
     main_query = (
         select(
-            OfferStock.offer_id.label('offer_id'),
-            OfferStock.warehouse_id.label('warehouse_id'),
-            *[func.coalesce(getattr(subquery.c, subquery_name), 0).label(subquery_name)
-              for subquery_name, subquery in query_periods.items()],
-            _build_smart_delivery_query(query_periods).label('smart_delivery')
+            orders_query,
+            sum([
+                Market.a_variable_for_smart_delivery * orders_query.c.for_7_days,
+                Market.b_variable_for_smart_delivery * orders_query.c.for_14_days,
+                Market.c_variable_for_smart_delivery * orders_query.c.for_28_days,
+                Market.d_variable_for_smart_delivery * orders_query.c.for_60_days,
+                Market.e_variable_for_smart_delivery * orders_query.c.for_120_days
+            ]).label('smart_delivery')
         )
-        .select_from(OfferStock)
-        .join(Offer, Offer.id == OfferStock.offer_id)
-        .join(Market, and_(Market.name == Offer.name_of_shop, Market.type == Offer.market))
+        .join(Offer, Offer.id == orders_query.c.offer_id)
+        .join(Market, and_(Market.type == Offer.market, Market.name == Offer.name_of_shop))
     )
-    for subquery in query_periods.values():
-        main_query = main_query.join(subquery, and_(subquery.c.offer_id == OfferStock.offer_id,
-                                                    subquery.c.warehouse_id == OfferStock.warehouse_id), isouter=True)
 
     if filter.offer_ids:
-        main_query = main_query.where(OfferStock.offer_id.in_(filter.offer_ids))
+        main_query = main_query.where(orders_query.c.offer_id.in_(filter.offer_ids))
 
     if filter.warehouse_ids:
-        main_query = main_query.where(OfferStock.warehouse_id.in_(filter.warehouse_ids))
+        main_query = main_query.where(orders_query.c.warehouse_id.in_(filter.warehouse_ids))
+
 
     result = (await session.execute(main_query)).all()
 
     return [OrdersQuantityStatOffersWithWarehouses.model_validate(i, from_attributes=True) for i in result]
+
+
+def _get_orders_query_by_warehouses():
+     return  (
+        select(
+            OfferStock.offer_id.label('offer_id'),
+            OfferStock.warehouse_id.label('warehouse_id'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '0 days'"), Order.quantity), else_=0)).label(
+                'today'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '1 days'"), Order.quantity), else_=0)).label(
+                'yesterday'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '7 days'"), Order.quantity), else_=0)).label(
+                'for_7_days'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '14 days'"), Order.quantity), else_=0)).label(
+                'for_14_days'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '28 days'"), Order.quantity), else_=0)).label(
+                'for_28_days'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '60 days'"), Order.quantity), else_=0)).label(
+                'for_60_days'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '120 days'"), Order.quantity), else_=0)).label(
+                'for_120_days'),
+        )
+        .select_from(OfferStock)
+        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .join(Order, and_(Order.warehouse_id == OfferStock.warehouse_id, Order.offer_id == OfferStock.offer_id),
+              isouter=True)
+        .where(Warehouse.warehouse_type == 'warehouse')
+        .group_by(OfferStock.offer_id, OfferStock.warehouse_id)
+    )
+
+
+def _get_orders_query_by_clusters():
+    parent_warehouse = aliased(Warehouse)
+    return (
+        select(
+            OfferStock.offer_id.label('offer_id'),
+            Warehouse.parent_warehouse_id.label('warehouse_id'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '0 days'"), Order.quantity), else_=0)).label(
+                'today'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '1 days'"), Order.quantity), else_=0)).label(
+                'yesterday'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '7 days'"), Order.quantity), else_=0)).label(
+                'for_7_days'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '14 days'"), Order.quantity), else_=0)).label(
+                'for_14_days'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '28 days'"), Order.quantity), else_=0)).label(
+                'for_28_days'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '60 days'"), Order.quantity), else_=0)).label(
+                'for_60_days'),
+            func.sum(case((Order.created_at >= text("NOW() - INTERVAL '120 days'"), Order.quantity), else_=0)).label(
+                'for_120_days'),
+        )
+        .select_from(OfferStock)
+        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .join(parent_warehouse, parent_warehouse.id == Warehouse.parent_warehouse_id)
+        .join(Order, and_(Order.warehouse_id == OfferStock.warehouse_id, Order.offer_id == OfferStock.offer_id),
+              isouter=True)
+        .where(parent_warehouse.warehouse_type == 'cluster')
+        .group_by(OfferStock.offer_id, Warehouse.parent_warehouse_id)
+    )
+
+
+def _get_orders_query_by_super_clusters():
+   return (
+       select(
+           Warehouse.id,
+           Order.offer_id,
+           func.sum(case((Order.created_at >= text("NOW() - INTERVAL '0 days'"), Order.quantity), else_=0)).label(
+               'today'),
+           func.sum(case((Order.created_at >= text("NOW() - INTERVAL '1 days'"), Order.quantity), else_=0)).label(
+               'yesterday'),
+           func.sum(case((Order.created_at >= text("NOW() - INTERVAL '7 days'"), Order.quantity), else_=0)).label(
+               'for_7_days'),
+           func.sum(case((Order.created_at >= text("NOW() - INTERVAL '14 days'"), Order.quantity), else_=0)).label(
+               'for_14_days'),
+           func.sum(case((Order.created_at >= text("NOW() - INTERVAL '28 days'"), Order.quantity), else_=0)).label(
+               'for_28_days'),
+           func.sum(case((Order.created_at >= text("NOW() - INTERVAL '60 days'"), Order.quantity), else_=0)).label(
+               'for_60_days'),
+           func.sum(case((Order.created_at >= text("NOW() - INTERVAL '120 days'"), Order.quantity), else_=0)).label(
+               'for_120_days')
+       )
+       .join(Offer, Offer.id == Order.offer_id)
+       .join(Warehouse, and_(Warehouse.market == Offer.market, Warehouse.warehouse_type == 'super_cluster'))
+       .group_by(Order.offer_id, Warehouse.id)
+   )
+

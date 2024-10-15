@@ -39,7 +39,7 @@ class OrdersQuantityStatOnlyOffers(BaseModel):
     for_28_days: int
     for_60_days: int
     for_120_days: int
-    smart_delivery: float
+    smart_delivery: float = 0
 
 
 class OrdersQuantityStatOffersWithWarehouses(OrdersQuantityStatOnlyOffers):
