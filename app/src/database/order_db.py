@@ -135,6 +135,7 @@ def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: l
         )
         .join(Offer, Offer.id == Order.offer_id)
         .join(Warehouse, and_(Warehouse.warehouse_type == 'super_cluster', Warehouse.market == Offer.market))
+        .where(Order.created_at >= text(f"NOW() - INTERVAL '{days_interval} days'"))
     )
 
     if warehouse_ids:
