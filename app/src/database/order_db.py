@@ -3,8 +3,9 @@ from datetime import datetime
 from pydantic import create_model
 from sqlalchemy import select, func, text, and_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
-from src.database.models.models import Order, Offer, OfferStock, Market
+from src.database.models.models import Order, Offer, OfferStock, Market, Warehouse
 from src.schemas.filters.filter_schemas import PagingFilter
 from src.schemas.filters.orders_filter import OrderFilter
 from src.schemas.filters.statistic_filter import OrderStatisticFilter
@@ -87,21 +88,65 @@ def _build_smart_delivery_query(period_queries: dict):
 
 
 def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: list[int] | None = None, warehouse_ids: list[int] | None = None):
-    query = select(
-        Order.offer_id,
-        Order.warehouse_id,
-        func.sum(Order.quantity).label(name),
-    ).where(Order.warehouse_id.is_not(None)).where(Order.created_at >= text(f"NOW() - INTERVAL '{days_interval} days'"))
+    warehouses_query = (
+        select(
+            Order.offer_id,
+            Order.warehouse_id,
+            func.sum(Order.quantity).label(name),
+        )
+        .join(Warehouse, Warehouse.id == Order.warehouse_id)
+        .where(Order.warehouse_id.is_not(None))
+        .where(Warehouse.parent_warehouse_id == None)
+        .where(Order.created_at >= text(f"NOW() - INTERVAL '{days_interval} days'"))
+    )
 
     if offer_ids:
-        query = query.where(Order.offer_id.in_(offer_ids))
+        warehouses_query = warehouses_query.where(Order.offer_id.in_(offer_ids))
 
     if warehouse_ids:
-        query = query.where(Order.warehouse_id.in_(warehouse_ids))
+        warehouses_query = warehouses_query.where(Order.warehouse_id.in_(warehouse_ids))
 
-    query = query.group_by(Order.offer_id, Order.warehouse_id).subquery()
+    warehouses_query = warehouses_query.group_by(Order.offer_id, Order.warehouse_id)
 
-    return query
+    clusters_query = (
+        select(
+            Warehouse.parent_warehouse_id,
+            Order.offer_id,
+            func.sum(Order.quantity).label(name)
+        )
+        .join(Warehouse, Warehouse.id == Order.warehouse_id)
+        .where(Warehouse.parent_warehouse_id != None)
+        .where(Order.created_at >= text(f"NOW() - INTERVAL '{days_interval} days'"))
+    )
+
+    if warehouse_ids:
+        clusters_query = clusters_query.where(Warehouse.parent_warehouse_id.in_(warehouse_ids))
+
+    if offer_ids:
+        clusters_query = clusters_query.where(Order.offer_id.in_(offer_ids))
+
+    clusters_query = clusters_query.group_by(Warehouse.parent_warehouse_id, Order.offer_id)
+
+    super_cluster_query = (
+        select(
+            Order.offer_id,
+            func.sum(Order.quantity).label(name),
+            Warehouse.id
+        )
+        .join(Offer, Offer.id == Order.offer_id)
+        .join(Warehouse, and_(Warehouse.warehouse_type == 'super_cluster', Warehouse.market == Offer.market))
+    )
+
+    if warehouse_ids:
+        super_cluster_query = super_cluster_query.where(Warehouse.id.in_(warehouse_ids))
+
+    if offer_ids:
+        super_cluster_query = super_cluster_query.where(Order.offer_id.in_(offer_ids))
+
+    super_cluster_query = super_cluster_query.group_by(Warehouse.id, Order.offer_id)
+
+    result_query = warehouses_query.union(clusters_query, super_cluster_query).subquery()
+    return result_query
 
 
 async def aggregate_orders_quantity_by_offers_with_warehouses(session: AsyncSession, filter: OrderStatisticFilter):
