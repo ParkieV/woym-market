@@ -262,9 +262,9 @@ def _get_orders_query_by_clusters():
 def _get_orders_query_by_super_clusters():
     return (
         select(
+            Order.offer_id,
             Warehouse.id.label('warehouse_id'),
             Order.quantity,
-            Order.offer_id,
             Order.created_at
         )
         .join(Warehouse, and_(Warehouse.market == Order.market, Warehouse.warehouse_type == 'super_cluster'))
