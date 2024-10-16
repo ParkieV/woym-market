@@ -175,29 +175,50 @@ def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: l
 
 
 async def aggregate_orders_quantity_by_offers_with_warehouses(session: AsyncSession, filter: OrderStatisticFilter):
-    orders_query = union_all(_get_orders_query_by_warehouses(), _get_orders_query_by_clusters(), _get_orders_query_by_super_clusters()).subquery()
-
     # its for 12000 days
     # clusters: 39=7 38=82 37=32
     # warehouses: 28=4 14=72 13=32 12=10 23=3
     # super: 198=121
+
+    main_query = build_order_stats_by_warehouses()
+
+    if filter.warehouse_ids:
+        main_query = main_query.where(OfferStock.warehouse_id.in_(filter.warehouse_ids))
+
+    if filter.offer_ids:
+        main_query = main_query.where(OfferStock.offer_id.in_(filter.offer_ids))
+
+    result = (await session.execute(main_query)).all()
+    return [OrdersQuantityStatOffersWithWarehouses.model_validate(i, from_attributes=True) for i in result]
+
+
+def build_order_stats_by_warehouses():
+    orders_query = union_all(_get_orders_query_by_warehouses(), _get_orders_query_by_clusters(), _get_orders_query_by_super_clusters()).subquery()
+
     query = (
         select(
             orders_query.c.warehouse_id,
             orders_query.c.offer_id,
-            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '0 days'"), orders_query.c.quantity), else_=0)).label(
+            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '0 days'"), orders_query.c.quantity),
+                          else_=0)).label(
                 'today'),
-            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '1 days'"), orders_query.c.quantity), else_=0)).label(
+            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '1 days'"), orders_query.c.quantity),
+                          else_=0)).label(
                 'yesterday'),
-            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '7 days'"), orders_query.c.quantity), else_=0)).label(
+            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '7 days'"), orders_query.c.quantity),
+                          else_=0)).label(
                 'for_7_days'),
-            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '14 days'"), orders_query.c.quantity), else_=0)).label(
+            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '14 days'"), orders_query.c.quantity),
+                          else_=0)).label(
                 'for_14_days'),
-            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '28 days'"), orders_query.c.quantity), else_=0)).label(
+            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '28 days'"), orders_query.c.quantity),
+                          else_=0)).label(
                 'for_28_days'),
-            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '60 days'"), orders_query.c.quantity), else_=0)).label(
+            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '60 days'"), orders_query.c.quantity),
+                          else_=0)).label(
                 'for_60_days'),
-            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '120 days'"), orders_query.c.quantity), else_=0)).label(
+            func.sum(case((orders_query.c.created_at >= text("NOW() - INTERVAL '120 days'"), orders_query.c.quantity),
+                          else_=0)).label(
                 'for_120_days'),
 
         )
@@ -205,7 +226,7 @@ async def aggregate_orders_quantity_by_offers_with_warehouses(session: AsyncSess
         .group_by(orders_query.c.warehouse_id, orders_query.c.offer_id)
     ).subquery()
 
-    main_query = (
+    return (
         select(
             query,
             sum([
@@ -217,20 +238,11 @@ async def aggregate_orders_quantity_by_offers_with_warehouses(session: AsyncSess
             ]).label('smart_delivery')
         )
         .select_from(OfferStock)
-        .join(query, and_(query.c.warehouse_id == OfferStock.warehouse_id, query.c.offer_id == OfferStock.offer_id), isouter=True)
+        .join(query, and_(query.c.warehouse_id == OfferStock.warehouse_id, query.c.offer_id == OfferStock.offer_id),
+              isouter=True)
         .join(Offer, Offer.id == query.c.offer_id)
         .join(Market, Market.type == Offer.market)
     )
-
-    if filter.warehouse_ids:
-        main_query = main_query.where(OfferStock.warehouse_id.in_(filter.warehouse_ids))
-
-    if filter.offer_ids:
-        main_query = main_query.where(OfferStock.offer_id.in_(filter.offer_ids))
-
-    result = (await session.execute(main_query)).all()
-    return [OrdersQuantityStatOffersWithWarehouses.model_validate(i, from_attributes=True) for i in result]
-
 
 
 def _get_orders_query_by_warehouses():

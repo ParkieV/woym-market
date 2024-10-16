@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from src.database.models.models import Offer
 from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market
 from src.database.order_db import _build_smart_delivery_query, _build_quantity_offers_query, \
-    _build_quantity_warehouses_query
+    _build_quantity_warehouses_query, build_order_stats_by_warehouses
 from src.database.utils import _update_or_create_object
 from src.schemas.filters.stocks_filter import WarehousesFilter
 from src.schemas.stocks.fbo_schemas import OfferStockOut, OfferFBOStockUpdate, AggOfferFBOStock
@@ -226,15 +226,8 @@ async def update_own_storages_by_sku(session: AsyncSession, data: list[dict], pl
 
 
 def build_supply_raw_for_delivery_query(warehouses: list[int] | None = None, offers: list[int] | None = None,):
-    query_periods = {
-        'today': _build_quantity_warehouses_query('today', 0, None, None),
-        'yesterday': _build_quantity_warehouses_query('yesterday', 1, None, None),
-        'for_7_days': _build_quantity_warehouses_query('for_7_days', 7, None, None),
-        'for_14_days': _build_quantity_warehouses_query('for_14_days', 14, None, None),
-        'for_28_days': _build_quantity_warehouses_query('for_28_days', 28, None, None),
-        'for_60_days': _build_quantity_warehouses_query('for_60_days', 60, None, None),
-        'for_120_days': _build_quantity_warehouses_query('for_120_days', 120, None, None),
-    }
+    orders_query = build_order_stats_by_warehouses().subquery()
+
     stocks_subquery = (
         select(
             OfferStock.offer_id.label('offer_id'),
@@ -242,20 +235,15 @@ def build_supply_raw_for_delivery_query(warehouses: list[int] | None = None, off
             OfferStock.current_stock.label('current_stock'),
             OfferStock.is_deliver_in_boxes.label('is_deliver_in_boxes'),
             OfferStock.in_box.label('in_box'),
-            case(
-                (OfferStock.use_smart_delivery, _build_smart_delivery_query(query_periods)),
+            func.coalesce(case(
+                (OfferStock.use_smart_delivery, orders_query.c.smart_delivery),
                 else_=OfferStock.min_stock
-            ).label('min_stock'),
+            ), 0).label('min_stock'),
 
         )
         .select_from(OfferStock)
-        .join(Offer, Offer.id == OfferStock.offer_id)
-        .join(Market, and_(Market.name == Offer.name_of_shop, Market.type == Offer.market))
+        .join(orders_query, and_(orders_query.c.offer_id == OfferStock.offer_id, orders_query.c.warehouse_id == OfferStock.warehouse_id), isouter=True)
     )
-
-    for subquery in query_periods.values():
-        stocks_subquery = stocks_subquery.join(subquery, and_(subquery.c.offer_id == OfferStock.offer_id, subquery.c.warehouse_id == OfferStock.warehouse_id), isouter=True)
-
     stocks_subquery = stocks_subquery.subquery()
 
     in_box_expr = case(
