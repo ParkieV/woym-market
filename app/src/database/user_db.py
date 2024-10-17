@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .db import async_session
 from .models.models import Users
+from src.schemas.user_schemas import UserCreate
 
 
 async def reg_user(login: str, password: str, is_staff: bool) -> Users | None:
@@ -64,24 +65,22 @@ async def get_user_by_login(login: str):
 
 
 
-# async def update_user(id_user: int, new_data: NewUserData):
-#     session: AsyncSession
-#     async with async_session() as session:
-#         user = await session.execute(
-#             select(
-#                 Users
-#             ).where(
-#                 Users.id == id_user
-#             )
-#         ) # .scalar_one()
-#         user = user.scalar_one_or_none()
-#         if user is None:
-#             raise HTTPException(
-#                 detail=f'id={id_user} does not exist in users table',
-#                 status_code=status.HTTP_400_BAD_REQUEST
-#             )
+async def update_user(id_user: int, new_data: UserCreate):
+    session: AsyncSession
+    async with async_session() as session:
+        user = await session.execute(
+            select(
+                Users
+            ).where(
+                Users.id == id_user
+            )
+        )
+        user = user.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(
+                detail=f'id={id_user} does not exist in users table',
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
 
-#         data_dict = {key: val for key, val in new_data if val is not None and key not in 'competence_list'}
-#         await user.update(**data_dict)
-#         await session.commit()
-
+        await user.update(**new_data.model_dump)
+        await session.commit()
