@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, update, where, values
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .db import async_session
@@ -81,6 +81,15 @@ async def update_user(id_user: int, new_data: UserCreate):
                 detail=f'id={id_user} does not exist in users table',
                 status_code=status.HTTP_400_BAD_REQUEST
             )
+        
+        await session.execute(
+            update(
+                Users
+            ).where(
+                Users.id == id_user
+            ).values(
+                **new_data.model_dump
+            )
+        )
 
-        await user.update(**new_data.model_dump)
         await session.commit()
