@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-from sqlalchemy import select, update, where, values
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .db import async_session
