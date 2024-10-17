@@ -88,7 +88,7 @@ async def update_user(id_user: int, new_data: UserCreate):
             ).where(
                 Users.id == id_user
             ).values(
-                **new_data.model_dump
+                **new_data.model_dump()
             )
         )
 
