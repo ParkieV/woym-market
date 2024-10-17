@@ -1,7 +1,8 @@
 import src.services.auth_utils as auth
 from src.schemas.user_schemas import *
 from src.services.settings_service import create_logs, create_settings
-from src.database.user_db import update_user
+from src.services.auth_utils import hash_password
+import src.database.user_db as user_db
 
 
 async def registration_user(login: str, password: str, is_staff: bool):
@@ -24,4 +25,5 @@ async def login_user(login, password):
 
 
 async def update_user_info(id_user: int, new_user_data: UserCreate):
-    await update_user(id_user, new_user_data)
+    new_user_data.password = hash_password(new_user_data.password)
+    await user_db.update_user(id_user, new_user_data)
