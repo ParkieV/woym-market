@@ -220,6 +220,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
 
 
 async def update_offers_attributes(offers: pd.DataFrame) -> None:
+    return
     data = offers.to_dict('records')
 
     if not config.is_prod:
