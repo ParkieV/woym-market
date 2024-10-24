@@ -15,15 +15,16 @@ class EndpointLoggingMiddleware(BaseHTTPMiddleware):
 
     @staticmethod
     async def _get_response_body(request: Request) -> Any:
-        from json import JSONDecodeError
+        if 'multipart/form-data' in request.headers.get('content-type', ''):
+            return None
         try:
             return await request.json()
-        except JSONDecodeError:
+        except Exception:
             return await request.body()
 
     async def dispatch(self, request: Request, call_next):
         request_body = await self._get_response_body(request)
-        base_log_message = f'{request.method} {request.url} | body={request_body} | params={request.query_params} | path_params={request.path_params} | headers={request.headers}'
+        base_log_message = f'{request.method} {request.url} | body={request_body} | params={request.query_params} | path_params={request.path_params} | headers={dict(request.headers.items())}'
         try:
             response = await call_next(request)
             logger.debug(f'[OK] {base_log_message}')

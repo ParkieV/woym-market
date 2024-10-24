@@ -122,6 +122,7 @@ class OzonAPI(BaseAPI):
             update_offer_data['name'] = valid_offer.name
             update_offer_data['images'] = update_offer_data.get('images', [])
             update_offer_data['images'] = [i['file_name'] for i in update_offer_data['images']]
+            update_offer_data['new_description_category_id'] = update_offer_data['description_category_id']
 
             update_offer_data['height'] = ceil(valid_offer.self_height)
             update_offer_data['width'] = ceil(valid_offer.self_width)
@@ -143,7 +144,15 @@ class OzonAPI(BaseAPI):
             update_offer_data['weight_unit'] = weight_unit
 
             update_offer_data['attributes'] = update_offer_data['attributes'] or []
-            update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] if attr['attribute_id'] not in (22336, 4191)]
+
+            for attr in update_offer_data['attributes']:
+                attr['id'] = attr.pop('attribute_id')
+
+            for complex_attrs in update_offer_data['complex_attributes']:
+                for complex_attr in complex_attrs['attributes']:
+                    complex_attr['id'] = complex_attr.pop('attribute_id')
+
+            update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] if attr['id'] not in (22336, 4191)]
             update_offer_data['attributes'].extend(
                 [
                     {
