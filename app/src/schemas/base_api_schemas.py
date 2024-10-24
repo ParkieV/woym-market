@@ -22,7 +22,6 @@ class APIOffer(BaseModel):
     self_length: int | None = None
     self_width: int | None = None
     self_height: int | None = None
-    volume: float | None = None
     photo: str | None = None
     current_price: float | None = None
     business_id: int | None = None
