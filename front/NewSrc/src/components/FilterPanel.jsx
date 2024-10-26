@@ -4,30 +4,18 @@ const FilterPanel = ({ filters, setFilters, shopMarketOptions, handleResetFilter
 
     const handleFilterChange = (name_of_shop, market) => {
         setFilters((prev) => {
-            const combinationExists = prev.shop.some((shop, index) => 
-                shop === name_of_shop && prev.market[index] === market
+            const pairExists = prev.shopMarketPairs.some(
+                (pair) => pair.shop === name_of_shop && pair.market === market
             );
-    
-            if (combinationExists) {
-                const updatedShops = prev.shop.filter((shop, index) => 
-                    !(shop === name_of_shop && prev.market[index] === market)
-                );
-                const updatedMarkets = prev.market.filter((mkt, index) => 
-                    !(prev.shop[index] === name_of_shop && mkt === market)
-                );
-    
-                return {
-                    ...prev,
-                    shop: updatedShops,
-                    market: updatedMarkets
-                };
-            } else {
-                return {
-                    ...prev,
-                    shop: [...prev.shop, name_of_shop],
-                    market: [...prev.market, market]
-                };
-            }
+
+            return {
+                ...prev,
+                shopMarketPairs: pairExists
+                    ? prev.shopMarketPairs.filter(
+                        (pair) => !(pair.shop === name_of_shop && pair.market === market)
+                    )
+                    : [...prev.shopMarketPairs, { shop: name_of_shop, market }]
+            };
         });
     };
 
@@ -47,7 +35,12 @@ const FilterPanel = ({ filters, setFilters, shopMarketOptions, handleResetFilter
                         <button
                             key={`${item.name}-${item.type}`}
                             onClick={() => handleFilterChange(item.name, item.type)}
-                            className={`filter-button ${filters.shop.includes(item.name) && filters.market.includes(item.type) ? 'active' : ''}`}
+                            className={`filter-button ${filters.shopMarketPairs.some(
+                                (pair) => pair.shop === item.name && pair.market === item.type
+                            )
+                                    ? 'active'
+                                    : ''
+                                }`}
                         >
                             {`${item.name} (${item.type})`}
                         </button>

@@ -30,18 +30,16 @@ const Dashboard = () => {
     const [editedStorages, setEditedStorages] = useState(new Map());
 
     const [filters, setFilters] = useState({
-        shop: [],
-        market: [],
+        shopMarketPairs: [],
         search: ''
     });
 
     const handleResetFilters = () => {
         setFilters({
-            shop: [],
-            market: [],
+            shopMarketPairs: [],
             search: ''
         });
-    };
+    }
     const applyCatalogFilters = (catalogData, filters) => {
 
         if (!Array.isArray(catalogData)) {
@@ -55,31 +53,39 @@ const Dashboard = () => {
             const matchesSearch = (item.name && item.name.toLowerCase().includes(searchValue)) ||
                 (item.search_words && item.search_words.toLowerCase().includes(searchValue));
 
-            const matchesShopAndMarket = item.synchronization.some(sync =>
-                filters.shop.includes(sync.name_of_shop) && filters.market.includes(sync.market)
+            const exactMatch = item.synchronization.every(sync =>
+                filters.shopMarketPairs.some(filterPair =>
+                    filterPair.shop === sync.name_of_shop && filterPair.market === sync.market
+                )
             );
 
-            return matchesSearch && (!filters.shop.length || matchesShopAndMarket);
+            return matchesSearch && (!filters.shopMarketPairs.length || (!exactMatch));
         });
     };
 
 
 
     const applyStocksFilters = (stocksData, filters) => {
+
+        if (!Array.isArray(stocksData)) {
+            console.error("stocksData is not an array:", stocksData);
+            return [];
+        }
         return stocksData.filter(item => {
             const searchValue = filters.search ? filters.search.toLowerCase() : '';
 
             const matchesSearch = item.offer.name && item.offer.name.some(name => name.toLowerCase().includes(searchValue));
 
-            const matchesShop = filters.shop.length
-                ? item.offer.name_of_shop && item.offer.name_of_shop.some(shop => filters.shop.includes(shop))
-                : true;
+            const matchesShopAndMarket = item.stocks.every(stock =>
+                filters.shopMarketPairs.some(filterPair =>
+                    stock.name_of_shop === filterPair.shop && stock.market === filterPair.market
+                )
+            )
 
-            const matchesMarket = filters.market.length
-                ? item.offer.market && item.offer.market.some(market => filters.market.includes(market))
-                : true
 
-            return matchesSearch && matchesShop && matchesMarket;
+
+
+            return matchesSearch && (!filters.shopMarketPairs.length || (!matchesShopAndMarket));
         });
     };
 

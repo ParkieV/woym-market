@@ -31,7 +31,7 @@
 }
 
 .filter-button.active {
-    background-color: green;
+    background-color: gray;
     color: #fff;
 }
 
