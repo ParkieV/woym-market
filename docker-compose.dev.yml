@@ -22,7 +22,7 @@ services:
     restart: unless-stopped
     env_file: ./front/.env.dev
     build:
-      context: ./front
+      context: ./front/NewSrc
       dockerfile: front.dockerfile
     depends_on:
       - app
@@ -39,6 +39,7 @@ services:
       - ./nginx/dev:/etc/nginx/conf.d
       - /etc/letsencrypt:/etc/letsencrypt
       - /var/www/html:/var/www/html
+      - ./front/NewSrc:/etc/nginx/front
       # - ./static:/etc/nginx/static_img
     ports:
       - 80:80
