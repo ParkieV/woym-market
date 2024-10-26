@@ -1,6 +1,6 @@
 FROM node:alpine AS builder
-WORKDIR /app
+WORKDIR /front
 COPY package.json .
 RUN npm install
-COPY . .
+COPY NewSrc .
 RUN npm run build
