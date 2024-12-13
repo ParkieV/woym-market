@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, computed_field, Field
+
 from src.schemas.stocks.warehouses_schemas import WarehouseOut
 
 
@@ -10,15 +11,13 @@ class BaseOfferStock(BaseModel):
     advice_from_the_store: str = ''
     in_box: int = 1
     is_deliver_in_boxes: bool = False
-    use_smart_delivery: bool = False
 
 
-class OfferFBOStockUpdate(BaseModel):
+class OfferStockUpdate(BaseModel):
     id: int
     min_stock: int
     in_box: int
     is_deliver_in_boxes: bool
-    use_smart_delivery: bool
 
 
 class OfferStockCreate(BaseOfferStock):
@@ -26,16 +25,144 @@ class OfferStockCreate(BaseOfferStock):
     warehouse_id: int
 
 
-class OfferStockOut(OfferStockCreate):
+class OfferStockOut(BaseOfferStock):
     id: int
 
 
 class OfferStockWithWarehouseOut(OfferStockOut):
     warehouse: WarehouseOut
 
+def _gen_float() -> float:
+    return -1.0
 
-class AggOfferFBOStock(BaseModel):
-    offer_id: int = Field(title='ID карточки товара')
-    min_stock: int = Field(title='Минимальный остаток товара')
-    current_stock: int = Field(title='Текущий остаток по товару')
-    for_delivery: int = Field(title='Требуется к поставке')
+class OfferWithStocks(BaseModel):
+    id: int
+    sku: str
+    name: str | None
+    photo: str | None
+    name_of_shop: str
+    market: str
+    note_1: str
+    note_2: str
+    note_3: str
+    supplier_available: bool
+    margin: float | None
+    cost_price: float | None
+    profit: float | None
+    self_weight: float | None
+    volume: float | None = Field(default_factory=_gen_float)
+    hidden: bool
+    barcodes: str | None
+    stocks: list[OfferStockWithWarehouseOut]
+
+    @property
+    def total_for_delivery(self) -> int:
+        return sum([i.for_delivery for i in self.stocks])
+
+    @computed_field
+    @property
+    def total_volume(self) -> float | None:
+        if self.volume is None:
+            return None
+        return self.volume * self.total_for_delivery
+
+    @computed_field
+    @property
+    def total_cost_price(self) -> float | None:
+        if self.cost_price is None:
+            return None
+        return self.cost_price * self.total_for_delivery
+
+    @computed_field
+    @property
+    def total_weight(self) -> float | None:
+        if self.self_weight is None:
+            return None
+        return self.self_weight * self.total_for_delivery
+
+    @computed_field
+    @property
+    def total_margin(self) -> float | None:
+        if self.margin is None:
+            return None
+        return self.margin * self.total_for_delivery
+
+    @computed_field
+    @property
+    def total_profit(self) -> float | None:
+        if self.profit is None:
+            return None
+        return self.profit * self.total_for_delivery
+
+
+class OfferWithStocksUpdate(BaseModel):
+    id: int
+    note_1: str = ''
+    note_2: str = ''
+    note_3: str = ''
+    supplier_available: bool
+    hidden: bool
+    stocks: list[OfferStockUpdate]
+
+
+class FboOfferOut(BaseModel):
+    id: int
+    sku: str
+    name: str
+    photo: str | None
+    name_of_shop: str
+    market: str
+    note_1: str
+    note_2: str
+    note_3: str
+    supplier_available: bool
+    margin: float | None
+    cost_price: float | None
+    profit: float | None
+    self_weight: float | None
+    volume: float | None
+    hidden: bool
+    barcodes: str | None
+    total_for_delivery: int
+
+    stocks: list[OfferStockOut]
+
+    # @computed_field
+    # @property
+    # def stocks(self) -> list:
+    #     return []
+
+    @computed_field
+    @property
+    def total_volume(self) -> float | None:
+        if self.volume is None:
+            return None
+        return self.volume * self.total_for_delivery
+
+    @computed_field
+    @property
+    def total_cost_price(self) -> float | None:
+        if self.cost_price is None:
+            return None
+        return self.cost_price * self.total_for_delivery
+
+    @computed_field
+    @property
+    def total_weight(self) -> float | None:
+        if self.self_weight is None:
+            return None
+        return self.self_weight * self.total_for_delivery
+
+    @computed_field
+    @property
+    def total_margin(self) -> float | None:
+        if self.margin is None:
+            return None
+        return self.margin * self.total_for_delivery
+
+    @computed_field
+    @property
+    def total_profit(self) -> float | None:
+        if self.profit is None:
+            return None
+        return self.profit * self.total_for_delivery

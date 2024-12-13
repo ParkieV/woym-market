@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from contextlib import asynccontextmanager
 
 import sentry_sdk
@@ -10,22 +9,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette import status
 from starlette.responses import JSONResponse
 
-from middlewares import EndpointLoggingMiddleware
+from logs import get_logger
 from scheduls import update_data
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
-from src.routers.offers.base_router import router as offer_router
+from src.routers.offer_router import data_router
 from src.routers.debug_router import debug_router
 from src.routers.stocks.stocks_router import router as stocks_router
 from src.routers.settings_router import settings_router
 from src.routers.core_router import router as core_router
 from src.routers.catalog_router import router as catalog_router
 from src.routers.media_router import router as media_router
-from src.routers.orders_router import router as orders_router
 from src.database.db import db_create
 import aioschedule
 from src.params.confing import config
-
+from src.services.auth_utils import hash_password
 
 if config.use_sentry:
     sentry_sdk.init(
@@ -39,6 +37,7 @@ if config.use_sentry:
         profiles_sample_rate=1.0,
     )
 
+
 async def scheduler():
     aioschedule.every(60).minutes.do(update_data, 1)
 
@@ -48,6 +47,7 @@ async def scheduler():
 
 
 async def to_startup():
+    logger = get_logger(__name__)
     if config.schedule_update:
         asyncio.create_task(scheduler())
 
@@ -59,17 +59,13 @@ async def startup(_: FastAPI):
     yield
 
 
-app: FastAPI = FastAPI(default_response_class=ORJSONResponse, root_path='' if config.is_local else '/backend', lifespan=startup, debug=True)
-
-if config.log_endpoints:
-    app.add_middleware(EndpointLoggingMiddleware)
+app: FastAPI = FastAPI(default_response_class=ORJSONResponse, root_path='' if config.is_local else '/backend', lifespan=startup)
 
 
 origins = [
     'http://localhost',
-    'http://localhost:8080',
-    'http://localhost:3000',
-    '*'
+    'http://localhost:5173',
+    'https://localhost:5173'
 ]
 
 app.add_middleware(
@@ -80,17 +76,15 @@ app.add_middleware(
     allow_headers=['*']
 )
 
-app.include_router(core_router)
-app.include_router(offer_router)
-app.include_router(catalog_router)
-app.include_router(orders_router)
-app.include_router(stocks_router)
-app.include_router(settings_router)
 app.include_router(media_router)
+app.include_router(catalog_router)
+app.include_router(core_router)
 app.include_router(auth_router)
 app.include_router(user_router)
+app.include_router(settings_router)
+app.include_router(data_router)
+app.include_router(stocks_router)
 app.include_router(debug_router)
-
 
 
 @app.exception_handler(500)

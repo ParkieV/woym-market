@@ -46,32 +46,9 @@ services:
   db:
     container_name: db
     restart: unless-stopped
-    image: postgres:16
-    env_file: db.env
+    image: postgres:latest
+    env_file: .env
     volumes:
       - ./db-data:/var/lib/postgresql/data
     expose:
       - 5432
-
-  loki:
-    container_name: loki
-    image: grafana/loki
-    ports:
-      - 3100:3100
-    volumes:
-      - ./loki-config.yaml:/etc/loki/local-config.yaml
-    command: -config.file=/etc/loki/local-config.yaml
-
-  grafana:
-    image: grafana/grafana
-    container_name: grafana
-    depends_on:
-      - loki
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana.ini:/etc/grafana/grafana.ini
-    ports:
-      - 3000:3000
-
-volumes:
-  grafana_data:

@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from pydantic import field_validator
 from sqlalchemy import (
     Column,
     ForeignKey,
@@ -9,7 +10,7 @@ from sqlalchemy import (
     TIMESTAMP,
     Float,
     DateTime,
-    select, func, BigInteger, false
+    select, func, BigInteger
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import text
@@ -51,16 +52,9 @@ class Offer(Base):
     description_changed = Column(Boolean, nullable=False, default=False)
 
     self_weight = Column(Float, default=None, nullable=True)
-    self_weight_changed = Column(Boolean, nullable=False, default=False)
-
     self_length = Column(Float, default=None, nullable=True)
-    self_length_changed = Column(Boolean, nullable=False, default=False)
-
     self_width = Column(Float, default=None, nullable=True)
-    self_width_changed = Column(Boolean, nullable=False, default=False)
-
     self_height = Column(Float, default=None, nullable=True)
-    self_height_changed = Column(Boolean, nullable=False, default=False)
 
     yandex_weight = Column(Float, nullable=True)
     yandex_length = Column(Float, nullable=True)
@@ -76,7 +70,6 @@ class Offer(Base):
     # countable/editable values
     dollar_cost_price = Column(Float, nullable=True)
     dollar_cost_price_updated_at = Column(DateTime, nullable=True, default=None)
-    dollar_cost_price_updated_at_changed = Column(Boolean, nullable=False, default=False, server_default=false())
     cost_price = Column(Float, nullable=True)
     total_price_coeff = Column(Float)
     total_price_min_additional = Column(Float)
@@ -89,7 +82,6 @@ class Offer(Base):
     content_rating = Column(Float, nullable=True)
     price_index = Column(String, nullable=True)
     supplier_available = Column(Boolean, default=False)
-    supplier_available_changed = Column(Boolean, default=False, nullable=False, server_default=false())
     volume_profitability_ratio = Column(Float, nullable=True, default=None)
     days_to_zero_profit = Column(Float, nullable=True, default=None)
     market_discount_in_percent = Column(Float, nullable=True, default=None)
@@ -133,11 +125,7 @@ class Offer(Base):
     barcodes_changed = Column(Boolean, nullable=False, default=False)
 
     use_promotion_price = Column(Boolean, default=False)
-    use_promotion_price_changed = Column(Boolean, nullable=False, default=False, server_default=false())
-
     wholesale_dollar_cost_price = Column(Float, nullable=True)
-    wholesale_dollar_cost_price_changed = Column(Boolean, nullable=False, default=False, server_default=false())
-
     vendor_code = Column(BigInteger, nullable=True, default=None)
     search_words = Column(String, nullable=True, default=None)
     search_words_changed = Column(Boolean, default=False, nullable=False)
@@ -145,7 +133,6 @@ class Offer(Base):
     synchronization = Column(Boolean, default=False, nullable=False)
 
     stocks = relationship('OfferStock')
-
 
     @classmethod
     def columns(cls, use_catalog: bool = False, exclude: list | None = None, exclude_from_catalog: list | None = None):
@@ -172,7 +159,6 @@ class Offer(Base):
                 result.append(column)
 
         return result
-
 
 class Logs(Base):
     __tablename__ = 'logs'
@@ -225,7 +211,6 @@ class Warehouse(Base):
     from_file_updated_at = Column(DateTime(timezone=True), nullable=True, default=None)
 
 
-
 class OfferStock(Base):
     __tablename__ = 'offers_stocks'
 
@@ -241,7 +226,6 @@ class OfferStock(Base):
     is_deliver_in_boxes = Column(Boolean, default=False)
     min_stock = Column(Integer, default=0)
     for_delivery = Column(Integer, default=0)
-    use_smart_delivery = Column(Boolean, default=False, server_default=false())
 
 
 class Market(Base):
@@ -266,21 +250,6 @@ class Market(Base):
     price_before_discount = Column(Float, default=20)
     volume_threshold_for_additional_logistics = Column(Float, default=10)
     cost_of_additional_logistics_per_liter = Column(Float, default=100)
-
-    a_variable_for_smart_delivery = Column(Float, default=0, nullable=False)
-    b_variable_for_smart_delivery = Column(Float, default=0, nullable=False)
-    c_variable_for_smart_delivery = Column(Float, default=0, nullable=False)
-    d_variable_for_smart_delivery = Column(Float, default=0, nullable=False)
-    e_variable_for_smart_delivery = Column(Float, default=0, nullable=False)
-
-    default_auto_min_price = Column(Float, default=100, nullable=False)
-    default_auto_price_control = Column(Boolean, default=False, nullable=False)
-    default_total_price_coeff = Column(Float, default=2.4, nullable=False)
-    default_total_price_min_additional = Column(Float, default=0, nullable=False)
-    default_auto_participation_in_promotions = Column(Boolean, default=False, nullable=False)
-    default_pricing_scheme = Column(String, default=None, nullable=True)
-
-    consider_logistic_cost = Column(Boolean, default=False, nullable=False)
 
 
 class OwnStorage(Base):
@@ -330,44 +299,20 @@ class CatalogItem(Base):
     sku = Column(String, index=True, nullable=False, primary_key=True)
 
     self_weight = Column(Float, nullable=True, default=None)
-    self_weight_changed = Column(Boolean, nullable=False, default=False)
-
     self_length = Column(Float, nullable=True, default=None)
-    self_length_changed = Column(Boolean, nullable=False, default=False)
-
     self_width = Column(Float, nullable=True, default=None)
-    self_width_changed = Column(Boolean, nullable=False, default=False)
-
     self_height = Column(Float, nullable=True, default=None)
-    self_height_changed = Column(Boolean, nullable=False, default=False)
-
+    volume = Column(Float, nullable=True, default=None)
     catalog_note = Column(String, nullable=True, server_default=text("'Новый товар'"))
-
     use_promotion_price = Column(Boolean, nullable=False, default=False)
-    use_promotion_price_changed = Column(Boolean, nullable=False, default=False, server_default=false())
-
     wholesale_dollar_cost_price = Column(Float, nullable=True, default=None)
-    wholesale_dollar_cost_price_changed = Column(Boolean, nullable=False, default=False)
-
     supplier_available = Column(Boolean, nullable=False, default=False)
-    supplier_available_changed = Column(Boolean, nullable=False, default=False, server_default=false())
-
     dollar_cost_price_updated_at = Column(DateTime, nullable=True, default=None)
-    dollar_cost_price_updated_at_changed = Column(Boolean, nullable=False, default=False, server_default=false())
-
     description = Column(String, nullable=True, default=None, server_default=None)
-    description_changed = Column(Boolean, nullable=False, default=False)
-
     search_words = Column(String, nullable=True, default=None, server_default=None)
     search_words_changed = Column(Boolean, nullable=False, default=False)
-
     name = Column(String, nullable=True, default=None, server_default=None)
-    name_changed = Column(Boolean, nullable=False, default=False)
-
     barcodes = Column(String, nullable=True, default=None, server_default=None)
-    barcodes_changed = Column(Boolean, nullable=False, default=False)
-
-    reverse_sync_offer_id = Column(Integer, ForeignKey('offers.id'), nullable=True, default=None)
 
     synchronization = relationship('Offer', uselist=True, primaryjoin='foreign(Offer.sku) == CatalogItem.sku')
 
@@ -391,3 +336,13 @@ class Order(Base):
     created_at = Column(DateTime(), nullable=False)
     updated_at = Column(DateTime, nullable=True, default=None)
 
+
+remaining_stocks_subuery = (
+    select(
+        OfferStock.offer_id,
+        func.sum(func.coalesce(OfferStock.current_stock, 0)).label('remaining_stock')
+    )
+    .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+    .where(Warehouse.warehouse_type == 'warehouse')
+    .group_by(
+        OfferStock.offer_id).subquery())

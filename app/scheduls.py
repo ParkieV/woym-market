@@ -1,3 +1,5 @@
+import asyncio
+
 from src.services.offer_service import update_offers
 from src.services.stocks_service import update_warehouses_and_stocks
 from src.services.orders_services import setup_orders
@@ -7,12 +9,15 @@ logger = get_logger(__name__)
 
 
 async def update_data(user_id: int):
+    logger.info('Start updating data!')
     try:
+        # Получение карточек товаров из магазина
         await update_offers(user_id)
     except Exception as e:
         logger.error(f'Error in update offers', exc_info=e)
 
     try:
+        # Получение информации о остатках на складах
         await update_warehouses_and_stocks()
     except Exception as e:
         logger.error(f"Error in update warehouses and stocks", exc_info=e)
@@ -23,3 +28,6 @@ async def update_data(user_id: int):
         logger.error(f'Error in update orders data', exc_info=e)
 
     logger.info('Schedules updated completed')
+
+if __name__ == '__main__':
+    asyncio.run(update_data(3))

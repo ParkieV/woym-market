@@ -1,3 +1,4 @@
+from collections.abc import Hashable
 from datetime import datetime
 from operator import or_
 
@@ -5,17 +6,14 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, func, and_, String, cast
+from sqlalchemy import select, update, delete, func
 from sqlalchemy.orm import selectinload
-from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, \
-    PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO, OfferChange
-from .models.models import Offer, PricingScheme, PricingSchemeField
-from typing import Iterable, Any, Type
+from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
+from .models.models import Offer, PricingScheme, PricingSchemeField, \
+    remaining_stocks_subuery
+from typing import Iterable, Any, Type, TypeVar
 from fastapi.exceptions import HTTPException
 from fastapi import status
-
-from ..schemas.filters.filter_schemas import PagingFilter
-from ..schemas.filters.offers_filter import OffersSourceFilter, OffersFilter
 
 
 def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
@@ -29,23 +27,37 @@ def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
     return data
 
 
-async def get_offers_list(session: AsyncSession, paging: PagingFilter | None = None, offers_filter: OffersFilter | None = None) -> list[OfferOut]:
-    query = select(Offer)
+async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None, model_schema: Type[BaseModel] = OfferOut, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
+    query = select(
+        Offer.__table__.columns,
+        remaining_stocks_subuery.c.remaining_stock
+    )
 
-    if paging:
-        query = paging(query)
+    if filters:
+        query = query.filter_by(**filters)
 
-    if offers_filter:
-        query = offers_filter(query)
+    query = query.outerjoin(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id).offset(offset)
 
-    offers = (await session.execute(query)).scalars()
-    return [OfferOut.model_validate(offer, from_attributes=True) for offer in offers]
+    if limit:
+        query = query.limit(limit)
 
+    offers = await session.execute(query)
+    result = offers.all()
+    return [model_schema.model_validate(offer, from_attributes=True) for offer in result]
+
+def clear_dict_from_keys(keys: list[Hashable], dictionary: dict[Hashable, Any]) -> dict[Hashable, Any]:
+    for key in keys:
+        try:
+            dictionary.pop(key)
+        except KeyError:
+            pass
+    return dictionary
 
 async def create_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) -> None:
     data = _dataframe_to_valid_dict(data)
 
-    offers_db = [Offer(**offer_data) for offer_data in data]
+    offers_db = [Offer(**clear_dict_from_keys(['yandex_volume', 'volume', 'volume_difference'],
+                                              offer_data)) for offer_data in data]
     session.add_all(offers_db)
     await session.commit()
 
@@ -99,74 +111,14 @@ async def update_offers(
             tracked_data = {f'{i}_changed': or_(getattr(Offer, f'{i}_changed'), (func.coalesce(getattr(Offer, i), 'unknown') != (offer[i] or 'unknown'))) for i in detect_changes if getattr(Offer, i, None) and i in offer}
             offer.update(tracked_data)
 
-        stmp = stmp.values(**offer)
+        offers_db = clear_dict_from_keys(['yandex_volume', 'volume', 'volume_difference'],
+                                                  offer)
+
+        stmp = stmp.values(**offers_db)
 
         await session.execute(stmp)
 
         await session.commit()
-
-
-async def change_offers(
-        session: AsyncSession,
-        offers: list[dict],
-        mapping_fields: list[str],
-        detect_changes: list[str] | None = None,
-        offers_filter: OffersSourceFilter | None = None,
-) -> None:
-    offer_model_update_fields = {i: getattr(Offer, i) for i in mapping_fields}
-
-    for update_offer_data in offers:
-        if (set(offer_model_update_fields.keys()) & set(update_offer_data.keys()) & set(mapping_fields)) != set(mapping_fields):
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Поля {mapping_fields} обязательно должны быть переданы')
-
-        if detect_changes:
-            tracked_data = {
-                f'{i}_changed': or_(
-                    getattr(Offer, f'{i}_changed'),
-                    func.concat(getattr(Offer, i), '') != func.concat(update_offer_data[i], '')
-                )
-                for i in detect_changes if getattr(Offer, i, None) and i in update_offer_data
-            }
-            update_offer_data.update(tracked_data)
-
-        stmp = update(Offer).values(**update_offer_data)
-
-        for mapping_field in mapping_fields:
-            stmp = stmp.where(offer_model_update_fields[mapping_field] == update_offer_data[mapping_field])
-
-        if offers_filter:
-            stmp = offers_filter(stmp)
-
-        await session.execute(stmp)
-
-    await session.commit()
-
-
-async def update_offers_from_list(session: AsyncSession, data: list[OfferChange], endswith_sku: bool = True) -> None:
-    for offer in data:
-        if offer.id is not None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Поля id не должно передаваться')
-
-        offer_data = offer.model_dump(exclude_unset=True)
-        stmp = update(Offer).values(**offer_data)
-
-        if offer.market:
-            stmp = stmp.where(Offer.market == offer.market)
-
-        if offer.name_of_shop:
-            stmp = stmp.where(Offer.name_of_shop == offer.name_of_shop)
-
-        if endswith_sku:
-            stmp = stmp.where(Offer.sku.endswith(offer.sku))
-        else:
-            stmp = stmp.where(Offer.sku == offer.sku)
-
-        await session.execute(stmp)
-
-    await session.commit()
-
-
-
 
 
 async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.DataFrame,
@@ -175,10 +127,18 @@ async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.D
 
     result = []
     for offer_data in data:
-        query = select(Offer).filter_by(**offer_data)
-        query_result = (await session.execute(query)).scalars()
+        query = (
+            select(
+                Offer.__table__.columns,
+                remaining_stocks_subuery.c.remaining_stock
+            )
+            .filter_by(**offer_data)
+            .join(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id)
+
+        )
+        query_result = await session.execute(query)
         result.extend(
-            [model_schema.model_validate(offer, from_attributes=True) for offer in query_result])
+            [model_schema.model_validate(offer, from_attributes=True) for offer in query_result.all()])
 
     return result
 
@@ -318,25 +278,5 @@ async def get_violators(session: AsyncSession, market: str | None = None, name_o
     return [ViolatorDTO.model_validate(i, from_attributes=True) for i in result]
 
 
-async def get_offers_fields(session: AsyncSession, columns: list):
-    query = select(
-        *columns
-    )
-    result = (await session.execute(query)).all()
-    return result
-
-
-async def reset_all_track_offers_markers(session: AsyncSession):
-    stmp = update(Offer).values(
-        name_changed=False,
-        description_changed=False,
-        self_weight_changed=False,
-        self_length_changed=False,
-        self_width_changed=False,
-        self_height_changed=False,
-        barcodes_changed=False,
-        search_words_changed=False
-    )
-    await session.execute(stmp)
-    await session.commit()
-
+async def set_tracked_fields_status(session: AsyncSession):
+    pass

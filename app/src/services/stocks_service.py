@@ -37,6 +37,7 @@ async def update_warehouses_and_stocks():
 
     async with async_session() as session:
         # Остатки из API
+
         stocks = await api_wrapper.get_stocks()
         logger.info('API stocks collected')
 

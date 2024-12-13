@@ -34,7 +34,12 @@ class APIWrapper(BaseAPI):
         result = []
         async with async_session() as session:
             for market in await get_markets(session, MarketFullOut):
-                api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
+                try:
+                    api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
+                except Exception as e:
+                    logger.error(f"Failed to get connect with Market. {e.__class__.__name__}: {e}")
+                    continue
+
                 offers = await api.get_offers_list()
                 logger.info(f'{market.name}({market.type}) offers collected: {len(offers)}')
                 if not offers:
@@ -47,7 +52,11 @@ class APIWrapper(BaseAPI):
         result = []
         async with async_session() as session:
             for market in await get_markets(session, MarketFullOut):
-                api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
+                try:
+                    api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
+                except Exception as e:
+                    logger.error(f"Failed to get connect with Market. {e.__class__.__name__}: {e}")
+                    continue
                 offers = await api.get_stocks()
                 logger.info(f'{market.name}({market.type}) offer stocks collected: {len(offers)}')
                 if not offers:
@@ -59,11 +68,19 @@ class APIWrapper(BaseAPI):
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         async with async_session() as session:
             for market in await get_markets(session, MarketFullOut):
-                api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
+                try:
+                    api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
+                except Exception as e:
+                    logger.error(f"Failed to get connect with Market. {e.__class__.__name__}: {e}")
+                    continue
 
                 price_data = [i for i in data if i.market==market.type and i.name_of_shop==market.name]
 
-                await api.change_prices(price_data)
+                try:
+                    await api.change_prices(price_data)
+                except Exception as e:
+                    logger.error(f"Failed to change prices. {e.__class__.__name__}: {e}")
+                    continue
 
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
         async with async_session() as session:

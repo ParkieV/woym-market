@@ -80,7 +80,7 @@ async def calculate_price(data: pd.DataFrame, market_settings: MarketOut) -> pd.
     data['min_price_in_market'] = data['min_price_in_market'].replace({None: np.nan})
 
     data['min_level'] = np.where(
-        (data['min_level'] < data['min_price_in_market']) | (np.isnan(data['min_level'])),
+        (data['min_level'] < data['min_price_in_market']) | (data['min_level'].isna()),
         data['min_price_in_market'],
         data['min_level']
     )
