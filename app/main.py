@@ -23,7 +23,6 @@ from src.routers.media_router import router as media_router
 from src.database.db import db_create
 import aioschedule
 from src.params.config import config
-from src.services.auth_utils import hash_password
 
 # if config.use_sentry:
 #     sentry_sdk.init(
@@ -63,10 +62,7 @@ app: FastAPI = FastAPI(default_response_class=ORJSONResponse, root_path='/backen
 
 
 origins = [
-    'https://frontend:3000',
-    'https://frontend',
-    'http://localhost:5173',
-    'http://localhost:5173/'
+    '*'
 ]
 
 app.add_middleware(

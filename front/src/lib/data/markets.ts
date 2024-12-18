@@ -44,6 +44,7 @@ export async function getStores(init?: FetchInit): Promise<Market[]> {
         undefined,
         "Не удалось получить список магазинов"
     );
+    console.log(await promise, "PA CHI MU");
     return (await promise).data;
 }
 

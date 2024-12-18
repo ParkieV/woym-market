@@ -1,5 +1,6 @@
 from fastapi import Depends, APIRouter
 
+from scheduls import logger
 from src.dependencies.users import get_current_user, require_staff
 from src.schemas.settings_schemas import LogsOut, SettingsOut, SettingsUpdate, TableInfoOut, TableInfoUpdate, MarketOut, \
     MarketCreate, MarketUpdate, TableInfoCreate
@@ -52,8 +53,13 @@ async def update_table(data: TableInfoUpdate, table_name: str,  current_user=Dep
 
 @settings_router.get('/markets', response_model=list[MarketOut], dependencies=[Depends(get_current_user)])
 async def get_markets():
-    return await service.get_markets()
-
+    try:
+        res = await service.get_markets()
+        print(res)
+        return res
+    except Exception as e:
+        print(e)
+        raise
 
 @settings_router.post('/markets', response_model=MarketOut, dependencies=[Depends(require_staff)])
 async def create_market(data: MarketCreate):

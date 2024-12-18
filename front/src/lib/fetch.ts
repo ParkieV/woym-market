@@ -14,6 +14,8 @@ export async function fetchPlain(endpoint: string, init?: FetchInit): Promise<Re
 
     const fetchFunc = init.fetch ?? fetch;
 
+    console.log("URL Endpoint", URI + endpoint);
+
     return fetchFunc(URI + endpoint, init).then(redirectUnauthenticated);
 }
 
@@ -32,7 +34,9 @@ function addAuthorizationHeader(headers: Headers) {
     if (browser) {
         const token = Cookies.get(tokenCookieName);
         headers.append("Authorization", "Bearer " + token);
+        console.log("Все док")
     } else {
+        console.log('Все ок')
         // SvelteKit will handle server-side auth via handleFetch hook
     }
 }

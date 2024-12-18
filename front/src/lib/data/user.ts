@@ -5,6 +5,7 @@ export const user: Writable<User | undefined> = writable();
 export const userCanModify: Readable<boolean> = derived(user, x => x?.is_staff ?? false);
 
 export async function fetchUser(init?: FetchInit): Promise<User> {
+    console.log('A', init);
     let { data } = await fetchJSON<User>("/users/me", init);
     return data;
 }

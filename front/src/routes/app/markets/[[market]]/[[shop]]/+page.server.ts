@@ -4,6 +4,7 @@ import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
     let markets = await getStores({ fetch });
+    console.log(markets, "aA");
     markets.sort((a, b) => a.name.localeCompare(b.name));
 
     let { market, shop } = params;

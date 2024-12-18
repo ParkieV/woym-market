@@ -11,7 +11,7 @@ async def get_current_user(token: str = Depends(auth.oauth2_scheme)) -> Users:
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                           detail=f"Не получилось авторизироваться в системе",
                                           headers={"WWW-Authenticate": "Bearer"})
-
+    print("token", token)
     token = verify_access_token(token, credentials_exception)
 
     user = await db.get_user_by_id(token.id)
