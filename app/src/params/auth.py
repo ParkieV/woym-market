@@ -3,7 +3,7 @@ from os import getenv
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 
-from src.params.confing import config
+from src.params.config import config
 
 SECRET_KEY = getenv('SECRET_KEY', 'SECRET')
 ALGORITHM = 'HS256'

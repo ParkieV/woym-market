@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from typing import Union
 
@@ -125,3 +126,13 @@ class APIOfferChangeData(BaseModel):
 
         return self.barcodes.replace(';', ' ').replace(',', ' ').split()
 
+class APIOrderData(BaseModel):
+    internal_order_id: str
+    sku: str
+    market: str
+    name_of_shop: str
+    quantity: int
+    created_at: datetime
+    updated_at: datetime | None
+    price: float | None
+    warehouse_name: str | None

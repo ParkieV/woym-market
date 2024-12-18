@@ -10,7 +10,7 @@ from sqlalchemy.schema import (
     )
 
 from logs import get_logger
-from ..params.confing import config
+from ..params.config import config
 from .models.base import Base
 
 

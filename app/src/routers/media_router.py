@@ -3,7 +3,7 @@ from starlette import status
 
 from src.api.yandex.disk import YandexDiscAPI
 from src.dependencies.users import require_staff
-from src.params.confing import config
+from src.params.config import config
 from src.schemas.media_schemas import UploadResult, StorageItem
 
 router = APIRouter(

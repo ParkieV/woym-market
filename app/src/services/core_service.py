@@ -1,7 +1,7 @@
 from git import Repo
 from datetime import datetime
 from logs import get_logger
-from src.params.confing import config
+from src.params.config import config
 from src.schemas.core_schemas import VersionInfo
 
 

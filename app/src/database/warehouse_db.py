@@ -7,7 +7,7 @@ from fastapi.exceptions import HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select, update, and_, func, text, literal_column, insert, cast, String, case
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, subqueryload
 
 from src.database.models.models import Offer
 from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market
@@ -15,7 +15,7 @@ from src.database.order_db import _build_smart_delivery_query, _build_quantity_o
     _build_quantity_warehouses_query, build_order_stats_by_warehouses
 from src.database.utils import _update_or_create_object
 from src.schemas.filters.stocks_filter import WarehousesFilter
-from src.schemas.stocks.fbo_schemas import OfferStockOut, OfferFBOStockUpdate, AggOfferFBOStock
+from src.schemas.stocks.fbo_schemas import OfferStockOut, OfferFBOStockUpdate, AggOfferFBOStock, OfferWithStocks
 from src.schemas.stocks.own_storages_schemas import OwnStorageAggOfferOut, OwnStorageOfferStockOut, OwnStorageOut, \
     OwnStorageStockOut, OwnStorageUpdate, OwnStoragePlaceCreate, OwnStoragePlaceOut, \
     OwnStoragePlaceUpdate
@@ -608,10 +608,24 @@ async def fill_empty_stocks(session: AsyncSession):
         await session.commit()
 
 
-async def get_offer_fbo_stocks(session: AsyncSession, offer_id: int) -> list[OfferStockOut]:
+async def get_offer_fbo_stocks(session: AsyncSession, offer_id: int) -> list[OfferWithStocks]:
     query = select(OfferStock).where(OfferStock.offer_id == offer_id)
     result = (await session.execute(query)).scalars()
     return [OfferStockOut.model_validate(i, from_attributes=True) for i in result]
+
+async def get_fbo_offers(session: AsyncSession):
+    query = (
+        select(Offer)
+        .options(subqueryload(Offer.stocks)
+                 .selectinload(OfferStock.warehouse)
+                 )
+    )
+    result = await session.execute(query)
+    offers = result.scalars().all()
+
+
+    return [OfferWithStocks.model_validate(i, from_attributes=True) for i in offers]
+
 
 
 async def get_agg_fbo_data(session: AsyncSession, warehouse_ids: list[int] | None = None,
@@ -635,3 +649,4 @@ async def get_agg_fbo_data(session: AsyncSession, warehouse_ids: list[int] | Non
 
     results = (await session.execute(query)).all()
     return [AggOfferFBOStock.model_validate(i, from_attributes=True) for i in results]
+

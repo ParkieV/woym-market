@@ -6,8 +6,8 @@ from fastapi import HTTPException, status
 # from database.admins_db import get_admin_by_email
 import src.params.auth as auth
 import src.database.user_db as db
-from ..database.models.models import Users
-from ..schemas.user_schemas import TokenData
+from src.database.models.models import Users
+from src.schemas.user_schemas import TokenData
 
 
 def hash_password(password: str) -> str:

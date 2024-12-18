@@ -7,7 +7,7 @@ from starlette import status
 
 from main import app
 from src.database.db import Base
-from src.params.confing import config
+from src.params.config import config
 
 engine_test = create_async_engine(config.db_url)
 async_session_maker = async_sessionmaker(engine_test, class_=AsyncSession, expire_on_commit=False)

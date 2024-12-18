@@ -19,10 +19,10 @@ services:
   frontend:
     container_name: frontend
     restart: unless-stopped
-    env_file: front-react/.env.prod
+    env_file: ./front/.env.prod
     build:
-      context: front-react
-      dockerfile: front-react.dockerfile
+      context: front
+      dockerfile: front.dockerfile
     depends_on:
       - app
     expose:

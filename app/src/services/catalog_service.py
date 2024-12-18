@@ -10,7 +10,7 @@ from src.database.db import async_session
 from src.database import offer_db
 from src.database import catalog_db as db
 from src.schemas.catalog_schemas import CatalogItemCreate, CatalogItem, CatalogItemUpdate
-from src.services.base_utils import parce_field_names, bytes_to_data_frame, parce_sizes_list, parce_purchase_list
+from src.services.base_utils import parce_field_names, bytes_to_data_frame, parce_purchase_list
 
 logger = get_logger(__name__)
 
@@ -80,7 +80,7 @@ async def export_catalog_items() -> Path:
     return path
 
 
-async def import_catalog_items(file: bytes, file_extension: str = '.xlsx') -> list[CatalogItem]:
+async def import_catalog_items(file: bytes, file_extension: str = '.xlsx') -> None:
     df = bytes_to_data_frame(file, file_extension=file_extension)
     if 'sku' not in df.columns.values.tolist():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, 'В файле должна быть колонка "sku"')

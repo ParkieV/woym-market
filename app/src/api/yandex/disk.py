@@ -1,6 +1,6 @@
 from pathlib import Path
 from datetime import datetime
-from src.params.confing import config
+from src.params.config import config
 from fastapi import UploadFile
 from requests import Session
 from starlette import status

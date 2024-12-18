@@ -12,7 +12,7 @@ from src.database.db import async_session
 from src.database import warehouse_db as db
 from src.database.models.models import Offer
 from src.database.offer_db import get_offers_fields
-from src.params.confing import config
+from src.params.config import config
 from src.schemas.filters.stocks_filter import WarehousesFilter
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks.own_storages_schemas import OwnStorageUpdate, OwnStoragePlaceCreate, \
@@ -448,3 +448,7 @@ async def change_fbo_stocks(data: list[OfferFBOStockUpdate]):
 async def aggregate_offers_fbo_stocks(warehouse_ids: list[int] | None = None, ignore_clusters: bool = True) -> list[AggOfferFBOStock]:
     async with async_session() as session:
         return await db.get_agg_fbo_data(session, warehouse_ids, ignore_clusters)
+
+async def get_fbo_offers():
+    async with async_session() as session:
+        return await db.get_fbo_offers(session)

@@ -1,8 +1,7 @@
 import logging
 import sys
-from logging_loki import LokiHandler
 
-from src.params.confing import config
+from src.params.config import config
 
 logging.basicConfig()
 
@@ -15,10 +14,10 @@ def get_logger(name: str, level: int = logging.INFO, tags: dict[str, str] | None
 
     # logger.addHandler(get_file_handler(f'logs/{name}.log', formatter, level))
 
-    logger.addHandler(get_loki_handler(
-        tags=tags,
-        application=application,
-    ))
+    # logger.addHandler(get_loki_handler(
+    #     tags=tags,
+    #     application=application,
+    # ))
 
     # logger.addHandler(get_stram_handler(formatter, level))
 

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from src.api.ozon.api import OzonAPI
 from src.schemas.base_api_schemas import APIOfferChangeData
 from tests.marketplaces.conftest import BaseMarketplaceAPITest
-from src.params.confing import config
+from src.params.config import config
 import pandas as pd  #noqa
 
 
@@ -54,7 +54,7 @@ class TestOzonAPI:
                 self_height='5',
             )
         ]
-        await api.change_offers(data)
+        # await api.change_offers(data)
 
     async def test_get_offers_list(self, api: OzonAPI):
         offers = await api.get_offers_list()

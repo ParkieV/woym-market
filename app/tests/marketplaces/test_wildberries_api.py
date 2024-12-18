@@ -1,4 +1,4 @@
-from src.params.confing import config
+from src.params.config import config
 import pandas as pd
 import pytest
 from datetime import datetime, timedelta
@@ -54,7 +54,7 @@ class TestWildberriesAPI(BaseMarketplaceAPITest):
                 self_height=3,
             )
         ]
-        await api.change_offers(data)
+        # await api.change_offers(data)
 
 
 

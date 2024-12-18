@@ -1,5 +1,5 @@
 import pytest
-from src.params.confing import config
+from src.params.config import config
 from src.api.yandex.disk import YandexDiscAPI
 
 

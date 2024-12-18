@@ -71,19 +71,19 @@ class MarketOut(BaseModel):
     price_before_discount: float
     volume_threshold_for_additional_logistics: float
     cost_of_additional_logistics_per_liter: float
-    a_variable_for_smart_delivery: float
-    b_variable_for_smart_delivery: float
-    c_variable_for_smart_delivery: float
-    d_variable_for_smart_delivery: float
-    e_variable_for_smart_delivery: float
+    a_variable_for_smart_delivery: float | None = None
+    b_variable_for_smart_delivery: float | None = None
+    c_variable_for_smart_delivery: float | None = None
+    d_variable_for_smart_delivery: float | None = None
+    e_variable_for_smart_delivery: float | None = None
 
-    default_auto_min_price: float
-    default_auto_price_control: bool
-    default_total_price_coeff: float
-    default_total_price_min_additional: float
-    default_auto_participation_in_promotions: bool
-    default_pricing_scheme: str | None
-    consider_logistic_cost: bool = Field(title='Учитывать в целевой цене товара стоимость дополнительной логистики', description='Если включено, то к «Целевая цена» прибавляем «Цена доп. логистики за 1 литр (₽)» * («объем» товара с маркетплейса, округленный до целого в большую сторону и минус 1)')
+    default_auto_min_price: float | None = None
+    default_auto_price_control: bool | None = None
+    default_total_price_coeff: float | None = None
+    default_total_price_min_additional: float | None = None
+    default_auto_participation_in_promotions: bool | None = None
+    default_pricing_scheme: str | None = None
+    consider_logistic_cost: bool = Field(title='Учитывать в целевой цене товара стоимость дополнительной логистики', description='Если включено, то к «Целевая цена» прибавляем «Цена доп. логистики за 1 литр (₽)» * («объем» товара с маркетплейса, округленный до целого в большую сторону и минус 1)', default=False)
 
 
 class MarketUpdate(BaseModel):

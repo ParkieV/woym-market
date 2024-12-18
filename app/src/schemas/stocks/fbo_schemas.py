@@ -12,6 +12,11 @@ class BaseOfferStock(BaseModel):
     in_box: int = 1
     is_deliver_in_boxes: bool = False
 
+class OfferFBOStockUpdate(BaseModel):
+    id: int
+    min_stock: int
+    in_box: int
+    is_deliver_in_boxes: bool
 
 class OfferStockUpdate(BaseModel):
     id: int
@@ -166,3 +171,10 @@ class FboOfferOut(BaseModel):
         if self.profit is None:
             return None
         return self.profit * self.total_for_delivery
+
+
+class AggOfferFBOStock(BaseModel):
+    offer_id: int = Field(title='ID карточки товара')
+    min_stock: int = Field(title='Минимальный остаток товара')
+    current_stock: int = Field(title='Текущий остаток по товару')
+    for_delivery: int = Field(title='Требуется к поставке')

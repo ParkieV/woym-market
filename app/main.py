@@ -13,7 +13,7 @@ from logs import get_logger
 from scheduls import update_data
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
-from src.routers.offer_router import data_router
+from src.routers.offers.base_router import router as data_router
 from src.routers.debug_router import debug_router
 from src.routers.stocks.stocks_router import router as stocks_router
 from src.routers.settings_router import settings_router
@@ -22,7 +22,7 @@ from src.routers.catalog_router import router as catalog_router
 from src.routers.media_router import router as media_router
 from src.database.db import db_create
 import aioschedule
-from src.params.confing import config
+from src.params.config import config
 from src.services.auth_utils import hash_password
 
 if config.use_sentry:
@@ -59,13 +59,14 @@ async def startup(_: FastAPI):
     yield
 
 
-app: FastAPI = FastAPI(default_response_class=ORJSONResponse, root_path='' if config.is_local else '/backend', lifespan=startup)
+app: FastAPI = FastAPI(default_response_class=ORJSONResponse, root_path='/backend', lifespan=startup)
 
 
 origins = [
-    'http://localhost',
+    'https://frontend:3000',
+    'https://frontend',
     'http://localhost:5173',
-    'https://localhost:5173'
+    'http://localhost:5173/'
 ]
 
 app.add_middleware(

@@ -15,6 +15,9 @@ from typing import Iterable, Any, Type, TypeVar
 from fastapi.exceptions import HTTPException
 from fastapi import status
 
+from ..schemas.filters.filter_schemas import PagingFilter
+from ..schemas.filters.offers_filter import OffersFilter
+
 
 def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
     '''Converts data to a valid sqlalchemy entry. If data is not a DataFrame, returns data'''
@@ -27,23 +30,17 @@ def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
     return data
 
 
-async def get_offers(session: AsyncSession, filters: dict[str, Any] | None = None, model_schema: Type[BaseModel] = OfferOut, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
-    query = select(
-        Offer.__table__.columns,
-        remaining_stocks_subuery.c.remaining_stock
-    )
+async def get_offers_list(session: AsyncSession, paging: PagingFilter | None = None, offers_filter: OffersFilter | None = None) -> list[OfferOut]:
+    query = select(Offer)
 
-    if filters:
-        query = query.filter_by(**filters)
+    if paging:
+        query = paging(query)
 
-    query = query.outerjoin(remaining_stocks_subuery, remaining_stocks_subuery.c.offer_id == Offer.id).offset(offset)
+    if offers_filter:
+        query = offers_filter(query)
 
-    if limit:
-        query = query.limit(limit)
-
-    offers = await session.execute(query)
-    result = offers.all()
-    return [model_schema.model_validate(offer, from_attributes=True) for offer in result]
+    offers = (await session.execute(query)).scalars()
+    return [OfferOut.model_validate(offer, from_attributes=True) for offer in offers]
 
 def clear_dict_from_keys(keys: list[Hashable], dictionary: dict[Hashable, Any]) -> dict[Hashable, Any]:
     for key in keys:
@@ -278,5 +275,23 @@ async def get_violators(session: AsyncSession, market: str | None = None, name_o
     return [ViolatorDTO.model_validate(i, from_attributes=True) for i in result]
 
 
-async def set_tracked_fields_status(session: AsyncSession):
-    pass
+async def get_offers_fields(session: AsyncSession, columns: list):
+    query = select(
+        *columns
+    )
+    result = (await session.execute(query)).all()
+    return result
+
+async def reset_all_track_offers_markers(session: AsyncSession):
+    stmp = update(Offer).values(
+        name_changed=False,
+        description_changed=False,
+        self_weight_changed=False,
+        self_length_changed=False,
+        self_width_changed=False,
+        self_height_changed=False,
+        barcodes_changed=False,
+        search_words_changed=False
+    )
+    await session.execute(stmp)
+    await session.commit()

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import src.services.base_utils
 from src.database.catalog_db import sync_catalog_items_with_offers
 from src.database.warehouse_db import create_own_storage_stocks
-from src.params.confing import config
+from src.params.config import config
 from logs import get_logger
 from src.api.wrapper import APIWrapper
 from src.database.db import async_session
@@ -17,6 +17,8 @@ from src.database import offer_db as db
 from src.database.settings_db import get_markets
 import src.services.offer_utils as utils
 from src.schemas.base_api_schemas import APIPriceChangeData, APIOfferChangeData
+from src.schemas.filters.filter_schemas import PagingFilter
+from src.schemas.filters.offers_filter import OffersFilter
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ImportType, Market, \
     PricingSchemeOut, PricingSchemeCreate, BaseOffer, PricingSchemeFieldCreate, PricingSchemeFieldChange, \
     PricingSchemeChange
@@ -36,11 +38,9 @@ api_wrapper = APIWrapper()
 logger = get_logger(__name__)
 
 CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes']
-
-
-async def get_offers(filters: dict[str, Any] | None = None, offset: int = 0, limit: int | None = None) -> list[OfferOut]:
+async def get_offers_list(offers_filter: OffersFilter | None = None, paging_filter: PagingFilter | None = None) -> list[OfferOut]:
     async with async_session() as session:
-        return await db.get_offers(session, filters, offset=offset, limit=limit)
+        return await db.get_offers_list(session, paging=paging_filter, offers_filter=offers_filter)
 
 
 @error_handler('Ошибка изменения товаров')
@@ -78,7 +78,7 @@ async def setup_offers_data(user_id: int):
             logger.info(f'{market.type}({market.name}) offers created: {len(data)}')
 
 
-async def update_offers(user_id: int):
+async def  update_offers(user_id: int):
     logger.info('Start update offers')
     mapping_fields = ['sku', 'name_of_shop', 'market']
     start_time = datetime.now()
@@ -93,7 +93,7 @@ async def update_offers(user_id: int):
         await recalculate_values(session, settings, which=[{'synchronization': True}])
 
     # Получаем товары из бд
-    db_offers = await get_offers()
+    db_offers = await get_offers_list()
     db_offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
     # Создаем переменную с данными для отправки цен в апи
@@ -213,7 +213,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
         for offer_data in data if offer_data['total_price'] is not None
     ]
 
-    await api_wrapper.change_prices(data)
+    # await api_wrapper.change_prices(data)
 
 
 async def update_offers_attributes(offers: pd.DataFrame):
@@ -241,7 +241,7 @@ async def update_offers_attributes(offers: pd.DataFrame):
         for offer_data in data
     ]
 
-    await api_wrapper.change_offers(data)
+    # await api_wrapper.change_offers(data)
 
     return data
 
@@ -375,28 +375,20 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
         await recalculate_values(session, settings)
 
 
-async def export_offers(name_of_shop: str | None = None, market: str | None = None) -> str:
-    filters = {}
+async def export_offers(offers_filter: OffersFilter | None = None) -> str:
 
-    if name_of_shop:
-        filters['name_of_shop'] = name_of_shop
+    offers = await get_offers_list(offers_filter=offers_filter)
+    exclude_columns = set()
+    exclude_columns.update(*[f'{i}_changed' for i in CONTROL_CHANGES])
 
-    if market:
-        filters['market'] = market
-
-    offers = await get_offers(filters)
-
-    exclude_columns = [f'{i}_changed' for i in CONTROL_CHANGES]
-
-    df = pd.DataFrame([offer.model_dump() for offer in offers], columns=OfferOut.fields().keys())
+    df = pd.DataFrame([offer.model_dump(exclude=exclude_columns) for offer in offers])
     df['dollar_cost_price_updated_at'] = df['dollar_cost_price_updated_at'].astype('string')
     df['dollar_cost_price_updated_at'].fillna('', inplace=True)
     df['dollar_cost_price_updated_at'] = df['dollar_cost_price_updated_at'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S.%f').strftime('%d/%m/%Y') if x else x)
-    df.drop(columns=exclude_columns, errors='ignore', inplace=True)
+    df.drop(columns=list(exclude_columns), errors='ignore', inplace=True)
     df.rename(columns=OfferOut.fields(), inplace=True)
     df.to_excel('data/out-offers.xlsx', index=False)
     return 'data/out-offers.xlsx'
-
 
 async def get_pricing_schemes() -> list[PricingSchemeOut]:
     async with async_session() as session:
@@ -461,3 +453,6 @@ async def create_violators_file(market: Market | None = None, name_of_shop: str 
 
         return "data/violators.pdf"
 
+async def reset_track_markers() -> None:
+    async with async_session() as session:
+        await db.reset_all_track_offers_markers(session)

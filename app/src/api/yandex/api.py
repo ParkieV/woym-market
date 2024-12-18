@@ -31,7 +31,7 @@ class YandexMarketAPI(BaseAPI):
         self._entity_id = entity_id  # same as campaign_id
         self._shop_name = shop_name
         self.auth_headers = {
-            'Authorization': f'Bearer {self._token}'
+            'Api-Key': self._token
         }
         self.validate_auth_data(token)
 

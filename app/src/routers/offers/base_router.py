@@ -5,7 +5,7 @@ from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
 from src.dependencies.users import require_staff, get_current_user
-from src.schemas.offer_schemas import OfferChange, OfferOut, Market, ImportType
+from src.schemas.offer_schemas import OfferChange, OfferOut, Market
 from src.services import offer_service as service
 from src.services.base_utils import clean_up_files
 from .pricing_schemes_router import router as pricing_schemes_router
@@ -34,7 +34,7 @@ async def change_offer_fields(offers_data: list[OfferChange], current_user=Depen
     """
     Параметр `id` товара обязательно должен передаваться. Параметры `market`, `name_of_shop` передаются для валидации значений для конкретного.
     """
-    return await service.change_offers(offers_data, current_user.id)
+    # return await service.change_offers(offers_data, current_user.id)
 
 
 @router.put('/media/images', tags=['Карточки товаров', 'Медиа'], dependencies=[Depends(require_staff)], deprecated=True)

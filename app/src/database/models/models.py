@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from pydantic import field_validator
 from sqlalchemy import (
     Column,
     ForeignKey,
