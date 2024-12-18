@@ -8,7 +8,7 @@ services:
     env_file: ./app/.env.prod
     build:
       context: ./app
-      dockerfile: app.dockerfile
+      dockerfile: app/Dockerfile
     depends_on:
       - db
     volumes:
@@ -22,7 +22,7 @@ services:
     env_file: ./front/.env.prod
     build:
       context: front
-      dockerfile: front.dockerfile
+      dockerfile: front/Dockerfile
     depends_on:
       - app
     expose:

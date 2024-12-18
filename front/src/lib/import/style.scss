@@ -1,0 +1,26 @@
+@mixin import-inputs {
+    span,
+    select {
+        font-size: 16px;
+    }
+    label {
+        @include underline();
+
+        display: flex;
+        justify-content: space-between;
+        > select {
+            width: 300px;
+            text-overflow: ellipsis;
+            border-radius: 0;
+            border: 0;
+            background-color: transparent;
+            text-align: end;
+            padding-right: 4px;
+        }
+    }
+}
+
+@mixin underline {
+    border-bottom: 1px solid #b9b9b9;
+    padding-bottom: 6px;
+}
