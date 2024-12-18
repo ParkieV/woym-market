@@ -89,7 +89,7 @@ export async function fetchOfferList(): Promise<Offer[]> {
 }
 
 export async function patchOfferList(changed: Offer[]): Promise<boolean> {
-    let response = fetchPlain("/data/offers", {
+    let response = fetchPlain("/offers", {
         method: "PATCH",
         body: JSON.stringify(changed),
         headers: {
