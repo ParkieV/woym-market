@@ -10,8 +10,8 @@ logger = get_logger('endpoints', level=logging.DEBUG)
 
 
 class EndpointLoggingMiddleware(BaseHTTPMiddleware):
-    # def __init__(self, app, *args, **kwargs):
-    #     super().__init__(app, *args, **kwargs)
+    # def __init__(self, backend, *args, **kwargs):
+    #     super().__init__(backend, *args, **kwargs)
 
     @staticmethod
     async def _get_response_body(request: Request) -> Any:

@@ -3,14 +3,14 @@ version: '3.9'
 services:
   backend:
     restart: unless-stopped
-    env_file: ./app/.env.dev
+    env_file: backend/.env.dev
     build:
-      context: app
+      context: backend
       dockerfile: Dockerfile
     depends_on:
       - database
     volumes:
-      - ./logs:/app/logs
+      - ./logs:/backend/logs
     expose:
       - 8000
     ports:

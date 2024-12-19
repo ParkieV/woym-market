@@ -1,14 +1,14 @@
 services:
   backend:
     restart: unless-stopped
-    env_file: ./app/.env.prod
+    env_file: backend/.env.prod
     build:
-      context: app
+      context: backend
       dockerfile: Dockerfile
     depends_on:
       - database
     volumes:
-      - ./logs:/app/logs
+      - ./logs:/backend/logs
     expose:
       - 8000
 

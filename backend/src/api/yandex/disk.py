@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 class YandexDiscAPI:
     session: Session
     work_dir: str
-    root_path: Path = Path('app:/')
+    root_path: Path = Path('backend:/')
 
     def __init__(self, token: str, work_dir: str):
         self.auth_headers = {
