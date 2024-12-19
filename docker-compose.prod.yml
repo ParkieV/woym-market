@@ -29,7 +29,7 @@ services:
     depends_on:
       - backend
     volumes:
-      - ./nginx/dev:/etc/nginx/conf.d
+      - ./nginx/prod:/etc/nginx/conf.d
       - /etc/letsencrypt:/etc/letsencrypt
       - /var/www/html:/var/www/html
     ports:
