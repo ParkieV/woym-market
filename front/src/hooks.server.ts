@@ -7,9 +7,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 
     if (event.url.pathname === "/auth") {
         if (event.locals.token !== undefined) {
-            redirect(303, "/backend");
+            redirect(303, "/app");
         }
-    } else if (event.url.pathname.startsWith("/backend")) {
+    } else if (event.url.pathname.startsWith("/app")) {
         if (event.locals.token === undefined) {
             redirect(303, "/auth");
         }
@@ -17,7 +17,7 @@ export const handle: Handle = async ({ event, resolve }) => {
         if (event.locals.token === undefined) {
             redirect(303, "/auth");
         } else {
-            redirect(303, "/backend");
+            redirect(303, "/app");
         }
     }
     const response = await resolve(event);
