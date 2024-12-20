@@ -7,13 +7,13 @@ import { fboStorageSelection, fboStocksSelection } from "../../routes/app/(main)
 export abstract class Export {
     public async export(): Promise<{ ok: boolean }> {
         try {
-            let body = this.body;
-            let headers: HeadersInit = body === null ? [] : [["Content-Type", "application/json"]];
-            let promise = fetchPlain(this.url, { method: "POST", body, headers });
+            const body = this.body;
+            const headers: HeadersInit = body === null ? [] : [["Content-Type", "application/json"]];
+            const promise = fetchPlain(this.url, { method: "POST", body, headers });
             showFetchModals(promise, "Скачивание файла...", "Ошибка экспорта");
-            let response = await promise;
+            const response = await promise;
 
-            let blob = await response.blob();
+            const blob = await response.blob();
             downloadFile(blob, this.defaultFileName);
 
             return { ok: true };
@@ -44,7 +44,7 @@ export class SimpleExport extends Export {
     }
 
     protected get body(): string {
-        let data: Record<string, string> = {};
+        const data: Record<string, string> = {};
         if (this.market) data.market = this.market;
         if (this.name_of_shop) data.name_of_shop = this.name_of_shop;
         return JSON.stringify(data);
@@ -57,7 +57,7 @@ export class SimpleExport extends Export {
 
 export class CatalogExport extends Export {
     protected get url(): string {
-        return `catalog/export`;
+        return `/catalog/export`;
     }
 
     protected get body(): string | null {
@@ -77,11 +77,11 @@ export class OwnStorageExport extends Export {
     }
 
     protected get url(): string {
-        return `stocks/own-storage/export`;
+        return `/stocks/own-storage/export`;
     }
 
     protected get body(): string {
-        let data: Record<string, string | number | number[] | null> = {
+        const data: Record<string, string | number | number[] | null> = {
             place_id: this.place_id
         };
         return JSON.stringify(data);
@@ -103,11 +103,11 @@ export class SupplyExport extends Export {
     public market: string | null = null;
 
     protected get url(): string {
-        return `stocks/supply/${this.type}/export`;
+        return `/stocks/supply/${this.type}/export`;
     }
 
     protected get body(): string {
-        let data: Record<string, string | number | number[] | null> = {
+        const data: Record<string, string | number | number[] | null> = {
             place_id: this.place_id,
             offers_id: Array.from(get(fboStorageSelection.filtered)).map(x => x[1].id),
             warehouses_id: Array.from(get(fboStocksSelection.filtered)).map(x => x[1].warehouse.id)
@@ -135,11 +135,11 @@ export class ViolatorsExport extends Export {
     public name_of_shop: string | null = null;
 
     protected get url(): string {
-        return "data/violators/export";
+        return "/offers/violators/export";
     }
 
     protected get body(): string {
-        let data: Record<string, string> = {};
+        const data: Record<string, string> = {};
         if (this.name_of_shop) data.name_of_shop = this.name_of_shop;
         if (this.market) data.market = this.market;
         return JSON.stringify(data);

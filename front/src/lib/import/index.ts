@@ -5,12 +5,12 @@ import { uploadFile } from "$lib/util";
 export abstract class Import {
     public async import(): Promise<{ ok: boolean }> {
         try {
-            let url = this.url;
+            const url = this.url;
 
-            let blob = await uploadFile();
-            let body = this.body(blob);
+            const blob = await uploadFile();
+            const body = this.body(blob);
 
-            let promise = fetchPlain(url, { method: "POST", body });
+            const promise = fetchPlain(url, { method: "POST", body });
             showFetchModals(promise, "Отправка файла...", "Ошибка импорта");
             await promise;
             return { ok: true };
@@ -43,7 +43,7 @@ export class SimpleImport extends Import {
     }
 
     protected body(file: Blob): FormData {
-        let formData = new FormData();
+        const formData = new FormData();
         if (this.props.market) formData.append("market", this.props.market);
         if (this.props.name_of_shop) formData.append("name_of_shop", this.props.name_of_shop);
         if (this.props.import_type) formData.append("import_type", this.props.import_type);
@@ -64,19 +64,18 @@ export type SimpleImportProps = {
 };
 
 export class CatalogImport extends Import {
-    constructor(public kind: "table" | "prices" | "sizes") {
+    constructor(public kind: "table" | "prices") {
         super();
     }
 
     protected get url(): string {
-        if (this.kind === "table") return "catalog/import";
-        if (this.kind === "prices") return "catalog/import/prices";
-        if (this.kind === "sizes") return "catalog/import/sizes";
+        if (this.kind === "table") return "/catalog/import";
+        if (this.kind === "prices") return "/catalog/import/prices";
         throw new Error("Неподдерживаемый вид импорта");
     }
 
     protected body(file: Blob): FormData {
-        let formData = new FormData();
+        const formData = new FormData();
         formData.append("data", file);
         return formData;
     }
@@ -98,11 +97,11 @@ export class FboAdditionsImport extends Import {
     }
 
     protected get url(): string {
-        return "stocks/fbo/additions/import";
+        return "/stocks/fbo/additions/import";
     }
 
     protected body(file: Blob): FormData {
-        let formData = new FormData();
+        const formData = new FormData();
         formData.append("name_of_shop", this.props.name_of_shop ?? "");
         formData.append("warehouse_id", this.props.warehouse_id?.toFixed(0) ?? "");
         formData.append("data", file);
@@ -128,18 +127,18 @@ export class OwnStorageImport extends Import {
 
     protected get url(): string {
         if (this.subtype === "coming") {
-            return "stocks/own-storage/coming/import";
+            return "/stocks/own-storage/coming/import";
         } else if (this.subtype === "consumption") {
-            return "stocks/own-storage/consumption/import";
+            return "/stocks/own-storage/consumption/import";
         } else if (this.subtype === null) {
-            return "stocks/own-storage/import";
+            return "/stocks/own-storage/import";
         } else {
             throw new Error("Unexpected url type");
         }
     }
 
     protected body(file: Blob): FormData {
-        let formData = new FormData();
+        const formData = new FormData();
         if (this.place_id) formData.append("place_id", this.place_id.toFixed(0));
         formData.append("data", file);
         return formData;
