@@ -38,18 +38,17 @@ export type Market = {
 };
 
 export async function getStores(init?: FetchInit): Promise<Market[]> {
-    let promise = fetchJSON<Market[]>("/settings/markets", init);
+    const promise = fetchJSON<Market[]>("/settings/markets", init);
     showFetchModals(
         promise.then(x => x.response),
         undefined,
         "Не удалось получить список магазинов"
     );
-    console.log(await promise, "PA CHI MU");
     return (await promise).data;
 }
 
 export async function patchStore(store: Market) {
-    let promise = fetchPlain(`/settings/markets/${store.id}`, {
+    const promise = fetchPlain(`/settings/markets/${store.id}`, {
         method: "PATCH",
         body: JSON.stringify(store),
         headers: {
@@ -61,7 +60,7 @@ export async function patchStore(store: Market) {
 }
 
 export async function getStoreNames(type?: string): Promise<string[]> {
-    let stores = await getStores();
+    const stores = await getStores();
     return stores
         .filter(x => type === undefined || x.type === type)
         .map(x => x.name)
@@ -69,6 +68,6 @@ export async function getStoreNames(type?: string): Promise<string[]> {
 }
 
 export async function getStoreTypes(): Promise<string[]> {
-    let stores = await getStores();
+    const stores = await getStores();
     return stores.map(x => x.type).filter(filterUnique);
 }

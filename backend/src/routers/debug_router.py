@@ -24,6 +24,5 @@ async def force_update(background: BackgroundTasks, current_user=Depends(require
 
 
 @debug_router.patch('/settings/markets')
-async def create_market(data: MarketFullUpdate, current_user=Depends(require_staff)):
+async def create_market(data: MarketFullUpdate, current_user=Depends(require_staff)) -> None:
     await settings_service.change_market(data.id, data, current_user.id)
-    return {'status': 'OK'}

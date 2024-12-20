@@ -32,9 +32,11 @@ async def reset_track_markers():
 @router.patch('', tags=['Карточки товаров'], summary='Изменение карточек товаров')
 async def change_offer_fields(offers_data: list[OfferChange], current_user=Depends(require_staff)):
     """
+    Эндпоинт для изменения информации о карточках.
+
     Параметр `id` товара обязательно должен передаваться. Параметры `market`, `name_of_shop` передаются для валидации значений для конкретного.
     """
-    # return await service.change_offers(offers_data, current_user.id)
+    return await service.change_offers(offers_data, current_user.id)
 
 
 @router.put('/media/images', tags=['Карточки товаров', 'Медиа'], dependencies=[Depends(require_staff)], deprecated=True)

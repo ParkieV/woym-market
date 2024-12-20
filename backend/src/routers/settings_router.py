@@ -55,10 +55,8 @@ async def update_table(data: TableInfoUpdate, table_name: str,  current_user=Dep
 async def get_markets():
     try:
         res = await service.get_markets()
-        print(res)
         return res
     except Exception as e:
-        print(e)
         raise
 
 @settings_router.post('/markets', response_model=MarketOut, dependencies=[Depends(require_staff)])

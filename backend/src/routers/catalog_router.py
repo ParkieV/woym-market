@@ -42,7 +42,7 @@ async def synchronize_catalog_items(background: BackgroundTasks, skus: list[str]
     """
     Запускает задачу синхронизации карточек товаров с каталогом
     """
-    background.add_task(service.sync_catalog_items_with_offers, skus=skus)
+    # background.add_task(service.sync_catalog_items_with_offers, skus=skus)
     return {'status': 'OK'}
 
 

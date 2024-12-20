@@ -43,12 +43,12 @@ async def get_offers_list(offers_filter: OffersFilter | None = None, paging_filt
         return await db.get_offers_list(session, paging=paging_filter, offers_filter=offers_filter)
 
 
-@error_handler('Ошибка изменения товаров')
 async def change_offers(offers_data: list[OfferChange], user_id: int):
+    """ Функция для изменения данных в карточках товаров """
     mapping_fields = ['sku', 'name_of_shop', 'market']
 
     if not offers_data:
-        return offers_data
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No offers to save')
 
     async with async_session() as session:
         settings = await get_user_settings(session, user_id)
@@ -89,7 +89,7 @@ async def  update_offers(user_id: int):
         logger.debug(f"Markets: {markets}")
         settings = await get_user_settings(session, user_id)
 
-        await sync_catalog_items_with_offers(session)
+        # await sync_catalog_items_with_offers(session)
         await recalculate_values(session, settings, which=[{'synchronization': True}])
 
     # Получаем товары из бд
@@ -174,7 +174,6 @@ async def  update_offers(user_id: int):
     logger.info(f'Offers update completed in {_time}')
 
 
-
 async def delete_offers(offers: list[OfferDelete]):
     async with async_session() as session:
         return await db.delete_offers(session, [offer.model_dump() for offer in offers])
@@ -247,6 +246,7 @@ async def update_offers_attributes(offers: pd.DataFrame):
 
 
 async def recalculate_values(session: AsyncSession, settings, which=None):
+    """ Пересчет значений вычисляемых величин """
     if which is None:
         offers = await db.get_offers(session, model_schema=OfferOut)
     else:
@@ -261,7 +261,7 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
         return
 
     for market in await get_markets(session):
-        df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], settings, market)
+        df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], market)
         df1.drop(set(df1.columns) - set(OfferOut.fields()), axis=1, inplace=True, errors='ignore')
 
         await db.update_offers(session, df1, mapping_columns=['sku', 'name_of_shop', 'market'])

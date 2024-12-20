@@ -10,6 +10,7 @@ logger = get_logger(__name__)
 
 async def update_data(user_id: int):
     logger.info('Start updating data!')
+
     try:
         # Получение карточек товаров из магазина
         await update_offers(user_id)

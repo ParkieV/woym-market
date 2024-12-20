@@ -79,7 +79,7 @@ export type Offer = OfferBase & {
 };
 
 export async function fetchOfferList(): Promise<Offer[]> {
-    let offers = fetchJSON<Offer[]>("/offers",
+    const offers = fetchJSON<Offer[]>("/offers",
         {
             method: "POST",
             headers: {"Content-Type": "application/json"},
@@ -89,7 +89,7 @@ export async function fetchOfferList(): Promise<Offer[]> {
 }
 
 export async function patchOfferList(changed: Offer[]): Promise<boolean> {
-    let response = fetchPlain("/offers", {
+    const response = fetchPlain("/offers", {
         method: "PATCH",
         body: JSON.stringify(changed),
         headers: {

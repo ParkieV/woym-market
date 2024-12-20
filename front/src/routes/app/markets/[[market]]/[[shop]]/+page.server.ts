@@ -3,11 +3,10 @@ import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
-    let markets = await getStores({ fetch });
-    console.log(markets, "aA");
+    const markets = await getStores({ fetch });
     markets.sort((a, b) => a.name.localeCompare(b.name));
 
-    let { market, shop } = params;
+    const { market, shop } = params;
 
     if (market === undefined || shop === undefined) {
         return {
@@ -16,7 +15,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
         };
     }
 
-    let found = markets.find(x => x.type === market && x.name === shop);
+    const found = markets.find(x => x.type === market && x.name === shop);
     if (found === undefined) error(404, "Магазин не найден");
 
     return {
