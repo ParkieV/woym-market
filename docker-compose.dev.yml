@@ -44,7 +44,7 @@ services:
   database:
     restart: unless-stopped
     image: postgres:17.0
-    env_file: .env.dev
+    env_file: .env
     environment:
       POSTGRES_USER: ${DB_ROOT_USER}
       POSTGRES_PASSWORD: ${DB_ROOT_PASSWORD}

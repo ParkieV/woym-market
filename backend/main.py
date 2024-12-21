@@ -62,7 +62,7 @@ app: FastAPI = FastAPI(default_response_class=ORJSONResponse, root_path='/backen
 
 
 origins = [
-    'https://woym-market.ru',
+    '*',
 ]
 
 app.add_middleware(
