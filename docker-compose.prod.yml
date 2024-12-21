@@ -45,9 +45,9 @@ services:
       POSTGRES_PASSWORD: ${DB_ROOT_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db-data-prod:/var/lib/postgresql/data
     expose:
       - 5432
 
 volumes:
-  db-data:
+  db-data-prod:
