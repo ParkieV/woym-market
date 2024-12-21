@@ -4,6 +4,7 @@ from fastapi import APIRouter, UploadFile, File, Depends, Body, BackgroundTasks
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
+from logs import get_logger
 from src.dependencies.users import get_current_user, require_staff
 from src.schemas.catalog_schemas import CatalogItem, CatalogItemUpdate
 from src.services import catalog_service as service
@@ -13,6 +14,8 @@ router = APIRouter(
     prefix="/catalog",
     tags=['Каталов']
 )
+
+logger = get_logger(__file__)
 
 
 @router.get('', response_model=list[CatalogItem], dependencies=[Depends(get_current_user)], summary='Список товаров каталога')
@@ -70,8 +73,11 @@ async def import_catalog_items(data: UploadFile = File()):
 
 @router.post('/import/prices', tags=['Импорт'], dependencies=[Depends(require_staff)], summary='Импорт цен в каталог')
 async def import_catalog_item_prices(data: UploadFile = File()):
+    logger.debug('Start reading file')
     content = await data.read()
+    logger.debug('Read file successfully')
     await service.import_item_prices(content, PurePath(data.filename).suffix)
+    logger.debug('Finished import prices')
     return {'status': 'OK'}
 
 

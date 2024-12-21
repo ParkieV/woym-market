@@ -212,7 +212,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
         for offer_data in data if offer_data['total_price'] is not None
     ]
 
-    await api_wrapper.change_prices(data)
+    # await api_wrapper.change_prices(data)
 
 
 async def update_offers_attributes(offers: pd.DataFrame):

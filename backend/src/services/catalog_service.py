@@ -100,10 +100,14 @@ async def import_catalog_items(file: bytes, file_extension: str = '.xlsx') -> No
 
 async def import_item_prices(data: bytes, file_extension: str = '.xlsx'):
     df = parce_purchase_list(data, file_extension=file_extension)
+    logger.debug('Parsed dataframe')
     to_update_data = [CatalogItemUpdate(**i) for i in df.to_dict('records')]
     async with async_session() as session:
+        logger.debug('Start')
         await db.change_catalog_items(session, to_update_data)
+        logger.debug('Changed catalog items successfully')
         await db.set_supplier_available(session, [i.sku for i in to_update_data])
+        logger.debug('Changed catalog items successfully')
 
 
 async def reverse_sync_catalog_items_with_offer(skus: list[str] | None = None, exclude_fields: list | None = None) -> None:

@@ -135,23 +135,26 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
 
 
 async def set_supplier_available(session: AsyncSession, skus: Iterable[str]) -> None:
-    for sku in skus:
-        available_stmp = (
-            update(CatalogItem)
-            .where(CatalogItem.sku.in_(sku)).values(
-                supplier_available=True,
-                dollar_cost_price_updated_at=func.now(),
-            )
+    """ Метод для определения наличия товара по sku у поставщиков """
+    available_stmt = (
+        update(CatalogItem)
+        .where(CatalogItem.sku.in_(skus))
+        .values(
+            supplier_available=True,
+            dollar_cost_price_updated_at=func.now(),
         )
-        await session.execute(available_stmp)
+    )
 
-        unavailable_stmp = (
-            update(CatalogItem)
-            .where(CatalogItem.sku.notin_(sku)).values(
-                supplier_available=False,
-            )
+    unavailable_stmt = (
+        update(CatalogItem)
+        .where(~CatalogItem.sku.in_(skus))
+        .values(
+            supplier_available=False,
         )
-        await session.execute(unavailable_stmp)
+    )
+
+    await session.execute(available_stmt)
+    await session.execute(unavailable_stmt)
 
     await session.commit()
 

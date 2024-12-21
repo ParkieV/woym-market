@@ -78,7 +78,7 @@ class APIWrapper(BaseAPI):
 
                 try:
                     pass
-                    await api.change_prices(price_data)
+                    # await api.change_prices(price_data)
                 except Exception as e:
                     logger.error(f"Failed to change prices. {e.__class__.__name__}: {e}")
                     continue
