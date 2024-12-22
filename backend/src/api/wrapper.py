@@ -1,5 +1,6 @@
 from dataclasses import asdict
 from datetime import datetime
+from typing import Any
 
 from logs import get_logger
 from .base_api import BaseAPI
@@ -30,7 +31,8 @@ class APIWrapper(BaseAPI):
     async def validate_auth_data(self, **kwargs):
         pass
 
-    async def get_offers_list(self) -> list[APIOffer]:
+    @property
+    async def get_offers_list(self) -> list[dict[str, Any]]:
         result = []
         async with async_session() as session:
             for market in await get_markets(session, MarketFullOut):
@@ -44,7 +46,7 @@ class APIWrapper(BaseAPI):
                 logger.info(f'{market.name}({market.type}) offers collected: {len(offers)}')
                 if not offers:
                     logger.warning(f'{market.name}({market.type}) returns empty offers list')
-                result.extend(offers)
+                result.extend([dict(_) for _ in offers])
 
         return result
 

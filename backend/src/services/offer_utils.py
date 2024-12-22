@@ -123,31 +123,42 @@ async def calculate_price(data: pd.DataFrame, market_settings: MarketOut) -> pd.
     return df
 
 
-async def build_offers_data(data: pd.DataFrame, market: MarketOut) -> pd.DataFrame:
+async def build_offers_data(data: pd.DataFrame, market, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False, default_price_scheme_id: int = 1) -> pd.DataFrame:
     data = data.copy()
+
     if data.empty:
         return data
 
-    default_schemes = {
-        APITypes.OZON: 'O0',
-        APITypes.YANDEX: 'Y0',
-        APITypes.WILDBERRIES: 'W0',
-    }
-
-    data['pricing_scheme_name'] = market.default_pricing_scheme or default_schemes[market.type]
-    data['total_price_coeff'] = market.default_total_price_coeff
-    data['total_price_min_additional'] = market.default_total_price_min_additional
-    data['auto_min_price'] = market.default_auto_min_price
-    data['auto_price_control'] = market.default_auto_price_control
-    data['auto_participation_in_promotions'] = market.default_auto_participation_in_promotions
-    data['manual_min_price'] = 100
-
-    data['target_price'] = np.nan
-    data['wholesale_dollar_cost_price'] = np.nan
     data['dollar_cost_price'] = np.nan  # закупка
     data[['self_weight', 'self_length', 'self_width', 'self_height']] = np.nan
+    data['pricing_scheme_name'] = None
+
+    data['pricing_scheme_name'] = np.where(
+        data['market'] == APITypes.OZON,
+        'O0',
+        data['pricing_scheme_name']
+    )
+    data['pricing_scheme_name'] = np.where(
+        data['market'] == APITypes.YANDEX,
+        'Y0',
+        data['pricing_scheme_name']
+    )
+    data['pricing_scheme_name'] = np.where(
+        data['market'] == APITypes.WILDBERRIES,
+        'W0',
+        data['pricing_scheme_name']
+    )
+
+    data['wholesale_dollar_cost_price'] = np.nan
+    data['total_price_coeff'] = total_price_coeff
+    data['total_price_min_additional'] = total_price_min_additional
+
+    data['auto_min_price'] = 100
+    data['manual_min_price'] = 100
+    data['target_price'] = np.nan
 
     data['use_manual_min_price'] = False
+    data['auto_price_control'] = False
     data['use_promotion_price'] = False
     data['yandex_length'] = np.nan
     data['yandex_width'] = np.nan
@@ -156,7 +167,7 @@ async def build_offers_data(data: pd.DataFrame, market: MarketOut) -> pd.DataFra
 
     data = await calculate_offers_values(data, market)
     data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']] = data[['photo', 'name_of_shop', 'market', 'best_place_wm', 'best_place_im', 'price_index']].astype('string')
-    data.drop(columns=['volume', 'yandex_volume', 'volume_difference', 'difference_from_recommended_retail_price', 'violator'], inplace=True, errors='ignore')
+
     return data
 
 

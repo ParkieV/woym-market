@@ -16,7 +16,7 @@ from fastapi.exceptions import HTTPException
 from fastapi import status
 
 from ..schemas.filters.filter_schemas import PagingFilter
-from ..schemas.filters.offers_filter import OffersFilter
+from ..schemas.filters.offers_filter import OffersFilter, OffersSourceFilter
 
 
 def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
@@ -116,6 +116,38 @@ async def update_offers(
         await session.execute(stmp)
 
         await session.commit()
+
+async def change_offers(
+        session: AsyncSession,
+        offers: list[dict],
+        mapping_fields: list[str],
+        detect_changes: list[str] | None = None,
+        offers_filter: OffersSourceFilter | None = None,
+) -> None:
+    offer_model_update_fields = {i: getattr(Offer, i) for i in mapping_fields}
+
+    for update_offer_data in offers:
+        if (set(offer_model_update_fields.keys()) & set(update_offer_data.keys()) & set(mapping_fields)) != set(mapping_fields):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Поля {mapping_fields} обязательно должны быть переданы')
+
+        if detect_changes:
+            tracked_data = {
+                f'{i}_changed': func.concat(getattr(Offer, i), '') != func.concat(update_offer_data[i], '')
+                for i in detect_changes if getattr(Offer, i, None) and i in update_offer_data
+            }
+            update_offer_data.update(tracked_data)
+
+        stmp = update(Offer).values(**update_offer_data)
+
+        for mapping_field in mapping_fields:
+            stmp = stmp.where(offer_model_update_fields[mapping_field] == update_offer_data[mapping_field])
+
+        if offers_filter:
+            stmp = offers_filter(stmp)
+
+        await session.execute(stmp)
+
+    await session.commit()
 
 
 async def get_offers_by(session: AsyncSession, data: list[dict[str, Any]] | pd.DataFrame,

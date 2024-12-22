@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.services.base_utils
 from src.database.catalog_db import sync_catalog_items_with_offers
+from src.database.models.models import Offer
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.config import config
 from logs import get_logger
@@ -64,7 +65,7 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
 
 
 async def setup_offers_data(user_id: int):
-    yandex_offers = await api_wrapper.get_offers_list()
+    yandex_offers = await api_wrapper.get_offers_list
     yandex_offers_df = pd.DataFrame(yandex_offers)
     async with async_session() as session:
         await db.check_pricing_schemes_exists(session, 'Y0')
@@ -78,7 +79,7 @@ async def setup_offers_data(user_id: int):
             logger.info(f'{market.type}({market.name}) offers created: {len(data)}')
 
 
-async def  update_offers(user_id: int):
+async def update_offers(user_id: int):
     logger.info('Start update offers')
     mapping_fields = ['sku', 'name_of_shop', 'market']
     start_time = datetime.now()
@@ -90,7 +91,7 @@ async def  update_offers(user_id: int):
         settings = await get_user_settings(session, user_id)
 
         # await sync_catalog_items_with_offers(session)
-        await recalculate_values(session, settings, which=[{'synchronization': True}])
+        await recalculate_values(session, settings)
 
     # Получаем товары из бд
     db_offers = await get_offers_list()
@@ -111,7 +112,7 @@ async def  update_offers(user_id: int):
     await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True])
 
     # Получаем товары из апи
-    api_offers = await api_wrapper.get_offers_list()
+    api_offers = await api_wrapper.get_offers_list
     api_offers_df = pd.DataFrame(api_offers)
 
     common_columns = (set(db_offers_df.columns.tolist()) & set(api_offers_df.columns.tolist())) - set(mapping_fields)
@@ -142,7 +143,7 @@ async def  update_offers(user_id: int):
 
     # Создаем новые товары
     for market in markets:
-        to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], settings, market, setup_mode=True)
+        to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], market, setup_mode=True)
         await db.create_offers(session, to_create_df_chunked)
         logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df_chunked)}')
 
@@ -152,7 +153,7 @@ async def  update_offers(user_id: int):
     logger.info('Own storage stocks created')
 
     # Обновляем товары из апи
-    api_offers = await api_wrapper.get_offers_list()
+    api_offers = await api_wrapper.get_offers_list
     api_offers_df = pd.DataFrame(api_offers)
 
     for tracked_column in CONTROL_CHANGES:
@@ -212,6 +213,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
         for offer_data in data if offer_data['total_price'] is not None
     ]
 
+    # изменение цен в магазине
     # await api_wrapper.change_prices(data)
 
 
@@ -245,12 +247,8 @@ async def update_offers_attributes(offers: pd.DataFrame):
     return data
 
 
-async def recalculate_values(session: AsyncSession, settings, which=None):
-    """ Пересчет значений вычисляемых величин """
-    if which is None:
-        offers = await db.get_offers(session, model_schema=OfferOut)
-    else:
-        offers = await db.get_offers_by(session, which, model_schema=OfferOut)
+async def recalculate_values(session: AsyncSession, settings, offers_filter: OffersFilter | None = None):
+    offers = await db.get_offers_list(session, offers_filter=offers_filter)
 
     df = pd.DataFrame([offer.model_dump() for offer in offers])
     df.drop('dollar_cost_price_updated_at', axis=1, inplace=True, errors='ignore')
@@ -262,9 +260,10 @@ async def recalculate_values(session: AsyncSession, settings, which=None):
 
     for market in await get_markets(session):
         df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], market)
-        df1.drop(set(df1.columns) - set(OfferOut.fields()), axis=1, inplace=True, errors='ignore')
-
-        await db.update_offers(session, df1, mapping_columns=['sku', 'name_of_shop', 'market'])
+        df1.replace({np.nan: None}, inplace=True)
+        exclude_columns = set(df1.columns.values.tolist()) - set(i.name for i in Offer.__table__.columns)
+        df1.drop(columns=exclude_columns, inplace=True)
+        await db.change_offers(session, offers=df1.to_dict('records'), mapping_fields=['id'])
 
 
 @error_handler('Ошибка импорта')

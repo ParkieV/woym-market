@@ -95,17 +95,17 @@ class YandexMarketAPI(BaseAPI):
             report_line = price_report.get(offer['sku'], {})
 
             extended_offer = {
-                'attractive_price_threshold': report_line.get('attractive_price_threshold', 0),
-                'moderately_attractive_price_threshold': report_line.get('moderately_attractive_price_threshold', 0),
-                'best_place_wm': report_line.get('best_place_wm', ''),
-                'min_price_without_market': report_line.get('min_price_without_market', 0),
+                'attractive_price_threshold': _ if (_ := report_line.get('attractive_price_threshold', 0)) else 0,
+                'moderately_attractive_price_threshold': _ if (_ := report_line.get('moderately_attractive_price_threshold', 0)) else 0,
+                'best_place_wm': _ if (_ := report_line.get('best_place_wm', '')) is not None else '',
+                'min_price_without_market': _ if (_ := report_line.get('min_price_without_market', 0)) else 0,
                 'best_place_im': report_line.get('best_place_im', ''),
-                'min_price_in_market': report_line.get('min_price_in_market', 0),
-                'min_general_markets_price': report_line.get('min_general_markets_price', 0),
-                'your_price_for_buyers': report_line.get('your_price_for_buyers', 0),
+                'min_price_in_market': _ if (_ := report_line.get('min_price_in_market', 0)) else 0,
+                'min_general_markets_price': _ if (_ := report_line.get('min_general_markets_price', 0)) else 0,
+                'your_price_for_buyers': _ if (_ := report_line.get('your_price_for_buyers', 0)) else 0,
                 'group_sellers_amount': 0,
                 'name_of_shop': self._shop_name,
-                'best_place_im_link': report_line.get('best_place_im_link', None),
+                'best_place_im_link': _ if (_ := report_line.get('best_place_im_link', '')) else '',
                 'fbo': None
                 # 'current_price': offers_prices.get(offer['sku'], None)
             }
@@ -270,27 +270,43 @@ class YandexMarketAPI(BaseAPI):
                 new_df[['sku', 'attractive_price_threshold', 'moderately_attractive_price_threshold',
                         'your_price_for_buyers', 'min_general_markets_price', 'best_place_wm',
                         'min_price_without_market', 'best_place_im',
-                        'min_price_in_market']] = df.iloc[:, [0, 6, 7, 10, 13, 14, 15, 16, 17]]
+                        'min_price_in_market']] = df.iloc[:, [0, 3, 4, 6, 11, 12, 13, 14, 15]]
                 new_df.replace({'–': np.nan}, inplace=True)
                 new_df['best_place_im_link'] = links_series
                 new_df[['best_place_wm', 'best_place_im']] = new_df[['best_place_wm', 'best_place_im']].fillna('')
 
                 result = new_df.to_dict('records')
+
                 result = {
                     i['sku']: {
-                        'attractive_price_threshold': i['attractive_price_threshold'],
-                        'moderately_attractive_price_threshold': i['moderately_attractive_price_threshold'],
-                        'min_general_markets_price': i['min_general_markets_price'],
-                        'best_place_wm': i['best_place_wm'],
-                        'min_price_without_market': i['min_price_without_market'],
+                        'attractive_price_threshold': None
+                                                        if (_ := i.get('attractive_price_threshold')) or _ == np.nan
+                                                        else i['attractive_price_threshold'],
+                        'moderately_attractive_price_threshold': None
+                                                        if (_ := i.get('moderately_attractive_price_threshold')) or _ == np.nan
+                                                        else i['moderately_attractive_price_threshold'],
+                        'min_general_markets_price': None
+                                                        if (_ := i.get('min_general_markets_price')) or _ == np.nan
+                                                        else i['min_general_markets_price'],
+                        'best_place_wm': None
+                                            if (_ := i.get('best_place_wm')) or _ == np.nan
+                                            else i['best_place_wm'],
+                        'min_price_without_market': None
+                                                    if (_ := i.get('min_price_without_market')) or _ == np.nan
+                                                    else i['min_price_without_market'],
                         'best_place_im': str(i['best_place_im']).replace(' • FBY', '').replace(' • FBS', ''),
-                        'min_price_in_market': i['min_price_in_market'],
-                        'your_price_for_buyers': i['your_price_for_buyers'],
-                        'best_place_im_link': i['best_place_im_link']
+                        'min_price_in_market': None
+                                                if (_ := i.get('min_price_in_market')) or _ == np.nan
+                                                else i['min_price_in_market'],
+                        'your_price_for_buyers': None
+                                                    if (_ := i.get('your_price_for_buyers')) or _ == np.nan
+                                                    else i['your_price_for_buyers'],
+                        'best_place_im_link': None
+                                                if (_ := i.get('best_place_im_link')) or _ == np.nan
+                                                else i['best_place_im_link'],
                     }
                     for i in result
                 }
-
                 # get hyperlinks to best market price
 
                 return result
