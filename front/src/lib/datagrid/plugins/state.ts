@@ -122,7 +122,7 @@ function setLocal(gridName: string, state: GridState) {
 
 async function setRemote(gridName: string, state: GridState) {
     await fetchPlain(`/settings/tables/${gridName}`, {
-        method: "PUT",
+        method: "PATCH",
         body: state.toString(),
         headers: {
             "Content-Type": "application/json"
