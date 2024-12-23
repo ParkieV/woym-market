@@ -80,7 +80,7 @@ class APIWrapper(BaseAPI):
 
                 try:
                     pass
-                    # await api.change_prices(price_data)
+                    await api.change_prices(price_data)
                 except Exception as e:
                     logger.error(f"Failed to change prices. {e.__class__.__name__}: {e}")
                     continue
@@ -90,5 +90,5 @@ class APIWrapper(BaseAPI):
             for market in await get_markets(session, MarketFullOut):
                 api = APIFactory.get(market.type, token=market.token, entity_id=market.entity_id, shop_name=market.name)
                 offers_data = [i for i in data if i.market==market.type and i.name_of_shop==market.name]
-                # await api.change_offers(offers_data)
+                await api.change_offers(offers_data)
 

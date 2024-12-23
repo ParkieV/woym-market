@@ -214,7 +214,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
     ]
 
     # изменение цен в магазине
-    # await api_wrapper.change_prices(data)
+    await api_wrapper.change_prices(data)
 
 
 async def update_offers_attributes(offers: pd.DataFrame):
@@ -242,7 +242,7 @@ async def update_offers_attributes(offers: pd.DataFrame):
         for offer_data in data
     ]
 
-    # await api_wrapper.change_offers(data)
+    await api_wrapper.change_offers(data)
 
     return data
 
