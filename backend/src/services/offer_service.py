@@ -61,7 +61,7 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
         # to_sync_skus = [i.sku for i in offers_data if i.synchronization]
         # if to_sync_skus:
         #     await sync_catalog_items_with_offers(session,  skus=to_sync_skus)
-        await recalculate_values(session, settings, which=changes[mapping_fields])
+        await recalculate_values(session, settings)
 
 
 async def setup_offers_data(user_id: int):
@@ -405,7 +405,7 @@ async def change_pricing_scheme(user_id: int, data: PricingSchemeChange):
         settings = await get_user_settings(session, user_id)
 
         await db.change_pricing_scheme(session, data)
-        await recalculate_values(session, settings, which=[{'pricing_scheme_name': data.name}])
+        await recalculate_values(session, settings)
 
 
 async def delete_pricing_scheme(names: list[str]):
