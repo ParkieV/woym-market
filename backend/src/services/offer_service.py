@@ -61,7 +61,7 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
         # to_sync_skus = [i.sku for i in offers_data if i.synchronization]
         # if to_sync_skus:
         #     await sync_catalog_items_with_offers(session,  skus=to_sync_skus)
-        await recalculate_values(session, settings)
+        await recalculate_values(session)
 
 
 async def setup_offers_data(user_id: int):
@@ -74,7 +74,7 @@ async def setup_offers_data(user_id: int):
         settings = await get_user_settings(session, user_id)
 
         for market in await get_markets(session):
-            data = await utils.build_offers_data(yandex_offers_df[((yandex_offers_df['market'] == market.type) & (yandex_offers_df['name_of_shop'] == market.name))], setup_mode=True, settings=settings, market=market)
+            data = await utils.build_offers_data(yandex_offers_df[((yandex_offers_df['market'] == market.type) & (yandex_offers_df['name_of_shop'] == market.name))], setup_mode=True, market=market)
             await db.create_offers(session, data)
             logger.info(f'{market.type}({market.name}) offers created: {len(data)}')
 
@@ -328,7 +328,7 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
             logger.error('Error while updating offers in import offers', exc_info=e)
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
 
-        await recalculate_values(session, settings, df[['sku', 'name_of_shop', 'market']])
+        await recalculate_values(session, df[['sku', 'name_of_shop', 'market']])
 
 
 async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
@@ -356,7 +356,7 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
             await db.set_supplier_available(session, db_skus & import_skus, True)
             await db.set_supplier_available(session, db_skus - import_skus, False)
 
-        await recalculate_values(session, settings)
+        await recalculate_values(session)
 
 
 async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
@@ -379,7 +379,7 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
             logger.error('Error while update price in import sizes', exc_info=True)
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
 
-        await recalculate_values(session, settings)
+        await recalculate_values(session)
 
 
 async def export_offers(offers_filter: OffersFilter | None = None) -> str:
@@ -413,7 +413,7 @@ async def change_pricing_scheme(user_id: int, data: PricingSchemeChange):
         settings = await get_user_settings(session, user_id)
 
         await db.change_pricing_scheme(session, data)
-        await recalculate_values(session, settings)
+        await recalculate_values(session)
 
 
 async def delete_pricing_scheme(names: list[str]):
