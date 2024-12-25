@@ -61,6 +61,7 @@ async def get_unique_skus(session: AsyncSession) -> list[str]:
 
 
 async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] | None = None, exclude_fields: list | None = None):
+    """ Метод для синхронизации данных в карточках и каталоге """
     _exclude_fields = {'id', 'sku'}
     if exclude_fields:
         _exclude_fields.update(exclude_fields)

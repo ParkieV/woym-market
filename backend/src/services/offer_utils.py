@@ -10,9 +10,18 @@ from src.schemas.settings_schemas import MarketOut
 
 
 async def calculate_offers_values(data: pd.DataFrame, market_settings: MarketOut) -> pd.DataFrame:
-    data = data.copy()
+    """
+    Расчёт вычисляемых значений в карточках
+
+    data - список карточек в виде таблицы
+    market_settings - настройки магазинов для вычисления значений
+
+    Список карточек с обновленными вычисляемыми значениями
+    """
+    # Расчет объёма
     data['volume'] = data['self_width'] * data['self_height'] * data['self_length'] / 1000
 
+    # Расчет стоимости поставки в долларах
     data['dollar_cost_price'] = np.where(
         data['wholesale_dollar_cost_price'].isna(),
         data['dollar_cost_price'],
@@ -22,6 +31,7 @@ async def calculate_offers_values(data: pd.DataFrame, market_settings: MarketOut
             data['wholesale_dollar_cost_price'] * (1 - market_settings.discount_purchase / 100)
         )
     )
+    # Расчет стоимости
     data['cost_price'] = data['dollar_cost_price'] * market_settings.rate
     data['total_price'] = data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional']
     data['recommended_retail_price'] = market_settings.first_variable_for_recommended_retail_price + (data['wholesale_dollar_cost_price'] * market_settings.rate) + (market_settings.second_variable_for_recommended_retail_price / 100 * data['wholesale_dollar_cost_price'] * market_settings.rate)

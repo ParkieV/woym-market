@@ -33,13 +33,13 @@ from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
 
-
 api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
 
 CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes']
 async def get_offers_list(offers_filter: OffersFilter | None = None, paging_filter: PagingFilter | None = None) -> list[OfferOut]:
+    """ Получение списка карточек """
     async with async_session() as session:
         return await db.get_offers_list(session, paging=paging_filter, offers_filter=offers_filter)
 
@@ -80,6 +80,7 @@ async def setup_offers_data(user_id: int):
 
 
 async def update_offers(user_id: int):
+    """ Метод для обновления информации о карточках магазинов """
     logger.info('Start update offers')
     mapping_fields = ['sku', 'name_of_shop', 'market']
     start_time = datetime.now()
@@ -88,10 +89,11 @@ async def update_offers(user_id: int):
         # получение информации о маркетах из БД
         markets = await get_markets(session)
         logger.debug(f"Markets: {markets}")
-        settings = await get_user_settings(session, user_id)
 
-        # await sync_catalog_items_with_offers(session)
-        await recalculate_values(session, settings)
+        # синхронизируем карточки и каталог
+        await sync_catalog_items_with_offers(session)
+        # Перевычисление значений в карточках и их сохранение в БД
+        await recalculate_values(session)
 
     # Получаем товары из бд
     db_offers = await get_offers_list()
@@ -102,13 +104,14 @@ async def update_offers(user_id: int):
 
     # Считаем значения, которые требуют настроек и целевой цены
     for market in markets:
+        # пересчет текущей цены до скидки для карточек магазина
         to_update_price_df['discount_base_price'] = np.where(
             (to_update_price_df['market'] == market.type) & (to_update_price_df['name_of_shop'] == market.name),
             to_update_price_df['target_price'] * (1.0 + market.price_before_discount / 100),
             to_update_price_df['discount_base_price']
         )
 
-    # Обновление цен
+    # Обновление цен для тех карточек, где включен автоконтроль цен
     await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True])
 
     # Получаем товары из апи
@@ -152,7 +155,7 @@ async def update_offers(user_id: int):
     await create_own_storage_stocks(session)
     logger.info('Own storage stocks created')
 
-    # Обновляем товары из апи
+    # Обновляем товары из апи для обратной синхронизации
     api_offers = await api_wrapper.get_offers_list
     api_offers_df = pd.DataFrame(api_offers)
 
@@ -166,7 +169,7 @@ async def update_offers(user_id: int):
     logger.warning(f"Offers to delete: {len(to_delete_offers)}")
 
     # Пересчитать все
-    await recalculate_values(session, settings)
+    await recalculate_values(session)
     logger.info('Offers recalculated')
 
     await update_logs(session, user_id, {'updated_at': datetime.now()})
@@ -181,6 +184,7 @@ async def delete_offers(offers: list[OfferDelete]):
 
 
 async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
+    """ Обновление цен в карточках в магазинах """
     data = []
 
     if isinstance(offers, pd.DataFrame):
@@ -247,7 +251,9 @@ async def update_offers_attributes(offers: pd.DataFrame):
     return data
 
 
-async def recalculate_values(session: AsyncSession, settings, offers_filter: OffersFilter | None = None):
+async def recalculate_values(session: AsyncSession, offers_filter: OffersFilter | None = None):
+    """ Метод для обновления вычисляемых значений карточек в БД """
+    # Получение карточек
     offers = await db.get_offers_list(session, offers_filter=offers_filter)
 
     df = pd.DataFrame([offer.model_dump() for offer in offers])
@@ -259,10 +265,12 @@ async def recalculate_values(session: AsyncSession, settings, offers_filter: Off
         return
 
     for market in await get_markets(session):
+        # выбираем карточки с конкретного магазина и обновляем значения в них
         df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], market)
         df1.replace({np.nan: None}, inplace=True)
         exclude_columns = set(df1.columns.values.tolist()) - set(i.name for i in Offer.__table__.columns)
         df1.drop(columns=exclude_columns, inplace=True)
+        # Обновляем карточки в БД
         await db.change_offers(session, offers=df1.to_dict('records'), mapping_fields=['id'])
 
 

@@ -246,6 +246,7 @@ class OzonAPI(BaseAPI):
         return None
 
     async def get_offers_list(self) -> list[APIOffer]:
+        # Тут какие-то трабы, тк код даже не вызывал эту строку....
         offers_identifiers = self._get_offers_identifiers()
         offers = self._get_offers_base_info(offers_identifiers)
         offers_attributes = self._get_offers_attributes(offers_identifiers)

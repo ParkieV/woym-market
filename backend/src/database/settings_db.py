@@ -93,6 +93,7 @@ async def create_market(session: AsyncSession, data: MarketCreate, model_schema:
 
 
 async def get_markets(session: AsyncSession, model_schema: Type[BaseModel] = MarketOut) -> list[BaseModel]:
+    """ Метод для получения данных о магазинах """
     query = select(Market)
     result = await session.execute(query)
     return [model_schema.model_validate(market, from_attributes=True) for market in result.scalars().all()]
