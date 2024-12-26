@@ -26,13 +26,16 @@
             dispatch("save");
         });
     }
+    let formattedServerUpdatedAt = 'N/A';
+
+    $: formattedServerUpdatedAt = $serverUpdatedAt
+        ? $serverUpdatedAt.toLocaleString("en-GB")
+        : 'N/A';
 </script>
 
 <footer>
     <span
-        >{`Последнее обновление:\n${
-            $serverUpdatedAt ? $serverUpdatedAt.toLocaleString("en-GB") : "N/A"
-        }`}</span
+        >{`Последнее обновление:\n${formattedServerUpdatedAt}`}</span
     >
     <div style:flex="1" />
     {#if $userCanModify}

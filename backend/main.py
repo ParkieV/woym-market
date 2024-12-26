@@ -38,7 +38,7 @@ from src.params.config import config
 
 
 async def scheduler():
-    aioschedule.every(60).minutes.do(update_data, 1)
+    aioschedule.every(60).minutes.do(update_data, (3, 4))
 
     while True:
         await aioschedule.run_pending()

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Sequence
 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
@@ -28,7 +28,7 @@ import numpy as np
 from src.database.settings_db import update_logs, get_user_settings
 from fastapi.exceptions import HTTPException
 from fastapi import status
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
@@ -79,7 +79,7 @@ async def setup_offers_data(user_id: int):
             logger.info(f'{market.type}({market.name}) offers created: {len(data)}')
 
 
-async def update_offers(user_id: int):
+async def update_offers(user_ids: Sequence[int]):
     """ Метод для обновления информации о карточках магазинов """
     logger.info('Start update offers')
     mapping_fields = ['sku', 'name_of_shop', 'market']
@@ -172,7 +172,8 @@ async def update_offers(user_id: int):
     await recalculate_values(session)
     logger.info('Offers recalculated')
 
-    await update_logs(session, user_id, {'updated_at': datetime.now()})
+    await update_logs(session, user_ids[0], {'updated_at': datetime.now() - timedelta(hours=3)})
+    await update_logs(session, user_ids[1], {'updated_at': datetime.now() - timedelta(hours=3)})
 
     _time = datetime.now() - start_time
     logger.info(f'Offers update completed in {_time}')

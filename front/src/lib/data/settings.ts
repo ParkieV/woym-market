@@ -28,19 +28,24 @@ export function setLocalUpdateTime() {
 }
 
 async function setServerUpdateTime() {
-    let updatedAt = (await fetchLogs()).updated_at;
+    const updatedAt = (await fetchLogs()).updated_at;
+    console.log("returd update:", updatedAt);
     if (!updatedAt) return;
     serverUpdatedAt.set(new Date(updatedAt));
+    const dateStr: string = serverUpdatedAt.toLocaleString();
+    console.log("server time var:", dateStr);
 }
 
 if (browser) {
     const time = 15 * 1000;
     setInterval(setServerUpdateTime, time);
+    setInterval(setLocalUpdateTime, time);
     setServerUpdateTime();
 }
 
 async function fetchLogs(): Promise<Logs> {
-    return fetchJSON<Logs>("/settings/logs").then(x => x.data);
+    const res = fetchJSON<Logs>("/settings/logs").then(x => x.data);
+    return res;
 }
 
 type Logs = {
