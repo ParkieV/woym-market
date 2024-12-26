@@ -1,4 +1,5 @@
 FROM python:3.10.5
+ENV TZ="Europe/Moscow"
 
 WORKDIR /app
 
