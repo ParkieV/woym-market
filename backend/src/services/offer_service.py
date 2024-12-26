@@ -172,8 +172,8 @@ async def update_offers(user_ids: Sequence[int]):
     await recalculate_values(session)
     logger.info('Offers recalculated')
 
-    await update_logs(session, user_ids[0], {'updated_at': datetime.now() - timedelta(hours=3)})
-    await update_logs(session, user_ids[1], {'updated_at': datetime.now() - timedelta(hours=3)})
+    await update_logs(session, user_ids[0], {'updated_at': datetime.now()})
+    await update_logs(session, user_ids[1], {'updated_at': datetime.now()})
 
     _time = datetime.now() - start_time
     logger.info(f'Offers update completed in {_time}')
