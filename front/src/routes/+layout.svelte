@@ -4,7 +4,7 @@
 </script>
 
 <svelte:head>
-    <title>mp-auto-price</title>
+        <title>WoymMarket</title>
 </svelte:head>
 
 <Modals />

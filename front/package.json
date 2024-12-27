@@ -1,6 +1,6 @@
 {
-    "name": "mp-auto-price",
-    "version": "0.0.1",
+    "name": "woym-market",
+    "version": "1.0.0",
     "private": true,
     "scripts": {
         "dev": "export $(xargs < ./.env.local) && vite dev",

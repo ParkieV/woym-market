@@ -29,11 +29,9 @@ export function setLocalUpdateTime() {
 
 async function setServerUpdateTime() {
     const updatedAt = (await fetchLogs()).updated_at;
-    console.log("returd update:", updatedAt);
     if (!updatedAt) return;
     serverUpdatedAt.set(new Date(updatedAt));
     const dateStr: string = serverUpdatedAt.toLocaleString();
-    console.log("server time var:", dateStr);
 }
 
 if (browser) {

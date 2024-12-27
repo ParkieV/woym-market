@@ -14,8 +14,6 @@ export async function fetchPlain(endpoint: string, init?: FetchInit): Promise<Re
 
     const fetchFunc = init.fetch ?? fetch;
 
-    // console.log("URL Endpoint", URI + endpoint, "Method", init.method || "GET");
-
     return fetchFunc(URI + endpoint, init).then(redirectUnauthenticated);
 }
 
