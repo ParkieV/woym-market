@@ -9,11 +9,12 @@ import {
     floatColumn,
     GroupColumn,
     ImageColumn,
-    DateColumn
+    DateColumn, ComboboxColumn
 } from "$lib/datagrid/columns/types";
 import type { Market } from "$lib/data/markets";
 
 export default function catalogGrid(markets: Market[]): GridDefinition<CatalogEntry> {
+    console.log(markets)
     return new GridDefinition(BASE_GRID_OPTIONS, columns(markets));
 }
 
@@ -119,39 +120,75 @@ function columns(markets: Market[]): (Column | ColumnGroup)[] {
         },
         {
             header: "Синхронизация",
-            children: marketColumns(markets)
+            children: syncColumns(markets)
         }
     ];
 }
 
-function marketColumns(markets: Market[]) {
-    return markets.map(market => {
-        return {
-            header: `${market.name} (${market.type})`,
-            key: `shops-${market.id}`,
+function syncColumns(markets: Market[]): Column<any>[] {
+    return [
+        ...markets.map(market => {
+            return {
+                header: `${market.name} (${market.type})`,
+                key: `shops-${market.id}`,
+                valueGetter: ({ data }: { data: CatalogEntry }) => {
+                    const synchronization = data.synchronization.find(
+                        ({ market: type, name_of_shop }) =>
+                            market.type === type && market.name === name_of_shop
+                    );
+                    return synchronization?.synchronization;
+                },
+                valueSetter: ({ data, newValue }: { data: CatalogEntry; newValue: boolean }) => {
+                    const synchronization = data.synchronization.find(
+                        x => x.market === market.type && x.name_of_shop === market.name
+                    );
+                    if (synchronization === undefined) return false;
+                    synchronization.synchronization = newValue;
+                    return true;
+                },
+                base: new BooleanColumn(),
+                editable: ({ data }) => {
+                    if (!data) return false;
+                    return data.synchronization.some(
+                        ({ market: type, name_of_shop }) =>
+                            market.type === type && market.name === name_of_shop
+                    );
+                }
+            } as Column<CatalogEntry>;
+        }),
+        {
+            key: "reverse_sync_offer_id",
+            header: "Обратная синхронизация",
+            base: new ComboboxColumn(({ data }: { data: CatalogEntry }) => {
+                return [
+                    ...data.synchronization.map(x => ({
+                        name: `${x.name_of_shop} (${x.market})`,
+                        value: x.id
+                    })),
+                    { name: "N/A", value: null }
+                ];
+            }),
             valueGetter: ({ data }: { data: CatalogEntry }) => {
-                let synchronization = data.synchronization.find(
-                    ({ market: type, name_of_shop }) =>
-                        market.type === type && market.name === name_of_shop
-                );
-                return synchronization?.synchronization;
+                const sync = data.synchronization.find(x => x.id === data.reverse_sync_offer_id);
+                if (sync === undefined) {
+                    return { name: "N/A", value: null };
+                }
+                return {
+                    name: `${sync.name_of_shop} (${sync.market})`,
+                    value: data.reverse_sync_offer_id
+                };
             },
-            valueSetter: ({ data, newValue }: { data: CatalogEntry; newValue: boolean }) => {
-                let synchronization = data.synchronization.find(
-                    x => x.market === market.type && x.name_of_shop === market.name
-                );
-                if (synchronization === undefined) return false;
-                synchronization.synchronization = newValue;
+            valueSetter: ({
+                              newValue,
+                              data
+                          }: {
+                data: CatalogEntry;
+                newValue: { value: number | null };
+            }) => {
+                data.reverse_sync_offer_id = newValue.value;
                 return true;
             },
-            base: new BooleanColumn(),
-            editable: ({ data }) => {
-                if (!data) return false;
-                return data.synchronization.some(
-                    ({ market: type, name_of_shop }) =>
-                        market.type === type && market.name === name_of_shop
-                );
-            }
-        } as Column<CatalogEntry>;
-    });
+            editable: true
+        }
+    ];
 }
