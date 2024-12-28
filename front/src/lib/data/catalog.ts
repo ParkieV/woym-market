@@ -35,7 +35,7 @@ export async function fetchCatalog(): Promise<CatalogEntry[]> {
 
 export async function updateCatalog(changed: CatalogEntry[]): Promise<boolean> {
     let response = fetchPlain("/catalog", {
-        method: "POST",
+        method: "PATCH",
         body: JSON.stringify(changed),
         headers: {
             "Content-Type": "application/json"

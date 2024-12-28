@@ -313,6 +313,8 @@ class CatalogItem(Base):
     name = Column(String, nullable=True, default=None, server_default=None)
     barcodes = Column(String, nullable=True, default=None, server_default=None)
 
+    reverse_sync_offer_id = Column(Integer, ForeignKey('offers.id'), nullable=True, default=None)
+
     synchronization = relationship('Offer', uselist=True, primaryjoin='foreign(Offer.sku) == CatalogItem.sku')
 
 
