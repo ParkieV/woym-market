@@ -123,6 +123,16 @@ class MarketUpdate(BaseModel):
     default_pricing_scheme: str | None = Field(title='Схема ценообразования по умолчанию для новых товаров', description='Если не указана, то для новых товаров по умолчанию будет устанавливаться схема {MARKET}0')
     consider_logistic_cost: bool = Field(title='Учитывать в целевой цене товара стоимость дополнительной логистики', description='Если включено, то к «Целевая цена» прибавляем «Цена доп. логистики за 1 литр (₽)» * («объем» товара с маркетплейса, округленный до целого в большую сторону и минус 1). Т.е. расчет доп наценки идет начиная со второго литра и дальше')
 
+    @field_validator('a_variable_for_smart_delivery',
+                        'b_variable_for_smart_delivery',
+                        'c_variable_for_smart_delivery',
+                        'd_variable_for_smart_delivery',
+                        'e_variable_for_smart_delivery', mode='before')
+    def validate_null(cls, value: float | None) -> float:
+        if value is None:
+            return 0
+        return value
+
 
 class MarketFullOut(MarketOut):
     token: str
