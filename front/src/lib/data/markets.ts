@@ -48,7 +48,6 @@ export async function getStores(init?: FetchInit): Promise<Market[]> {
 }
 
 export async function patchStore(store: Market) {
-    console.log('Market response', store);
     const promise = fetchPlain(`/settings/markets/${store.id}`, {
         method: "PATCH",
         body: JSON.stringify(store),
