@@ -1,9 +1,11 @@
 from src.database import settings_db as db
 from src.database.db import async_session
+from src.database.models.models import Market
 from src.schemas.filters.offers_filter import OffersFilter
 from src.schemas.settings_schemas import SettingsUpdate, TableInfoUpdate, TableInfoCreate, TableInfoOut, \
     MarketUpdate, MarketCreate, MarketFullUpdate
 from src.services.base_utils import error_handler
+from src.services.catalog_utils import mapping_pydantic_models
 from src.services.offer_service import recalculate_values
 from src.api.factory import APIFactory
 
@@ -86,8 +88,7 @@ async def create_market(data: MarketCreate):
 
 async def change_market(_id: int, data: MarketUpdate | MarketFullUpdate, user_id: int):
     async with async_session() as session:
-        market = await db.change_market(session, _id, data)
-        settings = await db.get_user_settings(session, user_id)
+        market = await db.change_market(session, _id, mapping_pydantic_models(data, Market, extra='allow'))
         await recalculate_values(session, offers_filter=OffersFilter(market=market.type, name_of_shop=market.name))
 
 

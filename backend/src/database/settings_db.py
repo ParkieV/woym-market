@@ -1,4 +1,5 @@
-from typing import Type
+from collections.abc import Mapping
+from typing import Type, Any
 
 from pydantic import BaseModel
 from sqlalchemy import select, update, delete
@@ -99,8 +100,9 @@ async def get_markets(session: AsyncSession, model_schema: Type[BaseModel] = Mar
     return [model_schema.model_validate(market, from_attributes=True) for market in result.scalars().all()]
 
 
-async def change_market(session: AsyncSession, _id: int, data: MarketUpdate | MarketFullUpdate) -> MarketFullOut:
-    stmp = update(Market).where(Market.id==_id).values(**data.model_dump())
+async def change_market(session: AsyncSession, _id: int, data: Mapping[str, Any]) -> MarketFullOut:
+
+    stmp = update(Market).where(Market.id==_id).values(data)
     await session.execute(stmp)
     await session.commit()
     market_db = await session.execute(select(Market).where(Market.id==_id))
