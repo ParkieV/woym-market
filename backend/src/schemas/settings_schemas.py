@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator, field_validator
 
 from src.api.factory import APITypes
 
@@ -71,11 +71,11 @@ class MarketOut(BaseModel):
     price_before_discount: float
     volume_threshold_for_additional_logistics: float
     cost_of_additional_logistics_per_liter: float
-    a_variable_for_smart_delivery: float | None = None
-    b_variable_for_smart_delivery: float | None = None
-    c_variable_for_smart_delivery: float | None = None
-    d_variable_for_smart_delivery: float | None = None
-    e_variable_for_smart_delivery: float | None = None
+    a_variable_for_smart_delivery: float
+    b_variable_for_smart_delivery: float
+    c_variable_for_smart_delivery: float
+    d_variable_for_smart_delivery: float
+    e_variable_for_smart_delivery: float
 
     default_auto_min_price: float | None = None
     default_auto_price_control: bool | None = None
@@ -84,6 +84,16 @@ class MarketOut(BaseModel):
     default_auto_participation_in_promotions: bool | None = None
     default_pricing_scheme: str | None = None
     consider_logistic_cost: bool = Field(title='Учитывать в целевой цене товара стоимость дополнительной логистики', description='Если включено, то к «Целевая цена» прибавляем «Цена доп. логистики за 1 литр (₽)» * («объем» товара с маркетплейса, округленный до целого в большую сторону и минус 1)', default=False)
+
+    @field_validator('a_variable_for_smart_delivery',
+                        'b_variable_for_smart_delivery',
+                        'c_variable_for_smart_delivery',
+                        'd_variable_for_smart_delivery',
+                        'e_variable_for_smart_delivery', mode='before')
+    def validate_null(cls, value: float | None) -> float:
+        if value is None:
+            return 0
+        return value
 
 
 class MarketUpdate(BaseModel):
@@ -105,11 +115,11 @@ class MarketUpdate(BaseModel):
     d_variable_for_smart_delivery: float = Field(title='Переменная D для расчета умной поставки', description='«заказы за 7 дней» * A + «заказы за 14 дней» * B + «заказы за 28 дней» * C + «заказы за 60 дней» * **D** + «заказы за 120 дней» * E')
     e_variable_for_smart_delivery: float = Field(title='Переменная E для расчета умной поставки', description='«заказы за 7 дней» * A + «заказы за 14 дней» * B + «заказы за 28 дней» * C + «заказы за 60 дней» * D + «заказы за 120 дней» * **E**')
 
-    default_auto_min_price: float = Field(title='Значение авто мин цены по умолчанию для новых товаров')
-    default_auto_price_control: bool = Field(title='Значение **автоконтроля цен** по умолчанию для новых товаров')
-    default_total_price_coeff: float = Field(title='Значение **коэффициента расчетной цены** по умолчанию для новых товаров')
-    default_total_price_min_additional: float = Field(title='Значение **мин наценки на расчетную цену** по умолчанию для новых товаров')
-    default_auto_participation_in_promotions: bool = Field(title='Значения **автоучастия в акциях** по умолчанию для для новых товаров')
+    default_auto_min_price: float | None = Field(title='Значение авто мин цены по умолчанию для новых товаров')
+    default_auto_price_control: bool | None = Field(title='Значение **автоконтроля цен** по умолчанию для новых товаров')
+    default_total_price_coeff: float | None = Field(title='Значение **коэффициента расчетной цены** по умолчанию для новых товаров')
+    default_total_price_min_additional: float | None = Field(title='Значение **мин наценки на расчетную цену** по умолчанию для новых товаров')
+    default_auto_participation_in_promotions: bool | None = Field(title='Значения **автоучастия в акциях** по умолчанию для для новых товаров')
     default_pricing_scheme: str | None = Field(title='Схема ценообразования по умолчанию для новых товаров', description='Если не указана, то для новых товаров по умолчанию будет устанавливаться схема {MARKET}0')
     consider_logistic_cost: bool = Field(title='Учитывать в целевой цене товара стоимость дополнительной логистики', description='Если включено, то к «Целевая цена» прибавляем «Цена доп. логистики за 1 литр (₽)» * («объем» товара с маркетплейса, округленный до целого в большую сторону и минус 1). Т.е. расчет доп наценки идет начиная со второго литра и дальше')
 
