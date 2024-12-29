@@ -14,7 +14,6 @@ import {
 import type { Market } from "$lib/data/markets";
 
 export default function catalogGrid(markets: Market[]): GridDefinition<CatalogEntry> {
-    console.log(markets)
     return new GridDefinition(BASE_GRID_OPTIONS, columns(markets));
 }
 
