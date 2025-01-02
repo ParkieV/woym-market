@@ -68,15 +68,14 @@ app: FastAPI = FastAPI(
     redoc_url=None if config.is_prod else '/redoc'
 )
 
-match config:
-    case config.is_dev:
-        origins = ['https://dev.woym-market.ru']
-    case config.is_prod:
-        origins = ['https://woym-market.ru']
-    case config.is_local:
-        origins = ['*']
-    case default:
-        raise InitializationError('Не получилось определить контур развертывания')
+if config.is_prod:
+    origins = ['https://dev.woym-market.ru']
+elif config.is_dev:
+    origins = ['https://woym-market.ru']
+elif config.is_local:
+    origins = ['*']
+else:
+    raise InitializationError('Не получилось определить контур развертывания')
 
 app.add_middleware(
     CORSMiddleware,
