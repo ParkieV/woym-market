@@ -23,6 +23,8 @@ from src.routers.media_router import router as media_router
 from src.database.db import db_create
 import aioschedule
 from src.params.config import config
+from src.shared.exceptions import InitializationError
+
 
 # if config.use_sentry:
 #     sentry_sdk.init(
@@ -58,12 +60,23 @@ async def startup(_: FastAPI):
     yield
 
 
-app: FastAPI = FastAPI(default_response_class=ORJSONResponse, root_path='/backend', lifespan=startup)
+app: FastAPI = FastAPI(
+    default_response_class=ORJSONResponse,
+    root_path='/backend',
+    lifespan=startup,
+    docs_url=None if config.is_prod else '/docs',
+    redoc_url=None if config.is_prod else '/redoc'
+)
 
-
-origins = [
-    'https://dev.woym-market.ru'
-]
+match config:
+    case config.is_dev:
+        origins = ['https://dev.woym-market.ru']
+    case config.is_prod:
+        origins = ['https://woym-market.ru']
+    case config.is_local:
+        origins = ['*']
+    case default:
+        raise InitializationError('Не получилось определить контур развертывания')
 
 app.add_middleware(
     CORSMiddleware,
