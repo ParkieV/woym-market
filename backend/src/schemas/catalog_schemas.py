@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator, ValidationError, computed_field
+from pydantic import BaseModel, Field, field_validator, ValidationError, computed_field, ConfigDict
 
 
 class SynchronizationOffer(BaseModel):
@@ -27,15 +27,15 @@ class CatalogItemUpdate(BaseCatalogItem):
     self_width: float | None = Field(title='Ширина', default=None)
     self_height: float | None = Field(title='Высота', default=None)
     catalog_note: str | None = Field(title='Примечание', default='Новый товар')
-    use_promotion_price: bool | None = Field(title='Акция', default=None)
+    use_promotion_price: bool = Field(title='Акция', default=False)
     wholesale_dollar_cost_price: float | None = Field(title='ОПТ закупка у. е.', default=None)
-    supplier_available: bool | None = Field(title='Наличие у поставщика', default=None)
+    supplier_available: bool = Field(title='Наличие у поставщика', default=False)
     synchronization: list[SynchronizationOffer] = Field(title='Связанные товары', default_factory=list)
     reverse_sync_offer_id: int | None = Field(default=None, title='ID карточки товара для обратной синхронизации')
 
 
 class CatalogItemCreate(CatalogItemUpdate):
-    dollar_cost_price_updated_at: datetime | None = Field(title='Дата обновления ОПТ У.Е.')
+    dollar_cost_price_updated_at: datetime | None = Field(title='Дата обновления ОПТ У.Е.', default=None)
 
 
 class CatalogItem(CatalogItemCreate):
