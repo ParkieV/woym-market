@@ -52,7 +52,7 @@ class BaseAPI(ABC):
         else:
             response_status = 'OK' if response.ok else 'FAILED'
             response_data = response.text if include_response_logs else '!transmission disabled'
-            request_logger.debug(f'[{response_status}] {response_log_message} Response from API: status={response.status_code} | content={response_data}')
+            # request_logger.debug(f'[{response_status}] {response_log_message} Response from API: status={response.status_code} | content={response_data}')
             return response
 
     def _download_report(self, url_path: str) -> pd.DataFrame:
