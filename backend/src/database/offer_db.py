@@ -57,6 +57,9 @@ async def get_offers_list(session: AsyncSession,
             return
 
         yield res
+
+        if chunk_size is None:
+            return
         offset += chunk_size
 
 
