@@ -40,8 +40,12 @@ logger = get_logger(__name__)
 CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes']
 async def get_offers_list(offers_filter: OffersFilter | None = None, paging_filter: PagingFilter | None = None) -> list[OfferOut]:
     """ Получение списка карточек """
+    res = []
     async with async_session() as session:
-        return await db.get_offers_list(session, paging=paging_filter, offers_filter=offers_filter)
+        async for offer_chunk in db.get_offers_list(session, chunk_size=1000, offers_filter=offers_filter):
+            res += offer_chunk
+
+    return res
 
 
 async def change_offers(offers_data: list[OfferChange], user_id: int):
@@ -95,7 +99,7 @@ async def update_offers(user_ids: Sequence[int]):
         # Перевычисление значений в карточках и их сохранение в БД
         await recalculate_values(session)
 
-    # Получаем товары из бд
+    # Получаем карточки товаров
     db_offers = await get_offers_list()
     db_offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
@@ -255,7 +259,9 @@ async def update_offers_attributes(offers: pd.DataFrame):
 async def recalculate_values(session: AsyncSession, offers_filter: OffersFilter | None = None):
     """ Метод для обновления вычисляемых значений карточек в БД """
     # Получение карточек
-    offers = await db.get_offers_list(session, offers_filter=offers_filter)
+    offers: list[OfferOut] = []
+    async for offer_chunk in db.get_offers_list(session, offers_filter=offers_filter):
+        offers += offer_chunk
 
     df = pd.DataFrame([offer.model_dump() for offer in offers])
     df.drop('dollar_cost_price_updated_at', axis=1, inplace=True, errors='ignore')

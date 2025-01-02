@@ -1,7 +1,7 @@
 from typing import Iterable
 
 import pandas as pd
-from sqlalchemy import select, update, func, or_, case, cast, String, and_
+from sqlalchemy import select, update, func, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from src.database.models.models import CatalogItem, Offer
