@@ -44,7 +44,6 @@ class APIWrapper(BaseAPI):
                     logger.error(f"Failed to get connect with Market. {e.__class__.__name__}: {e}")
                     continue
 
-                # FIX: нужно проверить функцию
                 offers = await api.get_offers_list()
                 logger.info(f'{market.name}({market.type}) offers collected: {len(offers)}')
                 if not offers:

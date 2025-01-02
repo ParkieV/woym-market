@@ -1,6 +1,5 @@
 from datetime import datetime
-import math
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, ConfigDict
 from abc import ABC
 from enum import Enum
 from urllib.parse import urlparse
@@ -169,6 +168,8 @@ class OfferOut(OfferChange):
     name_changed: bool = Field(title='Название изменено пользователем')
     description_changed: bool = Field(title='Описание изменено')
     barcodes_changed: bool = Field(title='Штрихкоды изменены')
+
+    model_config = ConfigDict(extra='allow')
 
     @computed_field(title='Разница с РРЦ')
     @property
