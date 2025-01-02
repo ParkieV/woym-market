@@ -1,12 +1,22 @@
-# TODO проверить как работает с пустым результатом
-from typing import Type, Any
+import asyncio
+from typing import Type, Any, Literal
 
 from pydantic import BaseModel
 from sqlalchemy import ColumnElement, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import DeclarativeBase
 
+from logs import get_logger
+from src.database.db import async_session
 from src.database.models.base import Base
+from src.schemas.catalog_schemas import CatalogItemCreate
+from src.shared.exceptions import MappingError
+from src.database.offer_db import get_offers_list
+from src.database.catalog_db import create_catalog_items
+from src.schemas.filters.offers_filter import SKUOnlyOffersFilter
 
+
+logger = get_logger(__name__)
 
 async def row_to_dict(row) -> dict:
     return dict(row._mapping)
@@ -78,3 +88,49 @@ async def _get_or_create(
         
     return model_schema.model_validate(object_db, from_attributes=True), created
 
+
+async def duplicate_offers_to_catalog() -> None:
+    """ Создает несозданные в каталоге записи карточек товарах """
+    offer_filter = SKUOnlyOffersFilter()
+
+    async with async_session() as session:
+        async for offers in get_offers_list(session, chunk_size=1000, offers_filter=offer_filter):
+            print("chunks size:", len(offers))
+            print("first chunk:", offers[0].model_dump())
+            sku_set = set([offers.sku for offers in offers])
+            offers_dto = [CatalogItemCreate(
+                            sku=sku,
+                            use_promotion_price=False,
+                            supplier_available=False,
+                            search_words_changed=False) for sku in sku_set]
+            await create_catalog_items(session, offers_dto)
+        logger.debug('Create catalog successfully!')
+
+
+def mapping_pydantic_to_sqlalchemy_dict(
+        pydantic_model: BaseModel,
+        sqlalc_model: type[DeclarativeBase],
+        *,
+        extra: Literal['allow'] | None = None) -> dict[str, Any]:
+    """
+    Mapping Pydantic model to dict according to SQLAlchemy model structure.
+    :param pydantic_model: Pydantic model.
+    :param sqlalc_model: SQLAlchemy model for validating.
+    :param extra: Parameter to check if Pydantic model has extra attributes for SQLAlchemy model.
+    :return: Validating with SQLAlchemy model dictionary.
+    """
+    data = pydantic_model.model_dump()
+    sqlalchemy_mapper = sqlalc_model.__mapper__
+    if extra == 'allow':
+        return {k: v for k, v in data.items() if k in sqlalchemy_mapper.columns}
+    else:
+        try:
+            return {k: v for k, v in data.items() if sqlalchemy_mapper.columns[k]}
+        except KeyError as key_err:
+            MappingError(f"Не удалось представить объект {pydantic_model.__class__.__name__} в виде словаря: {sqlalc_model.__class__.__name__} не содержит атрибут '{key_err.args[0]}'")
+
+
+if __name__ == '__main__':
+    logger.info('Duplicate started!')
+    asyncio.run(duplicate_offers_to_catalog())
+    logger.info('Duplicate finished!')

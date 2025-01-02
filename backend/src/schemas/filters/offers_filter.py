@@ -1,6 +1,9 @@
-from pydantic import Field
+from collections.abc import Sequence
 
-from src.database.models.models import Offer
+from pydantic import Field
+from sqlalchemy import select
+
+from src.database.models.models import Offer, CatalogItem
 from src.schemas.filters.filter_schemas import BaseFilter
 
 
@@ -41,4 +44,23 @@ class OffersFilter(OffersSourceFilter):
 
         return query
 
+class SKUOnlyOffersFilter(BaseFilter):
+    """ Filter for getting DB objects, which there are in Offer, but no in CatalogItem. """
 
+    markets: Sequence[str] | None = Field(default=None, title='Маркетплейс')
+    names_of_shops: Sequence[str] | None = Field(default=None, title='Название магазина на маркетплейсе')
+    offer_ids: Sequence[int] | None = Field(default=None, title='ID Карточки товара в системе')
+
+    def __call__(self, query, *args, **kwargs):
+        if self.markets:
+            query = query.where(Offer.market.in_(self.markets))
+
+        if self.names_of_shops:
+            query = query.where(Offer.name_of_shop.in_(self.names_of_shops))
+
+        if self.offer_ids:
+            query = query.where(Offer.id.in_(self.offer_ids))
+
+        query = query.where(~Offer.sku.in_(select(CatalogItem.sku)))
+
+        return query

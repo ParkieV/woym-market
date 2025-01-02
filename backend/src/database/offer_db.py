@@ -1,4 +1,4 @@
-from collections.abc import Hashable
+from collections.abc import Hashable, AsyncGenerator
 from datetime import datetime
 from operator import or_
 
@@ -30,17 +30,35 @@ def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
     return data
 
 
-async def get_offers_list(session: AsyncSession, paging: PagingFilter | None = None, offers_filter: OffersFilter | None = None) -> list[OfferOut]:
+async def get_offers_list(session: AsyncSession,
+                          *,
+                          chunk_size: int | None = None,
+                          offers_filter: OffersFilter | None = None) -> AsyncGenerator[list[OfferOut], None]:
+    """
+    Get offers from DB using chunks
+    :param session: SQLAlchemy asynchronous session
+    :param chunk_size: size of chunk
+    :param offers_filter: filters for selecting offers
+    :return: Batch of offers
+    """
     query = select(Offer)
-
-    if paging:
-        query = paging(query)
 
     if offers_filter:
         query = offers_filter(query)
 
-    offers = (await session.execute(query)).scalars()
-    return [OfferOut.model_validate(offer, from_attributes=True) for offer in offers]
+
+    offset = 0
+    while True:
+        query = query.limit(chunk_size).offset(offset)
+        offer_chunk = (await session.execute(query)).scalars().all()
+        res = [OfferOut.model_validate(offer, from_attributes=True) for offer in offer_chunk]
+
+        if len(res) == 0:
+            return
+
+        yield res
+        offset += chunk_size
+
 
 def clear_dict_from_keys(keys: list[Hashable], dictionary: dict[Hashable, Any]) -> dict[Hashable, Any]:
     for key in keys:

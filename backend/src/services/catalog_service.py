@@ -10,6 +10,7 @@ from src.database.db import async_session
 from src.database import offer_db
 from src.database import catalog_db as db
 from src.schemas.catalog_schemas import CatalogItemCreate, CatalogItem, CatalogItemUpdate
+from src.schemas.offer_schemas import OfferOut
 from src.services.base_utils import parce_field_names, bytes_to_data_frame, parce_purchase_list
 
 logger = get_logger(__name__)
@@ -17,7 +18,10 @@ logger = get_logger(__name__)
 
 async def setup_catalog_items() -> None:
     async with async_session() as session:
-        db_offers = await offer_db.get_offers_list(session)
+        db_offers: list[OfferOut] = []
+        async for offer_chunk in offer_db.get_offers_list(session):
+            db_offers += offer_chunk
+
         db_offers_df = pd.DataFrame([i.model_dump() for i in db_offers])
         db_offers_skus = set(db_offers_df['sku'].values.tolist())
 
