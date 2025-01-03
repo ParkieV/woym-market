@@ -1,12 +1,12 @@
 from datetime import datetime
 
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from src.database.models.models import Order
-from src.schemas.filters.filter_schemas import BaseFilter
+from src.schemas.filters.filter_schemas import BaseFilter, BasePydanticFilter
 
 
-class OrderFilter(BaseFilter):
+class OrderFilter(BasePydanticFilter):
     __model = Order
 
     warehouse_ids: list[int] = Field(default_factory=list)

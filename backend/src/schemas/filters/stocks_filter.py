@@ -1,11 +1,11 @@
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from src.database.models.models import Warehouse, OfferStock
-from src.schemas.filters.filter_schemas import BaseFilter
+from src.schemas.filters.filter_schemas import BaseFilter, BasePydanticFilter
 from src.schemas.stocks.warehouses_schemas import WarehouseTypes
 
 
-class WarehousesFilter(BaseFilter):
+class WarehousesFilter(BasePydanticFilter):
     warehouse_type: WarehouseTypes | None = Field(default=None, title='Тип склада')
     market: str | None = Field(default=None, title='Маркетплейс')
 
@@ -19,7 +19,7 @@ class WarehousesFilter(BaseFilter):
         return query
 
 
-class FBOStocksFilter(BaseFilter):
+class FBOStocksFilter(BasePydanticFilter):
     warehouse_ids: list[int] | None = Field(default=None, title='Id складов в системе сервиса')
     offer_ids: list[int] | None = Field(default=None, title='Id карточек товаров')
 

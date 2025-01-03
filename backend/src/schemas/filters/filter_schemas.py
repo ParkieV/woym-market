@@ -13,6 +13,13 @@ class BaseFilter(ABC, Generic[Query]):
         raise NotImplementedError
 
 
+class BasePydanticFilter(BaseModel, BaseFilter):
+
+    @abstractmethod
+    def __call__(self, query: Query) -> Query:
+        raise NotImplementedError
+
+
 class PagingFilter(BaseModel, BaseFilter):
     limit: int | None = None
     offset: int | None = None
