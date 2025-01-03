@@ -13,7 +13,7 @@ class OrderFilter(BaseFilter):
     offer_ids: list[int] = Field(default_factory=list)
 
 
-    def __call__(self, query, *args, **kwargs):
+    def __call__(self, query):
         if self.warehouse_ids:
             query = query.where(Order.warehouse_id.in_(self.warehouse_ids))
 

@@ -1,16 +1,23 @@
+from abc import ABC, abstractmethod
+from typing import Generic
+
 from pydantic import BaseModel
 
+from src.schemas.filters.interface import Query
 
-class BaseFilter(BaseModel):
-    def __call__(self, query, *args, **kwargs):
-        raise NotImplementedError('Needs to implement filter method')
+# This class must match the interface IBaseFilter
+class BaseFilter(ABC, Generic[Query]):
+
+    @abstractmethod
+    def __call__(self, query: Query) -> Query:
+        raise NotImplementedError
 
 
-class PagingFilter(BaseFilter):
+class PagingFilter(BaseModel, BaseFilter):
     limit: int | None = None
     offset: int | None = None
 
-    def __call__(self, query,  *args, **kwargs):
+    def __call__(self, query):
         if self.offset:
             query = query.offset(self.offset)
 

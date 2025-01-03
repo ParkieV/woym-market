@@ -7,11 +7,8 @@ from src.database.models.models import Offer, CatalogItem
 from src.schemas.filters.filter_schemas import BaseFilter
 
 
-class BaseOffersFilter(BaseFilter):
-    pass
 
-
-class OffersSourceFilter(BaseOffersFilter):
+class OffersSourceFilter(BaseFilter):
     market: str | None = Field(default=None, title='Маркетплейс')
     name_of_shop: str | None = Field(default=None, title='Название магазина на маркетплейсе')
 
@@ -51,7 +48,7 @@ class SKUOnlyOffersFilter(BaseFilter):
     names_of_shops: Sequence[str] | None = Field(default=None, title='Название магазина на маркетплейсе')
     offer_ids: Sequence[int] | None = Field(default=None, title='ID Карточки товара в системе')
 
-    def __call__(self, query, *args, **kwargs):
+    def __call__(self, query):
         if self.markets:
             query = query.where(Offer.market.in_(self.markets))
 

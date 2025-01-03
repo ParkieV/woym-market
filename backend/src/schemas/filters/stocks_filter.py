@@ -9,7 +9,7 @@ class WarehousesFilter(BaseFilter):
     warehouse_type: WarehouseTypes | None = Field(default=None, title='Тип склада')
     market: str | None = Field(default=None, title='Маркетплейс')
 
-    def __call__(self, query, *args, **kwargs):
+    def __call__(self, query):
         if self.warehouse_type:
             query = query.where(Warehouse.warehouse_type == self.warehouse_type)
 
@@ -23,7 +23,7 @@ class FBOStocksFilter(BaseFilter):
     warehouse_ids: list[int] | None = Field(default=None, title='Id складов в системе сервиса')
     offer_ids: list[int] | None = Field(default=None, title='Id карточек товаров')
 
-    def __call__(self, query, *args, **kwargs):
+    def __call__(self, query):
         if self.warehouse_ids:
             query = query.where(OfferStock.warehouse_id.in_(self.warehouse_ids))
 
