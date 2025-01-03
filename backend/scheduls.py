@@ -2,6 +2,7 @@ import asyncio
 from typing import Sequence
 
 from logs import get_logger
+from src.database.utils import duplicate_offers_to_catalog
 from src.services.offer_service import update_offers
 from src.services.orders_services import setup_orders
 from src.services.stocks_service import update_warehouses_and_stocks
@@ -15,6 +16,8 @@ async def update_data(user_ids: Sequence[int]):
     try:
         # Получение карточек товаров из магазина
         await update_offers(user_ids)
+        # Добавление новых карточек в каталог только sku
+        await duplicate_offers_to_catalog()
     except Exception as e:
         logger.error(f'Error in update offers', exc_info=e)
 

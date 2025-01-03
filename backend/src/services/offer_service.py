@@ -1,4 +1,5 @@
-from typing import Any, Sequence
+from datetime import datetime
+from typing import Sequence
 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
@@ -8,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.services.base_utils
 from src.database.catalog_db import sync_catalog_items_with_offers
-from src.database.models.models import Offer
+from src.database.models.models import Offer, CatalogItem
+from src.database.uow_realization import ReverseSyncUnitOfWork
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.config import config
 from logs import get_logger
@@ -28,10 +30,11 @@ import numpy as np
 from src.database.settings_db import update_logs, get_user_settings
 from fastapi.exceptions import HTTPException
 from fastapi import status
-from datetime import datetime, timedelta
+from src.services.db_metadata import DBMetadataService
 from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
+from src.services.synchronization import ReverseSynchronizationInteractor
 
 api_wrapper = APIWrapper()
 
@@ -40,8 +43,12 @@ logger = get_logger(__name__)
 CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes']
 async def get_offers_list(offers_filter: OffersFilter | None = None, paging_filter: PagingFilter | None = None) -> list[OfferOut]:
     """ Получение списка карточек """
+    res = []
     async with async_session() as session:
-        return await db.get_offers_list(session, paging=paging_filter, offers_filter=offers_filter)
+        async for offer_chunk in db.get_offers_list(session, chunk_size=1000, offers_filter=offers_filter):
+            res += offer_chunk
+
+    return res
 
 
 async def change_offers(offers_data: list[OfferChange], user_id: int):
@@ -85,17 +92,26 @@ async def update_offers(user_ids: Sequence[int]):
     mapping_fields = ['sku', 'name_of_shop', 'market']
     start_time = datetime.now()
 
+
+    # синхронизируем из каталога в карточки
+    reverse_sync_interactor = ReverseSynchronizationInteractor(
+        DBMetadataService({'Offer': Offer,
+                           'CatalogItem': CatalogItem}),
+        ReverseSyncUnitOfWork(session_factory=async_session))
+    await reverse_sync_interactor(skus=[])
+    logger.info('Reverse sync completed')
+
     async with async_session() as session:
         # получение информации о маркетах из БД
         markets = await get_markets(session)
         logger.debug(f"Markets: {markets}")
 
-        # синхронизируем карточки и каталог
+        # синхронизируем из карточек в каталог
         await sync_catalog_items_with_offers(session)
         # Перевычисление значений в карточках и их сохранение в БД
         await recalculate_values(session)
 
-    # Получаем товары из бд
+    # Получаем карточки товаров
     db_offers = await get_offers_list()
     db_offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
@@ -255,7 +271,9 @@ async def update_offers_attributes(offers: pd.DataFrame):
 async def recalculate_values(session: AsyncSession, offers_filter: OffersFilter | None = None):
     """ Метод для обновления вычисляемых значений карточек в БД """
     # Получение карточек
-    offers = await db.get_offers_list(session, offers_filter=offers_filter)
+    offers: list[OfferOut] = []
+    async for offer_chunk in db.get_offers_list(session, offers_filter=offers_filter):
+        offers += offer_chunk
 
     df = pd.DataFrame([offer.model_dump() for offer in offers])
     df.drop('dollar_cost_price_updated_at', axis=1, inplace=True, errors='ignore')

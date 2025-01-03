@@ -1,9 +1,10 @@
 from typing import Iterable
 
 import pandas as pd
-from sqlalchemy import select, update, func, or_, case, cast, String, and_
+from sqlalchemy import select, update, func, or_, case, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
 from src.database.models.models import CatalogItem, Offer
 from src.schemas import catalog_schemas as schemas
 
@@ -159,46 +160,6 @@ async def set_supplier_available(session: AsyncSession, skus: Iterable[str]) -> 
 
     await session.commit()
 
-
-async def reverse_sync_offers_with_catalog_items(session: AsyncSession, skus: list[str] | None = None, exclude_fields: list | None = None) -> None:
-    _exclude_fields = {'id', 'sku'}
-    if exclude_fields:
-        _exclude_fields.update(exclude_fields)
-
-    offer_columns = set(Offer.__table__.columns.keys())
-    catalog_columns = set(CatalogItem.__table__.columns.keys())
-    common_columns = (offer_columns & catalog_columns) - _exclude_fields
-
-    # Формируем словарь значений для обновления
-    update_values = {
-        col: case(
-            (getattr(CatalogItem, f'{col}_changed') == False, func.coalesce(getattr(Offer, col), getattr(CatalogItem, col))),
-            else_=getattr(CatalogItem, col)
-        )
-        for col in common_columns if getattr(CatalogItem, f'{col}_changed', None)
-    }
-
-    track_changes = {
-        f'{col}_changed': or_(
-            getattr(CatalogItem, f'{col}_changed'),
-            func.concat(getattr(CatalogItem, col), '') != func.concat(func.coalesce(getattr(Offer, col), getattr(CatalogItem, col)), '')
-        )
-        for col in common_columns if all((getattr(CatalogItem, f'{col}_changed', None), getattr(CatalogItem, col, None), getattr(Offer, col, None)))
-    }
-
-    update_values.update(track_changes)
-
-    stmp = (
-        update(CatalogItem)
-        .where(Offer.id == CatalogItem.reverse_sync_offer_id)
-        .values(update_values)
-        .execution_options(synchronize_session="fetch")
-    )
-    if skus:
-        stmp = stmp.where(CatalogItem.sku.in_(skus))
-
-    await session.execute(stmp)
-    await session.commit()
 
 
 async def reset_all_track_catalog_markers(session: AsyncSession):
