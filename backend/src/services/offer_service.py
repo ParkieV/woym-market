@@ -1,4 +1,5 @@
-from typing import Any, Sequence
+from datetime import datetime
+from typing import Sequence
 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
@@ -7,8 +8,9 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.services.base_utils
-from src.database.catalog_db import sync_catalog_items_with_offers, reverse_sync_offers_with_catalog_items
-from src.database.models.models import Offer
+from src.database.catalog_db import sync_catalog_items_with_offers
+from src.database.models.models import Offer, CatalogItem
+from src.database.uow_realization import ReverseSyncUnitOfWork
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.config import config
 from logs import get_logger
@@ -28,10 +30,11 @@ import numpy as np
 from src.database.settings_db import update_logs, get_user_settings
 from fastapi.exceptions import HTTPException
 from fastapi import status
-from datetime import datetime, timedelta
+from src.services.db_metadata import DBMetadataService
 from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
+from src.services.synchronization import ReverseSynchronizationInteractor
 
 api_wrapper = APIWrapper()
 
@@ -89,14 +92,20 @@ async def update_offers(user_ids: Sequence[int]):
     mapping_fields = ['sku', 'name_of_shop', 'market']
     start_time = datetime.now()
 
+
+    # синхронизируем из каталога в карточки
+    reverse_sync_interactor = ReverseSynchronizationInteractor(
+        DBMetadataService({'Offer': Offer,
+                           'CatalogItem': CatalogItem}),
+        ReverseSyncUnitOfWork(session_factory=async_session()))
+    await reverse_sync_interactor(skus=['28022'])
+    logger.info('Reverse sync completed')
+
     async with async_session() as session:
         # получение информации о маркетах из БД
         markets = await get_markets(session)
         logger.debug(f"Markets: {markets}")
 
-        # синхронизируем из каталога в карточки
-        await reverse_sync_offers_with_catalog_items(session)
-        logger.info('Reverse sync completed')
         # синхронизируем из карточек в каталог
         await sync_catalog_items_with_offers(session)
         # Перевычисление значений в карточках и их сохранение в БД
