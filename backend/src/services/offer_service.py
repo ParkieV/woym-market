@@ -98,7 +98,7 @@ async def update_offers(user_ids: Sequence[int]):
         DBMetadataService({'Offer': Offer,
                            'CatalogItem': CatalogItem}),
         ReverseSyncUnitOfWork(session_factory=async_session))
-    await reverse_sync_interactor(skus=['28022'])
+    await reverse_sync_interactor(skus=[])
     logger.info('Reverse sync completed')
 
     async with async_session() as session:
