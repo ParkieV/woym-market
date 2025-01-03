@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 from src.database.db import engine
-from src.database.interfaces_repos import IAsyncReverseSyncUnitOfWork
+from src.database.interfaces import IAsyncReverseSyncUnitOfWork
 from src.services.catalog_service import UpdateCatalogService
 
 DEFAULT_SESSION_FACTORY = async_sessionmaker(engine, expire_on_commit=False)
