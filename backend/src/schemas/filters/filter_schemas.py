@@ -20,7 +20,7 @@ class BasePydanticFilter(BaseModel, BaseFilter):
         raise NotImplementedError
 
 
-class PagingFilter(BaseModel, BaseFilter):
+class PagingFilter(BasePydanticFilter):
     limit: int | None = None
     offset: int | None = None
 
