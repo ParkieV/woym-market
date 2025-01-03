@@ -1,15 +1,19 @@
+from collections.abc import Sequence, Iterable
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
+from sqlalchemy import text
 
 from logs import get_logger
 from src.database.db import async_session
 from src.database import offer_db
 from src.database import catalog_db as db
 from src.schemas.catalog_schemas import CatalogItemCreate, CatalogItem, CatalogItemUpdate
+from src.schemas.filters.db_catalog import OfferDataFilter, SkuInArrayFilter
 from src.schemas.offer_schemas import OfferOut
 from src.services.base_utils import parce_field_names, bytes_to_data_frame, parce_purchase_list
 
@@ -114,11 +118,33 @@ async def import_item_prices(data: bytes, file_extension: str = '.xlsx'):
         logger.debug('Changed catalog items successfully')
 
 
-async def reverse_sync_catalog_items_with_offer(skus: list[str] | None = None, exclude_fields: list | None = None) -> None:
-    async with async_session() as session:
-        await db.reverse_sync_offers_with_catalog_items(session, skus, exclude_fields)
-
-
 async def reset_track_markers() -> None:
     async with async_session() as session:
         await db.reset_all_track_catalog_markers(session)
+
+
+class UpdateCatalogService:
+    offer_data_filter = OfferDataFilter()
+    sku_in_array_filter = SkuInArrayFilter()
+
+
+    def __init__(self, session: AsyncSession):
+        self._session = session
+
+    async def __call__(self,
+                 updating_columns: Iterable[str],
+                 skus: Sequence[str] | None = None):
+
+        query = "UPDATE catalog_items\nSET "
+
+        for column in updating_columns:
+            query += f'{column} = offers.{column},\n'
+
+        query = self.offer_data_filter(query[:-2]+'\n')
+
+        if skus and len(skus) > 0:
+            self.sku_in_array_filter.skus = skus
+            query = self.sku_in_array_filter(query)
+
+        query = text(query)
+        await self._session.execute(query)

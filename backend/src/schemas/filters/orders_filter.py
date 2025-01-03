@@ -1,19 +1,19 @@
 from datetime import datetime
 
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from src.database.models.models import Order
-from src.schemas.filters.filter_schemas import BaseFilter
+from src.schemas.filters.filter_schemas import BaseFilter, BasePydanticFilter
 
 
-class OrderFilter(BaseFilter):
+class OrderFilter(BasePydanticFilter):
     __model = Order
 
     warehouse_ids: list[int] = Field(default_factory=list)
     offer_ids: list[int] = Field(default_factory=list)
 
 
-    def __call__(self, query, *args, **kwargs):
+    def __call__(self, query):
         if self.warehouse_ids:
             query = query.where(Order.warehouse_id.in_(self.warehouse_ids))
 
