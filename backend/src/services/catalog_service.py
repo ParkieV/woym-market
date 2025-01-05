@@ -74,7 +74,7 @@ async def get_catalog_items(session_fabric: ISessionFabric) -> list[PydanticCata
 
 
 async def change_catalog_items(session_factory: ISessionFabric, items: list[CatalogItemUpdate]) -> None:
-    async with session_factory as session:
+    async with session_factory() as session:
         await db.change_catalog_items(session, items)
 
 
