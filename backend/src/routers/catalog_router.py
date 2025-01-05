@@ -29,7 +29,7 @@ async def get_catalog_items():
 
 @router.patch('', dependencies=[Depends(require_staff)], summary='Изменение товаров каталога')
 async def change_catalog_items(items: list[CatalogItemUpdate]):
-    await service.change_catalog_items(items)
+    await service.change_catalog_items(get_session(), items)
 
 
 @router.post('/reset-track-markers', tags=['Debug'], dependencies=[Depends(require_staff)])
