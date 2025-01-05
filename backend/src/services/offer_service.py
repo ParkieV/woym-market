@@ -98,13 +98,6 @@ async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int])
     mapping_fields = ['sku', 'name_of_shop', 'market']
     start_time = datetime.now()
 
-    sync_interactor = SynchronizationInteractor(
-        DBMetadataService({'Offer': Offer,
-                           'CatalogItem': CatalogItem}),
-        session_fabric)
-    await sync_interactor(skus=[])
-    logger.info('Synchronization completed')
-
     # синхронизируем из каталога в карточки
     reverse_sync_interactor = ReverseSynchronizationInteractor(
         DBMetadataService({'Offer': Offer,
@@ -113,6 +106,12 @@ async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int])
     await reverse_sync_interactor(skus=[])
     logger.info('Reverse synchronization completed')
 
+    sync_interactor = SynchronizationInteractor(
+        DBMetadataService({'Offer': Offer,
+                           'CatalogItem': CatalogItem}),
+        session_fabric)
+    await sync_interactor(skus=[])
+    logger.info('Synchronization completed')
 
     async with session_fabric() as session:
         # получение информации о маркетах из БД
