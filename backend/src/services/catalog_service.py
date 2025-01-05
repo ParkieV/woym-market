@@ -1,29 +1,29 @@
-from collections.abc import Sequence, Iterable
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
-from sqlalchemy import text
 
 from logs import get_logger
-from src.database.db import async_session
-from src.database import offer_db
-from src.database import catalog_db as db
+from src.database.catalog import CatalogRepository
+from src.database.db import async_session, ISessionFabric
+from src.database import offer
+from src.database import catalog as db
+from src.database.offer import OfferRepository
 from src.schemas.catalog_schemas import CatalogItemCreate, CatalogItem, CatalogItemUpdate
-from src.schemas.filters.db_catalog import OfferDataFilter, SkuInArrayFilter
 from src.schemas.offer_schemas import OfferOut
 from src.services.base_utils import parce_field_names, bytes_to_data_frame, parce_purchase_list
 
 logger = get_logger(__name__)
 
 
-async def setup_catalog_items() -> None:
-    async with async_session() as session:
+async def setup_catalog_items(session_fabric: ISessionFabric) -> None:
+    offer_repository = OfferRepository()
+    async with session_fabric as session:
+        offer_repository.session = session
         db_offers: list[OfferOut] = []
-        async for offer_chunk in offer_db.get_offers_list(session):
+        async for offer_chunk in offer_repository.list():
             db_offers += offer_chunk
 
         db_offers_df = pd.DataFrame([i.model_dump() for i in db_offers])
@@ -62,9 +62,16 @@ async def setup_catalog_items() -> None:
         logger.info(f'Catalog items created: {len(new_items)}')
 
 
-async def get_catalog_items() -> list[CatalogItem]:
-    async with async_session() as session:
-        return await db.get_all_catalog_items(session)
+async def get_catalog_items(session_fabric: ISessionFabric) -> list[CatalogItem]:
+    catalog_repo = CatalogRepository()
+    res = []
+
+    async with session_fabric as session:
+        catalog_repo.session = session
+        async for chunk in catalog_repo.list():
+            res += chunk
+
+    return res
 
 
 async def change_catalog_items(items: list[CatalogItemUpdate]) -> None:
@@ -121,30 +128,3 @@ async def import_item_prices(data: bytes, file_extension: str = '.xlsx'):
 async def reset_track_markers() -> None:
     async with async_session() as session:
         await db.reset_all_track_catalog_markers(session)
-
-
-class UpdateCatalogService:
-    offer_data_filter = OfferDataFilter()
-    sku_in_array_filter = SkuInArrayFilter()
-
-
-    def __init__(self, session: AsyncSession):
-        self._session = session
-
-    async def __call__(self,
-                 updating_columns: Iterable[str],
-                 skus: Sequence[str] | None = None):
-
-        query = "UPDATE catalog_items\nSET "
-
-        for column in updating_columns:
-            query += f'{column} = offers.{column},\n'
-
-        query = self.offer_data_filter(query[:-2]+'\n')
-
-        if skus and len(skus) > 0:
-            self.sku_in_array_filter.skus = skus
-            query = self.sku_in_array_filter(query)
-
-        query = text(query)
-        await self._session.execute(query)
