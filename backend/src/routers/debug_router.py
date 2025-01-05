@@ -20,7 +20,7 @@ async def delete_offers(offers: list[OfferDelete]):
 
 @debug_router.post('/offers/force-update')
 async def force_update(background: BackgroundTasks, current_user=Depends(require_staff)):
-    background.add_task(offer_service.update_offers, get_session(), current_user.id)
+    background.add_task(offer_service.update_offers, get_session, current_user.id)
     # await offer_service.update_offers(current_user.id)
     return {'status': 'OK'}
 

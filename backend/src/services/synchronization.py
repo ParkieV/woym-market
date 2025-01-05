@@ -2,10 +2,8 @@ import asyncio
 from collections.abc import Sequence
 
 from src.database.catalog import CatalogRepository
-from src.database.db import ISessionFabric, get_session
-from src.database.models.models import CatalogItem, Offer
+from src.database.db import ISessionFabric
 from src.database.offer import OfferRepository
-from src.services.db_metadata import DBMetadataService
 from src.services.interfaces import IDBMetadataService
 
 
@@ -35,7 +33,7 @@ class ReverseSynchronizationInteractor:
         updating_columns = (offer_columns & catalog_columns) - self.exclude_fields
 
 
-        async with self.session_fabric as session:
+        async with self.session_fabric() as session:
             catalog_repo.session = session
             await catalog_repo.synchronization_catalog_from_offer(updating_columns, skus)
 
@@ -65,18 +63,6 @@ class SynchronizationInteractor:
         # Колонки, значения которых будут обновлены
         updating_columns = (offer_columns & catalog_columns) - self.exclude_fields
 
-        async with self.session_fabric as session:
+        async with self.session_fabric() as session:
             offer_repository.session = session
             await offer_repository.synchronization_offer_from_catalog(updating_columns, skus)
-
-if __name__ == '__main__':
-    reverse_sync_interactor = ReverseSynchronizationInteractor(
-        DBMetadataService({'Offer': Offer, 'CatalogItem': CatalogItem}),
-        get_session()
-    )
-    sync_interactor = SynchronizationInteractor(
-        DBMetadataService({'Offer': Offer, 'CatalogItem': CatalogItem}),
-        get_session()
-    )
-    # asyncio.run(reverse_sync_interactor(['43513']))
-    asyncio.run(sync_interactor(['43513']))

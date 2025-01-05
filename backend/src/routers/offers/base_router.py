@@ -21,7 +21,7 @@ router = APIRouter(
 
 @router.post('', response_model=list[OfferOut], tags=['Карточки товаров'], dependencies=[Depends(get_current_user)], summary='Список карточек товаров')
 async def get_offers(filter: OffersFilter | None = None, paging: PagingFilter | None = None):
-    return await service.get_offers_list(get_session(), offers_filter=filter)
+    return await service.get_offers_list(get_session, offers_filter=filter)
 
 
 @router.post('/reset-track-markers', tags=['Debug'], dependencies=[Depends(require_staff)])
@@ -37,7 +37,7 @@ async def change_offer_fields(offers_data: list[OfferChange], current_user=Depen
 
     Параметр `id` товара обязательно должен передаваться. Параметры `market`, `name_of_shop` передаются для валидации значений для конкретного.
     """
-    return await service.change_offers(offers_data, current_user.id, get_session())
+    return await service.change_offers(offers_data, current_user.id, get_session)
 
 
 @router.put('/media/images', tags=['Карточки товаров', 'Медиа'], dependencies=[Depends(require_staff)], deprecated=True)

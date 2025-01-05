@@ -16,9 +16,9 @@ async def update_data(user_ids: Sequence[int]):
 
     try:
         # Получение карточек товаров из магазина
-        await update_offers(get_session(), user_ids)
+        await update_offers(get_session, user_ids)
         # Добавление новых карточек в каталог только sku
-        await duplicate_offers_to_catalog(get_session())
+        await duplicate_offers_to_catalog(get_session)
     except Exception as e:
         logger.error(f'Error in update offers', exc_info=e)
 

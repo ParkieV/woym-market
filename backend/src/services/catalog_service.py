@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 
 async def setup_catalog_items(session_fabric: ISessionFabric) -> None:
     offer_repository = OfferRepository()
-    async with session_fabric as session:
+    async with session_fabric() as session:
         offer_repository.session = session
         db_offers: list[OfferOut] = []
         async for offer_chunk in offer_repository.list():
@@ -65,7 +65,7 @@ async def get_catalog_items(session_fabric: ISessionFabric) -> list[PydanticCata
     catalog_repo = CatalogRepository()
     res = []
 
-    async with session_fabric as session:
+    async with session_fabric() as session:
         catalog_repo.session = session
         async for chunk in catalog_repo.list():
             res += chunk

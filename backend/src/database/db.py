@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, AbstractAsyncContextManager
+from typing import TypeVar
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy import create_engine
@@ -32,7 +33,7 @@ async_session = async_sessionmaker(
     engine,
     expire_on_commit=False
 )
-ISessionFabric = AbstractAsyncContextManager[AsyncSession]
+ISessionFabric = TypeVar("ISessionFabric")
 
 
 @asynccontextmanager
@@ -83,3 +84,4 @@ def db_create() -> None:
         logger.warning('Database reseted')
     else:
         logger.info('Database up-to-date')
+

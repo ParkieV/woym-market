@@ -43,7 +43,7 @@ async def get_offers_list(session_fabric: ISessionFabric, offers_filter: OffersF
     """ Получение списка карточек """
     res = []
     offer_repository = OfferRepository()
-    async with session_fabric as session:
+    async with session_fabric() as session:
         offer_repository.session = session
         async for offer_chunk in offer_repository.list(query_filter=offers_filter):
             res += offer_chunk
@@ -60,7 +60,7 @@ async def change_offers(offers_data: list[OfferChange],
     if not offers_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No offers to save')
 
-    async with session_fabric as session:
+    async with session_fabric() as session:
         settings = await get_user_settings(session, user_id)
 
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
@@ -98,6 +98,13 @@ async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int])
     mapping_fields = ['sku', 'name_of_shop', 'market']
     start_time = datetime.now()
 
+    sync_interactor = SynchronizationInteractor(
+        DBMetadataService({'Offer': Offer,
+                           'CatalogItem': CatalogItem}),
+        session_fabric)
+    await sync_interactor(skus=[])
+    logger.info('Synchronization completed')
+
     # синхронизируем из каталога в карточки
     reverse_sync_interactor = ReverseSynchronizationInteractor(
         DBMetadataService({'Offer': Offer,
@@ -106,14 +113,8 @@ async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int])
     await reverse_sync_interactor(skus=[])
     logger.info('Reverse synchronization completed')
 
-    sync_interactor = SynchronizationInteractor(
-        DBMetadataService({'Offer': Offer,
-                           'CatalogItem': CatalogItem}),
-        session_fabric)
-    await sync_interactor(skus=[])
-    logger.info('Synchronization completed')
 
-    async with session_fabric as session:
+    async with session_fabric() as session:
         # получение информации о маркетах из БД
         markets = await get_markets(session)
         logger.debug(f"Markets: {markets}")
@@ -122,7 +123,7 @@ async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int])
         await recalculate_values(session)
 
     # Получаем карточки товаров
-    db_offers = await get_offers_list(get_session())
+    db_offers = await get_offers_list(get_session)
     db_offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
     # Создаем переменную с данными для отправки цен в апи
@@ -414,7 +415,7 @@ async def import_sizes(data, name_of_shop: str | None = None, market: str | None
 
 async def export_offers(offers_filter: OffersFilter | None = None) -> str:
 
-    offers = await get_offers_list(get_session(), offers_filter=offers_filter)
+    offers = await get_offers_list(get_session, offers_filter=offers_filter)
     exclude_columns = set()
     exclude_columns.update(*[f'{i}_changed' for i in CONTROL_CHANGES])
 
