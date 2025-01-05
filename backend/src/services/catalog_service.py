@@ -8,10 +8,9 @@ from starlette import status
 from logs import get_logger
 from src.database.catalog import CatalogRepository
 from src.database.db import async_session, ISessionFabric
-from src.database import offer
 from src.database import catalog as db
 from src.database.offer import OfferRepository
-from src.schemas.catalog_schemas import CatalogItemCreate, CatalogItem, CatalogItemUpdate
+from src.schemas.catalog_schemas import CatalogItemCreate, PydanticCatalogItem, CatalogItemUpdate
 from src.schemas.offer_schemas import OfferOut
 from src.services.base_utils import parce_field_names, bytes_to_data_frame, parce_purchase_list
 
@@ -62,7 +61,7 @@ async def setup_catalog_items(session_fabric: ISessionFabric) -> None:
         logger.info(f'Catalog items created: {len(new_items)}')
 
 
-async def get_catalog_items(session_fabric: ISessionFabric) -> list[CatalogItem]:
+async def get_catalog_items(session_fabric: ISessionFabric) -> list[PydanticCatalogItem]:
     catalog_repo = CatalogRepository()
     res = []
 
@@ -88,7 +87,7 @@ async def export_catalog_items() -> Path:
     catalog_items = await get_catalog_items()
     df = pd.DataFrame([i.model_dump() for i in catalog_items])
     df.drop(columns=['synchronization'], inplace=True, errors='ignore')
-    df.rename(columns=parce_field_names(CatalogItem), inplace=True)
+    df.rename(columns=parce_field_names(PydanticCatalogItem), inplace=True)
 
     path = Path('data/catalog_items.xlsx')
     df.to_excel(str(path), index=False)

@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from src.database.interfaces import ICatalogRepository
 from src.database.models.models import CatalogItem, Offer
 from src.schemas import catalog_schemas as schemas
+from src.schemas.catalog_schemas import PydanticCatalogItem
 from src.schemas.filters.db_catalog import OfferDataFilter, SkuInArrayFilter
 from src.schemas.filters.interface import IBaseFilter
 
@@ -52,7 +53,7 @@ class CatalogRepository(ICatalogRepository[PydanticModel]):
         while True:
             query = query.limit(chunk_size).offset(offset)
             chunk = (await self.session.execute(query)).scalars().all()
-            res = [PydanticModel.model_validate(item, from_attributes=True) for item in chunk]
+            res = [PydanticCatalogItem.model_validate(item, from_attributes=True) for item in chunk]
 
             if len(res) == 0:
                 return

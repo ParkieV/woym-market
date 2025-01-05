@@ -6,9 +6,9 @@ from starlette.responses import FileResponse
 
 from logs import get_logger
 from src.database.db import get_session
-from src.database.models.models import Offer
+from src.database.models.models import Offer, CatalogItem
 from src.dependencies.users import get_current_user, require_staff
-from src.schemas.catalog_schemas import CatalogItem, CatalogItemUpdate
+from src.schemas.catalog_schemas import CatalogItemUpdate, PydanticCatalogItem
 from src.services import catalog_service as service
 from src.services.base_utils import clean_up_files
 from src.services.db_metadata import DBMetadataService
@@ -22,7 +22,7 @@ router = APIRouter(
 logger = get_logger(__file__)
 
 
-@router.get('', response_model=list[CatalogItem], dependencies=[Depends(get_current_user)], summary='Список товаров каталога')
+@router.get('', response_model=list[PydanticCatalogItem], dependencies=[Depends(get_current_user)], summary='Список товаров каталога')
 async def get_catalog_items():
     return await service.get_catalog_items(get_session())
 
