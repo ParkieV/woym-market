@@ -8,10 +8,8 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.services.base_utils
-from src.database.catalog import sync_catalog_items_with_offers
 from src.database.models.models import Offer, CatalogItem
 from src.database.offer import OfferRepository
-from src.database.uow_realization import ReverseSyncUnitOfWork
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.config import config
 from logs import get_logger

@@ -11,7 +11,7 @@ from src.api.wrapper import APIWrapper
 from src.database.db import async_session
 from src.database import warehouse_db as db
 from src.database.models.models import Offer
-from src.database.offer_db import get_offers_fields
+from src.database.offer import get_offers_fields
 from src.params.config import config
 from src.schemas.filters.stocks_filter import WarehousesFilter
 from src.schemas.offer_schemas import OfferOut

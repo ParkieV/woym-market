@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 from src.api.factory import APITypes
-from src.database.offer_db import get_pricing_schemes
+from src.database.offer import get_pricing_schemes
 from src.database.db import async_session
 from src.schemas.settings_schemas import MarketOut
 
