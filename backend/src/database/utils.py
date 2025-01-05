@@ -94,7 +94,7 @@ async def duplicate_offers_to_catalog(session_factory: ISessionFabric) -> None:
     offer_filter = SKUOnlyOffersFilter()
     offer_repository = OfferRepository()
 
-    async with session_factory as session:
+    async with session_factory() as session:
         offer_repository.session = session
         async for offers in offer_repository.list(chunk_size=1000, query_filter=offer_filter):
             print("chunks size:", len(offers))
