@@ -14,7 +14,7 @@ from src.database.warehouse_db import create_own_storage_stocks
 from src.params.config import config
 from logs import get_logger
 from src.api.wrapper import APIWrapper
-from src.database.db import async_session, ISessionFabric
+from src.database.db import async_session, ISessionFabric, get_session
 from src.database import offer as db
 from src.database.settings_db import get_markets
 import src.services.offer_utils as utils
@@ -122,7 +122,7 @@ async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int])
         await recalculate_values(session)
 
     # Получаем карточки товаров
-    db_offers = await get_offers_list()
+    db_offers = await get_offers_list(get_session())
     db_offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
     # Создаем переменную с данными для отправки цен в апи
@@ -311,19 +311,19 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
 
     match import_type:
         case ImportType.TABLE:
-            return await import_offers(data, settings, name_of_shop, market, file_extension)
+            return await import_offers(data, name_of_shop, market, file_extension)
 
         case ImportType.SIZES:
-            return await import_sizes(data, settings, name_of_shop, market, file_extension)
+            return await import_sizes(data, name_of_shop, market, file_extension)
 
         case ImportType.PRICES:
-            return await import_prices(data, settings, name_of_shop, market, file_extension)
+            return await import_prices(data, name_of_shop, market, file_extension)
 
         case _:
             raise NotImplemented(f'Import type "{import_type}" not implemented yet')
 
 
-async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+async def import_offers(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     required_fields = {'sku', 'market', 'name_of_shop'}
 
     df = src.services.base_utils.bytes_to_data_frame(data, file_extension=file_extension)
@@ -361,7 +361,7 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
         await recalculate_values(session, df[['sku', 'name_of_shop', 'market']])
 
 
-async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+async def import_prices(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = parce_purchase_list(data, file_extension=file_extension)
 
     async with async_session() as session:
@@ -389,7 +389,7 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
         await recalculate_values(session)
 
 
-async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+async def import_sizes(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = parce_sizes_list(data, file_extension=file_extension)
 
     mapping_columns = []
@@ -414,7 +414,7 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
 
 async def export_offers(offers_filter: OffersFilter | None = None) -> str:
 
-    offers = await get_offers_list(offers_filter=offers_filter)
+    offers = await get_offers_list(get_session(), offers_filter=offers_filter)
     exclude_columns = set()
     exclude_columns.update(*[f'{i}_changed' for i in CONTROL_CHANGES])
 
@@ -477,7 +477,7 @@ async def create_violators_file(market: Market | None = None, name_of_shop: str 
 
         styles = getSampleStyleSheet()
         styles['Normal'].fontName = 'DejaVuSerif'
-        pdfmetrics.registerFont(TTFont('DejaVuSerif', 'src/DejaVuSerif.ttf', 'UTF-8'))
+        pdfmetrics.registerFont(TTFont('DejaVuSerif', 'src/DejaVuSerif.ttf'))
 
         if len(violators):
             f = [

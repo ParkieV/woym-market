@@ -5,10 +5,13 @@ from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
 from logs import get_logger
+from src.database.db import get_session
+from src.database.models.models import Offer
 from src.dependencies.users import get_current_user, require_staff
 from src.schemas.catalog_schemas import CatalogItem, CatalogItemUpdate
 from src.services import catalog_service as service
 from src.services.base_utils import clean_up_files
+from src.services.db_metadata import DBMetadataService
 from src.services.synchronization import ReverseSynchronizationInteractor
 
 router = APIRouter(
@@ -21,7 +24,7 @@ logger = get_logger(__file__)
 
 @router.get('', response_model=list[CatalogItem], dependencies=[Depends(get_current_user)], summary='Список товаров каталога')
 async def get_catalog_items():
-    return await service.get_catalog_items()
+    return await service.get_catalog_items(get_session())
 
 
 @router.patch('', dependencies=[Depends(require_staff)], summary='Изменение товаров каталога')
@@ -55,7 +58,11 @@ async def reverse_synchronize_catalog_items(background: BackgroundTasks, skus: l
     """
 
     """
-    background.add_task(ReverseSynchronizationInteractor())
+    background.add_task(ReverseSynchronizationInteractor(
+        DBMetadataService({'Offer': Offer,
+                           'CatalogItem': CatalogItem}),
+        get_session()
+    ))
     return {'status': 'OK'}
 
 
