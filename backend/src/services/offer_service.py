@@ -8,19 +8,17 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.services.base_utils
-from src.database.catalog_db import sync_catalog_items_with_offers
 from src.database.models.models import Offer, CatalogItem
-from src.database.uow_realization import ReverseSyncUnitOfWork
+from src.database.offer import OfferRepository
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.config import config
 from logs import get_logger
 from src.api.wrapper import APIWrapper
-from src.database.db import async_session
-from src.database import offer_db as db
+from src.database.db import async_session, ISessionFabric, get_session
+from src.database import offer as db
 from src.database.settings_db import get_markets
 import src.services.offer_utils as utils
 from src.schemas.base_api_schemas import APIPriceChangeData, APIOfferChangeData
-from src.schemas.filters.filter_schemas import PagingFilter
 from src.schemas.filters.offers_filter import OffersFilter
 from src.schemas.offer_schemas import OfferChange, OfferOut, OfferDelete, ImportType, Market, \
     PricingSchemeOut, PricingSchemeCreate, BaseOffer, PricingSchemeFieldCreate, PricingSchemeFieldChange, \
@@ -34,31 +32,35 @@ from src.services.db_metadata import DBMetadataService
 from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
-from src.services.synchronization import ReverseSynchronizationInteractor
+from src.services.synchronization import ReverseSynchronizationInteractor, SynchronizationInteractor
 
 api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
 
 CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes']
-async def get_offers_list(offers_filter: OffersFilter | None = None, paging_filter: PagingFilter | None = None) -> list[OfferOut]:
+async def get_offers_list(session_fabric: ISessionFabric, offers_filter: OffersFilter | None = None) -> list[OfferOut]:
     """ Получение списка карточек """
     res = []
-    async with async_session() as session:
-        async for offer_chunk in db.get_offers_list(session, chunk_size=1000, offers_filter=offers_filter):
+    offer_repository = OfferRepository()
+    async with session_fabric() as session:
+        offer_repository.session = session
+        async for offer_chunk in offer_repository.list(query_filter=offers_filter):
             res += offer_chunk
 
     return res
 
 
-async def change_offers(offers_data: list[OfferChange], user_id: int):
+async def change_offers(offers_data: list[OfferChange],
+                        user_id: int,
+                        session_fabric: ISessionFabric):
     """ Функция для изменения данных в карточках товаров """
     mapping_fields = ['sku', 'name_of_shop', 'market']
 
     if not offers_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No offers to save')
 
-    async with async_session() as session:
+    async with session_fabric() as session:
         settings = await get_user_settings(session, user_id)
 
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
@@ -66,8 +68,12 @@ async def change_offers(offers_data: list[OfferChange], user_id: int):
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=['name', 'description', 'barcodes', 'search_words'])
 
         to_sync_skus = [i.sku for i in offers_data if i.synchronization]
+        sync_interactor = SynchronizationInteractor(
+            DBMetadataService({'Offer': Offer, 'CatalogItem': CatalogItem}),
+            session_fabric
+        )
         if to_sync_skus:
-            await sync_catalog_items_with_offers(session,  skus=to_sync_skus)
+            await sync_interactor(skus=to_sync_skus)
         await recalculate_values(session)
 
 
@@ -86,33 +92,37 @@ async def setup_offers_data(user_id: int):
             logger.info(f'{market.type}({market.name}) offers created: {len(data)}')
 
 
-async def update_offers(user_ids: Sequence[int]):
+async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int]):
     """ Метод для обновления информации о карточках магазинов """
     logger.info('Start update offers')
     mapping_fields = ['sku', 'name_of_shop', 'market']
     start_time = datetime.now()
 
-
     # синхронизируем из каталога в карточки
     reverse_sync_interactor = ReverseSynchronizationInteractor(
         DBMetadataService({'Offer': Offer,
                            'CatalogItem': CatalogItem}),
-        ReverseSyncUnitOfWork(session_factory=async_session))
+        session_fabric)
     await reverse_sync_interactor(skus=[])
-    logger.info('Reverse sync completed')
+    logger.info('Reverse synchronization completed')
 
-    async with async_session() as session:
+    sync_interactor = SynchronizationInteractor(
+        DBMetadataService({'Offer': Offer,
+                           'CatalogItem': CatalogItem}),
+        session_fabric)
+    await sync_interactor(skus=[])
+    logger.info('Synchronization completed')
+
+    async with session_fabric() as session:
         # получение информации о маркетах из БД
         markets = await get_markets(session)
         logger.debug(f"Markets: {markets}")
 
-        # синхронизируем из карточек в каталог
-        await sync_catalog_items_with_offers(session)
         # Перевычисление значений в карточках и их сохранение в БД
         await recalculate_values(session)
 
     # Получаем карточки товаров
-    db_offers = await get_offers_list()
+    db_offers = await get_offers_list(get_session)
     db_offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
     # Создаем переменную с данными для отправки цен в апи
@@ -272,7 +282,8 @@ async def recalculate_values(session: AsyncSession, offers_filter: OffersFilter 
     """ Метод для обновления вычисляемых значений карточек в БД """
     # Получение карточек
     offers: list[OfferOut] = []
-    async for offer_chunk in db.get_offers_list(session, offers_filter=offers_filter):
+    offer_repository = OfferRepository(session)
+    async for offer_chunk in offer_repository.list(query_filter=offers_filter):
         offers += offer_chunk
 
     df = pd.DataFrame([offer.model_dump() for offer in offers])
@@ -300,19 +311,19 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
 
     match import_type:
         case ImportType.TABLE:
-            return await import_offers(data, settings, name_of_shop, market, file_extension)
+            return await import_offers(data, name_of_shop, market, file_extension)
 
         case ImportType.SIZES:
-            return await import_sizes(data, settings, name_of_shop, market, file_extension)
+            return await import_sizes(data, name_of_shop, market, file_extension)
 
         case ImportType.PRICES:
-            return await import_prices(data, settings, name_of_shop, market, file_extension)
+            return await import_prices(data, name_of_shop, market, file_extension)
 
         case _:
             raise NotImplemented(f'Import type "{import_type}" not implemented yet')
 
 
-async def import_offers(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+async def import_offers(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     required_fields = {'sku', 'market', 'name_of_shop'}
 
     df = src.services.base_utils.bytes_to_data_frame(data, file_extension=file_extension)
@@ -350,7 +361,7 @@ async def import_offers(data, settings, name_of_shop: str | None = None, market:
         await recalculate_values(session, df[['sku', 'name_of_shop', 'market']])
 
 
-async def import_prices(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+async def import_prices(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = parce_purchase_list(data, file_extension=file_extension)
 
     async with async_session() as session:
@@ -378,7 +389,7 @@ async def import_prices(data, settings, name_of_shop: str | None = None, market:
         await recalculate_values(session)
 
 
-async def import_sizes(data, settings, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
+async def import_sizes(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
     df = parce_sizes_list(data, file_extension=file_extension)
 
     mapping_columns = []
@@ -403,7 +414,7 @@ async def import_sizes(data, settings, name_of_shop: str | None = None, market: 
 
 async def export_offers(offers_filter: OffersFilter | None = None) -> str:
 
-    offers = await get_offers_list(offers_filter=offers_filter)
+    offers = await get_offers_list(get_session, offers_filter=offers_filter)
     exclude_columns = set()
     exclude_columns.update(*[f'{i}_changed' for i in CONTROL_CHANGES])
 
@@ -466,7 +477,7 @@ async def create_violators_file(market: Market | None = None, name_of_shop: str 
 
         styles = getSampleStyleSheet()
         styles['Normal'].fontName = 'DejaVuSerif'
-        pdfmetrics.registerFont(TTFont('DejaVuSerif', 'src/DejaVuSerif.ttf', 'UTF-8'))
+        pdfmetrics.registerFont(TTFont('DejaVuSerif', 'src/DejaVuSerif.ttf'))
 
         if len(violators):
             f = [

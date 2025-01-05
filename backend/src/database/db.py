@@ -1,3 +1,7 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager, AbstractAsyncContextManager
+from typing import TypeVar
+
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy import create_engine
 from sqlalchemy.engine.reflection import Inspector
@@ -10,8 +14,8 @@ from sqlalchemy.schema import (
     )
 
 from logs import get_logger
-from ..params.config import config
-from .models.base import Base
+from src.params.config import config
+from src.database.models.base import Base
 
 
 logger = get_logger(__name__)
@@ -29,7 +33,17 @@ async_session = async_sessionmaker(
     engine,
     expire_on_commit=False
 )
+ISessionFabric = TypeVar("ISessionFabric")
 
+
+@asynccontextmanager
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    async with async_session() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception as e:
+            logger.error(f'Failed in transaction. {e.__class__.__name__}: {e}')
 
 def drop_everything(engine):
     con = engine.connect()
@@ -70,3 +84,4 @@ def db_create() -> None:
         logger.warning('Database reseted')
     else:
         logger.info('Database up-to-date')
+

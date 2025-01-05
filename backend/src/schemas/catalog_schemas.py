@@ -38,7 +38,7 @@ class CatalogItemCreate(CatalogItemUpdate):
     dollar_cost_price_updated_at: datetime | None = Field(title='Дата обновления ОПТ У.Е.', default=None)
 
 
-class CatalogItem(CatalogItemCreate):
+class PydanticCatalogItem(CatalogItemCreate):
 
     @computed_field(title='Объем', description='Ширина * Высота * Длина / 1000')
     @property

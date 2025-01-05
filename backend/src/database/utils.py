@@ -7,12 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
 from logs import get_logger
-from src.database.db import async_session
+from src.database.db import async_session, ISessionFabric
 from src.database.models.base import Base
 from src.schemas.catalog_schemas import CatalogItemCreate
 from src.shared.exceptions import MappingError
-from src.database.offer_db import get_offers_list
-from src.database.catalog_db import create_catalog_items
+from src.database.offer import OfferRepository
+from src.database.catalog import create_catalog_items
 from src.schemas.filters.offers_filter import SKUOnlyOffersFilter
 
 
@@ -89,12 +89,14 @@ async def _get_or_create(
     return model_schema.model_validate(object_db, from_attributes=True), created
 
 
-async def duplicate_offers_to_catalog() -> None:
+async def duplicate_offers_to_catalog(session_factory: ISessionFabric) -> None:
     """ Создает несозданные в каталоге записи карточек товарах """
     offer_filter = SKUOnlyOffersFilter()
+    offer_repository = OfferRepository()
 
-    async with async_session() as session:
-        async for offers in get_offers_list(session, chunk_size=1000, offers_filter=offer_filter):
+    async with session_factory() as session:
+        offer_repository.session = session
+        async for offers in offer_repository.list(chunk_size=1000, query_filter=offer_filter):
             print("chunks size:", len(offers))
             print("first chunk:", offers[0].model_dump())
             sku_set = set([offers.sku for offers in offers])
