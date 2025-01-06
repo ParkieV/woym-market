@@ -2,6 +2,7 @@ from collections.abc import Sequence, Iterable
 
 from sqlalchemy import TextClause, text
 
+from src.database.models.models import Offer
 from src.schemas.filters.filter_schemas import BaseFilter
 
 
@@ -58,9 +59,75 @@ class SyncUpdatingColumnFilter(BaseFilter[str]):
             ELSE offers.barcodes
             END"""}
 
+        # Формируем словарь значений для проверки, что поле было изменено
+        tracking_columns = {getattr(Offer, f'{column}_changed') if getattr(Offer, f'{column}_changed') else None for column in self.updating_columns}
+        detect_changes_values = {
+            column: f"""
+                offers.{column} OR
+                CONCAT(offers.{column}, '') != CONCAT(
+                    COALESCE(catalog_items.{column}, offers.{column}), ''
+                    )
+            """
+            for column in tracking_columns
+        }
+
+        # detect_changes_values = {
+        #     getattr(Offer, f'{col}_changed'): or_(
+        #         getattr(Offer, f'{col}_changed'),
+        #         func.concat(getattr(Offer, col), '') != func.concat(
+        #             func.coalesce(getattr(CatalogItem, col), getattr(Offer, col)), '')
+        #     )
+        #     for col in common_columns if
+        #     all((getattr(Offer, f'{col}_changed', None), getattr(CatalogItem, col, None), getattr(Offer, col, None)))
+        # }
+
+        detect_search_words_changes_for_ozon = {
+            'search_words_changed': f"""
+                CASE
+                    WHEN offers.market = 'ozon' THEN (offers.search_words_changed OR CONCAT(offers.search_words, '') != CONCAT(
+                        COALESCE(catalog_items.search_words, offers.search_words ), '')
+                    )
+                    ELSE offers.search_words_changed
+            """
+        }
+
+        # Поисковые слова изменяемые только для озона, поэтому тречим изменения только у него
+        # detect_search_words_changes_for_ozon = {
+        #     'search_words_changed': case(
+        #         (Offer.market == 'ozon', or_(
+        #             Offer.search_words_changed,
+        #             func.concat(Offer.search_words, '') != func.concat(
+        #                 func.coalesce(CatalogItem.search_words, Offer.search_words), '')
+        #         )),
+        #         else_=Offer.search_words_changed)
+        # }
+
+        detect_barcodes_changes_for_yandex = {
+            'barcodes_changed': f"""
+                CASE
+                    WHEN offers.market = 'yandex' THEN (offers.barcodes_changed OR CONCAT(offers.barcodes, '') != CONCAT(
+                        COALESCE(catalog_items.barcodes, offers.barcodes ), '')
+                    )
+                    ELSE offers.barcodes_changed
+            """
+        }
+        # Штрихкоды изменяемые только для яндекса, поэтому тречим изменения только у него
+        # detect_barcodes_changes_for_yandex = {
+        #     'barcodes_changed': case(
+        #         (Offer.market == 'yandex', or_(
+        #             Offer.barcodes_changed,
+        #             func.concat(Offer.barcodes, '') != func.concat(func.coalesce(CatalogItem.barcodes, Offer.barcodes),
+        #                                                            '')
+        #
+        #         )),
+        #         else_=Offer.barcodes_changed)
+        # }
+
         updating_values.update(update_search_words)
         updating_values.update(update_barcodes)
-
+        updating_values.update(detect_barcodes_changes_for_yandex)
+        updating_values.update(detect_changes_values)
+        updating_values.update(detect_search_words_changes_for_ozon)
 
         for k, v in updating_values.items():
             query += f"{k} = {v},\n\t"
