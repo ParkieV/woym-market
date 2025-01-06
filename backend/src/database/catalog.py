@@ -10,7 +10,7 @@ from src.database.interfaces import ICatalogRepository
 from src.database.models.models import CatalogItem, Offer
 from src.schemas import catalog_schemas as schemas
 from src.schemas.catalog_schemas import PydanticCatalogItem
-from src.schemas.filters.db_catalog import OfferDataFilter, SkuInArrayFilter
+from src.schemas.filters.db_catalog import OfferDataFilter, SkuInArrayFilter, ReverseSyncUpdatingColumnFilter
 from src.schemas.filters.interface import IBaseFilter
 
 
@@ -86,13 +86,13 @@ class CatalogRepository(ICatalogRepository[PydanticModel]):
                  skus: Sequence[str] | None = None) -> None:
         offer_data_filter = OfferDataFilter()
         sku_in_array_filter = SkuInArrayFilter('catalog_items')
+        updating_colmuns_filter = ReverseSyncUpdatingColumnFilter(updating_columns)
 
         query = "UPDATE catalog_items\n\tSET "
 
-        for column in updating_columns:
-            query += f'{column} = offers.{column},\n'
+        query = updating_colmuns_filter(query)
 
-        query = offer_data_filter(query[:-2]+'\n')
+        query = offer_data_filter(query[:-3]+'\n')
 
         if skus and len(skus) > 0:
             sku_in_array_filter.skus = skus

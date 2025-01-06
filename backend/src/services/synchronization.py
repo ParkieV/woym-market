@@ -32,7 +32,6 @@ class ReverseSynchronizationInteractor:
         # Колонки, значения которых будут обновлены
         updating_columns = (offer_columns & catalog_columns) - self.exclude_fields
 
-
         async with self.session_fabric() as session:
             catalog_repo.session = session
             await catalog_repo.synchronization_catalog_from_offer(updating_columns, skus)
