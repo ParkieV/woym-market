@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Sequence
+from collections.abc import Sequence, Iterable
 
 from src.database.catalog import CatalogRepository
 from src.database.db import ISessionFabric
@@ -21,16 +21,17 @@ class ReverseSynchronizationInteractor:
 
     async def __call__(self,
                  skus: Sequence[str],
-                 exclude_fields: Sequence[str] | None = None):
+                 exclude_fields: Iterable[str] | None = None):
         if exclude_fields:
             self.exclude_fields.update(exclude_fields)
 
         offer_columns = set(self.metadata_service.get_columns('Offer'))
         catalog_columns = set(self.metadata_service.get_columns('CatalogItem'))
-        catalog_repo = CatalogRepository()
 
         # Колонки, значения которых будут обновлены
         updating_columns = (offer_columns & catalog_columns) - self.exclude_fields
+
+        catalog_repo = CatalogRepository()
 
         async with self.session_fabric() as session:
             catalog_repo.session = session
@@ -51,16 +52,17 @@ class SynchronizationInteractor:
 
     async def __call__(self,
                  skus: Sequence[str],
-                 exclude_fields: Sequence[str] | None = None):
+                 exclude_fields: Iterable[str] | None = None):
         if exclude_fields:
             self.exclude_fields.update(exclude_fields)
 
         offer_columns = set(self.metadata_service.get_columns('Offer'))
         catalog_columns = set(self.metadata_service.get_columns('CatalogItem'))
-        offer_repository = OfferRepository()
 
         # Колонки, значения которых будут обновлены
         updating_columns = (offer_columns & catalog_columns) - self.exclude_fields
+
+        offer_repository = OfferRepository()
 
         async with self.session_fabric() as session:
             offer_repository.session = session

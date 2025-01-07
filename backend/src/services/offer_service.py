@@ -33,6 +33,7 @@ from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
 from src.services.synchronization import ReverseSynchronizationInteractor, SynchronizationInteractor
+from src.services.update_offer_from_api import UpdateOfferFromApi
 
 api_wrapper = APIWrapper()
 
@@ -188,8 +189,10 @@ async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int])
     for tracked_column in CONTROL_CHANGES:
         api_offers_df[f'{tracked_column}_changed'] = False
 
-    await db.update_offers(session, api_offers_df, mapping_columns=['name_of_shop', 'market'])
-    logger.info(f'Updated db offers: {len(api_offers_df)}')
+    update_api_interactor = UpdateOfferFromApi(DBMetadataService({'Offer': Offer,
+                                                                  'CatalogItem': CatalogItem}),
+                                               get_session)
+    await update_api_interactor(api_offers_df, skus=[])
 
     # Удаляем товары
     logger.warning(f"Offers to delete: {len(to_delete_offers)}")
