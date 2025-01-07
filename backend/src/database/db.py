@@ -44,6 +44,8 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
             await session.commit()
         except Exception as e:
             logger.error(f'Failed in transaction. {e.__class__.__name__}: {e}')
+            with open('error.log', 'w+') as f:
+                f.write(f'Failed in transaction. {e.__class__.__name__}: {e}')
 
 def drop_everything(engine):
     con = engine.connect()

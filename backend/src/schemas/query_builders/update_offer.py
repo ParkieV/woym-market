@@ -1,17 +1,13 @@
-from cmath import nan
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence, Generator
 from types import NoneType
-from typing import Any
-
+from typing import Any, overload
 
 from src.schemas.filters.filter_schemas import BaseFilter
 
 
 class CreateTempTable(BaseFilter):
     def __init__(self,
-                 data: Iterable[Mapping[str, Any]],
-                 updated_columns: Iterable[str]):
-        self.updated_columns = updated_columns
+                 data: Iterable[Mapping[str, Any]]):
         self.data = data
 
     def __call__(self, query):
@@ -29,7 +25,12 @@ class CreateTempTable(BaseFilter):
 
         for row in self.data:
             for key, value in row.items():
-                if key in self.updated_columns:
+                if key == 'search_words':
+                    value = ''
+
+                if key == 'price_index':
+                    query_create += f"{key} VARCHAR,\n\t"
+                else:
                     query_create += f"{key} {_type_python_postgresql_dict[type(value)] if key != 'vendor_code' else 'BIGINT'},\n\t"
             break
 
@@ -38,43 +39,47 @@ class CreateTempTable(BaseFilter):
 
 class InsertTempTable(BaseFilter):
     def __init__(self,
-                 data: Iterable[Mapping[str, Any]],
-                 updated_columns: Iterable[str]):
-        self.updated_columns = updated_columns
+                 data: list[Mapping[str, Any]]):
         self.data = data
 
-    def __call__(self, query):
-        i = 0
-        key_list = []
-        query_second = ""
-        for row in self.data:
-            row_list = []
-            for key, value in row.items():
-                if key in self.updated_columns:
-                    if i == 0:
-                        key_list.append(key)
-                    if key == 'vendor_code':
-                        row_list.append(str(int(value)))
-                    else:
-                        row_list.append(str(value))
-            if len(row_list) > 0:
-                query_second += f"({str(row_list)[1:-1]}),\n\t"
+    def __call__(self, query: str) -> Generator[list[str], list[dict[str, Any]]]:
+        data = self.data
 
-            i += 1
+        key_list = [key for key in data[0].keys()]
 
-        columns_str = str(key_list)[1:-1].replace("\'", f"\"")
-        query_first = f"INSERT INTO temp_updates ({columns_str})\nVALUES\n\t"
+        columns_str = '("' + '", "'.join(key_list) + '")'
+        query_first = f"INSERT INTO temp_updates {columns_str}\nVALUES\n\t"
+        # Определяем количество чанков
+        for i in range((len(data) // 950) + 1):
+            insert_data = {}
+            query_second = ""
+            # Разбиваем данные по чанкам для обхода ограничения на количество значений в одном запросе SQLAlchemy
+            for j in range(950 * i, min(len(data), 950 * (i + 1))):
+                insert_data.update({f'{key}_{j}': data[j][key] for key in key_list})
+                row_str = '(' + ', '.join([f':{column}_{j}' for column in key_list]) + ')'
+                query_second += f"{row_str},\n\t"
+            if len(insert_data) == 0:
+                return
+            query_insert: str = query_first + query_second[:-3] + ';'
 
-        query = query_first + query_second[:-3] + ';'
-        return query
+            yield query_insert, insert_data
+
 
 class UpdateOfferWithTempTable(BaseFilter):
     def __init__(self,
-                 updating_columns: Iterable[str]):
-        self.updating_columns = updating_columns
+                 columns: Iterable[str],
+                 synced_columns: Iterable[str]):
+        self.columns = columns
+        self.synced_columns = synced_columns
 
     def __call__(self, query):
-        for column in self.updating_columns:
-            query += f"{column} = temp_updates.{column},\n\t"
-        query = query[:-3] + f'\nFROM temp_updates\nWHERE offers.sku=temp_updates.sku AND offers.market=temp_updates.market AND offers.name_of_shop = temp_updates.name_of_shop AND offers.synchronization = false;'
+        for column in self.columns:
+            if column in self.synced_columns:
+                query += f"""{column} = CASE
+                WHEN offers.synchronization = true THEN offers.{column}
+                ELSE temp_updates.{column}
+                END,\n\t"""
+            else:
+                query += f"{column} = temp_updates.{column},\n\t"
+        query = query[:-3] + f'\nFROM temp_updates\nWHERE offers.sku=temp_updates.sku AND offers.market=temp_updates.market AND offers.name_of_shop = temp_updates.name_of_shop;'
         return query
