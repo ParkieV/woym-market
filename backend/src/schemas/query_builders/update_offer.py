@@ -59,8 +59,7 @@ class InsertTempTable(BaseFilter):
                         row_list.append(str(value))
             if len(row_list) > 0:
                 query_second += f"({str(row_list)[1:-1]}),\n\t"
-            if i == 1:
-                break
+
             i += 1
 
         columns_str = str(key_list)[1:-1].replace("\'", f"\"")
@@ -77,5 +76,5 @@ class UpdateOfferWithTempTable(BaseFilter):
     def __call__(self, query):
         for column in self.updating_columns:
             query += f"{column} = temp_updates.{column},\n\t"
-        query = query[:-3] + f'\nFROM temp_updates\nWHERE offers.sku=temp_updates.sku AND offers.market=temp_updates.market AND offers.name_of_shop = temp_updates.name_of_shop;'
+        query = query[:-3] + f'\nFROM temp_updates\nWHERE offers.sku=temp_updates.sku AND offers.market=temp_updates.market AND offers.name_of_shop = temp_updates.name_of_shop AND offers.synchronization = false;'
         return query
