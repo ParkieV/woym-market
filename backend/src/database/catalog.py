@@ -1,19 +1,105 @@
-from typing import Iterable
+from typing import Iterable, AsyncGenerator, TypeVar, Sequence
 
 import pandas as pd
+from pydantic import BaseModel
 from sqlalchemy import select, update, func, or_, case, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.database.interfaces import ICatalogRepository
 from src.database.models.models import CatalogItem, Offer
 from src.schemas import catalog_schemas as schemas
+from src.schemas.catalog_schemas import PydanticCatalogItem
+from src.schemas.filters.db_catalog import OfferDataFilter, SkuInArrayFilter, ReverseSyncUpdatingColumnFilter
+from src.schemas.filters.interface import IBaseFilter
 
 
-async def get_all_catalog_items(session: AsyncSession) -> list[CatalogItem]:
-    catalog_query = select(CatalogItem).options(selectinload(CatalogItem.synchronization))
-    return [schemas.CatalogItem.model_validate(i, from_attributes=True) for i in
-            (await session.execute(catalog_query)).scalars()]
+PydanticModel = TypeVar("PydanticModel", bound=BaseModel)
 
+class CatalogRepository(ICatalogRepository[PydanticModel]):
+
+    @property
+    def session(self):
+        if self._session is None:
+            raise ValueError('Session is not initialized')
+        return self._session
+
+    @session.setter
+    def session(self, session: AsyncSession):
+        self._session = session
+
+    def __init__(self, session: AsyncSession | None = None):
+        self._session = session
+
+    async def get(self,
+                  identification: str) -> PydanticModel:
+        ...
+
+    async def list(self,
+                   chunk_size: int | None = None,
+                   query_filter: IBaseFilter | None = None) -> AsyncGenerator[list[PydanticModel], None]:
+        """
+        Return list of catalog items using chunks
+        :param chunk_size: size of chunk
+        :param query_filter: filters for selecting offers
+        :return: Batch of offers
+        """
+        query = select(CatalogItem).options(selectinload(CatalogItem.synchronization))
+
+        if query_filter is not None:
+            query = query_filter(query)
+
+        offset = 0
+        while True:
+            query = query.limit(chunk_size).offset(offset)
+            chunk = (await self.session.execute(query)).scalars().all()
+            res = [PydanticCatalogItem.model_validate(item, from_attributes=True) for item in chunk]
+
+            if len(res) == 0:
+                return
+
+            yield res
+
+            if chunk_size is None:
+                return
+            offset += chunk_size
+
+    async def create(self, data: PydanticModel) -> None:
+        ...
+
+    async def create_many(self,
+                    data: Sequence[PydanticModel]) -> None:
+        ...
+
+    async def update(self,
+                     identification: str,
+                     data: PydanticModel) -> None:
+        ...
+
+    async def update_many(self,
+                          data: Sequence[PydanticModel],
+                          query_filter: IBaseFilter | None = None) -> None:
+        ...
+
+    async def synchronization_catalog_from_offer(self,
+                 updating_columns: Iterable[str],
+                 skus: Sequence[str] | None = None) -> None:
+        offer_data_filter = OfferDataFilter()
+        sku_in_array_filter = SkuInArrayFilter('catalog_items')
+        updating_colmuns_filter = ReverseSyncUpdatingColumnFilter(updating_columns)
+
+        query = "UPDATE catalog_items\n\tSET "
+
+        query = updating_colmuns_filter(query)
+
+        query = offer_data_filter(query[:-3]+'\n')
+
+        if skus and len(skus) > 0:
+            sku_in_array_filter.skus = skus
+            query = sku_in_array_filter(query)
+
+        query = text(query)
+        await self.session.execute(query)
 
 async def change_catalog_items(session: AsyncSession, items: list[schemas.CatalogItemUpdate] | pd.DataFrame) -> None:
     for item in items:
@@ -36,7 +122,7 @@ async def change_catalog_items(session: AsyncSession, items: list[schemas.Catalo
         item_stmp = update(CatalogItem).where(CatalogItem.sku == item.sku).values(**changed_data)
         await session.execute(item_stmp)
 
-    await session.commit()
+    await session.flush()
 
 
 async def set_offers_sync(session: AsyncSession, items: list[schemas.SynchronizationOffer]):

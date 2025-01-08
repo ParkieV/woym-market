@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import APIRouter, UploadFile, File, Depends, Query, HTTPException
 from starlette import status
 
@@ -20,7 +22,7 @@ disk = YandexDiscAPI(
 
 @router.delete("")
 async def delete_source(path: str):
-    disk.delete_source(path)
+    disk.delete_source(Path(path))
     return {'status': 'OK'}
 
 

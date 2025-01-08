@@ -1,4 +1,4 @@
-from collections.abc import Hashable, AsyncGenerator
+from collections.abc import Hashable, AsyncGenerator, Sequence
 from datetime import datetime
 from operator import or_
 
@@ -6,17 +6,109 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, func
+from sqlalchemy import select, update, delete, func, text
 from sqlalchemy.orm import selectinload
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
+from .interfaces import IOfferRepository
 from .models.models import Offer, PricingScheme, PricingSchemeField, \
     remaining_stocks_subuery
 from typing import Iterable, Any, Type, TypeVar
 from fastapi.exceptions import HTTPException
 from fastapi import status
 
+from ..schemas.filters.db_catalog import CatalogDataFilter, SkuInArrayFilter, SyncUpdatingColumnFilter
 from ..schemas.filters.filter_schemas import PagingFilter
+from ..schemas.filters.interface import IBaseFilter
 from ..schemas.filters.offers_filter import OffersFilter, OffersSourceFilter
+
+
+PydanticModel = TypeVar("PydanticModel", bound=BaseModel)
+
+class OfferRepository(IOfferRepository[PydanticModel]):
+
+    @property
+    def session(self):
+        if self._session is None:
+            raise ValueError('Session is not initialized')
+        return self._session
+
+    @session.setter
+    def session(self, session: AsyncSession):
+        self._session = session
+
+    def __init__(self, session: AsyncSession | None = None):
+        self._session = session
+
+    async def get(self,
+                  identification: str) -> PydanticModel:
+        ...
+
+    async def list(self,
+                   chunk_size: int | None = None,
+                   query_filter: IBaseFilter | None = None) -> AsyncGenerator[list[PydanticModel], None]:
+        """
+        Get offers from DB using chunks
+        :param session: SQLAlchemy asynchronous session
+        :param chunk_size: size of chunk
+        :param query_filter: filters for selecting offers
+        :return: Batch of offers
+        """
+        query = select(Offer)
+
+        if query_filter is not None:
+            query = query_filter(query)
+
+        offset = 0
+        while True:
+            query = query.limit(chunk_size).offset(offset)
+            chunk = (await self.session.execute(query)).scalars().all()
+            res = [OfferOut.model_validate(item, from_attributes=True) for item in chunk]
+
+            if len(res) == 0:
+                return
+
+            yield res
+
+            if chunk_size is None:
+                return
+            offset += chunk_size
+
+    async def create(self, data: PydanticModel) -> None:
+        ...
+
+    async def create_many(self,
+                    data: Sequence[PydanticModel]) -> None:
+        ...
+
+    async def update(self,
+                     identification: str,
+                     data: PydanticModel) -> None:
+        ...
+
+    async def update_many(self,
+                          data: Sequence[PydanticModel],
+                          query_filter: IBaseFilter | None = None) -> None:
+        ...
+
+    async def synchronization_offer_from_catalog(self,
+                 updating_columns: Iterable[str],
+                 skus: Sequence[str] | None = None) -> None:
+        catalog_data_filter = CatalogDataFilter()
+        sku_in_array_filter = SkuInArrayFilter('offers')
+        sync_updating_filter = SyncUpdatingColumnFilter(updating_columns)
+
+        query = "UPDATE offers\n\tSET "
+        query = sync_updating_filter(query)
+
+
+        query = catalog_data_filter(query[:-3]+'\n')
+
+        if skus and len(skus) > 0:
+            sku_in_array_filter.skus = skus
+            query = sku_in_array_filter(query)
+
+        query = text(query)
+        await self.session.execute(query)
 
 
 def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
@@ -28,39 +120,6 @@ def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
     data = data.replace(np.nan, None)
     data = data.to_dict('records')
     return data
-
-
-async def get_offers_list(session: AsyncSession,
-                          *,
-                          chunk_size: int | None = None,
-                          offers_filter: OffersFilter | None = None) -> AsyncGenerator[list[OfferOut], None]:
-    """
-    Get offers from DB using chunks
-    :param session: SQLAlchemy asynchronous session
-    :param chunk_size: size of chunk
-    :param offers_filter: filters for selecting offers
-    :return: Batch of offers
-    """
-    query = select(Offer)
-
-    if offers_filter:
-        query = offers_filter(query)
-
-
-    offset = 0
-    while True:
-        query = query.limit(chunk_size).offset(offset)
-        offer_chunk = (await session.execute(query)).scalars().all()
-        res = [OfferOut.model_validate(offer, from_attributes=True) for offer in offer_chunk]
-
-        if len(res) == 0:
-            return
-
-        yield res
-
-        if chunk_size is None:
-            return
-        offset += chunk_size
 
 
 def clear_dict_from_keys(keys: list[Hashable], dictionary: dict[Hashable, Any]) -> dict[Hashable, Any]:

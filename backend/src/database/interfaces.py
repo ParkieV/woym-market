@@ -1,27 +1,13 @@
 from abc import abstractmethod
-from collections.abc import Sequence
-from typing import Protocol, TypeVar
+from collections.abc import Sequence, Iterable
+from typing import Protocol, TypeVar, AsyncGenerator
 
 from src.schemas.filters.interface import IBaseFilter
-from src.services.catalog_service import UpdateCatalogService
 
 T = TypeVar('T')
-Repository = TypeVar('Repository')
 
 
-class IAsyncCatalogRepository(Protocol[T]):
-
-    @abstractmethod
-    async def update(self,
-               identification: str,
-               data: T) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def update_many(self,
-               query_filter: IBaseFilter,
-               data: Sequence[T]) -> None:
-        raise NotImplementedError
+class ICatalogRepository(Protocol[T]):
 
     @abstractmethod
     async def get(self,
@@ -31,7 +17,7 @@ class IAsyncCatalogRepository(Protocol[T]):
     @abstractmethod
     async def list(self,
                      chunk_size: int | None,
-                     query_filter: IBaseFilter) -> list[T]:
+                     query_filter: IBaseFilter | None = None) -> AsyncGenerator[list[T], None]:
         raise NotImplementedError
 
     @abstractmethod
@@ -44,50 +30,61 @@ class IAsyncCatalogRepository(Protocol[T]):
                     data: Sequence[T]) -> None:
         raise NotImplementedError
 
-
-class IUnitOfWork(Protocol[Repository]):
-    repository: Repository
-
     @abstractmethod
-    def __enter__(self) -> 'IUnitOfWork':
+    async def update(self,
+               identification: str,
+               data: T) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def update_many(self,
+                          data: Sequence[T],
+                          query_filter: IBaseFilter | None = None) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def commit(self) -> None:
+    async def synchronization_catalog_from_offer(self,
+                 updating_columns: Iterable[str],
+                 skus: Sequence[str] | None = None) -> None:
+        raise NotImplementedError
+
+class IOfferRepository(Protocol[T]):
+
+    @abstractmethod
+    async def get(self,
+                  identification: str) -> T:
         raise NotImplementedError
 
     @abstractmethod
-    def rollback(self) -> None:
+    async def list(self,
+                     chunk_size: int | None,
+                     query_filter: IBaseFilter | None = None) -> AsyncGenerator[list[T], None]:
         raise NotImplementedError
 
     @abstractmethod
-    def close(self) -> None:
-        raise NotImplementedError
-
-
-class IAsyncReverseSyncUnitOfWork(Protocol):
-    reverse_sync_service: UpdateCatalogService
-
-    @abstractmethod
-    async def __aenter__(self) -> 'IAsyncReverseSyncUnitOfWork':
+    async def create(self,
+               data: T) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def create_many(self,
+                    data: Sequence[T]) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    async def commit(self) -> None:
+    async def update(self,
+               identification: str,
+               data: T) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    async def rollback(self) -> None:
+    async def update_many(self,
+                          data: Sequence[T],
+                          query_filter: IBaseFilter | None = None) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    async def close(self) -> None:
+    async def synchronization_offer_from_catalog(self,
+                 updating_columns: Iterable[str],
+                 skus: Sequence[str] | None = None) -> None:
         raise NotImplementedError

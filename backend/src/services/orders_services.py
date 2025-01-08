@@ -6,7 +6,7 @@ from starlette import status
 from logs import get_logger
 from src.api.wrapper import APIWrapper
 from datetime import datetime, timedelta
-from src.database import warehouse_db, offer_db
+from src.database import warehouse_db, offer
 from src.database.db import async_session
 from src.database.models.models import Offer
 from src.schemas.filters.filter_schemas import PagingFilter
@@ -25,7 +25,7 @@ async def setup_orders() -> None:
     start = end - timedelta(days=120)
 
     async with async_session() as session:
-        offers_idents = await offer_db.get_offers_fields(session, [Offer.id, Offer.sku, Offer.market, Offer.name_of_shop])
+        offers_idents = await offer.get_offers_fields(session, [Offer.id, Offer.sku, Offer.market, Offer.name_of_shop])
         if not offers_idents:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Для получения остатков требуется наличие товаров')
 

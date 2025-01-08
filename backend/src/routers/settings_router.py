@@ -1,6 +1,5 @@
 from fastapi import Depends, APIRouter
 
-from scheduls import logger
 from src.dependencies.users import get_current_user, require_staff
 from src.schemas.settings_schemas import LogsOut, SettingsOut, SettingsUpdate, TableInfoOut, TableInfoUpdate, MarketOut, \
     MarketCreate, MarketUpdate, TableInfoCreate

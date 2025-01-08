@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Any
 
 from sqlalchemy import (
     ForeignKey,
@@ -46,10 +45,6 @@ class Offer(Base):
     sku = mapped_column(String, index=True, nullable=False) # same as id
 
     name = mapped_column(String, nullable=True)
-    name_changed = mapped_column(Boolean, nullable=False, default=False)
-
-    description = mapped_column(String, nullable=True, default=None, server_default=None)
-    description_changed = mapped_column(Boolean, nullable=False, default=False)
 
     self_weight = mapped_column(Float, default=None, nullable=True)
     self_length = mapped_column(Float, default=None, nullable=True)
@@ -61,6 +56,10 @@ class Offer(Base):
     yandex_width = mapped_column(Float, nullable=True)
     yandex_height = mapped_column(Float, nullable=True)
 
+    volume = mapped_column(Float, nullable=True)
+    yandex_volume = mapped_column(Float, nullable=True)
+    volume_difference = mapped_column(Float, nullable=True)
+
     photo = mapped_column(String, nullable=True)
     name_of_shop = mapped_column(String, index=True)
     market = mapped_column(String)
@@ -69,7 +68,6 @@ class Offer(Base):
 
     # countable/editable values
     dollar_cost_price = mapped_column(Float, nullable=True)
-    dollar_cost_price_updated_at = mapped_column(DateTime, nullable=True, default=None)
     cost_price = mapped_column(Float, nullable=True)
     total_price_coeff = mapped_column(Float)
     total_price_min_additional = mapped_column(Float)
@@ -79,32 +77,17 @@ class Offer(Base):
     margin = mapped_column(Float, nullable=True)
     fbo = mapped_column(Float, nullable=True)
 
-    content_rating = mapped_column(Float, nullable=True)
-    price_index = mapped_column(String, nullable=True)
-    supplier_available = mapped_column(Boolean, default=False)
-    volume_profitability_ratio = mapped_column(Float, nullable=True, default=None)
-    days_to_zero_profit = mapped_column(Float, nullable=True, default=None)
-    market_discount_in_percent = mapped_column(Float, nullable=True, default=None)
-    auto_participation_in_promotions = mapped_column(Boolean, default=False)
-    recommended_retail_price = mapped_column(Float, nullable=True, default=None)
-    stop_price = mapped_column(Float, nullable=True, default=None)
-
     attractive_price_threshold = mapped_column(Float, nullable=True)
     moderately_attractive_price_threshold = mapped_column(Float, nullable=True)
     best_place_wm = mapped_column(String, nullable=True)
     min_price_without_market = mapped_column(Float, nullable=True)
     best_place_im = mapped_column(String, nullable=True)
-    best_place_im_link = mapped_column(String, nullable=True, default=None)
     min_price_in_market = mapped_column(Float, nullable=True)
     your_price_for_buyers = mapped_column(Float, nullable=True)
     min_general_markets_price = mapped_column(Float, nullable=True)
-    logistic_price = mapped_column(Float, default=0)
-    your_promotion_price = mapped_column(Float, nullable=True, default=None)
 
     current_price = mapped_column(Float, nullable=True)
     target_price = mapped_column(Float, nullable=True, default=None)
-
-    catalog_note = mapped_column(String, nullable=False, default='', server_default=text("''"))
 
     # User additional fields
     note_1 = mapped_column(String, default='', nullable=False)
@@ -118,20 +101,42 @@ class Offer(Base):
 
     hidden = mapped_column(Boolean, default=False, nullable=False)
 
+    supplier_available = mapped_column(Boolean, default=False)
+    content_rating = mapped_column(Float, nullable=True)
+    price_index = mapped_column(String, nullable=True)
+    volume_profitability_ratio = mapped_column(Float, nullable=True, default=None)
+    days_to_zero_profit = mapped_column(Float, nullable=True, default=None)
+    market_discount_in_percent = mapped_column(Float, nullable=True, default=None)
+
     pricing_scheme_name = mapped_column(String, ForeignKey('pricing_schemes.name', ondelete='RESTRICT'), nullable=False)
-    pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
+    dollar_cost_price_updated_at = mapped_column(DateTime, nullable=True, default=None)
+    logistic_price = mapped_column(Float, default=0)
+
+    auto_participation_in_promotions = mapped_column(Boolean, default=False)
+    stop_price = mapped_column(Float, nullable=True, default=None)
+    recommended_retail_price = mapped_column(Float, nullable=True, default=None)
+    wholesale_dollar_cost_price = mapped_column(Float, nullable=True)
 
     barcodes = mapped_column(String, nullable=True, default=None)
-    barcodes_changed = mapped_column(Boolean, nullable=False, default=False)
-
+    your_promotion_price = mapped_column(Float, nullable=True, default=None)
     use_promotion_price = mapped_column(Boolean, default=False)
-    wholesale_dollar_cost_price = mapped_column(Float, nullable=True)
     vendor_code = mapped_column(BigInteger, nullable=True, default=None)
     search_words = mapped_column(String, nullable=True, default=None)
     search_words_changed = mapped_column(Boolean, default=False, nullable=False)
+    best_place_im_link = mapped_column(String, nullable=True, default=None)
 
     synchronization = mapped_column(Boolean, default=False, nullable=False)
+    name_changed = mapped_column(Boolean, nullable=False, default=False)
+    description = mapped_column(String, nullable=True, default=None)
+    description_changed = mapped_column(Boolean, nullable=False, default=False)
+    catalog_note = mapped_column(String, nullable=False, default='', server_default=text("''"))
+    barcodes_changed = mapped_column(Boolean, nullable=False, default=False)
+    self_weight_changed = mapped_column(Boolean, nullable=False, default=False)
+    self_length_changed = mapped_column(Boolean, nullable=False, default=False)
+    self_width_changed = mapped_column(Boolean, nullable=False, default=False)
+    self_height_changed = mapped_column(Boolean, nullable=False, default=False)
 
+    pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
     stocks = relationship('OfferStock')
 
     @classmethod
@@ -308,17 +313,27 @@ class CatalogItem(Base):
     self_length = mapped_column(Float, nullable=True, default=None)
     self_width = mapped_column(Float, nullable=True, default=None)
     self_height = mapped_column(Float, nullable=True, default=None)
-    volume = mapped_column(Float, nullable=True, default=None)
-    catalog_note = mapped_column(String, nullable=True, server_default=text("'Новый товар'"))
     use_promotion_price = mapped_column(Boolean, nullable=False, default=False)
     wholesale_dollar_cost_price = mapped_column(Float, nullable=True, default=None)
     supplier_available = mapped_column(Boolean, nullable=False, default=False)
-    dollar_cost_price_updated_at = mapped_column(DateTime, nullable=True, default=None)
-    description = mapped_column(String, nullable=True, default=None, server_default=None)
     search_words = mapped_column(String, nullable=True, default=None, server_default=None)
     search_words_changed = mapped_column(Boolean, nullable=False, default=False)
     name = mapped_column(String, nullable=True, default=None, server_default=None)
     barcodes = mapped_column(String, nullable=True, default=None, server_default=None)
+    volume = mapped_column(Float, nullable=True, default=None)
+    catalog_note = mapped_column(String, nullable=True, server_default=text("'Новый товар'"))
+    dollar_cost_price_updated_at = mapped_column(DateTime, nullable=True, default=None)
+    description = mapped_column(String, nullable=True, default=None, server_default=None)
+    self_weight_changed = mapped_column(Boolean, nullable=False, default=False)
+    self_length_changed = mapped_column(Boolean, nullable=False, default=False)
+    self_width_changed = mapped_column(Boolean, nullable=False, default=False)
+    self_height_changed = mapped_column(Boolean, nullable=False, default=False)
+    description_changed = mapped_column(Boolean, nullable=False, default=False)
+    name_changed = mapped_column(Boolean, nullable=False, default=False)
+    barcodes_changed = mapped_column(Boolean, nullable=False, default=False)
+    use_promotion_price_changed = mapped_column(Boolean, nullable=False, default=False)
+    wholesale_dollar_cost_price_changed = mapped_column(Boolean, nullable=False, default=False)
+    supplier_available_changed = mapped_column(Boolean, nullable=False, default=False)
 
     reverse_sync_offer_id = mapped_column(Integer, ForeignKey('offers.id'), nullable=True, default=None)
 
