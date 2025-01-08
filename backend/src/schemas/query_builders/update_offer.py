@@ -30,6 +30,10 @@ class CreateTempTable(BaseFilter):
 
                 if key == 'price_index':
                     query_create += f"{key} VARCHAR,\n\t"
+                elif key == 'group_sellers_amount':
+                    query_create += f"{key} INTEGER,\n\t"
+                elif key == 'business_id':
+                    query_create += f"{key} INTEGER,\n\t"
                 else:
                     query_create += f"{key} {_type_python_postgresql_dict[type(value)] if key != 'vendor_code' else 'BIGINT'},\n\t"
             break
