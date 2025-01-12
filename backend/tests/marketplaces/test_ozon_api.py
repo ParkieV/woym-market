@@ -19,15 +19,17 @@ import pandas as pd  #noqa
 class TestOzonAPI:
 
     async def test_get_offers_attributes(self, api: OzonAPI):
-        idents = api._get_offers_identifiers()
+        idents = []
+        async for chunk in api._get_offers_attributes_by_chunks()
+            idents += chunk
         attributes = api._get_offers_attributes(idents)
         assert isinstance(attributes, dict)
 
-    # async def test_set_search_words(self, api: OzonAPI):
+    # async def test_set_search_words(self, api: OzonApi):
     #     await api._set_search_words([('28165', 'секатор; сучкорез')])
 
     async def test_get_clasters_info(self, api: OzonAPI):
-        clasters = api._get_clasters_info()
+        clasters = api._get_clusters_info()
         assert isinstance(clasters, list)
         assert len(clasters)
 

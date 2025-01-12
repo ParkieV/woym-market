@@ -1,14 +1,13 @@
 from abc import ABC
-from typing import Type
 
 import pytest
 
-from src.api.base_api import BaseAPI
+from src.api.interfaces import IApiGateway
 from src.schemas.base_api_schemas import APIOffer, APIWarehouse
 
 
 @pytest.fixture(name='api')
-def marketplace_api_instance(api_class: Type[BaseAPI], auth_data: dict) -> BaseAPI:
+def marketplace_api_instance(api_class: type[IApiGateway], auth_data: dict) -> IApiGateway:
     return api_class(**auth_data)  # type: ignore
 
 

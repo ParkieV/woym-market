@@ -1,38 +1,28 @@
-from enum import Enum
-from typing import Type
-from .base_api import BaseAPI
-from fastapi.exceptions import HTTPException
-from fastapi import status
-from .yandex.api import YandexMarketAPI
-from .ozon.api import OzonAPI
-from .wildberries.api import WildberriesAPI
+
+from src.api.exceptions import InitializationError
+from src.api.interfaces import IApiGateway, IApiGatewayFactory, ApiTypes
+from src.api.yandex import YandexMarketApi
+from src.api.ozon import OzonApi
+from src.api.wildberries import WildberriesApi
 
 
-class APITypes(str, Enum):
-    OZON = 'ozon'
-    YANDEX = 'yandex'
-    WILDBERRIES = 'wildberries'
-
-
-class APIFactory:
-    __api_types: dict[APITypes, Type[BaseAPI]] = {
-        APITypes.YANDEX: YandexMarketAPI,
-        APITypes.OZON: OzonAPI,
-        APITypes.WILDBERRIES: WildberriesAPI
+class ApiFactory(IApiGatewayFactory):
+    api_types: dict[ApiTypes, type[IApiGateway]] = {
+        ApiTypes.YANDEX: YandexMarketApi,
+        ApiTypes.OZON: OzonApi,
+        ApiTypes.WILDBERRIES: WildberriesApi
     }
 
-    @classmethod
-    def get(cls, api_type: APITypes, **kwargs) -> BaseAPI:
-        api_class = cls.__api_types.get(api_type, None)
+    def __call__(self, api_type: ApiTypes, **attrs) -> IApiGateway:
+        api_class = self.api_types.get(api_type, None)
 
         if api_class is None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'API \"{api_type}\"  не найдено в зарегестрированных')
+            raise InitializationError(str(api_type), f'API \"{api_type}\"  не найдено в зарегистрированных')
 
         try:
-            api_instance = api_class(**kwargs)
-        except TypeError:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Недостаточно аргументов или неверные аргументы, чтобы инициализировать API \"{api_type}\"')
-
+            api_instance = api_class(**attrs)
+        except TypeError as err:
+            raise InitializationError(str(api_type.value), str(err)[str(err).rfind('init__()')+9
+                                                                    if str(err).rfind('init__()') != -1
+                                                                    else 0:])
         return api_instance
-
-

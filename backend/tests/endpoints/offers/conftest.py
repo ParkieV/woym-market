@@ -1,11 +1,11 @@
-from src.api.factory import APITypes
+from src.api.interfaces import ApiTypes
 
 
 def pricing_schemes():
     yandex_schemes = [
         ({
              'name': 'Y0',
-             'market': APITypes.YANDEX,
+             'market': ApiTypes.YANDEX,
              'fields': [
                  {
                      'key': 'cost_price',
@@ -17,7 +17,7 @@ def pricing_schemes():
         ),
         ({
              'name': 'Y1',
-             'market': APITypes.YANDEX,
+             'market': ApiTypes.YANDEX,
              'fields': [
                  {
                      'key': 'nothing',
@@ -31,7 +31,7 @@ def pricing_schemes():
     ozon_schemes = [
         ({
              'name': 'O0',
-             'market': APITypes.OZON,
+             'market': ApiTypes.OZON,
              'fields': [
                  {
                      'key': 'cost_price',

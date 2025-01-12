@@ -1,77 +1,39 @@
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
-from io import BytesIO
 from typing import Any
-import pandas as pd
-from fastapi import HTTPException
-from requests import Response, Session
+from requests import Response
 from src.schemas.base_api_schemas import APIOffer, APIWarehouse, APIPriceChangeData, APIOfferChangeData, APIOrderData
-from logs import get_logger
 
-logger = get_logger(__name__)
-request_logger = get_logger('requests', level=logging.DEBUG)
-
-
+# Must be match to IApiGateway
 class BaseAPI(ABC):
-    session: Session
     market_type: str
     name_of_shop: str
 
     @abstractmethod
     async def validate_auth_data(self, **kwargs):
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     async def get_offers_list(self) -> list[APIOffer]:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     async def get_stocks(self) -> list[APIWarehouse]:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
-        pass
+        raise NotImplementedError
 
-    def request(self, method: str, url: str, body: dict | None = None, params: dict | None = None,  headers: dict | None = None, include_response_logs: bool = False) -> Response:
-        response_log_message = f'Request to API {self.market_type}({self.name_of_shop}): {method.upper()} {url} | body={body} | params={params} | headers={headers}.'
-        try:
-            response = self.session.request(method, url=url, headers=headers, json=body, params=params)
-        except Exception as e:
-            request_logger.fatal(f'[FATAL] {response_log_message}', exc_info=e)
-            raise HTTPException(status_code=500, detail=response_log_message)
-        else:
-            response_status = 'OK' if response.ok else 'FAILED'
-            response_data = response.text if include_response_logs else '!transmission disabled'
-            # request_logger.debug(f'[{response_status}] {response_log_message} Response from API: status={response.status_code} | content={response_data}')
-            return response
-
-    def _download_report(self, url_path: str) -> pd.DataFrame:
-        output = BytesIO()
-        response = self.request('GET', url=url_path)
-        output.write(response.content)
-        return pd.read_excel(output, engine='openpyxl')
-
-    def _raise_error(self, detail: str, status_code: int = 400, body: Any = None):
-        logger.error(f'status: {status_code} \ndetail: {detail} \nbody: {body}')
-        raise HTTPException(status_code, detail, body)
-
-    def validate_response(self, response: Response, raise_error: bool = True, body: Any = None) -> Any:
-        if response.status_code != 200:
-            if raise_error:
-                self._raise_error(response.json(), response.status_code, body)
-
-            logger.error(f'status: {response.status_code} \ndetail: {response.json()} \nbody: {body}')
-
-        return response.json()
-
-
+    @abstractmethod
+    async def request(self, method: str, url: str, body: dict[str, Any] | None = None, params: dict[str, Any] | None = None,  headers: dict[str, Any] | None = None, include_response_logs: bool = False) -> Response:
+        raise NotImplementedError

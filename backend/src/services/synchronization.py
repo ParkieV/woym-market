@@ -2,7 +2,7 @@ import asyncio
 from collections.abc import Sequence, Iterable
 
 from src.database.catalog import CatalogRepository
-from src.database.db import ISessionFabric
+from src.database.interfaces import IDbSessionFabric
 from src.database.offer import OfferRepository
 from src.services.interfaces import IDBMetadataService
 
@@ -15,7 +15,7 @@ class ReverseSynchronizationInteractor:
 
     def __init__(self,
                  metadata_service: IDBMetadataService,
-                 session_fabric: ISessionFabric):
+                 session_fabric: IDbSessionFabric):
         self.metadata_service = metadata_service
         self.session_fabric = session_fabric
 
@@ -46,7 +46,7 @@ class SynchronizationInteractor:
 
     def __init__(self,
                  metadata_service: IDBMetadataService,
-                 session_fabric: ISessionFabric):
+                 session_fabric: IDbSessionFabric):
         self.metadata_service = metadata_service
         self.session_fabric = session_fabric
 

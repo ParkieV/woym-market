@@ -7,7 +7,7 @@ from src.schemas.settings_schemas import SettingsUpdate, TableInfoUpdate, TableI
     MarketUpdate, MarketCreate, MarketFullUpdate
 from src.services.base_utils import error_handler
 from src.services.offer_service import recalculate_values
-from src.api.factory import APIFactory
+from src.api.factory import ApiFactory
 
 
 async def get_logs(user_id: int):
@@ -80,9 +80,9 @@ async def get_markets():
         return await db.get_markets(session)
 
 
-async def create_market(data: MarketCreate):
+async def create_market(data: MarketCreate, api_factory: ApiFactory) -> MarketFullUpdate:
     async with async_session() as session:
-        APIFactory.get(data.type, token=data.token, entity_id=data.entity_id, shop_name=data.name)
+        api_factory(data.type, session=session, token=data.token, entity_id=data.entity_id, shop_name=data.name)
         return await db.create_market(session, data)
 
 

@@ -1,42 +1,55 @@
 import asyncio
-from datetime import datetime, timedelta
+from collections import defaultdict
+from collections.abc import AsyncGenerator
+from math import ceil
 from io import BytesIO
 from typing import Any
-from fastapi import HTTPException, status
-from requests import Session
-import openpyxl
+
+from aiohttp import ClientSession
+
 from logs import get_logger
-from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS, WAREHOUSES
-import pandas as pd
+from datetime import datetime, timedelta
+
+import openpyxl
 import numpy as np
-from src.api.base_api import BaseAPI
+import pandas as pd
+from fastapi import HTTPException, status
+
+from src.api.exceptions import InitializationError, RequestException
+from src.api.gateway_template import ApiGateway
+from src.api.interfaces import IApiGateway, ApiTypes
+from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS, WAREHOUSES
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, \
     APIOfferChangeData, APIOrderData, WarehouseType
-from math import ceil
 
 logger = get_logger(__name__, tags={'marketplace_api': 'yandex'})
 
 
-class YandexMarketAPI(BaseAPI):
+class YandexMarketApi(ApiGateway, IApiGateway):
     market_type = 'Yandex'
-    def validate_auth_data(self, token: str):
-        response = self.request('GET', url='https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
-        if response.status_code != 200:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Некорректные данные для инициализации API Яндекс маркта")
 
-    def __init__(self, token: str, entity_id: int, shop_name: str):
-        self.name_of_shop = shop_name
-        self.session = Session()
-        self._token = token
-        self._entity_id = entity_id  # same as campaign_id
-        self._shop_name = shop_name
+    async def validate_auth_data(self):
+        response = await self.request('GET', url='https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
+        if response.status != 200:
+            raise InitializationError(ApiTypes.YANDEX, "Incorrect token")
+
+    def __init__(self, token: str, entity_id: str | None, shop_name: str, session: ClientSession): #type: ignore
+        try:
+            super().__init__(token, entity_id, shop_name, session)
+        except InitializationError as err:
+            raise InitializationError(ApiTypes.YANDEX, err.detail)
+
         self.auth_headers = {
-            'Api-Key': self._token
+            'Api-Key': self.token
         }
-        self.validate_auth_data(token)
+        asyncio.create_task(self.validate_auth_data())
 
-    def _get_business_id_by_campaign_id(self, campaign_id: int) -> int:
-        return self._get_campaigns()[campaign_id]['business_id']
+    async def _get_business_id_by_campaign_id(self, campaign_id: str) -> int:
+        try:
+            data = await self._get_campaigns()
+        except Exception as err:
+            raise err
+        return data[campaign_id]['business_id']
 
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
         check_valid = lambda x: all((x.is_valid_name(), x.is_valid_description(), x.is_valid_barcodes(), x.is_valid_sizes()))
@@ -47,7 +60,7 @@ class YandexMarketAPI(BaseAPI):
             logger.warning(
                 f'Invalid offers data: {len(invalid_offer_data)} / {len(valida_offer_data)} {invalid_offer_data}')
 
-        business_id = self._get_business_id_by_campaign_id(self._entity_id)
+        business_id = self._get_business_id_by_campaign_id(self.client_id)
         url = f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings/update'
 
         chunk_size = 500
@@ -85,11 +98,13 @@ class YandexMarketAPI(BaseAPI):
 
     async def get_offers_list(self) -> list[APIOffer]:
         result = []
-        business_id = self._get_business_id_by_campaign_id(self._entity_id)
-        # stocks = self._get_offers_stocks(self._entity_id, OFFERS)
+        business_id = await self._get_business_id_by_campaign_id(self.client_id)
+        # stocks = self._get_offers_stocks(self.client_id, OFFERS)
         price_report = await self._get_market_prices_report(business_id)
-        base_offers = self._get_campaign_offers(business_id)
-        # offers_prices = self._get_offers_prices(self._entity_id, [i['sku'] for i in base_offers])
+        base_offers = []
+        async for chunk in self._get_campaign_offers(business_id):
+            base_offers += chunk
+        # offers_prices = self._get_offers_prices(self.client_id, [i['sku'] for i in base_offers])
 
         for offer in base_offers:
             report_line = price_report.get(offer['sku'], {})
@@ -104,7 +119,7 @@ class YandexMarketAPI(BaseAPI):
                 'min_general_markets_price': _ if (_ := report_line.get('min_general_markets_price', 0)) else 0,
                 'your_price_for_buyers': _ if (_ := report_line.get('your_price_for_buyers', 0)) else 0,
                 'group_sellers_amount': 0,
-                'name_of_shop': self._shop_name,
+                'name_of_shop': self.shop_name,
                 'best_place_im_link': _ if (_ := report_line.get('best_place_im_link', '')) else '',
                 'fbo': None
                 # 'current_price': offers_prices.get(offer['sku'], None)
@@ -114,27 +129,25 @@ class YandexMarketAPI(BaseAPI):
 
         return [APIOffer(**offer) for offer in result]
 
-    def _get_campaigns(self) -> dict[int, dict[str, Any]]:
-        response = self.request('GET', url='https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
+    async def _get_campaigns(self) -> dict[str, dict[str, Any]]:
+        """ Получить магазины, доступные по данному токену"""
+        response = await self.request('GET', url='https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
 
-        self.validate_response(response)
+        data = await self.validate_response(response)
 
-        data = response.json()
-
-        return {campaign['id']: {'business_id': campaign['business']['id'], 'name': campaign['business']['name']} for
+        return {str(campaign['id']): {'business_id': campaign['business']['id'], 'name': campaign['business']['name']} for
                 campaign in data['campaigns']}
 
-    def _get_offers_stocks(self, campaign_id: int, handler: StocksResponseHandler = OFFERS):
+    async def _get_offers_stocks(self, campaign_id: str, handler: StocksResponseHandler = OFFERS) -> defaultdict:
         warehouses = []
         page_token = ''
         while True:
-            response = self.request(
+            response = await self.request(
                 'POST',
                 url=f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offers/stocks?page_token={page_token}',
                 headers=self.auth_headers
             )
-            self.validate_response(response)
-            data = response.json()
+            data = await self.validate_response(response)
             warehouses.extend(data['result']['warehouses'])
 
             page_token = data['result']['paging'].get('nextPageToken', None)
@@ -144,20 +157,31 @@ class YandexMarketAPI(BaseAPI):
         result = handler(warehouses)
         return result
 
-    def _get_campaign_offers(self, business_id: int) -> list[dict]:
-        results = []
-        page_token = ''
+    async def _get_campaign_offers(self, business_id: int) -> AsyncGenerator[list[str, Any]]:
+        """ Получить информацию о товарах в каталоге """
+        page_token = None
+        chunk_size = 200
+
         while True:
-            response = self.request(
-                'POST',
-                url=f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings?limit=200&page_token={page_token}',
+            base_url = f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings? \
+                      limit={chunk_size}'
+            if page_token is not None:
+                base_url += f'&page_token={page_token}'
+            response = await self.request(
+                method='POST',
+                url=base_url,
                 headers=self.auth_headers
             )
 
-            self.validate_response(response)
-            data = response.json()
+            data = await self.validate_response(response)
 
-            for offer_mapping in data['result']['offerMappings']:
+            offer_chunk = data['result']['offerMappings']
+
+            if len(offer_chunk) == 0:
+                return
+
+            validated_offer_chunk = []
+            for offer_mapping in offer_chunk:
                 offer = offer_mapping['offer']
                 mapping = offer_mapping.get('mapping', {})
 
@@ -186,14 +210,13 @@ class YandexMarketAPI(BaseAPI):
 
                 }
                 offer_data['your_promotion_price'] = offer_data['current_price']
-                results.append(offer_data)
+                validated_offer_chunk.append(offer_data)
+
+            yield validated_offer_chunk
 
             page_token = data['result']['paging'].get('nextPageToken', None)
-
             if page_token is None:
-                break
-
-        return results
+                return
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
         chunk_size = 500
@@ -206,10 +229,10 @@ class YandexMarketAPI(BaseAPI):
                 f'Invalid prices data: {len(invalid_price_data)} / {len(valid_price_data)} {invalid_price_data}')
 
         if not valid_price_data:
-            logger.warning(f'{self._shop_name}(yandex) has no valid price data')
+            logger.warning(f'{self.shop_name}(yandex) has no valid price data')
             return
 
-        business_id = self._get_business_id_by_campaign_id(self._entity_id)
+        business_id = await self._get_business_id_by_campaign_id(self.client_id)
 
         for i in range(0, len(valid_price_data), chunk_size):
             post_data = [
@@ -227,7 +250,7 @@ class YandexMarketAPI(BaseAPI):
                 'offers': post_data
             }
 
-            response = self.request(
+            response = await self.request(
                 'POST',
                 url=f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-prices/updates',
                 headers=self.auth_headers,
@@ -235,36 +258,35 @@ class YandexMarketAPI(BaseAPI):
                 include_response_logs=True
             )
             if not response.ok:
-                logger.error(f'{self._shop_name}(yandex) has invalid price data: {response.text}')
+                logger.error(f'{self.shop_name}(yandex) has invalid price data: {response.text}')
 
-        self._set_cofinance_offers_price(data)
+        await self._set_cofinance_offers_price(data)
 
-        logger.info(f'{self._shop_name}(yandex) prices updated: {len(valid_price_data)} of {len(data)}')
+        logger.info(f'{self.shop_name}(yandex) prices updated: {len(valid_price_data)} of {len(data)}')
 
     async def _get_market_prices_report(self, business_id: int) -> dict[str, dict[str, Any]]:
-        response = self.request('POST', url='https://api.partner.market.yandex.ru/reports/prices/generate', body={'businessId': business_id}, headers=self.auth_headers)
+        response = await self.request('POST', url='https://api.partner.market.yandex.ru/reports/prices/generate', body={'businessId': business_id}, headers=self.auth_headers)
 
-        self.validate_response(response)
+        data = await self.validate_response(response)
 
-        data = response.json()
         report_id = data['result']['reportId']
 
         while True:
-            response = self.request('GET', url=f'https://api.partner.market.yandex.ru/reports/info/{report_id}',
+            response = await self.request('GET', url=f'https://api.partner.market.yandex.ru/reports/info/{report_id}',
                                         headers=self.auth_headers)
-            data = response.json()
+            data = await self.validate_response(response)
             if data['result']['status'] == 'DONE':
 
                 output = BytesIO()
-                response = self.request('GET', url=data['result']['file'])
-                output.write(response.content)
+                response = await self.request('GET', url=data['result']['file'])
+                output.write(await response.read())
 
                 wb = openpyxl.load_workbook(output)
                 ws = wb.active
                 links = [row[16].hyperlink.target if row[16].hyperlink else None for row in ws.rows]
                 links_series = pd.Series(links)[1:].reset_index(drop=True)
 
-                df = self._download_report(data['result']['file'])
+                df = await self._download_report(data['result']['file'])
                 df.drop([0, 1, 2, 3], inplace=True)
                 new_df = pd.DataFrame()
                 new_df[['sku', 'attractive_price_threshold', 'moderately_attractive_price_threshold',
@@ -312,21 +334,21 @@ class YandexMarketAPI(BaseAPI):
                 return result
 
             elif data['result']['status'] == 'FAILED':
-                self._raise_error(response.reason, response.status_code)
+                raise RequestException(f'status: {response.status} \ndetail: {response.reason}')
 
             await asyncio.sleep(5)
 
     async def get_stocks(self) -> list[APIWarehouse]:
         result = []
 
-        warehouses = self._get_warehouses_info()
-        offers_stocks = self._get_offers_stocks(self._entity_id, WAREHOUSES)
+        warehouses = await self._get_warehouses_info()
+        offers_stocks = await self._get_offers_stocks(self.client_id, WAREHOUSES)
 
         for warehouse_id in warehouses.keys():
             offers = [
                 APIWarehouseOffer(
                     sku=offer['offerId'],
-                    name_of_shop=self._shop_name,
+                    name_of_shop=self.shop_name,
                     current_stock=sum([i['count'] for i in offer['stocks'] if i['type'] == 'AVAILABLE'])
                 )
                 for offer in offers_stocks[warehouse_id]
@@ -341,11 +363,9 @@ class YandexMarketAPI(BaseAPI):
         result.append(APIWarehouse(name='Кластер все магазины', offers=[], warehouse_type=WarehouseType.SUPER_CLUSTER, market='yandex'))
         return result
 
-    def _get_warehouses_info(self) -> dict[int, dict[str, Any]]:
-        response = self.request('GET', url=f'https://api.partner.market.yandex.ru/warehouses', headers=self.auth_headers)
-        self.validate_response(response, raise_error=True)
-
-        data = response.json()
+    async def _get_warehouses_info(self) -> dict[int, dict[str, Any]]:
+        response = await self.request('GET', url=f'https://api.partner.market.yandex.ru/warehouses', headers=self.auth_headers)
+        data = await self.validate_response(response)
 
         result = dict()
         for warehouse in data['result']['warehouses']:
@@ -355,18 +375,17 @@ class YandexMarketAPI(BaseAPI):
 
         return result
 
-    def _get_offers_price(self, campaign_id: int) -> dict[str, float]:
+    async def _get_offers_price(self, campaign_id: int) -> dict[str, float]:
         page_token = ''
         result = dict()
 
         while True:
-            response = self.request(
+            response = await self.request(
                 'POST',
                 url=f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices?page_token={page_token}',
                 headers=self.auth_headers)
-            self.validate_response(response)
+            data = self.validate_response(response)
 
-            data = response.json()
 
             for offer_data in data['offers']:
                 result[offer_data['offerId']] = offer_data['offerId']['price']['value']
@@ -377,7 +396,7 @@ class YandexMarketAPI(BaseAPI):
 
         return result
 
-    def _get_offers_prices(self, campaign_id: int, skus: list[str]) -> dict[str, int]:
+    async def _get_offers_prices(self, campaign_id: int, skus: list[str]) -> dict[str, int]:
         chunk_size = 80
         result = dict()
 
@@ -385,14 +404,13 @@ class YandexMarketAPI(BaseAPI):
             body = {
                 "offerIds": skus[i:i + chunk_size],
             }
-            response = self.request(
+            response = await self.request(
                 'POST',
                 url=f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices',
                 headers=self.auth_headers,
                 body=body
             )
-            self.validate_response(response)
-            data = response.json()
+            data = await self.validate_response(response)
 
             for offer_price_info in data['result']['offers']:
                 if 'price' not in offer_price_info or 'value' not in offer_price_info['price']:
@@ -402,9 +420,9 @@ class YandexMarketAPI(BaseAPI):
 
         return result
 
-    def _set_cofinance_offers_price(self, data: list[APIPriceChangeData]):
+    async def _set_cofinance_offers_price(self, data: list[APIPriceChangeData]):
         chunk_size = 500
-        business_id = self._get_business_id_by_campaign_id(self._entity_id)
+        business_id = await self._get_business_id_by_campaign_id(self.client_id)
         valid_data = [i for i in data if i.is_valid_auto_min_price()]
 
         for i in range(0, len(data), chunk_size):
@@ -423,23 +441,23 @@ class YandexMarketAPI(BaseAPI):
                 ]
             }
 
-            response = self.request(
+            response = await self.request(
                 'POST',
                 url=f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings/update',
                 headers=self.auth_headers,
                 body=body
             )
-            self.validate_response(response, raise_error=False, body=body)
+            await self.validate_response(response, body=body)
 
     async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
         if (to_date - from_date).days > 30:
             from_date = to_date - timedelta(days=30)
 
-        url = f'https://api.partner.market.yandex.ru/campaigns/{self._entity_id}/orders'
+        url = f'https://api.partner.market.yandex.ru/campaigns/{self.client_id}/orders'
         params = {
             'pageSize': 50,
             'page': 1,
-            'fake': False,
+            'fake': 'false',
             'fromDate': from_date.strftime('%d-%m-%Y'),
             'toDate': to_date.strftime('%d-%m-%Y'),
         }
@@ -447,13 +465,13 @@ class YandexMarketAPI(BaseAPI):
         results = []
 
         while True:
-            response = self.request('GET', url=url, headers=self.auth_headers, params=params)
+            response = await self.request('GET', url=url, headers=self.auth_headers, params=params)
 
             if not response.ok:
                 logger.error(f'Cant collect orders: {response.text}')
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Не удалось получить информацию о заказах')
 
-            json_response = response.json()
+            json_response = await self.validate_response(response)
 
             if not json_response['orders']:
                 break
@@ -471,7 +489,7 @@ class YandexMarketAPI(BaseAPI):
                             internal_order_id=str(order['id']),
                             sku=order_item['offerId'],
                             market='yandex',
-                            name_of_shop=self._shop_name,
+                            name_of_shop=self.shop_name,
                             quantity=order_item['count'],
                             created_at=created_at,
                             updated_at=updated_at,

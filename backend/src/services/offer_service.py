@@ -8,13 +8,15 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.services.base_utils
+from src.api.interfaces import IApiSessionFabric
+from src.database.interfaces import IDbSessionFabric
 from src.database.models.models import Offer, CatalogItem
 from src.database.offer import OfferRepository
 from src.database.warehouse_db import create_own_storage_stocks
 from src.params.config import config
 from logs import get_logger
-from src.api.wrapper import APIWrapper
-from src.database.db import async_session, ISessionFabric, get_session
+from src.api.wrapper import ApiInteractor
+from src.database.db import async_session, get_db_session
 from src.database import offer as db
 from src.database.settings_db import get_markets
 import src.services.offer_utils as utils
@@ -35,12 +37,11 @@ from src.services.base_utils import error_handler
 from src.services.synchronization import ReverseSynchronizationInteractor, SynchronizationInteractor
 from src.services.update_offer_from_api import UpdateOfferFromApi
 
-api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
 
 CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes']
-async def get_offers_list(session_fabric: ISessionFabric, offers_filter: OffersFilter | None = None) -> list[OfferOut]:
+async def get_offers_list(session_fabric: IDbSessionFabric, offers_filter: OffersFilter | None = None) -> list[OfferOut]:
     """ Получение списка карточек """
     res = []
     offer_repository = OfferRepository()
@@ -54,7 +55,7 @@ async def get_offers_list(session_fabric: ISessionFabric, offers_filter: OffersF
 
 async def change_offers(offers_data: list[OfferChange],
                         user_id: int,
-                        session_fabric: ISessionFabric):
+                        session_fabric: IDbSessionFabric):
     """ Функция для изменения данных в карточках товаров """
     mapping_fields = ['sku', 'name_of_shop', 'market']
 
@@ -78,14 +79,16 @@ async def change_offers(offers_data: list[OfferChange],
         await recalculate_values(session)
 
 
-async def setup_offers_data(user_id: int):
-    yandex_offers = await api_wrapper.get_offers_list
+async def setup_offers_data(api_session_fabric: IApiSessionFabric,
+                            db_session_fabric: IDbSessionFabric,):
+    api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
+                                   db_session_fabric=db_session_fabric)
+    yandex_offers = await api_interactor.get_offers_list()
     yandex_offers_df = pd.DataFrame(yandex_offers)
     async with async_session() as session:
         await db.check_pricing_schemes_exists(session, 'Y0')
         await db.check_pricing_schemes_exists(session, 'O0')
         await db.check_pricing_schemes_exists(session, 'W0')
-        settings = await get_user_settings(session, user_id)
 
         for market in await get_markets(session):
             data = await utils.build_offers_data(yandex_offers_df[((yandex_offers_df['market'] == market.type) & (yandex_offers_df['name_of_shop'] == market.name))], setup_mode=True, market=market)
@@ -93,28 +96,32 @@ async def setup_offers_data(user_id: int):
             logger.info(f'{market.type}({market.name}) offers created: {len(data)}')
 
 
-async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int]):
+async def update_offers(db_session_fabric,
+                        api_session_fabric,
+                        user_ids: Sequence[int]):
     """ Метод для обновления информации о карточках магазинов """
     logger.info('Start update offers')
     mapping_fields = ['sku', 'name_of_shop', 'market']
     start_time = datetime.now()
 
-    # синхронизируем из каталога в карточки
+    # синхронизируем из карточек в каталог
     reverse_sync_interactor = ReverseSynchronizationInteractor(
         DBMetadataService({'Offer': Offer,
                            'CatalogItem': CatalogItem}),
-        session_fabric)
+        db_session_fabric)
     await reverse_sync_interactor(skus=[])
     logger.info('Reverse synchronization completed')
 
+    # синхронизируем из каталога в карточки
     sync_interactor = SynchronizationInteractor(
         DBMetadataService({'Offer': Offer,
                            'CatalogItem': CatalogItem}),
-        session_fabric)
+        db_session_fabric)
     await sync_interactor(skus=[])
     logger.info('Synchronization completed')
 
-    async with session_fabric() as session:
+
+    async with db_session_fabric() as session:
         # получение информации о маркетах из БД
         markets = await get_markets(session)
         logger.debug(f"Markets: {markets}")
@@ -122,8 +129,8 @@ async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int])
         # Перевычисление значений в карточках и их сохранение в БД
         await recalculate_values(session)
 
-    # Получаем карточки товаров
-    db_offers = await get_offers_list(get_session)
+    # Получаем карточек товаров из БД
+    db_offers = await get_offers_list(db_session_fabric)
     db_offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
     # Создаем переменную с данными для отправки цен в апи
@@ -139,10 +146,15 @@ async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int])
         )
 
     # Обновление цен для тех карточек, где включен автоконтроль цен
-    await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True])
+    await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True],
+                              api_session_fabric,
+                              db_session_fabric)
 
     # Получаем товары из апи
-    api_offers = await api_wrapper.get_offers_list
+    api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
+                                   db_session_fabric=db_session_fabric)
+
+    api_offers = await api_interactor.get_offers_list()
     api_offers_df = pd.DataFrame(api_offers)
 
     common_columns = (set(db_offers_df.columns.tolist()) & set(api_offers_df.columns.tolist())) - set(mapping_fields)
@@ -169,7 +181,7 @@ async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int])
     # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
     to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
     logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
-    await update_offers_attributes(to_update_attributes)
+    await update_offers_attributes(to_update_attributes, api_session_fabric, db_session_fabric)
 
     # Создаем новые товары
     for market in markets:
@@ -183,15 +195,14 @@ async def update_offers(session_fabric: ISessionFabric, user_ids: Sequence[int])
     logger.info('Own storage stocks created')
 
     # Обновляем товары из апи для обратной синхронизации
-    api_offers = await api_wrapper.get_offers_list
+    api_offers = await api_interactor.get_offers_list()
     api_offers_df = pd.DataFrame(api_offers)
 
     for tracked_column in CONTROL_CHANGES:
         api_offers_df[f'{tracked_column}_changed'] = False
 
     update_api_interactor = UpdateOfferFromApi(DBMetadataService({'Offer': Offer,
-                                                                  'CatalogItem': CatalogItem}),
-                                               get_session)
+                                                                  'CatalogItem': CatalogItem}), get_db_session)
     await update_api_interactor(api_offers_df, skus=[])
 
     # Удаляем товары
@@ -213,7 +224,9 @@ async def delete_offers(offers: list[OfferDelete]):
         return await db.delete_offers(session, [offer.model_dump() for offer in offers])
 
 
-async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
+async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
+                              db_session_fabric: IDbSessionFabric,
+                              api_session_fabric: IApiSessionFabric):
     """ Обновление цен в карточках в магазинах """
     data = []
 
@@ -248,10 +261,14 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut]):
     ]
 
     # изменение цен в магазине
-    await api_wrapper.change_prices(data)
+    api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
+                                   db_session_fabric=db_session_fabric)
+    await api_interactor.change_prices(data)
 
 
-async def update_offers_attributes(offers: pd.DataFrame):
+async def update_offers_attributes(offers: pd.DataFrame,
+                                   api_session_fabric: IApiSessionFabric,
+                                   db_session_fabric: IDbSessionFabric):
     data = offers.to_dict('records')
 
     if not config.is_prod:
@@ -276,7 +293,9 @@ async def update_offers_attributes(offers: pd.DataFrame):
         for offer_data in data
     ]
 
-    await api_wrapper.change_offers(data)
+    api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
+                                   db_session_fabric=db_session_fabric)
+    await api_interactor.change_offers(data)
 
     return data
 
@@ -417,7 +436,7 @@ async def import_sizes(data, name_of_shop: str | None = None, market: str | None
 
 async def export_offers(offers_filter: OffersFilter | None = None) -> str:
 
-    offers = await get_offers_list(get_session, offers_filter=offers_filter)
+    offers = await get_offers_list(get_db_session, offers_filter=offers_filter)
     exclude_columns = set()
     exclude_columns.update(*[f'{i}_changed' for i in CONTROL_CHANGES])
 

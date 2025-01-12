@@ -3,7 +3,7 @@ import math
 import pandas as pd
 import numpy as np
 
-from src.api.factory import APITypes
+from src.api.interfaces import ApiTypes
 from src.database.offer import get_pricing_schemes
 from src.database.db import async_session
 from src.schemas.settings_schemas import MarketOut
@@ -144,17 +144,17 @@ async def build_offers_data(data: pd.DataFrame, market, total_price_coeff: float
     data['pricing_scheme_name'] = None
 
     data['pricing_scheme_name'] = np.where(
-        data['market'] == APITypes.OZON,
+        data['market'] == ApiTypes.OZON,
         'O0',
         data['pricing_scheme_name']
     )
     data['pricing_scheme_name'] = np.where(
-        data['market'] == APITypes.YANDEX,
+        data['market'] == ApiTypes.YANDEX,
         'Y0',
         data['pricing_scheme_name']
     )
     data['pricing_scheme_name'] = np.where(
-        data['market'] == APITypes.WILDBERRIES,
+        data['market'] == ApiTypes.WILDBERRIES,
         'W0',
         data['pricing_scheme_name']
     )

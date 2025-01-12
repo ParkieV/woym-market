@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, Body, BackgroundTasks
 from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
+from src.api.gateway_template import get_api_session
+from src.database.db import get_db_session
 from src.dependencies.users import get_current_user, require_staff
 from src.routers.stocks.fbo_router import router as fbo_router
 from src.routers.stocks.own_storage_router import router as own_storage_router
@@ -35,7 +37,7 @@ async def get_warehouse(warehouse_id: int):
 
 @router.post('/setup', dependencies=[Depends(require_staff)])
 async def setup_fbo_stocks(background: BackgroundTasks):
-    background.add_task(service.update_warehouses_and_stocks)
+    background.add_task(service.update_warehouses_and_stocks, get_api_session, get_db_session)
     return {'status': 'OK'}
 
 

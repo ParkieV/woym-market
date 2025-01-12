@@ -1,19 +1,21 @@
-import asyncio
 import json
-import logging
-from datetime import datetime
+import asyncio
 from math import ceil
 from typing import Any
+from datetime import datetime
+from dataclasses import dataclass
+from collections.abc import Sequence, Mapping, AsyncGenerator
 
-from fastapi import HTTPException
-from requests import Session
+from aiohttp import ClientSession
 from starlette import status
+from fastapi import HTTPException
 
-from src.api.base_api import BaseAPI
+from logs import get_logger
+from src.api.exceptions import InitializationError
+from src.api.interfaces import IApiGateway, ApiTypes
+from src.api.gateway_template import ApiGateway
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, WarehouseType, \
     APIOfferChangeData, APIOrderData
-from dataclasses import dataclass
-from logs import get_logger
 
 logger = get_logger(__name__, tags={'marketplace_api': 'ozon'})
 
@@ -24,10 +26,21 @@ class OfferIdentifier:
     offer_id: str
 
 
-class OzonAPI(BaseAPI):
+class OzonApi(ApiGateway, IApiGateway):
     market_type = 'Ozon'
 
-    def __get_info_attributes(self, skus: list[str] | None = None) -> dict[str, dict]:
+    def __init__(self, token: str, entity_id: str | None, shop_name: str, session: ClientSession) -> None: #type: ignore
+        try:
+            super().__init__(token, entity_id, shop_name, session)
+        except InitializationError as err:
+            raise InitializationError(ApiTypes.OZON, err.detail)
+
+    async def _get_info_attributes(self, skus: Sequence[str] | None = None) -> dict[str, Any]:
+        """
+        Получаем информацию о карточках с соответствующим СКУ.
+        :param skus: Список СКУ товаров.
+        :return: Информация о товарах;
+        """
         url = 'https://api-seller.ozon.ru/v3/products/info/attributes'
         chunk_size = 1000
         body = {
@@ -40,13 +53,13 @@ class OzonAPI(BaseAPI):
         results = {}
 
         while True:
-            response = self.request('POST', url=url, body=body, headers=self.auth_headers)
+            response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
 
             if not response.ok:
                 logger.error(f'Cant get info attributes: {response.text}')
                 continue
 
-            json_response = response.json()
+            json_response = await response.json()
 
             for item in json_response.get('result', []):
                 results[item['offer_id']] = item
@@ -59,24 +72,29 @@ class OzonAPI(BaseAPI):
 
         return results
 
-    def __get_offers_prices(self, skus: list[str] | None = None) -> dict[str, dict]:
+    async def _get_offers_prices_by_sku(self, data: Sequence[str] | None = None) -> dict[str, Any]:
+        """
+        Получить информацию о цене товаров со соответствующим СКУ и её составляющих.
+        :param data: Список СКУ товаров.
+        :return: Информация о цене товаров
+        """
         url = 'https://api-seller.ozon.ru/v4/product/info/prices'
         results = {}
         chunk_size = 1000
         body = {
             "filter": {
-                "offer_id": skus or [],
+                "offer_id": data or [],
                 "visibility": "ALL"
             },
             "limit": chunk_size
         }
         while True:
-            response = self.request('POST', url=url, body=body, headers=self.auth_headers)
+            response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
             if not response.ok:
                 logger.error(f'Cant collect offers price info: {response.text}')
                 break
 
-            json_response = response.json()
+            json_response = await response.json()
 
             for item in json_response.get('result', {}).get('items', []):
                 results[item['offer_id']] = item
@@ -89,24 +107,151 @@ class OzonAPI(BaseAPI):
 
         return results
 
+    async def _get_offers_prices_by_identifiers(self, offer_data: Sequence[OfferIdentifier]) -> dict[str, dict]:
+        chunk_size = 1000
+        result = dict()
+
+        for i in range(0, len(offer_data), chunk_size):
+            body = {
+                'filter': {
+                    'offer_id': [i.offer_id for i in offer_data[i:i + chunk_size]]
+                },
+                'limit': chunk_size
+            }
+            response = await self.request('POST', url='https://api-seller.ozon.ru/v4/product/info/prices', headers=self.auth_headers,
+                                         body=body)
+
+            data = await self.validate_response(response, body=body)
+
+            for offer in data['result']['items']:
+                result[offer['offer_id']] = {
+                    'marketing_seller_price': self._str_to_float(offer['price'].get('marketing_seller_price', None))
+                }
+
+                try:
+                    commissions = offer['commissions']
+
+                    sales_percent = commissions['sales_percent_fbo']
+                    price = self._str_to_float(offer['price']['price'])
+
+                    expenses = sum([
+                        commissions['fbo_return_flow_trans_max_amount'],
+                        commissions['fbo_deliv_to_customer_amount'],
+                    ])
+
+                    result[offer['offer_id']]['commissions'] = price * sales_percent / 100 + expenses
+
+                except Exception as e:
+                    logger.error(f'Error in get commission for offer with sku {offer["offer_id"]}', exc_info=True)
+
+        return result
+
+    async def _get_content_ratings(self, skus: Sequence[int]):
+        chunk_size = 100
+        result = {}
+
+        for i in range(0, len(skus), chunk_size):
+            body = {
+                'skus': skus[i:i + chunk_size]
+            }
+            response = await self.request('POST', url='https://api-seller.ozon.ru/v1/product/rating-by-sku',
+                                         headers=self.auth_headers, body=body)
+            data = await self.validate_response(response, body=body)
+            result.update({item['sku']: item['rating'] for item in data['products']})
+
+        return result
+
+    async def _get_stock_on_warehouses(self):
+        chunk_size = 1000
+        offset = 0
+        result = []
+
+        while True:
+            body = {
+                'limit': chunk_size,
+                'offset': offset,
+                'warehouse_type': 'ALL'
+            }
+            response = await self.request('POST', url='https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses',
+                                         headers=self.auth_headers, body=body)
+
+            data = await self.validate_response(response, body)
+
+            if not data['result']['rows']:
+                break
+
+            for stock in data['result']['rows']:
+                stock_data = {
+                    'value': stock['free_to_sell_amount'],
+                    'market_sku': stock['sku'],
+                    'warehouse_name': stock['warehouse_name'].replace('_', ' ').title()
+                }
+                result.append(stock_data)
+
+            offset += chunk_size
+
+        return result
+
+    async def _market_sku_to_offer_id(self) -> Mapping[int, str]:
+        offers_identifiers = []
+        async for chunk in self._get_offers_identifiers_by_chunks():
+            offers_identifiers += chunk
+        print('2')
+        offers = await self._get_offers_base_info(offers_identifiers)
+
+        return {offer['market_sku']: offer['sku'] for offer in offers if offer['market_sku'] != 0}
+
+    async def _get_clusters_info(self) -> list[APIWarehouse]:
+        # url = 'https://seller-edu.ozon.ru/document-manager-api.kms/api/v2/seller-edu/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
+        url = 'https://seller-edu.ozon.ru/document-manager-api/seller-edu/api/v3/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
+        #
+        response = await self.request('GET', url=url)
+
+        data = await self.validate_response(response)
+        content_json = json.loads(data['document']['contentJson'])
+        spoilers = [i for i in content_json['content'] if i['type'] == 'spoiler']
+        spoilers = spoilers[len(spoilers) // 2:len(spoilers) + 1]
+
+        clasters = []
+
+        for spoiler in spoilers:
+            claster_name = spoiler['attrs']['title']
+            warehouses = [
+                i['content'][0]['content'][0]['text'].replace('-', ' ').title().replace('Мо ', '').replace('Спб', '')
+                for i in spoiler['content'][0]['content']]
+            clasters.append(
+                APIWarehouse(name=claster_name, market='ozon', offers=[], warehouse_type=WarehouseType.CLUSTER,
+                             related_warehouses_name=warehouses))
+
+        return clasters
+
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
+        """
+        Изменение информации о карточках в магазине
+        :param data: Данные для обновления
+        """
         url = 'https://api-seller.ozon.ru/v3/product/import'
 
+        # Лямбда-выражение, определяющее корректность данных карточек
         is_valid_offer_data = lambda x: all((x.is_valid_name(), x.is_valid_description(), x.is_valid_search_words(), x.is_valid_sizes()))
+
         valid_data = [i for i in data if is_valid_offer_data(i)]
         invalid_data = [i for i in data if not is_valid_offer_data(i)]
 
         if invalid_data:
             logger.error(f'Invalid offers data: {len(invalid_data)} / {len(valid_data)} {invalid_data}')
 
-        if not valid_data:
+        if len(valid_data) == 0:
             logger.warning(f'{self.shop_name}(ozon) has no valid offers data')
             return
 
-        offers_attributes_info = self.__get_info_attributes([i.sku for i in valid_data])
-        offers_prices_info = self.__get_offers_prices([i.sku for i in valid_data])
+        # Получение информации об офферах с магазина
+        offers_attributes_info = await self._get_info_attributes([i.sku for i in valid_data])
+        offers_prices_info = await self._get_offers_prices_by_sku([i.sku for i in valid_data])
 
         to_update_offers_data = []
+
+        # Подготовка моделей для отправки в магазины
         for valid_offer in valid_data:
             offer_price_info = offers_prices_info.get(valid_offer.sku, None)
             offer_attributes_info = offers_attributes_info.get(valid_offer.sku, None)
@@ -182,25 +327,26 @@ class OzonAPI(BaseAPI):
 
         chunk_size = 100
 
+        # Отправка данных в магазин
         for i in range(0, len(to_update_offers_data), chunk_size):
             body = {
                 'items': [offer_data for offer_data in to_update_offers_data[i:i + chunk_size]]
             }
-            response = self.request('POST', url, body=body, headers=self.auth_headers, include_response_logs=True)
+            response = await self.request('POST', url, body=body, headers=self.auth_headers, include_response_logs=True)
             if not response.ok:
                 logger.error(f'Cant update offers data: {response.text}')
                 continue
 
-            json_response = response.json()
+            json_response = await self.validate_response(response)
             task_id = json_response.get('result', {}).get('task_id', None)
             if not task_id:
                 logger.error(f'Cant find task_id: {response.text}')
                 return
 
             await asyncio.sleep(5)
-            self.check_task_status(task_id)
+            await self.check_task_status(task_id)
 
-    def check_task_status(self, task_id: int) -> bool:
+    async def check_task_status(self, task_id: int) -> None:
         if not task_id:
 
             return
@@ -208,13 +354,13 @@ class OzonAPI(BaseAPI):
         body = {
             'task_id': task_id,
         }
-        response = self.request('POST', url=f'https://api-seller.ozon.ru/v1/product/import/info', body=body, headers=self.auth_headers, include_response_logs=True)
+        response = await self.request('POST', url=f'https://api-seller.ozon.ru/v1/product/import/info', body=body, headers=self.auth_headers, include_response_logs=True)
 
         if not response.ok:
             logger.error(f'Cant check task({task_id}) status {response.text}')
             return
 
-        json_response = response.json()
+        json_response = await self.validate_response(response)
 
         for item_info in json_response.get('result', {}).get('items', []):
             if item_info.get('status') == 'failed':
@@ -226,32 +372,16 @@ class OzonAPI(BaseAPI):
 
         logger.info(f'Task {task_id} checked. Total {json_response.get("result", {}).get("total", "unknown")}')
 
-    def __init__(self, token: str, entity_id: int, shop_name: str):
-        self.name_of_shop = shop_name
-        self.token = token
-        self.shop_name = shop_name
-        self.client_id = str(entity_id)
-        self.auth_headers = {
-            'Client-Id': self.client_id,
-            'Api-Key': self.token,
-        }
-        self.session = Session()
-
-    async def validate_auth_data(self, **kwargs):
-        pass
-
-    def __str_to_float(self, value):
-        if value:
-            return float(value)
-        return None
-
     async def get_offers_list(self) -> list[APIOffer]:
-        offers_identifiers = self._get_offers_identifiers()
-        offers = self._get_offers_base_info(offers_identifiers)
-        offers_attributes = self._get_offers_attributes(offers_identifiers)
-        offers_content_rating = self._get_content_ratings(
+        offers_identifiers = []
+        async for chunk in self._get_offers_identifiers_by_chunks():
+            offers_identifiers += chunk
+        print('1')
+        offers = await self._get_offers_base_info(offers_identifiers)
+        offers_attributes = await self._get_offers_attributes(offers_identifiers)
+        offers_content_rating = await self._get_content_ratings(
             [offer['market_sku'] for offer in offers if offer['market_sku'] > 0])
-        offers_prices = self._get_offers_prices(offers_identifiers)
+        offers_prices = await self._get_offers_prices_by_identifiers(offers_identifiers)
 
         product_ids = {ident.offer_id: ident.product_id for ident in offers_identifiers}
 
@@ -271,8 +401,8 @@ class OzonAPI(BaseAPI):
         return [APIOffer(**i) for i in offers]
 
     async def get_stocks(self) -> list[APIWarehouse]:
-        warehouse_stocks = self._get_stock_on_warehouses()
-        offer_ids = self._market_sku_to_offer_id()
+        warehouse_stocks = await self._get_stock_on_warehouses()
+        offer_ids = await self._market_sku_to_offer_id()
         temp: dict[str, dict] = dict()
 
         for warehouse_stock in warehouse_stocks:
@@ -294,7 +424,7 @@ class OzonAPI(BaseAPI):
             else:
                 temp[warehouse_stock['warehouse_name']]['offers'].append(stock)
         result = [APIWarehouse(**i) for i in temp.values()]
-        result.extend(self._get_clasters_info())
+        result.extend(await self._get_clusters_info())
         result.append(APIWarehouse(market='ozon', name='Кластер все магазины', offers=[], warehouse_type=WarehouseType.SUPER_CLUSTER))
         return result
 
@@ -330,7 +460,7 @@ class OzonAPI(BaseAPI):
                 'prices': post_data
             }
 
-            response = self.request(
+            response = await self.request(
                 'POST',
                 url='https://api-seller.ozon.ru/v1/product/import/prices',
                 headers=self.auth_headers,
@@ -338,40 +468,61 @@ class OzonAPI(BaseAPI):
                 include_response_logs=True
             )
 
-            self.validate_response(response, raise_error=False, body=body)
+            # TODO: Check what happened there, probably returned value of this function
+            # should be use
+            await self.validate_response(response, body=body)
 
             if response.ok:
-                for offer_result in response.json()['result']:
+                for offer_result in (await response.json())['result']:
                     if not offer_result['updated']:
                         logger.warning(
                             f'Error in update offer with id - {offer_result["offer_id"]} \nErrors: {offer_result["errors"]}')
 
         logger.info(f'{self.shop_name}(ozon) price updated')
 
-    def _get_offers_identifiers(self) -> list[OfferIdentifier]:
-        response = self.request('POST', url='https://api-seller.ozon.ru/v2/product/list', headers=self.auth_headers)
+    async def _get_offers_identifiers_by_chunks(self) -> AsyncGenerator[list[OfferIdentifier], None]:
+        last_id = None
+        while True:
 
-        data = self.validate_response(response)['result']['items']
+            body = {'filter': {},
+                    'limit': 1000}
+            if last_id is not None:
+                body['last_id'] = last_id
 
-        return [OfferIdentifier(product_id=offer['product_id'], offer_id=offer['offer_id']) for offer in data]
+            response = await self.request(
+                method='POST',
+                url='https://api-seller.ozon.ru/v3/product/list',
+                headers=self.auth_headers,
+                body=body
+            )
 
-    def _get_offers_base_info(self, data: list[OfferIdentifier]) -> list[dict[str, Any]]:
+            data = (await self.validate_response(response))['result']
+            items = data['items']
+
+            if len(items) == 0:
+                return
+            yield [OfferIdentifier(product_id=offer['product_id'], offer_id=offer['offer_id']) for offer in items]
+
+            last_id = data['last_id']
+
+    async def _get_offers_base_info(self, offer_data: list[OfferIdentifier]) -> list[dict[str, Any]]:
         chunk_size = 1000
         result = []
 
-        for i in range(0, len(data), chunk_size):
-            chunk_offer_ids = [offer.offer_id for offer in data[i:i + chunk_size]]
+        for i in range(0, len(offer_data), chunk_size):
+            print('ASDF', type(offer_data))
+            chunk_offer_ids = [offer.offer_id for offer in offer_data[i:i + chunk_size]]
             body = {
                 'offer_id': chunk_offer_ids
             }
-            response = self.request(
+            response = await self.request(
                 'POST',
                 url='https://api-seller.ozon.ru/v2/product/info/list',
                 headers=self.auth_headers,
                 body=body
             )
 
-            data = self.validate_response(response, body=body)
+            data = await self.validate_response(response, body=body)
             for offer in data['result']['items']:
                 offer_status = offer.get('status', {})
                 if offer_status.get('validation_state', 'fail') == 'fail' or offer_status.get('is_failed', True):
@@ -390,28 +541,28 @@ class OzonAPI(BaseAPI):
                         'sku': offer['offer_id'],
                         'name': offer['name'],
                         'photo': offer['primary_image'],
-                        'current_price': self.__str_to_float(offer['price']),
-                        'min_price_in_market': self.__str_to_float(offer['min_ozon_price']),
-                        'min_price_without_market': self.__str_to_float(minimal_price),
-                        'attractive_price_threshold': self.__str_to_float(offer['recommended_price']),
+                        'current_price': self._str_to_float(offer['price']),
+                        'min_price_in_market': self._str_to_float(offer['min_ozon_price']),
+                        'min_price_without_market': self._str_to_float(minimal_price),
+                        'attractive_price_threshold': self._str_to_float(offer['recommended_price']),
                         'market': 'ozon',
                         'barcodes': ', '.join(offer.get('barcodes', [])),
-                        'price_index': self.__translate_price_index(price_index),
+                        'price_index': self._translate_price_index(price_index),
                         'market_sku': offer['sku'],
-                        'your_price_for_buyers': self.__str_to_float(offer['marketing_price'])
+                        'your_price_for_buyers': self._str_to_float(offer['marketing_price'])
                     })
 
                 except Exception as e:
                     logger.error(f'Error in get base info for offer with sku {offer["offer_id"]}', exc_info=True)
         return result
 
-    def _get_offers_attributes(self, data: list[OfferIdentifier]) -> dict[str, dict[str, Any]]:
+    async def _get_offers_attributes(self, offer_data: list[OfferIdentifier]) -> dict[str, dict[str, Any]]:
         chunk_size = 1000
 
         result = dict()
 
-        for i in range(0, len(data), chunk_size):
-            chunk_offer_ids = [offer.offer_id for offer in data[i:i + chunk_size]]
+        for i in range(0, len(offer_data), chunk_size):
+            chunk_offer_ids = [offer.offer_id for offer in offer_data[i:i + chunk_size]]
             body = {
                 'filter': {
                     'offer_id': chunk_offer_ids
@@ -419,14 +570,14 @@ class OzonAPI(BaseAPI):
                 'limit': chunk_size
             }
 
-            response = self.request(
+            response = await self.request(
                 'POST',
                 url='https://api-seller.ozon.ru/v3/products/info/attributes',
                 headers=self.auth_headers,
                 body=body
             )
 
-            data = self.validate_response(response, body=body)
+            data = await self.validate_response(response, body=body)
             # 4191 description
             for offer in data['result']:
                 description_attributes = [i['values'][0] for i in offer['attributes'] if
@@ -457,7 +608,15 @@ class OzonAPI(BaseAPI):
 
         return result
 
-    def __translate_price_index(self, value):
+    @staticmethod
+    def _str_to_float(value: str):
+        try:
+            return float(value)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _translate_price_index(value: str) -> str | None:
         samples = {
             "WITHOUT_INDEX": 'Без индекса',
             "PROFIT": 'Выгодный',
@@ -465,121 +624,6 @@ class OzonAPI(BaseAPI):
             "NON_PROFIT": 'Невыгодный'
         }
         return samples.get(value, None)
-
-    def _get_content_ratings(self, skus: list[int]):
-        chunk_size = 100
-        result = {}
-
-        for i in range(0, len(skus), chunk_size):
-            body = {
-                'skus': skus[i:i + chunk_size]
-            }
-            response = self.request('POST', url='https://api-seller.ozon.ru/v1/product/rating-by-sku',
-                                         headers=self.auth_headers, body=body)
-            data = self.validate_response(response, body=body)
-            result.update({item['sku']: item['rating'] for item in data['products']})
-
-        return result
-
-    def _get_stock_on_warehouses(self):
-        chunk_size = 1000
-        offset = 0
-        result = []
-
-        while True:
-            body = {
-                'limit': chunk_size,
-                'offset': offset,
-                'warehouse_type': 'ALL'
-            }
-            response = self.request('POST', url='https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses',
-                                         headers=self.auth_headers, body=body)
-
-            data = self.validate_response(response, True, body)
-
-            if not data['result']['rows']:
-                break
-
-            for stock in data['result']['rows']:
-                stock_data = {
-                    'value': stock['free_to_sell_amount'],
-                    'market_sku': stock['sku'],
-                    'warehouse_name': stock['warehouse_name'].replace('_', ' ').title()
-                }
-                result.append(stock_data)
-
-            offset += chunk_size
-
-        return result
-
-    def _market_sku_to_offer_id(self) -> dict[int, str]:
-        offers_identifiers = self._get_offers_identifiers()
-        offers = self._get_offers_base_info(offers_identifiers)
-
-        return {offer['market_sku']: offer['sku'] for offer in offers if offer['market_sku'] != 0}
-
-    def _get_offers_prices(self, data: list[OfferIdentifier]) -> dict[str, dict]:
-        chunk_size = 1000
-        result = dict()
-
-        for i in range(0, len(data), chunk_size):
-            body = {
-                'filter': {
-                    'offer_id': [i.offer_id for i in data[i:i + chunk_size]]
-                },
-                'limit': chunk_size
-            }
-            response = self.request('POST', url='https://api-seller.ozon.ru/v4/product/info/prices', headers=self.auth_headers,
-                                         body=body)
-
-            data = self.validate_response(response, body=body)
-
-            for offer in data['result']['items']:
-                result[offer['offer_id']] = {
-                    'marketing_seller_price': self.__str_to_float(offer['price'].get('marketing_seller_price', None))
-                }
-
-                try:
-                    commissions = offer['commissions']
-
-                    sales_percent = commissions['sales_percent_fbo']
-                    price = self.__str_to_float(offer['price']['price'])
-
-                    expenses = sum([
-                        commissions['fbo_return_flow_trans_max_amount'],
-                        commissions['fbo_deliv_to_customer_amount'],
-                    ])
-
-                    result[offer['offer_id']]['commissions'] = price * sales_percent / 100 + expenses
-
-                except Exception as e:
-                    logger.error(f'Error in get commission for offer with sku {offer["offer_id"]}', exc_info=True)
-
-        return result
-
-    def _get_clasters_info(self) -> list[APIWarehouse]:
-        # url = 'https://seller-edu.ozon.ru/document-manager-api.kms/api/v2/seller-edu/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
-        url = 'https://seller-edu.ozon.ru/document-manager-api/seller-edu/api/v3/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
-        #
-        response = self.request('GET', url=url)
-
-        data = response.json()
-        content_json = json.loads(data['document']['contentJson'])
-        spoilers = [i for i in content_json['content'] if i['type'] == 'spoiler']
-        spoilers = spoilers[len(spoilers) // 2:len(spoilers) + 1]
-
-        clasters = []
-
-        for spoiler in spoilers:
-            claster_name = spoiler['attrs']['title']
-            warehouses = [
-                i['content'][0]['content'][0]['text'].replace('-', ' ').title().replace('Мо ', '').replace('Спб', '')
-                for i in spoiler['content'][0]['content']]
-            clasters.append(
-                APIWarehouse(name=claster_name, market='ozon', offers=[], warehouse_type=WarehouseType.CLUSTER,
-                             related_warehouses_name=warehouses))
-
-        return clasters
 
     async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
         url = 'https://api-seller.ozon.ru/v2/posting/fbo/list'
@@ -598,14 +642,14 @@ class OzonAPI(BaseAPI):
                 "financial_data": True
             }
         }
-        response = self.request('POST', url=url, headers=self.auth_headers, body=body)
+        response = await self.request('POST', url=url, headers=self.auth_headers, body=body)
 
         if not response.ok:
             logger.error(f'Cant get orders from {from_date}: {response.text}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST,
                                 f'Не удалось получить заказы: {response.json().get("message", "unknown")}')
 
-        json_response = response.json()
+        json_response = await self.validate_response(response)
         result = []
 
         for order in json_response.get('result', []):
@@ -629,4 +673,3 @@ class OzonAPI(BaseAPI):
                 result.append(order_item_data)
 
         return result
-

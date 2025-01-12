@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
 from logs import get_logger
-from src.database.db import async_session, ISessionFabric
+from src.database.interfaces import IDbSessionFabric
 from src.database.models.base import Base
 from src.schemas.catalog_schemas import CatalogItemCreate
 from src.shared.exceptions import MappingError
@@ -89,7 +89,7 @@ async def _get_or_create(
     return model_schema.model_validate(object_db, from_attributes=True), created
 
 
-async def duplicate_offers_to_catalog(session_factory: ISessionFabric) -> None:
+async def duplicate_offers_to_catalog(session_factory) -> None:
     """ Создает несозданные в каталоге записи карточек товарах """
     offer_filter = SKUOnlyOffersFilter()
     offer_repository = OfferRepository()
