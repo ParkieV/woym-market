@@ -16,8 +16,8 @@ class TestYandexMarketAPI(BaseMarketplaceAPITest):
 
 
     async def test_get_market_prices_report(self, api: YandexMarketAPI):
-        _id = api._get_business_id_by_campaign_id(api._entity_id)
-        result = await api._get_market_prices_report(_id)
+        id = api._get_business_id_by_campaign_id(api.entity_id)
+        result = await api._get_market_prices_report(id)
 
         assert result
 

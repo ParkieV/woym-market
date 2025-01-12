@@ -5,7 +5,7 @@ from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
 from logs import get_logger
-from src.database.db import get_session
+from src.database.db import get_db_session
 from src.database.models.models import Offer, CatalogItem
 from src.dependencies.users import get_current_user, require_staff
 from src.schemas.catalog_schemas import CatalogItemUpdate, PydanticCatalogItem
@@ -24,12 +24,12 @@ logger = get_logger(__file__)
 
 @router.get('', response_model=list[PydanticCatalogItem], dependencies=[Depends(get_current_user)], summary='Список товаров каталога')
 async def get_catalog_items():
-    return await service.get_catalog_items(get_session)
+    return await service.get_catalog_items(get_db_session)
 
 
 @router.patch('', dependencies=[Depends(require_staff)], summary='Изменение товаров каталога')
 async def change_catalog_items(items: list[CatalogItemUpdate]):
-    await service.change_catalog_items(get_session, items)
+    await service.change_catalog_items(get_db_session, items)
 
 
 @router.post('/reset-track-markers', tags=['Debug'], dependencies=[Depends(require_staff)])
@@ -61,7 +61,7 @@ async def reverse_synchronize_catalog_items(background: BackgroundTasks, skus: l
     background.add_task(ReverseSynchronizationInteractor(
         DBMetadataService({'Offer': Offer,
                            'CatalogItem': CatalogItem}),
-        get_session
+        get_db_session
     ))
     return {'status': 'OK'}
 

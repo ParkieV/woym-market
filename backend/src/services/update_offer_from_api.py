@@ -5,7 +5,7 @@ import pandas as pd
 from sqlalchemy import text
 
 from logs import get_logger
-from src.database.db import ISessionFabric
+from src.database.interfaces import IDbSessionFabric
 from src.schemas.query_builders.update_offer import CreateTempTable, UpdateOfferWithTempTable, InsertTempTable
 from src.services.interfaces import IDBMetadataService
 
@@ -17,9 +17,9 @@ class UpdateOfferFromApi:
 
     def __init__(self,
                  metadata_service: IDBMetadataService,
-                 session_fabric: ISessionFabric):
+                 db_session_fabric: IDbSessionFabric):
         self.metadata_service = metadata_service
-        self.session_fabric = session_fabric
+        self.db_session_fabric = db_session_fabric
 
     async def __call__(self,
                  data: pd.DataFrame,
@@ -52,7 +52,7 @@ class UpdateOfferFromApi:
         insert_gen = insert_temp_table_builder('')
         query_update = query_builder("UPDATE offers\n\tSET ")
 
-        async with self.session_fabric() as session:
+        async with self.db_session_fabric() as session:
             await session.execute(text(query_create))
             [await session.execute(text(query_insert), data_insert) for query_insert, data_insert in insert_gen]
             await session.execute(text(query_update))

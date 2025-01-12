@@ -1,11 +1,13 @@
 from abc import abstractmethod
-from collections.abc import Sequence, Iterable
-from typing import Protocol, TypeVar, AsyncGenerator
+from collections.abc import Sequence, Iterable, Callable
+from typing import Protocol, TypeVar, AsyncGenerator, AsyncContextManager
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.schemas.filters.interface import IBaseFilter
 
 T = TypeVar('T')
-
+IDbSessionFabric = Callable[[], AsyncContextManager[AsyncSession]]
 
 class ICatalogRepository(Protocol[T]):
 

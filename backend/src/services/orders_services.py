@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from starlette import status
 
 from logs import get_logger
-from src.api.wrapper import APIWrapper
+from src.api.wrapper import ApiInteractor
 from datetime import datetime, timedelta
 from src.database import warehouse_db, offer
 from src.database.db import async_session
@@ -15,28 +15,29 @@ from src.schemas.filters.statistic_filter import OrderStatisticFilter
 from src.schemas.orders_scemas import OrderCreate, OrderOut
 from src.database import order_db as db
 
-api_wrapper = APIWrapper()
-
 logger = get_logger(__name__)
 
 
-async def setup_orders() -> None:
+async def setup_orders(api_session_fabric, db_session_fabric) -> None:
     end = datetime.now()
     start = end - timedelta(days=120)
 
-    async with async_session() as session:
-        offers_idents = await offer.get_offers_fields(session, [Offer.id, Offer.sku, Offer.market, Offer.name_of_shop])
+    async with db_session_fabric() as db_session:
+        offers_idents = await offer.get_offers_fields(db_session, [Offer.id, Offer.sku, Offer.market, Offer.name_of_shop])
         if not offers_idents:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Для получения остатков требуется наличие товаров')
 
-        db_warehouses = await warehouse_db.get_warehouses(session)
+        db_warehouses = await warehouse_db.get_warehouses(db_session)
         if not db_warehouses:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Для получения остатков требуется наличие складов')
         
-        db_orders = await db.get_orders(session)
+        db_orders = await db.get_orders(db_session)
         db_orders_df = pd.DataFrame([i.model_dump() for i in db_orders], columns=OrderOut.model_fields.keys())
 
-    api_orders = await api_wrapper.get_orders(start, end)
+
+    api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
+                                   db_session_fabric=db_session_fabric)
+    api_orders = await api_interactor.get_orders(start, end)
     api_orders_df = pd.DataFrame([i.model_dump() for i in api_orders])
     warehouses_df = pd.DataFrame([i.model_dump() for i in db_warehouses])
     warehouses_df.rename(columns={

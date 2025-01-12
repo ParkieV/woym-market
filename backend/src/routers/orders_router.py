@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, Body
 
+from src.api.gateway_template import get_api_session
+from src.database.db import get_db_session
 from src.schemas.filters.filter_schemas import PagingFilter
 from src.schemas.filters.orders_filter import OrderFilter
 from src.schemas.filters.statistic_filter import OrderStatisticFilter
@@ -35,7 +37,7 @@ async def get_orders_statistic(filter: OrderStatisticFilter = Body(...)):
 
 @router.post('/setup', dependencies=[Depends(require_staff)])
 async def setup_orders_data():
-    await service.setup_orders()
+    await service.setup_orders(get_api_session, get_db_session)
     return {'status': 'OK'}
 
 

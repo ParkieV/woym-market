@@ -3,7 +3,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field, model_validator, field_validator
 
-from src.api.factory import APITypes
+from src.api.interfaces import ApiTypes
 
 
 class LogsOut(BaseModel):
@@ -59,7 +59,7 @@ class MarketOut(BaseModel):
     id: int
     name: str
     tax: float = 0
-    type: APITypes
+    type: ApiTypes
     discount_purchase: float
     long_term_storage_cost: float | None
     rate: float
@@ -146,7 +146,7 @@ class MarketFullUpdate(MarketFullOut):
 class MarketCreate(BaseModel):
     name: str
     tax: float = 0
-    type: APITypes
+    type: ApiTypes
     token: str
     entity_id: int | None
 

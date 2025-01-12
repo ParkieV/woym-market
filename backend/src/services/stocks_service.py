@@ -7,7 +7,7 @@ from starlette import status
 import openpyxl
 import src.services.base_utils
 from logs import get_logger
-from src.api.wrapper import APIWrapper
+from src.api.wrapper import ApiInteractor
 from src.database.db import async_session
 from src.database import warehouse_db as db
 from src.database.models.models import Offer
@@ -25,35 +25,35 @@ from datetime import datetime
 from pathlib import Path
 from shutil import make_archive
 
-api_wrapper = APIWrapper()
 
 logger = get_logger(__name__)
 
 
-async def update_warehouses_and_stocks():
+async def update_warehouses_and_stocks(api_session_fabric, db_session_fabric):
     logger.info('Start update warehouses and stocks')
 
     start_time = datetime.now()
 
-    async with async_session() as session:
-        # Остатки из API
+    # Остатки из API
+    api_wrapper = ApiInteractor(api_session_fabric=api_session_fabric,
+                               db_session_fabric=db_session_fabric)
+    stocks = await api_wrapper.get_stocks()
+    logger.info('API stocks collected')
 
-        stocks = await api_wrapper.get_stocks()
-        logger.info('API stocks collected')
+    api_stocks_df = pd.DataFrame([{
+        'warehouse_name': warehouse.name,
+        'warehouse_type': warehouse.warehouse_type,
+        'market': warehouse.market,
+        'sku': [stock.sku for stock in warehouse.offers],
+        'name_of_shop': [stock.name_of_shop for stock in warehouse.offers],
+        'current_stock': [stock.current_stock for stock in warehouse.offers],
+    } for warehouse in stocks])
+    api_stocks_df_exploded = api_stocks_df.explode(['sku', 'name_of_shop', 'current_stock'])
+    api_stocks_df_exploded.dropna(inplace=True)
+    api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']] = api_stocks_df_exploded[
+        ['sku', 'name_of_shop', 'market', 'warehouse_name']].astype('string')
 
-        api_stocks_df = pd.DataFrame([{
-            'warehouse_name': warehouse.name,
-            'warehouse_type': warehouse.warehouse_type,
-            'market': warehouse.market,
-            'sku': [stock.sku for stock in warehouse.offers],
-            'name_of_shop': [stock.name_of_shop for stock in warehouse.offers],
-            'current_stock': [stock.current_stock for stock in warehouse.offers],
-        } for warehouse in stocks])
-        api_stocks_df_exploded = api_stocks_df.explode(['sku', 'name_of_shop', 'current_stock'])
-        api_stocks_df_exploded.dropna(inplace=True)
-        api_stocks_df_exploded[['sku', 'name_of_shop', 'market', 'warehouse_name']] = api_stocks_df_exploded[
-            ['sku', 'name_of_shop', 'market', 'warehouse_name']].astype('string')
-
+    async with db_session_fabric() as session:
         # Остатки из БД
         db_stocks = await db.get_all_offers_stocks(session)
         db_stocks_df = pd.DataFrame(db_stocks, columns=['id', 'current_stock', 'offer_id', 'warehouse_name', 'sku', 'market', 'name_of_shop'])
