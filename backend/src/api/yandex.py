@@ -60,7 +60,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
             logger.warning(
                 f'Invalid offers data: {len(invalid_offer_data)} / {len(valida_offer_data)} {invalid_offer_data}')
 
-        business_id = self._get_business_id_by_campaign_id(self.client_id)
+        business_id = await self._get_business_id_by_campaign_id(self.client_id)
         url = f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings/update'
 
         chunk_size = 500
@@ -70,15 +70,15 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 'offerMappings': [
                     {
                         'offer': {
-                            'offerId': offer_data.sku,
-                            'barcodes': [barcode for barcode in offer_data.valid_barcodes],
-                            'name': offer_data.name,
-                            'description': offer_data.description,
+                            'offerId': valida_offer_data[i].sku,
+                            'barcodes': [barcode for barcode in valida_offer_data[i].valid_barcodes],
+                            'name': valida_offer_data[i].name,
+                            'description': valida_offer_data[i].description,
                             'weightDimensions': {
-                                'length': ceil(offer_data.self_length),
-                                'width': ceil(offer_data.self_width),
-                                'height': ceil(offer_data.self_height),
-                                'weight': offer_data.self_weight,
+                                'length': ceil(valida_offer_data[i].self_length),
+                                'width': ceil(valida_offer_data[i].self_width),
+                                'height': ceil(valida_offer_data[i].self_height),
+                                'weight': valida_offer_data[i].self_weight,
                             }
 
                         }
@@ -86,14 +86,14 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                     for offer_data in valida_offer_data[i:i + chunk_size]
                 ]
             }
-            response = self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
+            response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
                 logger.error(f'Cant update offers data: {response.text}')
 
-            response_json = response.json()
+            response_json = await self.validate_response(response)
 
-            if not response_json.get('status', None) == 'OK':
+            if not response.ok:
                 logger.error(f'Cant update offers data: {response_json.get("errors", "unknown")}')
 
     async def get_offers_list(self) -> list[APIOffer]:

@@ -1,9 +1,8 @@
 from pathlib import Path
 
-from fastapi import APIRouter, UploadFile, File, Depends, Query, HTTPException
-from starlette import status
+from fastapi import APIRouter, UploadFile, File, Depends, Query
 
-from src.api.yandex.disk import YandexDiscAPI
+from src.api.yandex_disk import YandexDiscApi
 from src.dependencies.users import require_staff
 from src.params.config import config
 from src.schemas.media_schemas import UploadResult, StorageItem
@@ -14,7 +13,7 @@ router = APIRouter(
     dependencies=[Depends(require_staff)]
 )
 
-disk = YandexDiscAPI(
+disk = YandexDiscApi(
     token=config.yandex_disk_token,
     work_dir=config.yandex_disk_work_dir
 )
