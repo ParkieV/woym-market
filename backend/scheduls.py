@@ -34,7 +34,6 @@ async def update_data(user_ids: Sequence[int]):
     except Exception as e:
         logger.error(f'Error in update orders data', exc_info=e)
 
-    logger.info('Schedules updated completed')
 
 if __name__ == '__main__':
     asyncio.run(update_data([3, 4]))
