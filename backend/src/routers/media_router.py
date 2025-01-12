@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, Depends, Query
@@ -14,13 +15,17 @@ router = APIRouter(
     tags=['Медиа', 'Debug'],
     dependencies=[Depends(require_staff)]
 )
-async with get_api_session() as api_session:
-    disk = YandexDiscApi(
-        token=config.yandex_disk_token,
-        work_dir=config.yandex_disk_work_dir,
-        session=api_session
-    )
+disk = None
+async def foo():
+    global disk
+    async with get_api_session() as api_session:
+        disk = YandexDiscApi(
+            token=config.yandex_disk_token,
+            work_dir=config.yandex_disk_work_dir,
+            session=api_session
+        )
 
+asyncio.run(foo())
 
 @router.delete("")
 async def delete_source(path: str):
