@@ -1,7 +1,9 @@
 from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, Depends, Query
+from requests import session
 
+from src.api.gateway_template import get_api_session
 from src.api.yandex_disk import YandexDiscApi
 from src.dependencies.users import require_staff
 from src.params.config import config
@@ -12,11 +14,12 @@ router = APIRouter(
     tags=['Медиа', 'Debug'],
     dependencies=[Depends(require_staff)]
 )
-
-disk = YandexDiscApi(
-    token=config.yandex_disk_token,
-    work_dir=config.yandex_disk_work_dir
-)
+async with get_api_session() as api_session:
+    disk = YandexDiscApi(
+        token=config.yandex_disk_token,
+        work_dir=config.yandex_disk_work_dir,
+        session=api_session
+    )
 
 
 @router.delete("")
