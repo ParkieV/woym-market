@@ -5,7 +5,7 @@ from math import ceil
 from io import BytesIO
 from typing import Any
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientResponse
 
 from logs import get_logger
 from datetime import datetime, timedelta
@@ -70,15 +70,15 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 'offerMappings': [
                     {
                         'offer': {
-                            'offerId': valida_offer_data[i].sku,
-                            'barcodes': [barcode for barcode in valida_offer_data[i].valid_barcodes],
-                            'name': valida_offer_data[i].name,
-                            'description': valida_offer_data[i].description,
+                            'offerId': offer_data.sku,
+                            'barcodes': [barcode for barcode in offer_data.valid_barcodes],
+                            'name': offer_data.name,
+                            'description': offer_data.description,
                             'weightDimensions': {
-                                'length': ceil(valida_offer_data[i].self_length),
-                                'width': ceil(valida_offer_data[i].self_width),
-                                'height': ceil(valida_offer_data[i].self_height),
-                                'weight': valida_offer_data[i].self_weight,
+                                'length': ceil(offer_data.self_length),
+                                'width': ceil(offer_data.self_width),
+                                'height': ceil(offer_data.self_height),
+                                'weight': offer_data.self_weight,
                             }
 
                         }
@@ -95,6 +95,14 @@ class YandexMarketApi(ApiGateway, IApiGateway):
 
             if not response.ok:
                 logger.error(f'Cant update offers data: {response_json.get("errors", "unknown")}')
+
+    async def validate_response(self, response: ClientResponse, body: Any = None) -> Any:
+        data_json = await response.json()
+
+        if response.status != 200 :
+            raise RequestException(f'status: {response.status} \ndetail: {data_json}')
+
+        return data_json
 
     async def get_offers_list(self) -> list[APIOffer]:
         result = []
@@ -163,8 +171,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
         chunk_size = 200
 
         while True:
-            base_url = f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings? \
-                      limit={chunk_size}'
+            base_url = f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings?limit={chunk_size}'
             if page_token is not None:
                 base_url += f'&page_token={page_token}'
             response = await self.request(

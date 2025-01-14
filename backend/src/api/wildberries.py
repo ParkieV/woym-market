@@ -102,7 +102,6 @@ class WildberriesApi(ApiGateway, IApiGateway):
             logger.error(f'Errors in offers: {errors}')
 
     async def get_offers_list(self) -> list[APIOffer]:
-        print('3')
         offers = await self._get_offers_base_info()
         offers_prices = await self._get_offers_prices()
 

@@ -54,8 +54,6 @@ class ApiInteractor:
                     token=market.token,
                     entity_id=str(market.entity_id) if market.entity_id else None,
                     shop_name=market.name)
-                if market.type == ApiTypes.OZON:
-                    print('ozon')
                 offers = await api.get_offers_list()
                 logger.info(f'{market.name}({market.type}) offers collected: {len(offers)}')
                 if not offers:

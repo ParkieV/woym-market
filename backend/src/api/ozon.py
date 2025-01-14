@@ -196,7 +196,6 @@ class OzonApi(ApiGateway, IApiGateway):
         offers_identifiers = []
         async for chunk in self._get_offers_identifiers_by_chunks():
             offers_identifiers += chunk
-        print('2')
         offers = await self._get_offers_base_info(offers_identifiers)
 
         return {offer['market_sku']: offer['sku'] for offer in offers if offer['market_sku'] != 0}
@@ -376,7 +375,6 @@ class OzonApi(ApiGateway, IApiGateway):
         offers_identifiers = []
         async for chunk in self._get_offers_identifiers_by_chunks():
             offers_identifiers += chunk
-        print('1')
         offers = await self._get_offers_base_info(offers_identifiers)
         offers_attributes = await self._get_offers_attributes(offers_identifiers)
         offers_content_rating = await self._get_content_ratings(
@@ -510,7 +508,6 @@ class OzonApi(ApiGateway, IApiGateway):
         result = []
 
         for i in range(0, len(offer_data), chunk_size):
-            print('ASDF', type(offer_data))
             chunk_offer_ids = [offer.offer_id for offer in offer_data[i:i + chunk_size]]
             body = {
                 'offer_id': chunk_offer_ids
