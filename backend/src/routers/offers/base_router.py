@@ -9,7 +9,7 @@ from src.schemas.offer_schemas import OfferChange, OfferOut, Market
 from src.services import offer_service as service
 from src.services.base_utils import clean_up_files
 from .pricing_schemes_router import router as pricing_schemes_router
-from ...database.db import get_session
+from ...database.db import get_db_session
 from ...schemas.filters.filter_schemas import PagingFilter
 from ...schemas.filters.offers_filter import OffersFilter
 
@@ -21,7 +21,7 @@ router = APIRouter(
 
 @router.post('', response_model=list[OfferOut], tags=['Карточки товаров'], dependencies=[Depends(get_current_user)], summary='Список карточек товаров')
 async def get_offers(filter: OffersFilter | None = None, paging: PagingFilter | None = None):
-    return await service.get_offers_list(get_session, offers_filter=filter)
+    return await service.get_offers_list(get_db_session, offers_filter=filter)
 
 
 @router.post('/reset-track-markers', tags=['Debug'], dependencies=[Depends(require_staff)])
@@ -37,7 +37,7 @@ async def change_offer_fields(offers_data: list[OfferChange], current_user=Depen
 
     Параметр `id` товара обязательно должен передаваться. Параметры `market`, `name_of_shop` передаются для валидации значений для конкретного.
     """
-    return await service.change_offers(offers_data, current_user.id, get_session)
+    return await service.change_offers(offers_data, current_user.id, get_db_session)
 
 
 @router.put('/media/images', tags=['Карточки товаров', 'Медиа'], dependencies=[Depends(require_staff)], deprecated=True)
@@ -49,7 +49,7 @@ async def add_image_to_offer(file: UploadFile = File(...), offer_id: int = Query
 @router.post('/setup', tags=['Debug'], include_in_schema=False)
 async def setup_offers_data(current_user=Depends(require_staff)):
     """Создает **все** карточки товаров, которые отдают подключенные магазины """
-    await service.setup_offers_data(current_user.id)
+    await service.setup_offers_data(current_user.id, )
     return {'status': 'OK'}
 
 

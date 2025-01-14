@@ -1,5 +1,8 @@
 from pathlib import Path
 from datetime import datetime
+
+from aiohttp import ClientSession
+
 from src.params.config import config
 from fastapi import UploadFile
 from requests import Session
@@ -11,12 +14,11 @@ from src.schemas.media_schemas import UploadResult, StorageItem
 logger = get_logger(__name__)
 
 
-class YandexDiscAPI:
-    session: Session
+class YandexDiscApi:
     work_dir: str
     root_path: Path = Path('backend:/')
 
-    def __init__(self, token: str, work_dir: str):
+    def __init__(self, token: str, work_dir: str, session: ClientSession):
         self.auth_headers = {
             'Authorization': f'OAuth {token}'
         }
@@ -167,10 +169,3 @@ class YandexDiscAPI:
         if not response.ok:
             logger.error(f'Cant create directory "{new_dir_path}": {response.text}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалось создать папку "{new_dir_path}": {response.json().get("message", "unknown")}')
-
-
-
-
-
-
-

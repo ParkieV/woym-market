@@ -3,50 +3,52 @@ from datetime import datetime
 from math import ceil
 from typing import Any
 
+from aiohttp import ClientSession
 from fastapi import HTTPException
-from requests import Session
 from starlette import status
 
 from logs import get_logger
-from src.api.base_api import BaseAPI
+from src.api.exceptions import InitializationError
+from src.api.gateway_template import ApiGateway
+from src.api.interfaces import IApiGateway, ApiTypes
 from src.schemas.base_api_schemas import APIPriceChangeData, APIWarehouse, APIOffer, WarehouseType, APIWarehouseOffer, \
     APIOfferChangeData, APIOrderData
 
 logger = get_logger(__name__, tags={'marketplace_api': 'wildberries'})
 
 
-class WildberriesAPI(BaseAPI):
+class WildberriesApi(ApiGateway, IApiGateway):
     market_type = 'Wildberries'
     __characteristic_ids = {
         'self_weight': 88953
     }
 
-    def __init__(self, token: str, shop_name: str, *args, **kwargs):
-        self.token = token
-        self.name_of_shop = shop_name
-        self.shop_name = shop_name
-        self.auth_headers = {
-            'Authorization': self.token,
-        }
-        self.session = Session()
+    def __init__(self, token: str, entity_id: int | None, shop_name: str, session: ClientSession) -> None: #type: ignore
+        try:
+            super().__init__(token, entity_id, shop_name, session)
+            self.auth_headers = {
+                'Authorization': self.token,
+            }
+        except InitializationError as err:
+            raise InitializationError(ApiTypes.WILDBERRIES, err.detail)
 
-    async def validate_auth_data(self, **kwargs):
+    async def validate_auth_data(self):
         url = 'https://common-api.wildberries.ru/open-utils/tokens/introspect-v2'
         headers = {'X-Introspect': self.token}
-        response = self.request('GET', url=url, headers=headers)
+        response = await self.request('GET', url=url, headers=headers)
 
         if not response.ok:
             raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                                 f'Ошибка проверки данных авторизации сервиса {self.shop_name}(wildberries)')
 
-        data = response.json()
+        data = self.validate_response(response)
         if not data['Ok']:
             raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                                 f'Ошибка проверки данных(токена) авторизации сервиса {self.shop_name}(wildberries)')
 
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
 
-        items = self.__get_base_offer_data()
+        items = await self._get_base_offer_data()
         items = {item['vendorCode']: item for item in items}
 
         update_url = 'https://content-api.wildberries.ru/content/v2/cards/update'
@@ -89,20 +91,19 @@ class WildberriesAPI(BaseAPI):
                 }
                 body.append(body_item)
 
-            response = self.request('POST', url=update_url, body=body, headers=self.auth_headers, include_response_logs=True)
+            response = await self.request('POST', url=update_url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
                 logger.error(f'Cant update offers data: {response.text}')
                 continue
 
-        errors = self.__errors_in_update()
+        errors = await self._errors_in_update()
         if errors:
             logger.error(f'Errors in offers: {errors}')
 
-
     async def get_offers_list(self) -> list[APIOffer]:
-        offers = self._get_offers_base_info()
-        offers_prices = self._get_offers_prices()
+        offers = await self._get_offers_base_info()
+        offers_prices = await self._get_offers_prices()
 
         result = []
 
@@ -115,8 +116,8 @@ class WildberriesAPI(BaseAPI):
         return result
 
     async def get_stocks(self) -> list[APIWarehouse]:
-        warehouses = self._get_warehouses()
-        stocks = self._get_stocks()
+        warehouses = await self._get_warehouses()
+        stocks = await self._get_stocks()
 
         result = []
 
@@ -136,18 +137,18 @@ class WildberriesAPI(BaseAPI):
         result.append(APIWarehouse(market='wildberries', offers=[], name='Кластер все магазины', warehouse_type=WarehouseType.SUPER_CLUSTER))
         return result
 
-    def _check_price_update_result(self, task_id: int) -> None:
+    async def _check_price_update_result(self, task_id: int) -> None:
         if not task_id:
             logger.warning('Price task_id no gotten')
             return
 
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/history/tasks'
-        response = self.request('GET', url=url, headers=self.auth_headers, params={'uploadID': task_id})
+        response = await self.request('GET', url=url, headers=self.auth_headers, params={'uploadID': task_id})
 
         if not response.ok:
             logger.error(f'Cant check price update result: {response.text}')
 
-        response_json = response.json()
+        response_json = await self.validate_response(response)
 
         if response_json.get('error', None):
             logger.error(f'Cant check price update result: {response_json.get("errorText", "unknown error")}')
@@ -181,22 +182,22 @@ class WildberriesAPI(BaseAPI):
                     for price_data in valid_price_data[i:i + chunk_size]
                 ]
             }
-            response = self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
+            response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
                 logger.error(logger.error(f'Cant change price: {response.text}'))
 
-            response_json = response.json()
+            response_json = self.validate_response(response)
 
             if response_json.get('error', None):
                 logger.error(response_json['errorText'])
 
             if response_json.get('data', None):
-                self._check_price_update_result(response_json['data'].get('id', None))
+                await self._check_price_update_result(response_json['data'].get('id', None))
 
         logger.info(f'{self.shop_name}(wildberries) prices updated: {len(valid_price_data)} of {len(data)}')
 
-    def __get_base_offer_data(self) -> list[dict]:
+    async def _get_base_offer_data(self) -> list[dict]:
         url = 'https://content-api.wildberries.ru/content/v2/get/cards/list?locale=ru'
         limit = 100
         cursor = {
@@ -219,13 +220,13 @@ class WildberriesAPI(BaseAPI):
                 }
             }
 
-            response = self.request('POST', url=url, body=body, headers=self.auth_headers)
+            response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
 
             if not response.ok:
                 logger.error(f'Cant get offers base info: {response.text}')
                 return result
 
-            response_data = response.json()
+            response_data = await self.validate_response(response)
 
             cards_data = response_data['cards']
             cursor_data = response_data['cursor']
@@ -243,8 +244,8 @@ class WildberriesAPI(BaseAPI):
 
         return result
 
-    def _get_offers_base_info(self) -> list[dict]:
-        items = self.__get_base_offer_data()
+    async def _get_offers_base_info(self) -> list[dict]:
+        items = await self._get_base_offer_data()
         result = []
         for item in items:
             self_weight = [i for i in item.get('characteristics', []) if
@@ -270,7 +271,7 @@ class WildberriesAPI(BaseAPI):
 
         return result
 
-    def _get_offers_prices(self) -> dict[str, Any]:
+    async def _get_offers_prices(self) -> dict[str, Any]:
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter'
 
         limit = 1000
@@ -278,13 +279,13 @@ class WildberriesAPI(BaseAPI):
         result = {}
 
         while True:
-            response = self.request('GET', url=url, params={'limit': limit, 'offset': offset}, headers=self.auth_headers)
+            response = await self.request('GET', url=url, params={'limit': limit, 'offset': offset}, headers=self.auth_headers)
 
             if not response.ok:
                 logger.error(f'Cant get price info: {response.text}')
                 break
 
-            response_data = response.json()
+            response_data = await self.validate_response(response)
             data = response_data['data']['listGoods']
 
             if not data:
@@ -313,17 +314,17 @@ class WildberriesAPI(BaseAPI):
 
         return result
 
-    def _get_warehouses(self) -> list[dict]:
+    async def _get_warehouses(self) -> list[dict]:
         url = 'https://supplies-api.wildberries.ru/api/v1/warehouses'
         result = []
 
-        response = self.request('GET', url=url, headers=self.auth_headers)
+        response = await self.request('GET', url=url, headers=self.auth_headers)
 
         if not response.ok:
             logger.error(f'Cant get warehouses: {response.text}')
             return []
 
-        response_data = response.json()
+        response_data = await self.validate_response(response)
 
         for item in response_data:
             result.append({
@@ -335,27 +336,26 @@ class WildberriesAPI(BaseAPI):
 
         return result
 
-    def __errors_in_update(self) -> list[dict]:
+    async def _errors_in_update(self) -> list[dict]:
         url = 'https://content-api.wildberries.ru/content/v2/cards/error/list'
-        response = self.request('GET', url=url, headers=self.auth_headers)
-        json_response = response.json()
+        response = await self.request('GET', url=url, headers=self.auth_headers)
+        json_response = await self.validate_response(response)
         return json_response.get('data', [])
 
-
-    def _get_stocks_on_warehouse(self, warehouse_id: int, data: dict['barcode', 'sku']) -> list[APIWarehouseOffer]:
+    async def _get_stocks_on_warehouse(self, warehouse_id: int, data: dict[str, Any]) -> list[APIWarehouseOffer]:
         url = f'https://marketplace-api.wildberries.ru/api/v3/stocks/{warehouse_id}'
         result = []
 
         body = {
             'skus': list(data.keys())
         }
-        response = self.request('POST', url=url, headers=self.auth_headers, body=body)
+        response = await self.request('POST', url=url, headers=self.auth_headers, body=body)
 
         if not response.ok:
             logger.error(f'Cant get stocks on warehouse id({warehouse_id}): {response.text}')
             return result
 
-        json_data = response.json()
+        json_data = await self.validate_response(response)
 
         if not json_data['stocks']:
             return result
@@ -368,16 +368,16 @@ class WildberriesAPI(BaseAPI):
             ))
         return result
 
-    def _get_stocks(self) -> defaultdict[str, dict[str, Any]]:
+    async def _get_stocks(self) -> defaultdict[Any, list]:
         date_from = '2000-06-20'
         url = f'https://statistics-api.wildberries.ru/api/v1/supplier/stocks?dateFrom={date_from}'
 
-        response = self.request('GET', url=url, headers=self.auth_headers)
+        response = await self.request('GET', url=url, headers=self.auth_headers)
         if not response.ok:
             logger.error(f'Cant get stocks: {response.text}')
-            return []
+            return defaultdict()
 
-        response_json = response.json()
+        response_json = await self.validate_response(response)
         result = defaultdict(list)
 
         if not response_json:
@@ -398,13 +398,13 @@ class WildberriesAPI(BaseAPI):
         params = {
             'dateFrom': from_date.strftime('%Y-%m-%d'),
         }
-        response = self.request('GET', url=url, headers=self.auth_headers, params=params)
+        response = await self.request('GET', url=url, headers=self.auth_headers, params=params)
 
         if not response.ok:
             logger.error(f'Cant get orders from {from_date}: {response.text}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалоь получить заказы: {response.text}')
 
-        response_json = response.json()
+        response_json = await self.validate_response(response)
         result = []
 
         for item in response_json:

@@ -7,7 +7,8 @@ from starlette import status
 
 from logs import get_logger
 from src.database.catalog import CatalogRepository
-from src.database.db import async_session, ISessionFabric
+from src.database.db import async_session
+from src.database.interfaces import IDbSessionFabric
 from src.database import catalog as db
 from src.database.offer import OfferRepository
 from src.schemas.catalog_schemas import CatalogItemCreate, PydanticCatalogItem, CatalogItemUpdate
@@ -17,7 +18,7 @@ from src.services.base_utils import parce_field_names, bytes_to_data_frame, parc
 logger = get_logger(__name__)
 
 
-async def setup_catalog_items(session_fabric: ISessionFabric) -> None:
+async def setup_catalog_items(session_fabric: IDbSessionFabric) -> None:
     offer_repository = OfferRepository()
     async with session_fabric() as session:
         offer_repository.session = session
@@ -61,7 +62,7 @@ async def setup_catalog_items(session_fabric: ISessionFabric) -> None:
         logger.info(f'Catalog items created: {len(new_items)}')
 
 
-async def get_catalog_items(session_fabric: ISessionFabric) -> list[PydanticCatalogItem]:
+async def get_catalog_items(session_fabric: IDbSessionFabric) -> list[PydanticCatalogItem]:
     catalog_repo = CatalogRepository()
     res = []
 
@@ -73,7 +74,7 @@ async def get_catalog_items(session_fabric: ISessionFabric) -> list[PydanticCata
     return res
 
 
-async def change_catalog_items(session_factory: ISessionFabric, items: list[CatalogItemUpdate]) -> None:
+async def change_catalog_items(session_factory: IDbSessionFabric, items: list[CatalogItemUpdate]) -> None:
     async with session_factory() as session:
         await db.change_catalog_items(session, items)
 
