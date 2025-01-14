@@ -146,9 +146,9 @@ async def update_offers(db_session_fabric,
         )
 
     # Обновление цен для тех карточек, где включен автоконтроль цен
-    # await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True],
-    #                           api_session_fabric,
-    #                           db_session_fabric)
+    await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True],
+                              api_session_fabric,
+                              db_session_fabric)
 
     # Получаем товары из апи
     api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
