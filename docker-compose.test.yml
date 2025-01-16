@@ -1,0 +1,53 @@
+services:
+  backend:
+    restart: unless-stopped
+    env_file: backend/.env.test
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    depends_on:
+      - database
+    volumes:
+      - ./logs:/backend/logs
+    expose:
+      - 8000
+
+  frontend:
+    restart: unless-stopped
+    env_file: front/.env.test
+    build:
+      context: front
+      dockerfile: Dockerfile
+    depends_on:
+      - backend
+    expose:
+      - 3000
+
+  nginx:
+    image: nginx:1.27
+    restart: unless-stopped
+    depends_on:
+      - backend
+    volumes:
+      - ./nginx/test:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/html:/var/www/html
+    ports:
+      - 80:80
+      - 443:443
+
+  database:
+    restart: unless-stopped
+    image: postgres:17.0
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${DB_ROOT_USER}
+      POSTGRES_PASSWORD: ${DB_ROOT_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - db-data-test:/var/lib/postgresql/data
+    expose:
+      - 5432
+
+volumes:
+  db-data-test:
