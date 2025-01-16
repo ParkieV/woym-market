@@ -147,9 +147,8 @@ async def update_offers(db_session_fabric,
 
     # Обновление цен для тех карточек, где включен автоконтроль цен
     await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True],
-                              api_session_fabric,
-                              db_session_fabric)
-
+                              db_session_fabric,
+                              api_session_fabric)
     # Получаем товары из апи
     api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
                                    db_session_fabric=db_session_fabric)
@@ -294,7 +293,9 @@ async def update_offers_attributes(offers: pd.DataFrame,
             self_width = offer_data['self_width'],
             self_height = offer_data['self_height']
         )
-        for offer_data in data
+        for offer_data in data if not np.isnan(offer_data['self_height']) and
+                                  not np.isnan(offer_data['self_height']) and
+                                  not np.isnan(offer_data['self_weight'])
     ]
 
     api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,

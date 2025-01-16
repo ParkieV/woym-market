@@ -182,15 +182,14 @@ class WildberriesApi(ApiGateway, IApiGateway):
                     for price_data in valid_price_data[i:i + chunk_size]
                 ]
             }
+            logger.info(body)
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
-                logger.error(logger.error(f'Cant change price: {response.text}'))
+                logger.error(f'Cant change price: {response.reason}: {await response.json()}')
 
-            response_json = self.validate_response(response)
+            response_json = await self.validate_response(response)
 
-            if response_json.get('error', None):
-                logger.error(response_json['errorText'])
 
             if response_json.get('data', None):
                 await self._check_price_update_result(response_json['data'].get('id', None))

@@ -53,7 +53,9 @@ class ApiGateway(IApiGateway):
         :param include_response_logs: Активировать логи запроса.
         :return: Ответ запроса.
         """
-        response_log_message = f'Request to API {self.market_type}({self.name_of_shop}): {method.upper()} {url} | body={body} | params={params} | headers={headers}.'
+        response_log_message = (f'Request to API {self.market_type}({self.name_of_shop}): {method.upper()} {url} '
+                                f''
+                                f'| params={params} | headers={headers}.')
 
         try:
             response = await self.session.request(method=method, url=url, headers=headers, json=body, params=params)
