@@ -53,17 +53,7 @@ sudo apt install snapd
 sudo snap install --classic certbot
 sudo ln -s /snap/bin/certbot /usr/bin/certbot
 ```
-10) Создаем пустой docker container с NGINX
-``docker run -d --name empty-nginx -p 8080:80 nginx:latest``
-
-11) В корневой папке проекта создаем папку `certs/`
-
-12) Заходим в неё и выполняем команду
+11) Выполняем команду
 ``sudo certbot certonly --standalone -d <НЕОБХОДИМЫЙ_ДОМЕН> -d www.<НЕОБХОДИМЫЙ_ДОМЕН>``
-13) Останавливаем контейнер с NGINX
-```
-docker stop empty-nginx
-docker rm empty-nginx
-```
-14) Выполняем команду
+12) Выполняем команду
 ``docker compose -f docker-compose.<КОНТУР>.yml up --build -d``
