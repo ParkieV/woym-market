@@ -6,6 +6,7 @@ from typing import Union, Any
 import numpy as np
 from pydantic import BaseModel, field_validator, ValidationError, Field
 from pydantic_core.core_schema import FieldValidationInfo
+from tomlkit import value
 
 
 class WarehouseType(str, Enum):
@@ -21,9 +22,9 @@ class APIOffer(BaseModel):
     name_of_shop: str
     description: str | None = None
     self_weight: float | None = None
-    self_length: int | None = None
-    self_width: int | None = None
-    self_height: int | None = None
+    self_length: float | None = None
+    self_width: float | None = None
+    self_height: float | None = None
     volume: float | None = None
     photo: str | None = None
     current_price: float | None = None
@@ -48,12 +49,19 @@ class APIOffer(BaseModel):
     search_words: str | None = None
     market: str = 'yandex'
 
-    @field_validator('self_length', 'self_width', 'self_height', mode='before')
+    @field_validator('self_length', 'self_width', 'self_height', 'self_weight', mode='before')
     @classmethod
-    def convert_sizes(cls, value: int | None) -> int | None:
-        if value is None:
-            return None
-        return int(value)
+    def convert_sizes(cls, value: Any, info: FieldValidationInfo) -> float | None:
+        match value:
+            case float():
+                return value
+            case int():
+                return float(value)
+            case None:
+                return None
+            case _:
+                raise ValidationError(f"Attribute '{info.field_name}' should be an float")
+
 
 @dataclass
 class APIWarehouseOffer:
@@ -110,9 +118,9 @@ class APIOfferChangeData(BaseModel, frozen=True):
     search_words: str | None = None
     barcodes: str | None
     self_weight: float | None = None
-    self_length: int | None = Field(default=None, strict=False)
-    self_width: int | None = Field(default=None, strict=False)
-    self_height: int | None = Field(default=None, strict=False)
+    self_length: float | None = Field(default=None, strict=False)
+    self_width: float | None = Field(default=None, strict=False)
+    self_height: float | None = Field(default=None, strict=False)
 
     def is_valid_vendor_code(self) -> bool:
         return isinstance(self.vendor_code, int) and not np.isnan(self.vendor_code)
@@ -162,19 +170,19 @@ class APIOfferChangeData(BaseModel, frozen=True):
             case _:
                 raise ValidationError(f"Attribute '{info.field_name}' should be an integer")
 
-    @field_validator('self_length', 'self_width', 'self_height', mode='before')
+    @field_validator('self_length', 'self_width', 'self_height', 'self_weight', mode='before')
     @classmethod
-    def validate_dimensions(cls, value: Any, info: FieldValidationInfo) -> int | None:
+    def validate_dimensions(cls, value: Any, info: FieldValidationInfo) -> float | None:
         match value:
             case int():
-                return value
+                return float(value)
             case float():
                 if np.isnan(value):
                     raise ValidationError(f"Attribute '{info.field_name}' cannot be NaN")
                 else:
-                    return int(value)
+                    return value
             case _:
-                raise ValidationError(f"Attribute '{info.field_name}' should be an integer")
+                raise ValidationError(f"Attribute '{info.field_name}' should be an float")
 
 
 class APIOrderData(BaseModel):
