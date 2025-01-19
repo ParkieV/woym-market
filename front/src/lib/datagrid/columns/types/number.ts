@@ -45,7 +45,7 @@ export default class NumberColumn implements ColumnBase<number> {
 }
 
 export const intColumn = new NumberColumn({ precision: 0, min: 0 });
-export const floatColumn = new NumberColumn({ precision: 2, min: 0 });
+export const floatColumn = new NumberColumn({ precision: 3, min: 0 });
 export const rubleColumn = postfixColumn(new NumberColumn({ precision: 0, min: 0 }), " ₽", "₽");
 export const dollarColumn = postfixColumn(new NumberColumn({ precision: 2, min: 0 }), " $", "$");
 export const percentColumn = postfixColumn(new NumberColumn({ precision: 2, min: 0 }), "%");
