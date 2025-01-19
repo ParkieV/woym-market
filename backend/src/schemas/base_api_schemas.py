@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Union
+from typing import Union, Any
 
 import numpy as np
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, ValidationError, Field
+from pydantic_core.core_schema import FieldValidationInfo
 
 
 class WarehouseType(str, Enum):
@@ -98,7 +99,7 @@ class APIPriceChangeData:
         return isinstance(self.vendor_code, int) and not np.isnan(self.vendor_code)
 
 
-class APIOfferChangeData(BaseModel):
+class APIOfferChangeData(BaseModel, frozen=True):
     sku: str
     market: str
     name_of_shop: str
@@ -107,11 +108,11 @@ class APIOfferChangeData(BaseModel):
     description: str | None = None
     vendor_code: int | None = None
     search_words: str | None = None
-    barcodes: str | None = None
+    barcodes: str | None
     self_weight: float | None = None
-    self_length: int | None = None
-    self_width: int | None = None
-    self_height: int | None = None
+    self_length: int | None = Field(default=None, strict=False)
+    self_width: int | None = Field(default=None, strict=False)
+    self_height: int | None = Field(default=None, strict=False)
 
     def is_valid_vendor_code(self) -> bool:
         return isinstance(self.vendor_code, int) and not np.isnan(self.vendor_code)
@@ -140,13 +141,41 @@ class APIOfferChangeData(BaseModel):
 
         return True
 
-
     @property
     def valid_barcodes(self) -> list[str]:
         if not self.is_valid_barcodes():
             raise ValueError(f'Invalid barcodes for sku {self.sku}: "{self.barcodes}"')
 
         return self.barcodes.replace(';', ' ').replace(',', ' ').split()
+
+    @field_validator('vendor_code', mode='before')
+    @classmethod
+    def validate_vendor_code(cls, value: Any, info: FieldValidationInfo) -> int | None:
+        match value:
+            case int():
+                return value
+            case float():
+                if np.isnan(value):
+                    return None
+                else:
+                    return int(value)
+            case _:
+                raise ValidationError(f"Attribute '{info.field_name}' should be an integer")
+
+    @field_validator('self_length', 'self_width', 'self_height', mode='before')
+    @classmethod
+    def validate_dimensions(cls, value: Any, info: FieldValidationInfo) -> int | None:
+        match value:
+            case int():
+                return value
+            case float():
+                if np.isnan(value):
+                    raise ValidationError(f"Attribute '{info.field_name}' cannot be NaN")
+                else:
+                    return int(value)
+            case _:
+                raise ValidationError(f"Attribute '{info.field_name}' should be an integer")
+
 
 class APIOrderData(BaseModel):
     internal_order_id: str
