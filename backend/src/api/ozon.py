@@ -595,9 +595,9 @@ class OzonApi(ApiGateway, IApiGateway):
                     search_words = search_words[:search_words[:256].rfind(';')]
 
                 result[offer['offer_id']] = {
-                    'self_height': ceil(offer['height'] / unit_dimension_divider if offer['height'] else offer['height']),
-                    'self_length': ceil(offer['depth'] / unit_dimension_divider if offer['depth'] else offer['depth']),
-                    'self_width': ceil(offer['width'] / unit_dimension_divider if offer['width'] else offer['width']),
+                    'self_height': offer['height'] / unit_dimension_divider if offer['height'] else offer['height'],
+                    'self_length': offer['depth'] / unit_dimension_divider if offer['depth'] else offer['depth'],
+                    'self_width': offer['width'] / unit_dimension_divider if offer['width'] else offer['width'],
                     'self_weight': offer['weight'] / 1000 if offer['weight'] else offer['weight'],
                     'search_words': search_words,
                     'description': descriptions
