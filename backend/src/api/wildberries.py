@@ -58,7 +58,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         invalid_data = [i for i in data if not check_valid(i)]
 
         if invalid_data:
-            logger.warning(f'Invalid offers data: {len(invalid_data)} / {len(valid_offers_data)} {invalid_data}')
+            logger.warning(f'Invalid offers data: {len(invalid_data)} / {len(valid_offers_data)}')
 
         if not valid_offers_data:
             logger.warning(f'{self.shop_name}(wildberries) has no valid offers data')
@@ -94,7 +94,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url=update_url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
-                logger.error(f'Cant update offers data: {response.text}')
+                logger.error(f'Cant update offers data: {await response.json()}')
                 continue
 
         errors = await self._errors_in_update()
