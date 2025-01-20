@@ -49,21 +49,8 @@ class ReverseSyncUpdatingColumnFilter(BaseFilter[str]):
 
         updating_values = {col: f'catalog_items.{col}' for col in self.updating_columns}
 
-        changed_detected_updating_values = {col[:col.find('_changed')]: f"""CASE 
-                WHEN catalog_items.{col} = false THEN COALESCE(offers.{col[:col.find('_changed')]}, catalog_items.{col[:col.find('_changed')]})
-                ELSE catalog_items.{col[:col.find('_changed')]}
-            END"""
+        changed_detected_updating_values = {col[:col.find('_changed')]: f"COALESCE(offers.{col[:col.find('_changed')]}, catalog_items.{col[:col.find('_changed')]})"
             for col in tracking_columns}
-
-        # Формируем словарь значений для обновления
-        # update_values = {
-        #     col: case(
-        #         (getattr(CatalogItem, f'{col}_changed') == False,
-        #          func.coalesce(getattr(Offer, col), getattr(CatalogItem, col))),
-        #         else_=getattr(CatalogItem, col)
-        #     )
-        #     for col in common_columns if getattr(CatalogItem, f'{col}_changed', None)
-        # }
 
         detect_changes_values = {
             column: f"""
