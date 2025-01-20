@@ -86,11 +86,11 @@ class CatalogRepository(ICatalogRepository[PydanticModel]):
                  skus: Sequence[str] | None = None) -> None:
         offer_data_filter = OfferDataFilter()
         sku_in_array_filter = SkuInArrayFilter('catalog_items')
-        updating_colmuns_filter = ReverseSyncUpdatingColumnFilter(updating_columns)
+        updating_columns_filter = ReverseSyncUpdatingColumnFilter(updating_columns)
 
         query = "UPDATE catalog_items\n\tSET "
 
-        query = updating_colmuns_filter(query)
+        query = updating_columns_filter(query)
 
         query = offer_data_filter(query[:-3]+'\n')
 

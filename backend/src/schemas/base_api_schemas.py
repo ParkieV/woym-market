@@ -6,7 +6,6 @@ from typing import Union, Any
 import numpy as np
 from pydantic import BaseModel, field_validator, ValidationError, Field
 from pydantic_core.core_schema import FieldValidationInfo
-from tomlkit import value
 
 
 class WarehouseType(str, Enum):
@@ -116,7 +115,7 @@ class APIOfferChangeData(BaseModel, frozen=True):
     description: str | None = None
     vendor_code: int | None = None
     search_words: str | None = None
-    barcodes: str | None
+    barcodes: str | None = None
     self_weight: float | None = None
     self_length: float | None = Field(default=None, strict=False)
     self_width: float | None = Field(default=None, strict=False)

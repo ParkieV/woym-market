@@ -131,7 +131,7 @@ class ApiInteractor:
                     token=market.token,
                     entity_id=str(market.entity_id) if market.entity_id else None,
                     shop_name=market.name)
-                offers_data = [i for i in data if i.market==market.type.value and i.name_of_shop==market.name]
+                offers_data = [i for i in data if i.market==market.type and i.name_of_shop==market.name]
                 await api.change_offers(offers_data)
 
 @dataclass
