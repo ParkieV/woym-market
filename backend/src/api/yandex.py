@@ -64,7 +64,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
         business_id = await self._get_business_id_by_campaign_id(self.client_id)
         url = f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings/update'
 
-        chunk_size = 500
+        chunk_size = 100
 
         for i in range(0, len(valida_offer_data), chunk_size):
             body = {
