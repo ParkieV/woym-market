@@ -172,7 +172,7 @@ async def update_offers(db_session_fabric,
     # Двойная синхронизаия полей
     for tracked_column in CONTROL_CHANGES:
         to_update_offers[tracked_column] = np.where(
-            to_update_offers[f'{tracked_column}_changed'],
+            to_update_offers[tracked_column] != to_update_offers[f'{tracked_column}__api'],
             to_update_offers[tracked_column],
             to_update_offers[f'{tracked_column}__api']
         )
