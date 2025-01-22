@@ -50,10 +50,6 @@ async def get_offers_list(session_fabric: IDbSessionFabric, offers_filter: Offer
         offer_repository.session = session
         async for offer_chunk in offer_repository.list(query_filter=offers_filter):
             res += offer_chunk
-        async for stock_chunk in offer_stocks_list(session, 1000):
-            for item in res:
-                if item.id in stock_chunk:
-                    item.remaining_stock = stock_chunk[item.id]
 
     return res
 
