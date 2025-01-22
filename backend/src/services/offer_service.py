@@ -12,7 +12,7 @@ from src.api.interfaces import IApiSessionFabric
 from src.database.interfaces import IDbSessionFabric
 from src.database.models.models import Offer, CatalogItem
 from src.database.offer import OfferRepository
-from src.database.warehouse_db import create_own_storage_stocks
+from src.database.warehouse_db import create_own_storage_stocks, offer_stocks_list
 from src.params.config import config
 from logs import get_logger
 from src.api.wrapper import ApiInteractor
@@ -45,10 +45,15 @@ async def get_offers_list(session_fabric: IDbSessionFabric, offers_filter: Offer
     """ Получение списка карточек """
     res = []
     offer_repository = OfferRepository()
+
     async with session_fabric() as session:
         offer_repository.session = session
         async for offer_chunk in offer_repository.list(query_filter=offers_filter):
             res += offer_chunk
+        async for stock_chunk in offer_stocks_list(session, 1000):
+            for item in res:
+                if item.id in stock_chunk:
+                    item.remaining_stock = stock_chunk[item.id]
 
     return res
 

@@ -1,3 +1,4 @@
+import asyncio
 from collections import defaultdict
 from datetime import datetime
 from typing import Type, TypeVar, Any
@@ -9,6 +10,7 @@ from sqlalchemy import select, update, and_, func, text, literal_column, cast, S
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, subqueryload
 
+from src.database.db import get_db_session
 from src.database.models.models import Offer
 from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market
 from src.database.order_db import build_order_stats_by_warehouses
@@ -625,6 +627,22 @@ async def get_fbo_offers(session: AsyncSession):
 
     return [OfferWithStocks.model_validate(i, from_attributes=True) for i in offers]
 
+async def offer_stocks_list(session: AsyncSession, chunk_size: int | None = None, offset: int | None = 0):
+    query = select(OfferStock.offer_id, OfferStock.current_stock)
+
+    while True:
+        query = query.limit(chunk_size).offset(offset)
+        chunk = (await session.execute(query)).all()
+        res = [{item[0]: item[1]} for item in chunk]
+
+        if len(res) == 0:
+            return
+
+        yield res
+
+        if chunk_size is None:
+            return
+        offset += chunk_size
 
 
 async def get_agg_fbo_data(session: AsyncSession, warehouse_ids: list[int] | None = None,
@@ -648,4 +666,3 @@ async def get_agg_fbo_data(session: AsyncSession, warehouse_ids: list[int] | Non
 
     results = (await session.execute(query)).all()
     return [AggOfferFBOStock.model_validate(i, from_attributes=True) for i in results]
-
