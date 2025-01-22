@@ -5,14 +5,13 @@ from typing import Type, TypeVar, Any
 from fastapi import status
 from fastapi.exceptions import HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, update, and_, func, text, literal_column, insert, cast, String, case
+from sqlalchemy import select, update, and_, func, text, literal_column, cast, String, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, subqueryload
 
 from src.database.models.models import Offer
 from src.database.models.models import Warehouse, OfferStock, OwnStorage, OwnStoragePlace, Market
-from src.database.order_db import _build_smart_delivery_query, _build_quantity_offers_query, \
-    _build_quantity_warehouses_query, build_order_stats_by_warehouses
+from src.database.order_db import build_order_stats_by_warehouses
 from src.database.utils import _update_or_create_object
 from src.schemas.filters.stocks_filter import WarehousesFilter
 from src.schemas.stocks.fbo_schemas import OfferStockOut, OfferFBOStockUpdate, AggOfferFBOStock, OfferWithStocks
@@ -133,7 +132,7 @@ async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[
     await session.execute(stmp)
 
     stmp = update(OfferStock).options(selectinload(OfferStock.warehouse)).where(
-        Warehouse.warehouse_type == 'cluster').where(OfferStock.current_stock == None).values(current_stock=0)
+        Warehouse.warehouse_type == 'cluster').where(OfferStock.current_stock is None).values(current_stock=0)
 
     await session.execute(stmp)
     await session.commit()
@@ -470,7 +469,7 @@ async def recalculate_clusters_stocks(session: AsyncSession):
         .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
         .group_by(OfferStock.offer_id, Warehouse.parent_warehouse_id)
         .where(Warehouse.warehouse_type == 'warehouse')
-        .where(Warehouse.parent_warehouse_id != None)
+        .where(Warehouse.parent_warehouse_id is not None)
     ).subquery('stocks_subquery')
 
     current_cluster_stock_subquery = (

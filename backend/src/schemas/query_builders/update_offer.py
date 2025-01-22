@@ -1,6 +1,6 @@
-from collections.abc import Iterable, Mapping, Sequence, Generator
+from collections.abc import Iterable, Mapping, Generator
 from types import NoneType
-from typing import Any, overload
+from typing import Any
 
 from src.schemas.filters.filter_schemas import BaseFilter
 
@@ -87,5 +87,5 @@ class UpdateOfferWithTempTable(BaseFilter):
                 END,\n\t"""
             else:
                 query += f"{column} = temp_updates.{column},\n\t"
-        query = query[:-3] + f'\nFROM temp_updates\nWHERE offers.sku=temp_updates.sku AND offers.market=temp_updates.market AND offers.name_of_shop = temp_updates.name_of_shop;'
+        query = query[:-3] + '\nFROM temp_updates\nWHERE offers.sku=temp_updates.sku AND offers.market=temp_updates.market AND offers.name_of_shop = temp_updates.name_of_shop;'
         return query

@@ -48,7 +48,7 @@ async def scheduler():
 
 
 async def to_startup():
-    logger = get_logger(__name__)
+    get_logger(__name__)
     if config.schedule_update:
         asyncio.create_task(scheduler())
 

@@ -35,7 +35,7 @@ class TestUsers:
         response_json = response.json()
         token = response_json['access_token']
 
-        response = await async_client.get(f"/users/me", headers={'Authorization': f'Bearer {token}'})
+        response = await async_client.get("/users/me", headers={'Authorization': f'Bearer {token}'})
         assert response.status_code == status.HTTP_200_OK, response.text
         response_data = response.json()
         assert response_data['login'] == auth_data['username']

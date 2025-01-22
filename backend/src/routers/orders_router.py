@@ -22,7 +22,7 @@ async def get_orders(filter: OrderFilter = Body(...), paging: PagingFilter = Bod
 
 @router.delete('', dependencies=[Depends(require_staff)], summary='Удаление заказов из БД')
 async def delete_orders(filter: OrderFilter = Body(...)):
-    raise NotImplemented
+    raise NotImplementedError
 
 
 @router.post('/statistic/only-offers', response_model=list[OrdersQuantityStatOnlyOffers], dependencies=[Depends(get_current_user)], summary='Статистика заказов по товарам')
@@ -31,7 +31,7 @@ async def get_orders_statistic(filter: OrderStatisticFilter = Body(...)):
 
 
 @router.post('/statistic/offers-with-warehouses', response_model=list[OrdersQuantityStatOffersWithWarehouses], dependencies=[Depends(get_current_user)], summary='Статистика заказов по товарам со складов')
-async def get_orders_statistic(filter: OrderStatisticFilter = Body(...)):
+async def get_orders_statistics(filter: OrderStatisticFilter = Body(...)):
     return await service.get_order_statistics_by_offers_with_warehouses(filter)
 
 

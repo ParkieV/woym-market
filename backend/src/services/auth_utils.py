@@ -69,7 +69,7 @@ def verify_access_token(token: str, credentials_exception):
 
         token_data = TokenData(id=str(id))
 
-    except ExpiredSignatureError as e:
+    except ExpiredSignatureError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, 'Время сессии истекло.')
 
     except JWTError:

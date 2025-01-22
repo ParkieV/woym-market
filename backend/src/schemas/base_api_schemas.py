@@ -1,6 +1,9 @@
+import json
+from collections import namedtuple
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 from typing import Union, Any
 
 import numpy as np
@@ -136,17 +139,24 @@ class APIOfferChangeData(BaseModel, frozen=True):
     def is_valid_search_words(self) -> bool:
         return isinstance(self.search_words, str)
 
-    def is_valid_sizes(self) -> bool:
-        dimensions = [self.self_width, self.self_height, self.self_length]
+    def is_valid_sizes(self) -> (bool, dict):
+        dimensions = namedtuple('dimensions', ('self_weight', 'self_width', 'self_height', 'self_length'))
+        sizes = dimensions(self.self_weight, self.self_width, self.self_height, self.self_length)
+        invalid_sizes = {}
+        fl = True
 
-        if not isinstance(self.self_weight, (int, float)) or np.isnan(self.self_weight):
-            return False
+        for i in sizes:
+            if not isinstance(i, (int, float)):
+                fl = False
+                invalid_sizes[i.__name__] = i
+            elif np.isnan(i):
+                fl = False
+                invalid_sizes[i.__name__] = i
 
-        for i in dimensions:
-            if not isinstance(i, int) or np.isnan(i):
-                return False
-
-        return True
+        if fl:
+            return True, dict()
+        else:
+            return False, invalid_sizes
 
     @property
     def valid_barcodes(self) -> list[str]:
@@ -194,3 +204,33 @@ class APIOrderData(BaseModel):
     updated_at: datetime | None
     price: float | None
     warehouse_name: str | None
+
+
+class Singleton(type):
+    _instance = None
+
+    def __call__(cls, *args, **kwargs):
+        if Singleton._instance is None:
+            Singleton._instance = super().__call__(*args, **kwargs)
+        return Singleton._instance
+
+
+class InvalidOffers(metaclass=Singleton):
+    _skus: list[str] | None = []
+    _invalid_offers: dict[str, dict[str, Any]] | None = {}
+
+    @property
+    def offers(self) -> dict[str, dict[str, Any]]:
+        return self._invalid_offers
+
+    def __len__(self) -> int:
+        return len(self._skus)
+
+    def to_json(self, filename: Path = Path('output.json')) -> None:
+        with open(filename, 'w+') as f:
+            f.write(json.dumps(self.offers, indent=4))
+
+    def add(self, offers: dict[str, dict[str, Any]]) -> None:
+        for key, offer_data in offers.items():
+            self._skus.append(key)
+            self._invalid_offers[key] = offer_data

@@ -1,9 +1,8 @@
 from src.params.config import config
-import pandas as pd
 import pytest
 from datetime import datetime, timedelta
 from src.api.wildberries.api import WildberriesAPI
-from src.schemas.base_api_schemas import APIWarehouse, APIOfferChangeData
+from src.schemas.base_api_schemas import APIOfferChangeData
 from tests.marketplaces.conftest import BaseMarketplaceAPITest
 
 
@@ -38,7 +37,7 @@ class TestWildberriesAPI(BaseMarketplaceAPITest):
         assert orders
 
     async def test_change_offers(self, api: WildberriesAPI):
-        data = [
+        [
             APIOfferChangeData(
                 sku='26714',
                 market='wildberries',

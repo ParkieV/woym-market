@@ -141,7 +141,7 @@ class OzonApi(ApiGateway, IApiGateway):
 
                     result[offer['offer_id']]['commissions'] = price * sales_percent / 100 + expenses
 
-                except Exception as e:
+                except Exception:
                     logger.error(f'Error in get commission for offer with sku {offer["offer_id"]}', exc_info=True)
 
         return result
@@ -232,7 +232,8 @@ class OzonApi(ApiGateway, IApiGateway):
         url = 'https://api-seller.ozon.ru/v3/product/import'
 
         # Лямбда-выражение, определяющее корректность данных карточек
-        is_valid_offer_data = lambda x: all((x.is_valid_name(), x.is_valid_description(), x.is_valid_search_words(), x.is_valid_sizes()))
+        def is_valid_offer_data(x):
+            return all((x.is_valid_name(), x.is_valid_description(), x.is_valid_search_words(), x.is_valid_sizes()))
 
         valid_data = [i for i in data if is_valid_offer_data(i)]
         invalid_data = [i for i in data if not is_valid_offer_data(i)]
@@ -353,7 +354,7 @@ class OzonApi(ApiGateway, IApiGateway):
         body = {
             'task_id': task_id,
         }
-        response = await self.request('POST', url=f'https://api-seller.ozon.ru/v1/product/import/info', body=body, headers=self.auth_headers, include_response_logs=True)
+        response = await self.request('POST', url='https://api-seller.ozon.ru/v1/product/import/info', body=body, headers=self.auth_headers, include_response_logs=True)
 
         if not response.ok:
             logger.error(f'Cant check task({task_id}) status {response.text}')
@@ -549,7 +550,7 @@ class OzonApi(ApiGateway, IApiGateway):
                         'your_price_for_buyers': self._str_to_float(offer['marketing_price'])
                     })
 
-                except Exception as e:
+                except Exception:
                     logger.error(f'Error in get base info for offer with sku {offer["offer_id"]}', exc_info=True)
         return result
 

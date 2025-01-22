@@ -1,4 +1,4 @@
-from sqlalchemy import select, func, text, and_, case, union, union_all
+from sqlalchemy import select, func, text, and_, case, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.models.models import Order, Offer, OfferStock, Market, Warehouse
@@ -116,7 +116,7 @@ def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: l
         )
         .join(Warehouse, Warehouse.id == Order.warehouse_id)
         .where(Order.warehouse_id.is_not(None))
-        .where(Warehouse.parent_warehouse_id == None)
+        .where(Warehouse.parent_warehouse_id is None)
         .where(Order.created_at >= text(f"NOW() - INTERVAL '{days_interval} days'"))
     )
 
@@ -135,7 +135,7 @@ def _build_quantity_warehouses_query(name: str, days_interval: int, offer_ids: l
             func.sum(Order.quantity).label(name)
         )
         .join(Warehouse, Warehouse.id == Order.warehouse_id)
-        .where(Warehouse.parent_warehouse_id != None)
+        .where(Warehouse.parent_warehouse_id is not None)
         .where(Order.created_at >= text(f"NOW() - INTERVAL '{days_interval} days'"))
     )
 
@@ -262,7 +262,7 @@ def _get_orders_query_by_clusters():
             Order.created_at
         )
         .join(Warehouse, Warehouse.id == Order.warehouse_id)
-        .where(Warehouse.parent_warehouse_id != None)
+        .where(Warehouse.parent_warehouse_id is not None)
     )
 
 

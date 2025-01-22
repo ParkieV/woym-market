@@ -53,7 +53,8 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         update_url = 'https://content-api.wildberries.ru/content/v2/cards/update'
 
-        check_valid = lambda x: all((x.is_valid_name(), x.is_valid_description(), x.is_valid_vendor_code(), x.is_valid_sizes()))
+        def check_valid(x):
+            return all((x.is_valid_name(), x.is_valid_description(), x.is_valid_vendor_code(), x.is_valid_sizes()))
         valid_offers_data = [i for i in data if check_valid(i)]
         invalid_data = [i for i in data if not check_valid(i)]
 

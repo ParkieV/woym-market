@@ -1,4 +1,3 @@
-import asyncio
 from collections.abc import Sequence, Iterable
 
 from src.database.catalog import CatalogRepository

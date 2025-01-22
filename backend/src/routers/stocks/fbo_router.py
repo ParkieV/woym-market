@@ -2,7 +2,7 @@ from pathlib import PurePath
 from fastapi import APIRouter, Depends, Body, UploadFile, File, HTTPException
 from starlette import status
 from src.dependencies.users import get_current_user, require_staff
-from src.schemas.stocks.fbo_schemas import OfferFBOStockUpdate, OfferStockOut, AggOfferFBOStock, OfferWithStocks
+from src.schemas.stocks.fbo_schemas import OfferFBOStockUpdate, OfferStockOut, OfferWithStocks
 from src.services import stocks_service as service
 
 router = APIRouter(

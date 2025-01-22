@@ -9,7 +9,7 @@ import pandas as pd
 from aiohttp import ClientSession, ClientResponse
 
 from logs import get_logger
-from src.api.exceptions import RequestException, InitializationError
+from src.api.exceptions import RequestException
 from src.api.interfaces import IApiGateway
 from src.schemas.base_api_schemas import APIOfferChangeData, APIOffer, APIWarehouse, APIPriceChangeData, APIOrderData
 

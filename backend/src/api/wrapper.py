@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime
 from typing import Any
 
@@ -114,6 +113,7 @@ class ApiInteractor:
                 price_data = [i for i in data if i.market==market.type and i.name_of_shop==market.name]
 
                 try:
+                    logger.info(f'{market.name}({market.type}) offers length: {len(price_data)}')
                     await api.change_prices(price_data)
                 except Exception as e:
                     logger.error(f"Failed to change prices in {market.type}({market.name}). {e.__class__.__name__}: {e}")
@@ -171,7 +171,7 @@ async def foo(datas: dict[str, Any],
             raise e
         row.description = "'" + row.description + "'" if row.description is not None else None
         if row.sku:
-            query = f"""
+            query = """
             UPDATE catalog_items
                 SET self_weight=CASE
                     WHEN self_weight IS NULL THEN :self_weight
@@ -231,9 +231,3 @@ async def main():
     scrabBerries_offers = api_offers_df[api_offers_df['name_of_shop'] == 'SkrabBerries']
 
     await foo(db_offers, scrab_offers, scrabBerries_offers)
-
-
-
-if __name__ == '__main__':
-    asyncio.run(main())
-    # data_1['description'] if data_1 and not (not isinstance(data_1['description'], str) and np.isnan(data_1['description'])) else data_2['description'] if data_2 and (not isinstance(data_1['description'], str) and not np.isnan(data_2['description'])) else 'NULL'

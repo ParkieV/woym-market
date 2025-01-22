@@ -32,4 +32,4 @@ async def get_scalars_all(session: AsyncSession, db_model: Type[Base],  schema: 
     if paging:
         query = paging(query)
 
-    result = await session.execute(query)
+    await session.execute(query)

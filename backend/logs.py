@@ -1,7 +1,6 @@
 import logging
 import sys
 
-from src.params.config import config
 
 logging.basicConfig()
 
@@ -10,7 +9,7 @@ def get_logger(name: str, level: int = logging.INFO, tags: dict[str, str] | None
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    formatter = logging.Formatter(f"%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s")
+    logging.Formatter("%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s")
 
     # logger.addHandler(get_file_handler(f'logs/{name}.log', formatter, level))
 
@@ -24,15 +23,15 @@ def get_logger(name: str, level: int = logging.INFO, tags: dict[str, str] | None
     return logger
 
 
-def get_loki_handler(tags: dict[str, str] | None = None, application: str = 'fastapi'):
-    loki_logs_handler_tags = {"application": application}
-    if tags:
-        loki_logs_handler_tags.update(tags)
-    return LokiHandler(
-        url=config.loki_url,
-        tags=loki_logs_handler_tags,
-        version="1"
-    )
+# def get_loki_handler(tags: dict[str, str] | None = None, application: str = 'fastapi'):
+#     loki_logs_handler_tags = {"application": application}
+#     if tags:
+#         loki_logs_handler_tags.update(tags)
+#     return LokiHandler(
+#         url=config.loki_url,
+#         tags=loki_logs_handler_tags,
+#         version="1"
+#     )
 
 def get_file_handler(filename: str, formatter: logging.Formatter, level: int = logging.WARNING) -> logging.Handler:
     handler = logging.FileHandler(filename, mode='a')

@@ -1,8 +1,6 @@
-import asyncio
 from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, Depends, Query
-from requests import session
 
 from src.api.gateway_template import get_api_session
 from src.api.yandex_disk import YandexDiscApi

@@ -1,6 +1,5 @@
 from collections.abc import Sequence, Iterable
 
-from sqlalchemy import TextClause, text
 
 from src.database.models.models import Offer, CatalogItem
 from src.schemas.filters.filter_schemas import BaseFilter
@@ -87,13 +86,13 @@ class SyncUpdatingColumnFilter(BaseFilter[str]):
         updating_values = {col: f'catalog_items.{col}' for col in self.updating_columns}
 
         # Поисковые слова изменяются только для озона
-        update_search_words = {'search_words': f"""CASE
+        update_search_words = {'search_words': """CASE
             WHEN offers.market = 'ozon' THEN catalog_items.search_words
             ELSE offers.search_words
             END"""}
 
         # Штрихкоды изменяются только у яндекса
-        update_barcodes = {'barcodes': f"""CASE
+        update_barcodes = {'barcodes': """CASE
             WHEN offers.market = 'yandex' THEN catalog_items.barcodes
             ELSE offers.barcodes
             END"""}
@@ -120,7 +119,7 @@ class SyncUpdatingColumnFilter(BaseFilter[str]):
         # }
 
         detect_search_words_changes_for_ozon = {
-            'search_words_changed': f"""CASE
+            'search_words_changed': """CASE
                     WHEN offers.market = 'ozon' THEN (offers.search_words_changed OR CONCAT(offers.search_words, '') != CONCAT(
                         COALESCE(catalog_items.search_words, offers.search_words ), '')
                     )
@@ -140,7 +139,7 @@ class SyncUpdatingColumnFilter(BaseFilter[str]):
         # }
 
         detect_barcodes_changes_for_yandex = {
-            'barcodes_changed': f"""CASE
+            'barcodes_changed': """CASE
                     WHEN offers.market = 'yandex' THEN (offers.barcodes_changed OR CONCAT(offers.barcodes, '') != CONCAT(
                         COALESCE(catalog_items.barcodes, offers.barcodes ), '')
                     )

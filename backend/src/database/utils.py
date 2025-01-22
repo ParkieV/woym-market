@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
 from logs import get_logger
-from src.database.interfaces import IDbSessionFabric
 from src.database.models.base import Base
 from src.schemas.catalog_schemas import CatalogItemCreate
 from src.shared.exceptions import MappingError
