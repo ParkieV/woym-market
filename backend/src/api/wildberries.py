@@ -55,13 +55,19 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         def check_valid(x):
             return all((x.is_valid_name(), x.is_valid_description(), x.is_valid_vendor_code(), x.is_valid_sizes()))
-        valid_offers_data = [i for i in data if check_valid(i)]
-        invalid_data = [i for i in data if not check_valid(i)]
+
+        valid_offers_data, invalid_data = [], []
+        for offer in data:
+            if check_valid(offer):
+                offer.name = offer.name[:60]
+                valid_offers_data.append(offer)
+            else:
+                invalid_data.append(offer)
 
         if invalid_data:
             logger.warning(f'Invalid offers data: {len(invalid_data)} / {len(valid_offers_data)} {invalid_data}')
 
-        if not valid_offers_data:
+        if len(valid_offers_data) == 0:
             logger.warning(f'{self.shop_name}(wildberries) has no valid offers data')
             return
 

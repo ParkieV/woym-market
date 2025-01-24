@@ -113,7 +113,6 @@ class APIOfferChangeData(BaseModel, frozen=True):
     sku: str
     market: str
     name_of_shop: str
-
     name: str | None = None
     description: str | None = None
     vendor_code: int | None = None
