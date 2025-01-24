@@ -21,7 +21,7 @@ class CreateTempTable(BaseFilter):
         }
         query_create = query
 
-        query_create += "CREATE TEMP TABLE temp_updates (\n\t"
+        query_create += "CREATE TEMP TABLE IF NOT EXISTS temp_updates (\n\t"
 
         for row in self.data:
             for key, value in row.items():
@@ -54,7 +54,10 @@ class InsertTempTable(BaseFilter):
         key_list = [key for key in data[0].keys()]
 
         columns_str = '("' + '", "'.join(key_list) + '")'
-        query_first = f"INSERT INTO temp_updates {columns_str}\nVALUES\n\t"
+        query_first = (
+            "DELETE FROM temp_updates;\n"
+            f"INSERT INTO temp_updates {columns_str}\nVALUES\n\t"
+        )
         # Определяем количество чанков
         for i in range((len(data) // 950) + 1):
             insert_data = {}
