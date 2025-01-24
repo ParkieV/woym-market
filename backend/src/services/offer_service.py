@@ -180,7 +180,7 @@ async def update_offers(db_session_fabric,
     # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
     to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
     logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
-    await update_offers_attributes(to_update_attributes, api_session_fabric, db_session_fabric)
+    # await update_offers_attributes(to_update_attributes, api_session_fabric, db_session_fabric)
 
     # Создаем новые товары
     for market in markets:

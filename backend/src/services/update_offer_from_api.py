@@ -54,6 +54,7 @@ class UpdateOfferFromApi:
 
         async with self.db_session_fabric() as session:
             await session.execute(text(query_create))
+            await session.execute(text("DELETE FROM temp_updates;"))
             [await session.execute(text(query_insert), data_insert) for query_insert, data_insert in insert_gen]
             await session.execute(text(query_update))
 

@@ -96,7 +96,7 @@ async def calculate_price(data: pd.DataFrame, market_settings: MarketOut) -> pd.
     data['min_level'] = data['min_level'].replace(0, np.nan)
 
     # используем ручную мин планку
-    sub_data_2 = data[data['use_manual_min_price'] is True]
+    sub_data_2 = data[data['use_manual_min_price'] == True]
     sub_data_2.loc[:, 'target_price'] = np.where(
         (sub_data_2['current_price'] >= sub_data_2['min_price_in_market']),
         sub_data_2[['min_level', 'manual_min_price']].max(axis=1),
@@ -104,7 +104,7 @@ async def calculate_price(data: pd.DataFrame, market_settings: MarketOut) -> pd.
     )
     # total_price = верхняя планка
     #  используем автоматическую мин планку
-    sub_data_3 = data[data['use_manual_min_price'] is False]
+    sub_data_3 = data[data['use_manual_min_price'] == False]
     sub_data_3['temp_auto_min_price'] = sub_data_3['total_price'] * sub_data_3['auto_min_price'] / 100
     sub_data_3.loc[:, 'target_price'] = np.where(
         sub_data_3['current_price'] >= sub_data_3['min_price_in_market'],

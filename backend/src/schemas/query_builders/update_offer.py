@@ -55,7 +55,6 @@ class InsertTempTable(BaseFilter):
 
         columns_str = '("' + '", "'.join(key_list) + '")'
         query_first = (
-            "DELETE FROM temp_updates;\n"
             f"INSERT INTO temp_updates {columns_str}\nVALUES\n\t"
         )
         # Определяем количество чанков
