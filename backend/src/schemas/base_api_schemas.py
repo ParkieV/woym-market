@@ -109,7 +109,7 @@ class APIPriceChangeData:
         return isinstance(self.vendor_code, int) and not np.isnan(self.vendor_code)
 
 
-class APIOfferChangeData(BaseModel, frozen=True):
+class APIOfferChangeData(BaseModel):
     sku: str
     market: str
     name_of_shop: str
