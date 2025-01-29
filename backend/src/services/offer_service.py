@@ -40,7 +40,17 @@ from src.services.update_offer_from_api import UpdateOfferFromApi
 
 logger = get_logger(__name__)
 
-CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes']
+CONTROL_CHANGES = (
+    'search_words',
+    'description',
+    'name',
+    'barcodes',
+    'self_height',
+    'self_weight',
+    'self_width',
+    'self_length'
+)
+
 async def get_offers_list(session_fabric: IDbSessionFabric, offers_filter: OffersFilter | None = None) -> list[OfferOut]:
     """ Получение списка карточек """
     res = []
