@@ -171,11 +171,12 @@ async def update_offers(db_session_fabric,
 
     # Двойная синхронизаия полей
     for tracked_column in CONTROL_CHANGES:
-        to_update_offers[tracked_column] = np.where(
-            to_update_offers[tracked_column] != to_update_offers[f'{tracked_column}__api'],
-            to_update_offers[tracked_column],
-            to_update_offers[f'{tracked_column}__api']
-        )
+        if to_update_offers[tracked_column] != to_update_offers[f'{tracked_column}__api']:
+            to_update_offers[tracked_column] = to_update_offers[tracked_column]
+            to_update_offers[f'{tracked_column}_changed'] = True
+        else:
+            to_update_offers[tracked_column] = to_update_offers[f'{tracked_column}__api']
+            to_update_offers[f'{tracked_column}_changed'] = False
 
     # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
     to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
