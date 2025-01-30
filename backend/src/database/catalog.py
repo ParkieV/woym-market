@@ -86,11 +86,11 @@ class CatalogRepository(ICatalogRepository[PydanticModel]):
                  skus: Sequence[str] | None = None) -> None:
         offer_data_filter = OfferDataFilter()
         sku_in_array_filter = SkuInArrayFilter('catalog_items')
-        updating_colmuns_filter = ReverseSyncUpdatingColumnFilter(updating_columns)
+        updating_columns_filter = ReverseSyncUpdatingColumnFilter(updating_columns)
 
         query = "UPDATE catalog_items\n\tSET "
 
-        query = updating_colmuns_filter(query)
+        query = updating_columns_filter(query)
 
         query = offer_data_filter(query[:-3]+'\n')
 
@@ -107,7 +107,8 @@ async def change_catalog_items(session: AsyncSession, items: list[schemas.Catalo
         await set_offers_sync(session, synchronization_info)
 
         changed_data = item.model_dump(exclude_unset=True)
-        if 'synchronization' in changed_data: changed_data.pop('synchronization')
+        if 'synchronization' in changed_data:
+            changed_data.pop('synchronization')
 
         track_changes = {
             f'{column}_changed': or_(
@@ -210,7 +211,7 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
 
     stmp = (
         update(Offer)
-        .where(Offer.synchronization == True, Offer.sku == CatalogItem.sku)
+        .where(Offer.synchronization is True, Offer.sku == CatalogItem.sku)
         .values(update_values)
         .execution_options(synchronize_session="fetch")
     )

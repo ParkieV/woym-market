@@ -156,7 +156,7 @@ async def export_own_storages(place_id: int) -> str:
     stocks_df = stocks_df.groupby('sku', as_index=False).sum()
 
     own_storage_data = chain.from_iterable([[{'sku': storage.sku,
-                                              f'Мой склад': storage.value}
+                                              'Мой склад': storage.value}
                                              for storage in i.storages] for i in data])
     own_storages_df = pd.DataFrame(own_storage_data)
     own_storages_df['sku'] = own_storages_df['sku'].astype('string')
@@ -335,7 +335,7 @@ async def export_supply(export_type: SupplyExportType, warehouses: list[int], of
             raise HTTPException(status.HTTP_404_NOT_FOUND, 'Товаров с ненулевым значением "к поставке" не найдено')
 
         # create zip archive/folder
-        zip_file_path = Path(f'data/Поставка')
+        zip_file_path = Path('data/Поставка')
         zip_file_path.mkdir(parents=True, exist_ok=True)
 
         for _market in set(df['market'].values.tolist()):

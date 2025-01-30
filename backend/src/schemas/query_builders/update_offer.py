@@ -1,6 +1,6 @@
-from collections.abc import Iterable, Mapping, Sequence, Generator
+from collections.abc import Iterable, Mapping, Generator
 from types import NoneType
-from typing import Any, overload
+from typing import Any
 
 from src.schemas.filters.filter_schemas import BaseFilter
 
@@ -21,7 +21,7 @@ class CreateTempTable(BaseFilter):
         }
         query_create = query
 
-        query_create += "CREATE TEMP TABLE temp_updates (\n\t"
+        query_create += "CREATE TEMP TABLE IF NOT EXISTS temp_updates (\n\t"
 
         for row in self.data:
             for key, value in row.items():
@@ -54,7 +54,9 @@ class InsertTempTable(BaseFilter):
         key_list = [key for key in data[0].keys()]
 
         columns_str = '("' + '", "'.join(key_list) + '")'
-        query_first = f"INSERT INTO temp_updates {columns_str}\nVALUES\n\t"
+        query_first = (
+            f"INSERT INTO temp_updates {columns_str}\nVALUES\n\t"
+        )
         # Определяем количество чанков
         for i in range((len(data) // 950) + 1):
             insert_data = {}
@@ -87,5 +89,5 @@ class UpdateOfferWithTempTable(BaseFilter):
                 END,\n\t"""
             else:
                 query += f"{column} = temp_updates.{column},\n\t"
-        query = query[:-3] + f'\nFROM temp_updates\nWHERE offers.sku=temp_updates.sku AND offers.market=temp_updates.market AND offers.name_of_shop = temp_updates.name_of_shop;'
+        query = query[:-3] + '\nFROM temp_updates\nWHERE offers.sku=temp_updates.sku AND offers.market=temp_updates.market AND offers.name_of_shop = temp_updates.name_of_shop;'
         return query

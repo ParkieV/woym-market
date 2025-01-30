@@ -1,9 +1,8 @@
-from datetime import datetime
 
-from pydantic import Field, BaseModel
+from pydantic import Field
 
 from src.database.models.models import Order
-from src.schemas.filters.filter_schemas import BaseFilter, BasePydanticFilter
+from src.schemas.filters.filter_schemas import BasePydanticFilter
 
 
 class OrderFilter(BasePydanticFilter):

@@ -55,7 +55,7 @@ async def get_markets():
     try:
         res = await service.get_markets()
         return res
-    except Exception as e:
+    except Exception:
         raise
 
 @settings_router.post('/markets', response_model=MarketOut, dependencies=[Depends(require_staff)])

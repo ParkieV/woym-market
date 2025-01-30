@@ -1,4 +1,4 @@
-from pathlib import Path, PurePath
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, UploadFile, File, Query, Body
 from starlette.background import BackgroundTask

@@ -4,8 +4,7 @@ from io import BytesIO
 from typing import Type
 import numpy as np
 import pandas as pd
-from fastapi.exceptions import HTTPException
-from fastapi import status, HTTPException
+from fastapi import HTTPException
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
 from starlette import status
@@ -28,7 +27,7 @@ def error_handler(default_message: str = 'Ошибка сервера'):
                 logger.error(f'Error in func {func}: {e.detail}', exc_info=True)
                 raise HTTPException(e.status_code, e.detail)
 
-            except Exception as e:
+            except Exception:
                 logger.error(f'Error in func {func}', exc_info=True)
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, default_message)
 
@@ -44,7 +43,7 @@ def clean_up_files(file_path: str):
             path.unlink()
         elif path.is_dir():
             shutil.rmtree(path)
-    except Exception as e:
+    except Exception:
         logger.exception(f'Cannot remove file or dir \'{file_path}\'', exc_info=True)
 
 

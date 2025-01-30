@@ -12,7 +12,7 @@ from src.api.interfaces import IApiSessionFabric
 from src.database.interfaces import IDbSessionFabric
 from src.database.models.models import Offer, CatalogItem
 from src.database.offer import OfferRepository
-from src.database.warehouse_db import create_own_storage_stocks
+from src.database.warehouse_db import create_own_storage_stocks, offer_stocks_list
 from src.params.config import config
 from logs import get_logger
 from src.api.wrapper import ApiInteractor
@@ -40,11 +40,22 @@ from src.services.update_offer_from_api import UpdateOfferFromApi
 
 logger = get_logger(__name__)
 
-CONTROL_CHANGES = ['search_words', 'description', 'name', 'barcodes']
+CONTROL_CHANGES = (
+    'search_words',
+    'description',
+    'name',
+    'barcodes',
+    'self_height',
+    'self_weight',
+    'self_width',
+    'self_length'
+)
+
 async def get_offers_list(session_fabric: IDbSessionFabric, offers_filter: OffersFilter | None = None) -> list[OfferOut]:
     """ Получение списка карточек """
     res = []
     offer_repository = OfferRepository()
+
     async with session_fabric() as session:
         offer_repository.session = session
         async for offer_chunk in offer_repository.list(query_filter=offers_filter):
@@ -57,13 +68,12 @@ async def change_offers(offers_data: list[OfferChange],
                         user_id: int,
                         session_fabric: IDbSessionFabric):
     """ Функция для изменения данных в карточках товаров """
-    mapping_fields = ['sku', 'name_of_shop', 'market']
 
     if not offers_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No offers to save')
 
     async with session_fabric() as session:
-        settings = await get_user_settings(session, user_id)
+        await get_user_settings(session, user_id)
 
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
 
@@ -171,10 +181,10 @@ async def update_offers(db_session_fabric,
 
     # Двойная синхронизаия полей
     for tracked_column in CONTROL_CHANGES:
-        to_update_offers[tracked_column] = np.where(
-            to_update_offers[f'{tracked_column}_changed'],
-            to_update_offers[tracked_column],
-            to_update_offers[f'{tracked_column}__api']
+        to_update_offers[f'{tracked_column}_changed'] = np.where(
+            to_update_offers[tracked_column] != to_update_offers[f'{tracked_column}__api'],
+            True,
+            False
         )
 
     # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
@@ -293,10 +303,11 @@ async def update_offers_attributes(offers: pd.DataFrame,
             self_width = offer_data['self_width'],
             self_height = offer_data['self_height']
         )
-        for offer_data in data if not np.isnan(offer_data['self_height']) and
+        for offer_data in data if not np.isnan(offer_data['self_width']) and
                                   not np.isnan(offer_data['self_height']) and
                                   not np.isnan(offer_data['self_weight'])
     ]
+
 
     api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
                                    db_session_fabric=db_session_fabric)
@@ -334,7 +345,7 @@ async def recalculate_values(session: AsyncSession, offers_filter: OffersFilter 
 @error_handler('Ошибка импорта')
 async def import_data(data: bytes, market: Market, import_type: ImportType, name_of_shop: str | None, user_id: int, file_extension: str = 'xlsx') -> None:
     async with async_session() as session:
-        settings = await get_user_settings(session, user_id)
+        await get_user_settings(session, user_id)
 
     match import_type:
         case ImportType.TABLE:
@@ -347,7 +358,7 @@ async def import_data(data: bytes, market: Market, import_type: ImportType, name
             return await import_prices(data, name_of_shop, market, file_extension)
 
         case _:
-            raise NotImplemented(f'Import type "{import_type}" not implemented yet')
+            raise NotImplementedError(f'Import type "{import_type}" not implemented yet')
 
 
 async def import_offers(data, name_of_shop: str | None = None, market: str | None = None, file_extension: str = 'xlsx'):
@@ -383,7 +394,7 @@ async def import_offers(data, name_of_shop: str | None = None, market: str | Non
             await db.update_offers(session, df, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
         except Exception as e:
             logger.error('Error while updating offers in import offers', exc_info=e)
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Некоректные данные.')
 
         await recalculate_values(session, df[['sku', 'name_of_shop', 'market']])
 
@@ -432,9 +443,9 @@ async def import_sizes(data, name_of_shop: str | None = None, market: str | None
     async with async_session() as session:
         try:
             await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
-        except Exception as e:
+        except Exception:
             logger.error('Error while update price in import sizes', exc_info=True)
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Некоректные данные.')
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Некоректные данные.')
 
         await recalculate_values(session)
 
@@ -467,7 +478,7 @@ async def create_pricing_scheme(data: PricingSchemeCreate) -> PricingSchemeOut:
 @error_handler('Не удалось обновить данные')
 async def change_pricing_scheme(user_id: int, data: PricingSchemeChange):
     async with async_session() as session:
-        settings = await get_user_settings(session, user_id)
+        await get_user_settings(session, user_id)
 
         await db.change_pricing_scheme(session, data)
         await recalculate_values(session)

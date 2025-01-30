@@ -18,7 +18,7 @@ def get_latest_commit_info() -> VersionInfo | None:
             author=repo.head.object.author.name,
             branch=repo.active_branch.name,
         )
-    except Exception as e:
+    except Exception:
         logger.error('Error while getting latest commit info', exc_info=True)
         return None
     else:

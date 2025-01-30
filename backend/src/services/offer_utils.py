@@ -1,4 +1,3 @@
-import math
 
 import pandas as pd
 import numpy as np
@@ -32,7 +31,7 @@ async def calculate_offers_values(data: pd.DataFrame, market_settings: MarketOut
         )
     )
     # Расчет стоимости
-    data['cost_price'] = data['dollar_cost_price'] * market_settings.rate
+    data['cost_price'] = data['dollar_cost_price'] * market_settings.rate + (np.ceil(data['volume']) - market_settings.volume_threshold_for_additional_logistics) * market_settings.cost_of_additional_logistics_per_liter
     data['total_price'] = data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional']
     data['recommended_retail_price'] = market_settings.first_variable_for_recommended_retail_price + (data['wholesale_dollar_cost_price'] * market_settings.rate) + (market_settings.second_variable_for_recommended_retail_price / 100 * data['wholesale_dollar_cost_price'] * market_settings.rate)
     data['stop_price'] = market_settings.first_variable_for_stop_price + (data['wholesale_dollar_cost_price'] * market_settings.rate) + (market_settings.second_variable_for_stop_price / 100 * data['wholesale_dollar_cost_price'] * market_settings.rate)

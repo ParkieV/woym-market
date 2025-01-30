@@ -21,18 +21,18 @@ async def update_data(user_ids: Sequence[int]):
         # Добавление новых карточек в каталог только sku
         await duplicate_offers_to_catalog(get_db_session)
     except Exception as e:
-        logger.error(f'Error in update offers', exc_info=e)
+        logger.error('Error in update offers', exc_info=e)
 
     try:
         # Получение информации о остатках на складах
         await update_warehouses_and_stocks(get_api_session, get_db_session)
     except Exception as e:
-        logger.error(f"Error in update warehouses and stocks", exc_info=e)
+        logger.error("Error in update warehouses and stocks", exc_info=e)
 
     try:
         await setup_orders(get_api_session, get_db_session)
     except Exception as e:
-        logger.error(f'Error in update orders data', exc_info=e)
+        logger.error('Error in update orders data', exc_info=e)
 
     logger.error('Scheduler finished successful!')
 
