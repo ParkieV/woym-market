@@ -7,8 +7,8 @@ import src.database.user_db as user_db
 
 async def registration_user(login: str, password: str, is_staff: bool):
     new_user = await auth.reg_user(login, password, is_staff)
-    settings = await create_settings(new_user.id)
-    logs = await create_logs(new_user.id)
+    await create_settings(new_user.id)
+    await create_logs(new_user.id)
     return new_user
 
 

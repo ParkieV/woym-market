@@ -41,7 +41,7 @@ async def get_settings(user_id: int):
 async def update_settings(user_id: int, data: SettingsUpdate):
     async with async_session() as session:
         await db.update_user_settings(session, user_id, data)
-        settings = await db.get_user_settings(session, user_id)
+        await db.get_user_settings(session, user_id)
         await recalculate_values(session)
 
 
@@ -57,7 +57,7 @@ async def get_table(name: str) -> TableInfoOut:
 
 async def update_table(user_id: int, table_name: str, data: TableInfoUpdate):
     async with async_session() as session:
-        settings = await db.get_user_settings(session, user_id)
+        await db.get_user_settings(session, user_id)
 
         return await db.update_table(session, table_name, data)
 

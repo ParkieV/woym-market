@@ -34,7 +34,7 @@ async def setup_catalog_items(session_fabric: IDbSessionFabric) -> None:
         to_create_skus = db_offers_skus - catalog_items_skus
 
         if not to_create_skus:
-            logger.info(f'New catalog items not found')
+            logger.info('New catalog items not found')
             return
 
         to_create_items_with_cdv = db_offers_df[

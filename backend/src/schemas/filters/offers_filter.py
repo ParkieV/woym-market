@@ -1,11 +1,10 @@
-from abc import abstractmethod
 from collections.abc import Sequence
 
-from pydantic import Field, BaseModel
+from pydantic import Field
 from sqlalchemy import select
 
 from src.database.models.models import Offer, CatalogItem
-from src.schemas.filters.filter_schemas import BaseFilter, BasePydanticFilter
+from src.schemas.filters.filter_schemas import BasePydanticFilter
 
 
 class OffersSourceFilter(BasePydanticFilter):

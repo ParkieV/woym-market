@@ -1,7 +1,7 @@
-from pydantic import Field, BaseModel
+from pydantic import Field
 
 from src.database.models.models import Warehouse, OfferStock
-from src.schemas.filters.filter_schemas import BaseFilter, BasePydanticFilter
+from src.schemas.filters.filter_schemas import BasePydanticFilter
 from src.schemas.stocks.warehouses_schemas import WarehouseTypes
 
 

@@ -9,7 +9,7 @@ from src.services.auth_utils import verify_access_token
 
 async def get_current_user(token: str = Depends(auth.oauth2_scheme)) -> Users:
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                                          detail=f"Не получилось авторизироваться в системе",
+                                          detail="Не получилось авторизироваться в системе",
                                           headers={"WWW-Authenticate": "Bearer"})
     token = verify_access_token(token, credentials_exception)
 

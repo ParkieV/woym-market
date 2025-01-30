@@ -107,7 +107,8 @@ async def change_catalog_items(session: AsyncSession, items: list[schemas.Catalo
         await set_offers_sync(session, synchronization_info)
 
         changed_data = item.model_dump(exclude_unset=True)
-        if 'synchronization' in changed_data: changed_data.pop('synchronization')
+        if 'synchronization' in changed_data:
+            changed_data.pop('synchronization')
 
         track_changes = {
             f'{column}_changed': or_(
@@ -210,7 +211,7 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
 
     stmp = (
         update(Offer)
-        .where(Offer.synchronization == True, Offer.sku == CatalogItem.sku)
+        .where(Offer.synchronization is True, Offer.sku == CatalogItem.sku)
         .values(update_values)
         .execution_options(synchronize_session="fetch")
     )

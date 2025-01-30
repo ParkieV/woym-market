@@ -17,9 +17,8 @@ from fastapi.exceptions import HTTPException
 from fastapi import status
 
 from ..schemas.filters.db_catalog import CatalogDataFilter, SkuInArrayFilter, SyncUpdatingColumnFilter
-from ..schemas.filters.filter_schemas import PagingFilter
 from ..schemas.filters.interface import IBaseFilter
-from ..schemas.filters.offers_filter import OffersFilter, OffersSourceFilter
+from ..schemas.filters.offers_filter import OffersSourceFilter
 
 
 PydanticModel = TypeVar("PydanticModel", bound=BaseModel)

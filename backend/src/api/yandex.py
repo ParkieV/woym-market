@@ -52,7 +52,8 @@ class YandexMarketApi(ApiGateway, IApiGateway):
         return data[campaign_id]['business_id']
 
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
-        check_valid = lambda x: all((x.is_valid_name(), x.is_valid_description(), x.is_valid_barcodes(), x.is_valid_sizes()))
+        def check_valid(x):
+            return all((x.is_valid_name(), x.is_valid_description(), x.is_valid_barcodes(), x.is_valid_sizes()))
         valida_offer_data = [i for i in data if check_valid(i)]
         invalid_offer_data = [i for i in data if not check_valid(i)]
 
@@ -371,7 +372,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
         return result
 
     async def _get_warehouses_info(self) -> dict[int, dict[str, Any]]:
-        response = await self.request('GET', url=f'https://api.partner.market.yandex.ru/warehouses', headers=self.auth_headers)
+        response = await self.request('GET', url='https://api.partner.market.yandex.ru/warehouses', headers=self.auth_headers)
         data = await self.validate_response(response)
 
         result = dict()
