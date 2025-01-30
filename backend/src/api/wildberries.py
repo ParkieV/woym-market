@@ -60,6 +60,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         for offer in data:
             if check_valid(offer):
                 offer.name = offer.name[:60]
+                offer.description = offer.description[:2000]
                 valid_offers_data.append(offer)
             else:
                 invalid_data.append(offer)
