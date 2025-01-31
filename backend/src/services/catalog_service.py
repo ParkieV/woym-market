@@ -7,7 +7,7 @@ from starlette import status
 
 from logs import get_logger
 from src.database.catalog import CatalogRepository
-from src.database.db import async_session
+from src.database.db import async_session, get_db_session
 from src.database.interfaces import IDbSessionFabric
 from src.database import catalog as db
 from src.database.offer import OfferRepository
@@ -85,7 +85,7 @@ async def sync_catalog_items_with_offers(skus: list[str] | None = None, exclude_
 
 
 async def export_catalog_items() -> Path:
-    catalog_items = await get_catalog_items()
+    catalog_items = await get_catalog_items(get_db_session)
     df = pd.DataFrame([i.model_dump() for i in catalog_items])
     df.drop(columns=['synchronization'], inplace=True, errors='ignore')
     df.rename(columns=parce_field_names(PydanticCatalogItem), inplace=True)
