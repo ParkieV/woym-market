@@ -43,12 +43,12 @@ class CreateTempTable(BaseFilter):
         query = query_create[:-3] + '\n);'
         return query
 
-class InsertTempTable(BaseFilter):
+class InsertTempTable:
     def __init__(self,
                  data: list[Mapping[str, Any]]):
         self.data = data
 
-    def __call__(self, query: str) -> Generator[list[str], list[dict[str, Any]]]:
+    def __call__(self, query: str, chunk_size: int = 500) -> Generator[list[str], list[dict[str, Any]]]:
         data = self.data
 
         key_list = [key for key in data[0].keys()]
@@ -58,11 +58,11 @@ class InsertTempTable(BaseFilter):
             f"INSERT INTO temp_updates {columns_str}\nVALUES\n\t"
         )
         # Определяем количество чанков
-        for i in range((len(data) // 950) + 1):
+        for i in range((len(data) // chunk_size) + 1):
             insert_data = {}
             query_second = ""
             # Разбиваем данные по чанкам для обхода ограничения на количество значений в одном запросе SQLAlchemy
-            for j in range(950 * i, min(len(data), 950 * (i + 1))):
+            for j in range(chunk_size * i, min(len(data), chunk_size * (i + 1))):
                 insert_data.update({f'{key}_{j}': data[j][key] for key in key_list})
                 row_str = '(' + ', '.join([f':{column}_{j}' for column in key_list]) + ')'
                 query_second += f"{row_str},\n\t"
