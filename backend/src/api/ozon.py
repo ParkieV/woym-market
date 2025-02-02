@@ -239,7 +239,7 @@ class OzonApi(ApiGateway, IApiGateway):
         invalid_data = [i for i in data if not is_valid_offer_data(i)]
 
         if invalid_data:
-            logger.error(f'Invalid offers data: {len(invalid_data)} / {len(valid_data)} {invalid_data}')
+            logger.error(f'Invalid offers data: {len(invalid_data)} / {len(valid_data)}')
 
         if len(valid_data) == 0:
             logger.warning(f'{self.shop_name}(ozon) has no valid offers data')
@@ -436,7 +436,7 @@ class OzonApi(ApiGateway, IApiGateway):
                         not all((i.is_valid_min_price(), i.is_valid_target_price(), i.is_valid_discount_base_price()))]
 
         if invalid_data:
-            logger.warning(f'Invalid prices data: {len(invalid_data)} / {len(valid_price_data)} {invalid_data}')
+            logger.warning(f'Invalid prices data: {len(invalid_data)} / {len(valid_price_data)}')
 
         if not valid_price_data:
             logger.warning(f'{self.shop_name}(ozon) has no valid price data')

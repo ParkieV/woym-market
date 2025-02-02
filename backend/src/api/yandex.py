@@ -59,7 +59,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
 
         if invalid_offer_data:
             logger.warning(
-                f'Invalid offers data: {len(invalid_offer_data)} / {len(valida_offer_data)} {invalid_offer_data}')
+                f'Invalid offers data: {len(invalid_offer_data)} / {len(valida_offer_data)}')
 
         business_id = await self._get_business_id_by_campaign_id(self.client_id)
         url = f'https://api.partner.market.yandex.ru/businesses/{business_id}/offer-mappings/update'
@@ -234,7 +234,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
 
         if invalid_price_data:
             logger.warning(
-                f'Invalid prices data: {len(invalid_price_data)} / {len(valid_price_data)} {invalid_price_data}')
+                f'Invalid prices data: {len(invalid_price_data)} / {len(valid_price_data)}')
 
         if not valid_price_data:
             logger.warning(f'{self.shop_name}(yandex) has no valid price data')

@@ -66,7 +66,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 invalid_data.append(offer)
 
         if invalid_data:
-            logger.warning(f'Invalid offers data: {len(invalid_data)} / {len(valid_offers_data)} {invalid_data}')
+            logger.warning(f'Invalid offers data: {len(invalid_data)} / {len(valid_offers_data)}')
 
         if len(valid_offers_data) == 0:
             logger.warning(f'{self.shop_name}(wildberries) has no valid offers data')
@@ -173,7 +173,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         invalid_price_data = [price_data for price_data in data if not (price_data.is_valid_target_price() and price_data.is_valid_vendor_code())]
 
         if invalid_price_data:
-            logger.warning(f'Invalid price data: {len(invalid_price_data)} / {len(valid_price_data)} {invalid_price_data}')
+            logger.warning(f'Invalid price data: {len(invalid_price_data)} / {len(valid_price_data)}')
 
         if not valid_price_data:
             logger.warning(f'{self.shop_name}(wildberries) has no valid price data')
