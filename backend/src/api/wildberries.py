@@ -87,6 +87,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 body_item = {
                     'nmID': offer_data.vendor_code,
                     'vendorCode': offer_data.sku,
+                    'brand': 'SKRAB',
                     'title': offer_data.name,
                     'description': offer_data.description,
                     'sizes': items[offer_data.sku]['sizes'],
