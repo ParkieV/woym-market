@@ -158,8 +158,8 @@ class SyncUpdatingColumnFilter(BaseFilter[str]):
         #         else_=Offer.barcodes_changed)
         # }
 
-        updating_values.update(update_search_words)
-        updating_values.update(update_barcodes)
+        # updating_values.update(update_search_words)
+        # updating_values.update(update_barcodes)
         updating_values.update(detect_barcodes_changes_for_yandex)
         updating_values.update(detect_changes_values)
         updating_values.update(detect_search_words_changes_for_ozon)
