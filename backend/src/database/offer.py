@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
 from .interfaces import IOfferRepository
 from .models.models import Offer, PricingScheme, PricingSchemeField, \
-    remaining_stocks_subuery
+    remaining_stocks_subuery, OfferStock
 from typing import Iterable, Any, Type, TypeVar
 from fastapi.exceptions import HTTPException
 from fastapi import status
@@ -57,16 +57,26 @@ class OfferRepository(IOfferRepository[PydanticModel]):
         if query_filter is not None:
             query = query_filter(query)
 
+        query_stocks = select(
+            OfferStock.offer_id,
+            func.sum(OfferStock.current_stock.label('current_stock'))
+        ).group_by(OfferStock.offer_id)
+
         offset = 0
         while True:
             query = query.limit(chunk_size).offset(offset)
-            chunk = (await self.session.execute(query)).scalars().all()
-            res = [OfferOut.model_validate(item, from_attributes=True) for item in chunk]
+            chunk = (await self.session.execute(query)).scalars()
+            res = {item.id: OfferOut.model_validate(item, from_attributes=True) for item in chunk}
+            chunk_stocks = (await self.session.execute(query_stocks)).all()
+            for stocks in chunk_stocks:
+                if stocks[0] in res:
+                    res[stocks[0]].remaining_stock = stocks[1]
+
 
             if len(res) == 0:
                 return
 
-            yield res
+            yield res.values()
 
             if chunk_size is None:
                 return
