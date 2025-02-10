@@ -1,4 +1,5 @@
 import asyncio
+import multiprocessing
 from typing import Sequence
 
 from logs import get_logger
@@ -36,6 +37,15 @@ async def update_data(user_ids: Sequence[int]):
 
     logger.error('Scheduler finished successful!')
 
+
+async def start_worker(async_func, *args, **kwargs):
+    def run_async():
+        asyncio.run(async_func(*args, **kwargs))
+    print('Worker started!')
+    process = multiprocessing.Process(target=run_async)
+    process.start()
+    process.join()
+    print('Worker finished!')
 
 if __name__ == '__main__':
     asyncio.run(update_data([3, 4]))
