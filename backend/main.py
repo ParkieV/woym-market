@@ -10,7 +10,7 @@ from starlette import status
 from starlette.responses import JSONResponse
 
 from logs import get_logger
-from scheduls import update_data
+from scheduls import update_data, start_worker
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
 from src.routers.offers.base_router import router as data_router
@@ -40,6 +40,7 @@ from src.shared.exceptions import InitializationError
 
 
 async def scheduler():
+#     aioschedule.every(5).minutes.do(start_worker, update_data, (3, 4))
     aioschedule.every(60).minutes.do(update_data, (3, 4))
 
     while True:

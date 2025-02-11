@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
 from .interfaces import IOfferRepository
 from .models.models import Offer, PricingScheme, PricingSchemeField, \
-    remaining_stocks_subuery, OfferStock
+    remaining_stocks_subuery, OfferStock, Warehouse
 from typing import Iterable, Any, Type, TypeVar
 from fastapi.exceptions import HTTPException
 from fastapi import status
@@ -57,10 +57,14 @@ class OfferRepository(IOfferRepository[PydanticModel]):
         if query_filter is not None:
             query = query_filter(query)
 
-        query_stocks = select(
+        query_stocks = (
+        select(
             OfferStock.offer_id,
-            func.sum(OfferStock.current_stock.label('current_stock'))
-        ).group_by(OfferStock.offer_id)
+            OfferStock.current_stock,
+        )
+        .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
+        .where(Warehouse.warehouse_type == 'super_cluster')
+        )
 
         offset = 0
         while True:
