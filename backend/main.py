@@ -9,8 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette import status
 from starlette.responses import JSONResponse
 
-from logs import get_logger
-from scheduls import update_data, start_worker
+from logs import backend_logger
+from scheduls import update_data
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
 from src.routers.offers.base_router import router as data_router
@@ -49,7 +49,6 @@ async def scheduler():
 
 
 async def to_startup():
-    get_logger(__name__)
     if config.schedule_update:
         asyncio.create_task(scheduler())
 

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from sqlalchemy import text
 
-from logs import get_logger
+from logs import parser_logger
 from src.api.gateway_template import get_api_session
 from src.api.interfaces import IApiSessionFabric
 from src.database.catalog import CatalogRepository
@@ -18,7 +18,6 @@ from src.api.factory import ApiFactory
 from src.database.db import get_db_session
 from src.schemas.settings_schemas import MarketFullOut
 
-logger = get_logger(__name__, tags={'marketplace_api': 'api wrapper'})
 
 
 class ApiInteractor:
@@ -43,7 +42,7 @@ class ApiInteractor:
                 orders = await api.get_orders(from_date, to_date)
 
                 if not orders:
-                    logger.warning(f'Orders list for {market.name}({market.type}) is empty')
+                    parser_logger.warning(f'Orders list for {market.name}({market.type}) is empty')
 
                 result.extend(orders)
         return result
@@ -62,9 +61,9 @@ class ApiInteractor:
                     entity_id=str(market.entity_id) if market.entity_id else None,
                     shop_name=market.name)
                 offers = await api.get_offers_list()
-                logger.info(f'{market.name}({market.type}) offers collected: {len(offers)}')
+                parser_logger.info(f'{market.name}({market.type}) offers collected: {len(offers)}')
                 if not offers:
-                    logger.warning(f'{market.name}({market.type}) returns empty offers list')
+                    parser_logger.warning(f'{market.name}({market.type}) returns empty offers list')
                 result.extend([dict(_) for _ in offers])
 
         return result
@@ -84,12 +83,12 @@ class ApiInteractor:
                         entity_id=str(market.entity_id) if market.entity_id else None,
                         shop_name=market.name)
                 except Exception as e:
-                    logger.error(f"Failed to get connect with Market. {e.__class__.__name__}: {e}")
+                    parser_logger.error(f"Failed to get connect with Market. {e.__class__.__name__}: {e}")
                     continue
                 offers = await api.get_stocks()
-                logger.info(f'{market.name}({market.type}) offer stocks collected: {len(offers)}')
+                parser_logger.info(f'{market.name}({market.type}) offer stocks collected: {len(offers)}')
                 if not offers:
-                    logger.warning(f'{market.name}({market.type}) returns empty stocks list')
+                    parser_logger.warning(f'{market.name}({market.type}) returns empty stocks list')
                 result.extend(offers)
 
         return result
@@ -107,16 +106,16 @@ class ApiInteractor:
                         entity_id=str(market.entity_id) if market.entity_id else None,
                         shop_name=market.name)
                 except Exception as e:
-                    logger.error(f"Failed to get connect with {market.type}({market.name}). {e.__class__.__name__}: {e}")
+                    parser_logger.error(f"Failed to get connect with {market.type}({market.name}). {e.__class__.__name__}: {e}")
                     continue
 
                 price_data = [i for i in data if i.market==market.type and i.name_of_shop==market.name]
 
                 try:
-                    logger.info(f'{market.name}({market.type}) offers length: {len(price_data)}')
+                    parser_logger.info(f'{market.name}({market.type}) offers length: {len(price_data)}')
                     await api.change_prices(price_data)
                 except Exception as e:
-                    logger.error(f"Failed to change prices in {market.type}({market.name}). {e.__class__.__name__}: {e}")
+                    parser_logger.error(f"Failed to change prices in {market.type}({market.name}). {e.__class__.__name__}: {e}")
                     continue
 
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
@@ -167,7 +166,7 @@ async def foo(datas: dict[str, Any],
                         if data_2 and not (not isinstance(data_1['description'], str) and np.isnan(data_2['description'])) else None,
             )
         except Exception as e:
-            logger.error(f"Failed to update data for {data['sku']}. {e.__class__.__name__}")
+            parser_logger.error(f"Failed to update data for {data['sku']}. {e.__class__.__name__}")
             raise e
         row.description = "'" + row.description + "'" if row.description is not None else None
         if row.sku:

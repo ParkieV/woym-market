@@ -5,7 +5,7 @@ import pandas as pd
 from fastapi import HTTPException
 from starlette import status
 
-from logs import get_logger
+from logs import backend_logger
 from src.database.catalog import CatalogRepository
 from src.database.db import async_session, get_db_session
 from src.database.interfaces import IDbSessionFabric
@@ -15,7 +15,6 @@ from src.schemas.catalog_schemas import CatalogItemCreate, PydanticCatalogItem, 
 from src.schemas.offer_schemas import OfferOut
 from src.services.base_utils import parce_field_names, bytes_to_data_frame, parce_purchase_list
 
-logger = get_logger(__name__)
 
 
 async def setup_catalog_items(session_fabric: IDbSessionFabric) -> None:
@@ -34,7 +33,7 @@ async def setup_catalog_items(session_fabric: IDbSessionFabric) -> None:
         to_create_skus = db_offers_skus - catalog_items_skus
 
         if not to_create_skus:
-            logger.info('New catalog items not found')
+            backend_logger.info('New catalog items not found')
             return
 
         to_create_items_with_cdv = db_offers_df[
@@ -55,11 +54,11 @@ async def setup_catalog_items(session_fabric: IDbSessionFabric) -> None:
         new_items = [CatalogItemCreate(**i) for i in new_items_df.to_dict(orient='records')]
 
         if len(new_items) != len(to_create_skus):
-            logger.warning(f'Len of new skus and creating skus not equal: {len(new_items)} / {len(to_create_skus)}')
+            backend_logger.warning(f'Len of new skus and creating skus not equal: {len(new_items)} / {len(to_create_skus)}')
 
         await db.create_catalog_items(session, new_items)
 
-        logger.info(f'Catalog items created: {len(new_items)}')
+        backend_logger.info(f'Catalog items created: {len(new_items)}')
 
 
 async def get_catalog_items(session_fabric: IDbSessionFabric) -> list[PydanticCatalogItem]:
@@ -115,14 +114,14 @@ async def import_catalog_items(file: bytes, file_extension: str = '.xlsx') -> No
 
 async def import_item_prices(data: bytes, file_extension: str = '.xlsx'):
     df = parce_purchase_list(data, file_extension=file_extension)
-    logger.debug('Parsed dataframe')
+    backend_logger.debug('Parsed dataframe')
     to_update_data = [CatalogItemUpdate(**i) for i in df.to_dict('records')]
     async with async_session() as session:
-        logger.debug('Start')
+        backend_logger.debug('Start')
         await db.change_catalog_items(session, to_update_data)
-        logger.debug('Changed catalog items successfully')
+        backend_logger.debug('Changed catalog items successfully')
         await db.set_supplier_available(session, [i.sku for i in to_update_data])
-        logger.debug('Changed catalog items successfully')
+        backend_logger.debug('Changed catalog items successfully')
 
 
 async def reset_track_markers() -> None:

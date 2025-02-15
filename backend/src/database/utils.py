@@ -6,7 +6,7 @@ from sqlalchemy import ColumnElement, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
-from logs import get_logger
+from logs import backend_logger
 from src.database.models.base import Base
 from src.schemas.catalog_schemas import CatalogItemCreate
 from src.shared.exceptions import MappingError
@@ -14,8 +14,6 @@ from src.database.offer import OfferRepository
 from src.database.catalog import create_catalog_items
 from src.schemas.filters.offers_filter import SKUOnlyOffersFilter
 
-
-logger = get_logger(__name__)
 
 async def row_to_dict(row) -> dict:
     return dict(row._mapping)
@@ -105,7 +103,7 @@ async def duplicate_offers_to_catalog(session_factory) -> None:
                             supplier_available=False,
                             search_words_changed=False) for sku in sku_set]
             await create_catalog_items(session, offers_dto)
-        logger.debug('Create catalog successfully!')
+        backend_logger.debug('Create catalog successfully!')
 
 
 def mapping_pydantic_to_sqlalchemy_dict(
@@ -132,6 +130,6 @@ def mapping_pydantic_to_sqlalchemy_dict(
 
 
 if __name__ == '__main__':
-    logger.info('Duplicate started!')
+    backend_logger.info('Duplicate started!')
     asyncio.run(duplicate_offers_to_catalog())
-    logger.info('Duplicate finished!')
+    backend_logger.info('Duplicate finished!')
