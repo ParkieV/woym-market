@@ -33,7 +33,7 @@ async def update_data(user_ids: Sequence[int]):
     except Exception as e:
         parser_logger.error('Error in update orders data', exc_info=e)
 
-    parser_logger.error('Scheduler finished successful!')
+    parser_logger.info('Scheduler finished successful!')
 
 
 async def start_worker(async_func, *args, **kwargs):

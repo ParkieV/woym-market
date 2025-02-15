@@ -21,6 +21,12 @@ LOGGING_CONFIG = dict(
             'formatter': 'generic_console',
             'stream': sys.stdout,
         },
+        'console_error': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'generic_console',
+            'stream': sys.stderr,
+            'level': 'ERROR',
+        },
         'file': {
             'class': 'logs_utils.CustomTimedRotatingFileHandler',
             'formatter': 'generic_json',
@@ -28,19 +34,18 @@ LOGGING_CONFIG = dict(
             'when': 'midnight',
             'interval': 1,
             'encoding': 'utf-8',
-            'datefmt': '%Y-%m-%d_%H:%M',
-
+            'datefmt': '%Y-%m-%d',
         }
     },
     loggers={
         'woym_market': {
             'level': 'INFO' if config.mode == 'PROD' else 'DEBUG',
-            'handlers': ['file'],
+            'handlers': ['console_error', 'file'],
             'propagate': False
         },
         'parser': {
             'level': 'INFO' if config.mode == 'PROD' else 'DEBUG',
-            'handlers': ['file'],
+            'handlers': ['console_error', 'file'],
             'propagate': False,
         }
     }
