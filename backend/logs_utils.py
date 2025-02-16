@@ -3,6 +3,7 @@ import logging
 import os
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
+from venv import logger
 
 import dateutil.parser
 
@@ -46,4 +47,4 @@ class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
         # Составляем путь с учетом имени логгера
         filepath = f"logs/{logger_name}"
         os.makedirs(filepath, exist_ok=True)
-        return f"{filepath}/{timestamp or ''}.log"
+        return f"{filepath}/{logger_name}_{timestamp or ''}.log"
