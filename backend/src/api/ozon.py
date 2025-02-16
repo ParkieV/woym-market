@@ -40,7 +40,7 @@ class OzonApi(ApiGateway, IApiGateway):
         :param skus: Список СКУ товаров.
         :return: Информация о товарах;
         """
-        url = 'https://api-seller.ozon.ru/v3/products/info/attributes'
+        url = 'https://api-seller.ozon.ru/v4/product/info/attributes'
         chunk_size = 1000
         body = {
             'filter': {
@@ -122,7 +122,7 @@ class OzonApi(ApiGateway, IApiGateway):
 
             data = await self.validate_response(response, body=body)
 
-            for offer in data['result']['items']:
+            for offer in data['items']:
                 result[offer['offer_id']] = {
                     'marketing_seller_price': self._str_to_float(offer['price'].get('marketing_seller_price', None))
                 }
@@ -133,10 +133,7 @@ class OzonApi(ApiGateway, IApiGateway):
                     sales_percent = commissions['sales_percent_fbo']
                     price = self._str_to_float(offer['price']['price'])
 
-                    expenses = sum([
-                        commissions['fbo_return_flow_trans_max_amount'],
-                        commissions['fbo_deliv_to_customer_amount'],
-                    ])
+                    expenses = commissions['fbo_direct_flow_trans_min_amount']
 
                     result[offer['offer_id']]['commissions'] = price * sales_percent / 100 + expenses
 
@@ -394,7 +391,8 @@ class OzonApi(ApiGateway, IApiGateway):
             offer['content_rating'] = offers_content_rating.get(offer['market_sku'], None)
             # артикул - product_id
             offer['vendor_code'] = product_ids.get(offer['sku'], None)
-            del offer['market_sku']
+            offer.pop('market_sku', None)
+            offer['photo'] = offer['photo'][0]
 
         return [APIOffer(**i) for i in offers]
 
@@ -544,11 +542,11 @@ class OzonApi(ApiGateway, IApiGateway):
                         'current_price': self._str_to_float(offer['price']),
                         'min_price_in_market': min_market_price,
                         'min_price_without_market': self._str_to_float(minimal_price),
-                        'attractive_price_threshold': self._str_to_float(offer['recommended_price']),
+                        'attractive_price_threshold': None,
                         'market': 'ozon',
                         'barcodes': ', '.join(offer.get('barcodes', [])),
                         'price_index': self._translate_price_index(price_index),
-                        'market_sku': offer['sku'],
+                        'market_sku': offer['sources'][0]['sku'],
                         'your_price_for_buyers': self._str_to_float(offer['marketing_price'])
                     })
 
@@ -572,7 +570,7 @@ class OzonApi(ApiGateway, IApiGateway):
 
             response = await self.request(
                 'POST',
-                url='https://api-seller.ozon.ru/v4/products/info/attributes',
+                url='https://api-seller.ozon.ru/v4/product/info/attributes',
                 headers=self.auth_headers,
                 body=body
             )
@@ -581,7 +579,7 @@ class OzonApi(ApiGateway, IApiGateway):
             # 4191 description
             for offer in data['result']:
                 description_attributes = [i['values'][0] for i in offer['attributes'] if
-                                          i['attribute_id'] == 4191 and len(i['values'])]
+                                          i['id'] == 4191 and len(i['values'])]
                 descriptions = '. '.join(i['value'] for i in description_attributes)
 
                 unit_dimension_divider = 1
@@ -590,7 +588,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 elif offer['dimension_unit'] == 'cm':
                     unit_dimension_divider = 1
 
-                search_attributes = [i for i in offer['attributes'] if i['attribute_id'] == 22336]
+                search_attributes = [i for i in offer['attributes'] if i['id'] == 22336]
                 search_words = '; '.join(
                     ['; '.join([words['value'] for words in item['values']]) for item in search_attributes])
                 if len(search_words) > 255:
