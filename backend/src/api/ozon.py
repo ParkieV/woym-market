@@ -77,7 +77,8 @@ class OzonApi(ApiGateway, IApiGateway):
         :param data: Список СКУ товаров.
         :return: Информация о цене товаров
         """
-        url = 'https://api-seller.ozon.ru/v4/product/info/prices'
+        # TODO: Fix body
+        url = 'https://api-seller.ozon.ru/v5/product/info/prices'
         results = {}
         chunk_size = 1000
         body = {
@@ -98,11 +99,11 @@ class OzonApi(ApiGateway, IApiGateway):
             for item in json_response.get('result', {}).get('items', []):
                 results[item['offer_id']] = item
 
-            last_id = json_response.get('result', {}).get('last_id', None)
+            last_id = json_response.get('result', {}).get('cursor', None)
             if not last_id or json_response.get('result', {}).get('total', 0) < chunk_size:
                 break
 
-            body['last_id'] = last_id
+            body['cursor'] = last_id
 
         return results
 
@@ -117,7 +118,8 @@ class OzonApi(ApiGateway, IApiGateway):
                 },
                 'limit': chunk_size
             }
-            response = await self.request('POST', url='https://api-seller.ozon.ru/v4/product/info/prices', headers=self.auth_headers,
+            # TODO: Fix body
+            response = await self.request('POST', url='https://api-seller.ozon.ru/v5/product/info/prices', headers=self.auth_headers,
                                          body=body)
 
             data = await self.validate_response(response, body=body)
@@ -466,8 +468,6 @@ class OzonApi(ApiGateway, IApiGateway):
                 include_response_logs=True
             )
 
-            # TODO: Check what happened there, probably returned value of this function
-            # should be use
             await self.validate_response(response, body=body)
 
             if response.ok:
@@ -514,13 +514,13 @@ class OzonApi(ApiGateway, IApiGateway):
             }
             response = await self.request(
                 'POST',
-                url='https://api-seller.ozon.ru/v2/product/info/list',
+                url='https://api-seller.ozon.ru/v3/product/info/list',
                 headers=self.auth_headers,
                 body=body
             )
 
             data = await self.validate_response(response, body=body)
-            for offer in data['result']['items']:
+            for offer in data['items']:
                 offer_status = offer.get('status', {})
                 if offer_status.get('validation_state', 'fail') == 'fail' or offer_status.get('is_failed', True):
                     parser_logger.warning(f'Error in offer {offer["offer_id"]} data. Status: {offer_status}')
@@ -539,7 +539,7 @@ class OzonApi(ApiGateway, IApiGateway):
                         'name': offer['name'],
                         'photo': offer['primary_image'],
                         'current_price': self._str_to_float(offer['price']),
-                        'min_price_in_market': self._str_to_float(offer['min_ozon_price']),
+                        'min_price_in_market': self._str_to_float(offer.get('min_ozon_price', None)),
                         'min_price_without_market': self._str_to_float(minimal_price),
                         'attractive_price_threshold': self._str_to_float(offer['recommended_price']),
                         'market': 'ozon',
@@ -569,7 +569,7 @@ class OzonApi(ApiGateway, IApiGateway):
 
             response = await self.request(
                 'POST',
-                url='https://api-seller.ozon.ru/v3/products/info/attributes',
+                url='https://api-seller.ozon.ru/v4/products/info/attributes',
                 headers=self.auth_headers,
                 body=body
             )
@@ -581,7 +581,6 @@ class OzonApi(ApiGateway, IApiGateway):
                                           i['attribute_id'] == 4191 and len(i['values'])]
                 descriptions = '. '.join(i['value'] for i in description_attributes)
 
-                # TODO посчитать объем
                 unit_dimension_divider = 1
                 if offer['dimension_unit'] == 'mm':
                     unit_dimension_divider = 10
