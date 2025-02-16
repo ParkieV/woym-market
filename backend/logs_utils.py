@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from collections import OrderedDict
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 
@@ -9,15 +10,16 @@ import dateutil.parser
 
 class JsonFormatter(logging.Formatter):
     def format(self, record):
-        log_record = {
-            "level": record.levelname,
-            "timestamp": self.formatTime(record),
-            "message": record.getMessage(),
-            "name": record.name,
-            "module": record.module,
-            "funcName": record.funcName,
-            "lineno": record.lineno,
-        }
+        log_record = OrderedDict(
+            level=record.levelname,
+            timestamp=self.formatTime(record),
+            message=record.getMessage(),
+            name=record.name,
+            module=record.module,
+            filepath=record.pathname,
+            funcName=record.funcName,
+            lineno=record.lineno,
+        )
         return json.dumps(log_record, ensure_ascii=False)
 
 class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
