@@ -77,7 +77,6 @@ class OzonApi(ApiGateway, IApiGateway):
         :param data: Список СКУ товаров.
         :return: Информация о цене товаров
         """
-        # TODO: Fix body
         url = 'https://api-seller.ozon.ru/v5/product/info/prices'
         results = {}
         chunk_size = 1000
@@ -118,7 +117,6 @@ class OzonApi(ApiGateway, IApiGateway):
                 },
                 'limit': chunk_size
             }
-            # TODO: Fix body
             response = await self.request('POST', url='https://api-seller.ozon.ru/v5/product/info/prices', headers=self.auth_headers,
                                          body=body)
 
