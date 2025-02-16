@@ -531,13 +531,18 @@ class OzonApi(ApiGateway, IApiGateway):
                                                             None) if external_index_data is not None else None
 
                     price_index = price_indexes.get('price_index', None) if price_indexes is not None else None
+                    min_market_price = (
+                        self._str_to_float(offer['min_ozon_price'])
+                        if offer.get('min_ozon_price', None) is not None
+                        else None
+                    )
 
                     result.append({
                         'sku': offer['offer_id'],
                         'name': offer['name'],
                         'photo': offer['primary_image'],
                         'current_price': self._str_to_float(offer['price']),
-                        'min_price_in_market': self._str_to_float(offer.get('min_ozon_price', None)),
+                        'min_price_in_market': min_market_price,
                         'min_price_without_market': self._str_to_float(minimal_price),
                         'attractive_price_threshold': self._str_to_float(offer['recommended_price']),
                         'market': 'ozon',
