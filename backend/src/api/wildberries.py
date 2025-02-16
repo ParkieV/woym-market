@@ -130,10 +130,11 @@ class WildberriesApi(ApiGateway, IApiGateway):
         result = []
 
         for warehouse in warehouses:
-            warehouse['name'] = warehouse['name'] if warehouse['name'].lower() != 'краснодар' else 'Краснодар (Тихорецкая)'
             warehouse_stocks = [
                 APIWarehouseOffer(name_of_shop=self.shop_name, **i)
-                for i in stocks.get(warehouse['name'], [])
+                for i in stocks.get(
+                    warehouse['name'] if warehouse['name'] != 'Краснодар (Тихорецкая)' else 'Краснодар',
+                    [])
             ]
             result.append(
                 APIWarehouse(
@@ -313,7 +314,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 result[item['vendorCode']] = {
                     'current_price': size['price'],
                     'your_promotion_price': size['discountedPrice'],
-                    'discount': size['discount'],
+                    'discount': item['discount'],
                 }
 
             if len(data) < limit:
