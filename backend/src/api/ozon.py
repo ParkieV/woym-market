@@ -392,7 +392,7 @@ class OzonApi(ApiGateway, IApiGateway):
             # артикул - product_id
             offer['vendor_code'] = product_ids.get(offer['sku'], None)
             offer.pop('market_sku', None)
-            offer['photo'] = offer['photo'][0]
+            offer['photo'] = offer['photo'][0] if len(offer['photo']) > 0 else None
 
         return [APIOffer(**i) for i in offers]
 
