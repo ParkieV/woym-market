@@ -3,7 +3,6 @@ import logging
 import os
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
-from venv import logger
 
 import dateutil.parser
 
