@@ -124,10 +124,11 @@ function columns(): (Column | ColumnGroup)[] {
                     base: intColumn,
                     valueGetter: (params: ValueGetterParams<FboStorage>) => {
                         if (!params.data) return 0;
-                        return params.data.stocks
+                        const stocks = params.data.stocks
                             .filter(x => x.warehouse.warehouse_type !== "cluster")
                             .map(x => x.current_stock)
                             .reduce((a, b) => a + b, 0);
+                        return stocks / 2;
                     }
                 },
                 {
@@ -137,7 +138,7 @@ function columns(): (Column | ColumnGroup)[] {
                     valueGetter: (params: ValueGetterParams<FboStorage>) => {
                         if (!params.data) return 0;
                         return params.data.stocks
-                            .filter(x => x.warehouse.warehouse_type !== "cluster")
+                            .filter(x => x.warehouse.warehouse_type !== "cluster" && x.warehouse.warehouse_type !== "super_cluster")
                             .map(x => x.min_stock)
                             .reduce((a, b) => a + b, 0);
                     }
@@ -149,7 +150,7 @@ function columns(): (Column | ColumnGroup)[] {
                     valueGetter: (params: ValueGetterParams<FboStorage>) => {
                         if (!params.data) return 0;
                         return params.data.stocks
-                            .filter(x => x.warehouse.warehouse_type !== "cluster")
+                            .filter(x => x.warehouse.warehouse_type !== "cluster" && x.warehouse.warehouse_type !== "super_cluster")
                             .reduce((sum, storage) => sum + calcToDeliver(storage), 0);
                     }
                 },

@@ -8,12 +8,11 @@ from typing import Any
 import pandas as pd
 from aiohttp import ClientSession, ClientResponse
 
-from logs import get_logger
+from logs import parser_logger
 from src.api.exceptions import RequestException
 from src.api.interfaces import IApiGateway
 from src.schemas.base_api_schemas import APIOfferChangeData, APIOffer, APIWarehouse, APIPriceChangeData, APIOrderData
 
-api_logger = get_logger('API', level=logging.INFO)
 
 
 @asynccontextmanager
@@ -22,7 +21,7 @@ async def get_api_session() -> AsyncGenerator[ClientSession, None]:
         try:
             yield session
         except RequestException as exc:
-            api_logger.error(exc)
+            parser_logger.error(exc)
             raise exc
 
 
@@ -60,15 +59,15 @@ class ApiGateway(IApiGateway):
         try:
             response = await self.session.request(method=method, url=url, headers=headers, json=body, params=params)
         except Exception as e:
-            api_logger.fatal(f'[FATAL] {response_log_message}', exc_info=e)
+            parser_logger.fatal(f'[FATAL] {response_log_message}', exc_info=e)
             raise RequestException(response_log_message)
         else:
             response_status = 'OK' if response.ok else 'FAILED'
             response_data = response.text if include_response_logs else '!transmission disabled'
-            if api_logger.level == logging.DEBUG:
-                api_logger.debug(f'[{response_status}] {response_log_message} Response from API: status={response.status} | content={response_data}')
+            if parser_logger.level == logging.DEBUG:
+                parser_logger.debug(f'[{response_status}] {response_log_message} Response from API: status={response.status} | content={response_data}')
             else:
-                api_logger.info(f'[{response_status}] {response_log_message} Response from API: status={response.status}')
+                parser_logger.info(f'[{response_status}] {response_log_message} Response from API: status={response.status}')
 
             return response
 

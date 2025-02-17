@@ -8,10 +8,9 @@ from fastapi import UploadFile
 from requests import Session
 from starlette import status
 from starlette.exceptions import HTTPException
-from logs import get_logger
+from logs import parser_logger
 from src.schemas.media_schemas import UploadResult, StorageItem
 
-logger = get_logger(__name__)
 
 
 class YandexDiscApi:
@@ -48,7 +47,7 @@ class YandexDiscApi:
         path_response = self.session.get('https://cloud-api.yandex.net/v1/disk/resources/upload', params=path_query_params, headers=self.auth_headers)
 
         if not path_response.ok:
-            logger.error(f'Cant upload url for file "{upload_file_path}": {path_response.text}')
+            parser_logger.error(f'Cant upload url for file "{upload_file_path}": {path_response.text}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалось получить доступ к загрузке файла "{upload_file_path}": {path_response.json().get("message", "unknown")}')
 
         # Загружаем целевой файл по полученной сылке
@@ -56,11 +55,11 @@ class YandexDiscApi:
         upload_response = self.session.put(upload_path, data=content, headers=self.auth_headers)
 
         if upload_response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE:
-            logger.error(f'File "{filename}" is too large ({file.size})')
+            parser_logger.error(f'File "{filename}" is too large ({file.size})')
             raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, f'Файл "{filename}" слишком большой')
 
         if not upload_response.ok:
-            logger.error(f'Cant upload file "{upload_file_path}": {upload_response.text}')
+            parser_logger.error(f'Cant upload file "{upload_file_path}": {upload_response.text}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалось загрузить файл: {upload_response.json().get("message", "unknown")}')
 
         return upload_file_path
@@ -72,7 +71,7 @@ class YandexDiscApi:
         response = self.session.put('https://cloud-api.yandex.net/v1/disk/resources/publish', params=params, headers=self.auth_headers)
 
         if not response.ok:
-            logger.error(f'Cant publish file "{file_path}": {response.text}')
+            parser_logger.error(f'Cant publish file "{file_path}": {response.text}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалось опубликовать файл "{file_path}": {response.json().get("message", "unknown")}')
 
         json_data = response.json()
@@ -84,7 +83,7 @@ class YandexDiscApi:
         meta_info_response = self.session.get(metadata_path, headers=self.auth_headers)
 
         if not response.ok:
-            logger.error(f'Cant read metainfo of file "{file_path}": {meta_info_response.text} \nLink: {metadata_path}')
+            parser_logger.error(f'Cant read metainfo of file "{file_path}": {meta_info_response.text} \nLink: {metadata_path}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалось получить публичную ссылку на файл "{file_path}": {meta_info_response.json().get("message", "unknown")}')
 
         meta_data = meta_info_response.json()
@@ -99,11 +98,11 @@ class YandexDiscApi:
         response = self.session.delete('https://cloud-api.yandex.net/v1/disk/resources', params=params, headers=self.auth_headers)
 
         if response.status_code == status.HTTP_404_NOT_FOUND:
-            logger.error(f'File not found: {str(path)}')
+            parser_logger.error(f'File not found: {str(path)}')
             raise HTTPException(status.HTTP_404_NOT_FOUND, f'Файл не найден: {str(path)}')
 
         elif not response.ok:
-            logger.error(f'Error deleting file "{str(path)}": {response.text}')
+            parser_logger.error(f'Error deleting file "{str(path)}": {response.text}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Ошибка при удалении файла "{str(path)}": {response.json().get("message", "unknown")}')
 
     async def upload_file(self, file: UploadFile, path: str = '', overwrite: bool = True, publish: bool = True, keep_name: bool = False) -> UploadResult:
@@ -135,7 +134,7 @@ class YandexDiscApi:
             response = self.session.get('https://cloud-api.yandex.net/v1/disk/resources', params=params, headers=self.auth_headers)
 
             if not response.ok:
-                logger.error(f'Cant get files from "{str(self.root / path)}": {response.text}')
+                parser_logger.error(f'Cant get files from "{str(self.root / path)}": {response.text}')
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалось получить файлы каталога "{str(self.root / path)}": {response.json().get("message", "unknown")}')
 
             json_data = response.json()
@@ -167,5 +166,5 @@ class YandexDiscApi:
         response = self.session.put('https://cloud-api.yandex.net/v1/disk/resources', headers=self.auth_headers, params=params)
 
         if not response.ok:
-            logger.error(f'Cant create directory "{new_dir_path}": {response.text}')
+            parser_logger.error(f'Cant create directory "{new_dir_path}": {response.text}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалось создать папку "{new_dir_path}": {response.json().get("message", "unknown")}')

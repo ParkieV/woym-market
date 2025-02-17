@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette import status
 from starlette.responses import JSONResponse
 
-from logs import get_logger
+from logs import backend_logger
 from scheduls import update_data
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
@@ -40,6 +40,7 @@ from src.shared.exceptions import InitializationError
 
 
 async def scheduler():
+#     aioschedule.every(5).minutes.do(start_worker, update_data, (3, 4))
     aioschedule.every(60).minutes.do(update_data, (3, 4))
 
     while True:
@@ -48,7 +49,6 @@ async def scheduler():
 
 
 async def to_startup():
-    get_logger(__name__)
     if config.schedule_update:
         asyncio.create_task(scheduler())
 

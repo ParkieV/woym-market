@@ -9,10 +9,9 @@ from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
 from starlette import status
 
-from logs import get_logger
+from logs import backend_logger
 from pathlib import Path
 
-logger = get_logger(__name__)
 
 
 def error_handler(default_message: str = 'Ошибка сервера'):
@@ -24,11 +23,11 @@ def error_handler(default_message: str = 'Ошибка сервера'):
             try:
                 return await func(*args, **kwargs)
             except HTTPException as e:
-                logger.error(f'Error in func {func}: {e.detail}', exc_info=True)
+                backend_logger.error(f'Error in func {func}: {e.detail}', exc_info=True)
                 raise HTTPException(e.status_code, e.detail)
 
             except Exception:
-                logger.error(f'Error in func {func}', exc_info=True)
+                backend_logger.error(f'Error in func {func}', exc_info=True)
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, default_message)
 
         return wrapped
@@ -44,7 +43,7 @@ def clean_up_files(file_path: str):
         elif path.is_dir():
             shutil.rmtree(path)
     except Exception:
-        logger.exception(f'Cannot remove file or dir \'{file_path}\'', exc_info=True)
+        backend_logger.exception(f'Cannot remove file or dir \'{file_path}\'', exc_info=True)
 
 
 def validate_dataframe(

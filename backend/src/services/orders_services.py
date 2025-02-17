@@ -3,7 +3,7 @@ import pandas as pd
 from fastapi import HTTPException
 from starlette import status
 
-from logs import get_logger
+from logs import backend_logger
 from src.api.wrapper import ApiInteractor
 from datetime import datetime, timedelta
 from src.database import warehouse_db, offer
@@ -15,7 +15,6 @@ from src.schemas.filters.statistic_filter import OrderStatisticFilter
 from src.schemas.orders_scemas import OrderCreate, OrderOut
 from src.database import order_db as db
 
-logger = get_logger(__name__)
 
 
 async def setup_orders(api_session_fabric, db_session_fabric) -> None:
@@ -61,12 +60,12 @@ async def setup_orders(api_session_fabric, db_session_fabric) -> None:
     new_orders = [OrderCreate(**i) for i in to_create_orders.to_dict('records')]
 
     if not new_orders:
-        logger.info('New orders not found')
+        backend_logger.info('New orders not found')
         return
 
     async with async_session() as session:
         await db.create_orders(session, new_orders)
-        logger.info(f'New orders created: {len(new_orders)}')
+        backend_logger.info(f'New orders created: {len(new_orders)}')
 
 
 async def get_orders(filter_: OrderFilter | None, paging: PagingFilter | None) -> list[OrderOut]:

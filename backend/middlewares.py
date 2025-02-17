@@ -4,9 +4,8 @@ from typing import Any
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-from logs import get_logger
+from logs import backend_logger
 
-logger = get_logger('endpoints', level=logging.DEBUG)
 
 
 class EndpointLoggingMiddleware(BaseHTTPMiddleware):
@@ -27,9 +26,9 @@ class EndpointLoggingMiddleware(BaseHTTPMiddleware):
         base_log_message = f'{request.method} {request.url} | body={request_body} | params={request.query_params} | path_params={request.path_params} | headers={dict(request.headers.items())}'
         try:
             response = await call_next(request)
-            logger.debug(f'[OK] {base_log_message}')
+            backend_logger.debug(f'[OK] {base_log_message}')
         except Exception as exp:
-            logger.debug(f'[ERROR] {base_log_message}. Error message: {exp}')
+            backend_logger.debug(f'[ERROR] {base_log_message}. Error message: {exp}')
             raise exp
 
         return response

@@ -1,11 +1,10 @@
 from git import Repo
 from datetime import datetime
-from logs import get_logger
+from logs import backend_logger
 from src.params.config import config
 from src.schemas.core_schemas import VersionInfo
 
 
-logger = get_logger(__name__)
 
 
 def get_latest_commit_info() -> VersionInfo | None:
@@ -19,7 +18,7 @@ def get_latest_commit_info() -> VersionInfo | None:
             branch=repo.active_branch.name,
         )
     except Exception:
-        logger.error('Error while getting latest commit info', exc_info=True)
+        backend_logger.error('Error while getting latest commit info', exc_info=True)
         return None
     else:
         return version_info

@@ -55,6 +55,8 @@
                             return data.stop_price > data.target_price;
                         } else if (colDef.field === "current_price") {
                             return data.stop_price > data.current_price;
+                        } else if (colDef.field === "name") {
+                            return data.name?.length > 60;
                         }
                         return false;
                     }

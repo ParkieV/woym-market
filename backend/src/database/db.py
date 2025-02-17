@@ -12,12 +12,11 @@ from sqlalchemy.schema import (
         ForeignKeyConstraint,
     )
 
-from logs import get_logger
+from logs import backend_logger
 from src.params.config import config
 from src.database.models.base import Base
 
 
-logger = get_logger(__name__)
 
 
 engine = create_async_engine(
@@ -41,7 +40,7 @@ async def get_db_session() -> AsyncContextManager[AsyncSession]:
             yield session
             await session.commit()
         except Exception as e:
-            logger.error(f'Failed in transaction. {e.__class__.__name__}: {e}')
+            backend_logger.error(f'Failed in transaction. {e.__class__.__name__}: {e}')
 
 def drop_everything(engine):
     con = engine.connect()
@@ -79,7 +78,7 @@ def db_create() -> None:
         sync_engine = create_engine(sync_url)
         drop_everything(sync_engine)
         Base.metadata.create_all(sync_engine)
-        logger.warning('Database reseted')
+        backend_logger.warning('Database reseted')
     else:
-        logger.info('Database up-to-date')
+        backend_logger.info('Database up-to-date')
 
