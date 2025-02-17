@@ -10,7 +10,7 @@ from starlette import status
 from starlette.responses import JSONResponse
 
 from logs import backend_logger
-from scheduls import update_data
+from scheduls import update_data, start_worker
 from src.routers.user_router import user_router
 from src.routers.auth_router import auth_router
 from src.routers.offers.base_router import router as data_router
@@ -40,13 +40,12 @@ from src.shared.exceptions import InitializationError
 
 
 async def scheduler():
-#     aioschedule.every(5).minutes.do(start_worker, update_data, (3, 4))
-    aioschedule.every(60).minutes.do(update_data, (3, 4))
+    aioschedule.every(60).minutes.do(start_worker, update_data, (3, 4))
+#     aioschedule.every(60).minutes.do(update_data, (3, 4))
 
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)
-
 
 async def to_startup():
     if config.schedule_update:
@@ -57,6 +56,7 @@ async def to_startup():
 async def startup(_: FastAPI):
     db_create()
     await to_startup()
+    backend_logger.info('Worker start!')
     yield
 
 
