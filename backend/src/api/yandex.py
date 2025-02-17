@@ -7,7 +7,7 @@ from typing import Any
 
 from aiohttp import ClientSession, ClientResponse
 
-from logs import get_logger
+from logs import parser_logger
 from datetime import datetime, timedelta
 
 import openpyxl
@@ -22,7 +22,6 @@ from src.services.stocks_response_handlers import StocksResponseHandler, OFFERS,
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, \
     APIOfferChangeData, APIOrderData, WarehouseType
 
-logger = get_logger(__name__, tags={'marketplace_api': 'yandex'})
 
 
 class YandexMarketApi(ApiGateway, IApiGateway):
@@ -58,7 +57,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
         invalid_offer_data = [i for i in data if not check_valid(i)]
 
         if invalid_offer_data:
-            logger.warning(
+            parser_logger.warning(
                 f'Invalid offers data: {len(invalid_offer_data)} / {len(valida_offer_data)}')
 
         business_id = await self._get_business_id_by_campaign_id(self.client_id)
@@ -90,12 +89,12 @@ class YandexMarketApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
-                logger.error(f'Cant update offers data: {response.text}')
+                parser_logger.error(f'Cant update offers data: {response.text}')
 
             response_json = await self.validate_response(response)
 
             if not response.ok:
-                logger.error(f'Cant update offers data: {response_json.get("errors", "unknown")}')
+                parser_logger.error(f'Cant update offers data: {response_json.get("errors", "unknown")}')
 
     async def validate_response(self, response: ClientResponse, body: Any = None) -> Any:
         data_json = await response.json()
@@ -233,11 +232,11 @@ class YandexMarketApi(ApiGateway, IApiGateway):
         invalid_price_data = [i for i in data if not (i.is_valid_target_price() and i.is_valid_discount_base_price())]
 
         if invalid_price_data:
-            logger.warning(
+            parser_logger.warning(
                 f'Invalid prices data: {len(invalid_price_data)} / {len(valid_price_data)}')
 
         if not valid_price_data:
-            logger.warning(f'{self.shop_name}(yandex) has no valid price data')
+            parser_logger.warning(f'{self.shop_name}(yandex) has no valid price data')
             return
 
         business_id = await self._get_business_id_by_campaign_id(self.client_id)
@@ -266,11 +265,11 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 include_response_logs=True
             )
             if not response.ok:
-                logger.error(f'{self.shop_name}(yandex) has invalid price data: {response.text}')
+                parser_logger.error(f'{self.shop_name}(yandex) has invalid price data: {response.text}')
 
         await self._set_cofinance_offers_price(data)
 
-        logger.info(f'{self.shop_name}(yandex) prices updated: {len(valid_price_data)} of {len(data)}')
+        parser_logger.info(f'{self.shop_name}(yandex) prices updated: {len(valid_price_data)} of {len(data)}')
 
     async def _get_market_prices_report(self, business_id: int) -> dict[str, dict[str, Any]]:
         response = await self.request('POST', url='https://api.partner.market.yandex.ru/reports/prices/generate', body={'businessId': business_id}, headers=self.auth_headers)
@@ -476,7 +475,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
             response = await self.request('GET', url=url, headers=self.auth_headers, params=params)
 
             if not response.ok:
-                logger.error(f'Cant collect orders: {response.text}')
+                parser_logger.error(f'Cant collect orders: {response.text}')
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Не удалось получить информацию о заказах')
 
             json_response = await self.validate_response(response)

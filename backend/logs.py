@@ -1,47 +1,57 @@
-import logging
 import sys
+import logging.config
 
+from src.params.config import config
 
-logging.basicConfig()
+LOGGING_CONFIG = dict(
+    version=1,
+    disable_existing_loggers=False,
+    formatters={
+        'generic_console': {
+            'format': '%(asctime)s [%(levelname)s] %(message)s (%(name)s:%(filename)s:%(funcName)s:%(lineno)d)',
+        },
+        'generic_json': {
+            'class': 'logs_utils.JsonFormatter',
+            'datefmt': '%Y-%m-%d %H:%M:%S.%f',
+        }
+    },
+    handlers={
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'generic_console',
+            'stream': sys.stdout,
+        },
+        'console_error': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'generic_console',
+            'stream': sys.stderr,
+            'level': 'ERROR',
+        },
+        'file': {
+            'class': 'logs_utils.CustomTimedRotatingFileHandler',
+            'formatter': 'generic_json',
+            'filename': 'app.log',
+            'when': 'midnight',
+            'interval': 1,
+            'encoding': 'utf-8',
+            'datefmt': '%Y-%m-%d',
+        }
+    },
+    loggers={
+        'woym_market': {
+            'level': 'INFO' if config.mode == 'PROD' else 'DEBUG',
+            'handlers': ['console_error', 'file'],
+            'propagate': False
+        },
+        'parser': {
+            'level': 'INFO' if config.mode == 'PROD' else 'DEBUG',
+            'handlers': ['console_error', 'file'],
+            'propagate': False,
+        }
+    }
+)
 
+logging.config.dictConfig(LOGGING_CONFIG)
 
-def get_logger(name: str, level: int = logging.INFO, tags: dict[str, str] | None = None, application: str = 'fastapi') -> logging.Logger:
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-
-    logging.Formatter("%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s")
-
-    # logger.addHandler(get_file_handler(f'logs/{name}.log', formatter, level))
-
-    # logger.addHandler(get_loki_handler(
-    #     tags=tags,
-    #     application=application,
-    # ))
-
-    # logger.addHandler(get_stram_handler(formatter, level))
-
-    return logger
-
-
-# def get_loki_handler(tags: dict[str, str] | None = None, application: str = 'fastapi'):
-#     loki_logs_handler_tags = {"application": application}
-#     if tags:
-#         loki_logs_handler_tags.update(tags)
-#     return LokiHandler(
-#         url=config.loki_url,
-#         tags=loki_logs_handler_tags,
-#         version="1"
-#     )
-
-def get_file_handler(filename: str, formatter: logging.Formatter, level: int = logging.WARNING) -> logging.Handler:
-    handler = logging.FileHandler(filename, mode='a')
-    handler.setLevel(level)
-    handler.setFormatter(formatter)
-    return handler
-
-
-def get_stram_handler(formatter: logging.Formatter, level: int = logging.INFO) -> logging.Handler:
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(level)
-    handler.setFormatter(formatter)
-    return handler
+backend_logger = logging.getLogger('woym_market')
+parser_logger = logging.getLogger('parser')

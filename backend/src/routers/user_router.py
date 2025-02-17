@@ -18,7 +18,6 @@ async def get_current_authorized_user(current_user=Depends(get_current_user)):
     return UserOut.model_validate(current_user, from_attributes=True)
 
 
-# TODO refactor this route
 @user_router.patch('/')
 async def route_update_user(id_user: int, new_user_data: UserCreate, user = Depends(get_current_user)):
     await update_user_info(id_user, new_user_data)

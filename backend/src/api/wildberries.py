@@ -7,14 +7,13 @@ from aiohttp import ClientSession
 from fastapi import HTTPException
 from starlette import status
 
-from logs import get_logger
+from logs import parser_logger
 from src.api.exceptions import InitializationError
 from src.api.gateway_template import ApiGateway
 from src.api.interfaces import IApiGateway, ApiTypes
 from src.schemas.base_api_schemas import APIPriceChangeData, APIWarehouse, APIOffer, WarehouseType, APIWarehouseOffer, \
     APIOfferChangeData, APIOrderData
 
-logger = get_logger(__name__, tags={'marketplace_api': 'wildberries'})
 
 
 class WildberriesApi(ApiGateway, IApiGateway):
@@ -66,10 +65,10 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 invalid_data.append(offer)
 
         if invalid_data:
-            logger.warning(f'Invalid offers data: {len(invalid_data)} / {len(valid_offers_data)}')
+            parser_logger.warning(f'Invalid offers data: {len(invalid_data)} / {len(valid_offers_data)}')
 
         if len(valid_offers_data) == 0:
-            logger.warning(f'{self.shop_name}(wildberries) has no valid offers data')
+            parser_logger.warning(f'{self.shop_name}(wildberries) has no valid offers data')
             return
 
         chunk_size = 3000
@@ -103,12 +102,12 @@ class WildberriesApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url=update_url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
-                logger.error(f'Cant update offers data: {response.text}')
+                parser_logger.error(f'Cant update offers data: {response.text}')
                 continue
 
         errors = await self._errors_in_update()
         if errors:
-            logger.error(f'Errors in offers: {errors}')
+            parser_logger.error(f'Errors in offers: {errors}')
 
     async def get_offers_list(self) -> list[APIOffer]:
         offers = await self._get_offers_base_info()
@@ -133,7 +132,9 @@ class WildberriesApi(ApiGateway, IApiGateway):
         for warehouse in warehouses:
             warehouse_stocks = [
                 APIWarehouseOffer(name_of_shop=self.shop_name, **i)
-                for i in stocks.get(warehouse['name'], [])
+                for i in stocks.get(
+                    warehouse['name'] if warehouse['name'] != 'Краснодар (Тихорецкая)' else 'Краснодар',
+                    [])
             ]
             result.append(
                 APIWarehouse(
@@ -148,23 +149,23 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
     async def _check_price_update_result(self, task_id: int) -> None:
         if not task_id:
-            logger.warning('Price task_id no gotten')
+            parser_logger.warning('Price task_id no gotten')
             return
 
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/history/tasks'
         response = await self.request('GET', url=url, headers=self.auth_headers, params={'uploadID': task_id})
 
         if not response.ok:
-            logger.error(f'Cant check price update result: {response.text}')
+            parser_logger.error(f'Cant check price update result: {response.text}')
 
         response_json = await self.validate_response(response)
 
         if response_json.get('error', None):
-            logger.error(f'Cant check price update result: {response_json.get("errorText", "unknown error")}')
+            parser_logger.error(f'Cant check price update result: {response_json.get("errorText", "unknown error")}')
 
         task_result_info = response_json.get('data', {})
 
-        logger.info(
+        parser_logger.info(
             f'Task price upload ID({task_result_info.get("uploadID", "unknown")}) with status: {task_result_info.get("status", "unknown")} checked. \nAll goods: {task_result_info.get("overAllGoodsNumber", "unknown")}, without errors: {task_result_info.get("successGoodsNumber", "unknown")}')
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
@@ -173,10 +174,10 @@ class WildberriesApi(ApiGateway, IApiGateway):
         invalid_price_data = [price_data for price_data in data if not (price_data.is_valid_target_price() and price_data.is_valid_vendor_code())]
 
         if invalid_price_data:
-            logger.warning(f'Invalid price data: {len(invalid_price_data)} / {len(valid_price_data)}')
+            parser_logger.warning(f'Invalid price data: {len(invalid_price_data)} / {len(valid_price_data)}')
 
         if not valid_price_data:
-            logger.warning(f'{self.shop_name}(wildberries) has no valid price data')
+            parser_logger.warning(f'{self.shop_name}(wildberries) has no valid price data')
             return
 
         chunk_size = 1000
@@ -191,11 +192,11 @@ class WildberriesApi(ApiGateway, IApiGateway):
                     for price_data in valid_price_data[i:i + chunk_size]
                 ]
             }
-            logger.info(body)
+            parser_logger.info(body)
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
-                logger.error(f'Cant change price: {response.reason}: {await response.json()}')
+                parser_logger.error(f'Cant change price: {response.reason}: {await response.json()}')
 
             response_json = await self.validate_response(response)
 
@@ -203,7 +204,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             if response_json.get('data', None):
                 await self._check_price_update_result(response_json['data'].get('id', None))
 
-        logger.info(f'{self.shop_name}(wildberries) prices updated: {len(valid_price_data)} of {len(data)}')
+        parser_logger.info(f'{self.shop_name}(wildberries) prices updated: {len(valid_price_data)} of {len(data)}')
 
     async def _get_base_offer_data(self) -> list[dict]:
         url = 'https://content-api.wildberries.ru/content/v2/get/cards/list?locale=ru'
@@ -231,7 +232,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
 
             if not response.ok:
-                logger.error(f'Cant get offers base info: {response.text}')
+                parser_logger.error(f'Cant get offers base info: {response.text}')
                 return result
 
             response_data = await self.validate_response(response)
@@ -290,29 +291,30 @@ class WildberriesApi(ApiGateway, IApiGateway):
             response = await self.request('GET', url=url, params={'limit': limit, 'offset': offset}, headers=self.auth_headers)
 
             if not response.ok:
-                logger.error(f'Cant get price info: {response.text}')
+                parser_logger.error(f'Cant get price info: {response.text}')
                 break
 
             response_data = await self.validate_response(response)
             data = response_data['data']['listGoods']
 
             if not data:
-                logger.error(f'Cant get price info: {response.text}')
+                parser_logger.error(f'Cant get price info: {response.text}')
                 break
 
             for item in data:
                 if not item['sizes']:
-                    logger.warning(f'Offer {item["vendorCode"]} has no sizes(price items)')
+                    parser_logger.warning(f'Offer {item["vendorCode"]} has no sizes(price items)')
                     continue
 
                 if len(item['sizes']) > 1:
-                    logger.warning(f'Offer {item["vendorCode"]} has more than one size(price item)')
+                    parser_logger.warning(f'Offer {item["vendorCode"]} has more than one size(price item)')
 
                 size = item['sizes'][0]
 
                 result[item['vendorCode']] = {
                     'current_price': size['price'],
                     'your_promotion_price': size['discountedPrice'],
+                    'discount': item['discount'],
                 }
 
             if len(data) < limit:
@@ -329,7 +331,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         response = await self.request('GET', url=url, headers=self.auth_headers)
 
         if not response.ok:
-            logger.error(f'Cant get warehouses: {response.text}')
+            parser_logger.error(f'Cant get warehouses: {response.text}')
             return []
 
         response_data = await self.validate_response(response)
@@ -360,7 +362,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         response = await self.request('POST', url=url, headers=self.auth_headers, body=body)
 
         if not response.ok:
-            logger.error(f'Cant get stocks on warehouse id({warehouse_id}): {response.text}')
+            parser_logger.error(f'Cant get stocks on warehouse id({warehouse_id}): {response.text}')
             return result
 
         json_data = await self.validate_response(response)
@@ -382,7 +384,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         response = await self.request('GET', url=url, headers=self.auth_headers)
         if not response.ok:
-            logger.error(f'Cant get stocks: {response.text}')
+            parser_logger.error(f'Cant get stocks: {response.text}')
             return defaultdict()
 
         response_json = await self.validate_response(response)
@@ -409,7 +411,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         response = await self.request('GET', url=url, headers=self.auth_headers, params=params)
 
         if not response.ok:
-            logger.error(f'Cant get orders from {from_date}: {response.text}')
+            parser_logger.error(f'Cant get orders from {from_date}: {response.text}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалоь получить заказы: {response.text}')
 
         response_json = await self.validate_response(response)

@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from starlette import status
 import openpyxl
 import src.services.base_utils
-from logs import get_logger
+from logs import backend_logger
 from src.api.wrapper import ApiInteractor
 from src.database.db import async_session
 from src.database import warehouse_db as db
@@ -26,11 +26,10 @@ from pathlib import Path
 from shutil import make_archive
 
 
-logger = get_logger(__name__)
 
 
 async def update_warehouses_and_stocks(api_session_fabric, db_session_fabric):
-    logger.info('Start update warehouses and stocks')
+    backend_logger.info('Start update warehouses and stocks')
 
     start_time = datetime.now()
 
@@ -38,7 +37,7 @@ async def update_warehouses_and_stocks(api_session_fabric, db_session_fabric):
     api_wrapper = ApiInteractor(api_session_fabric=api_session_fabric,
                                db_session_fabric=db_session_fabric)
     stocks = await api_wrapper.get_stocks()
-    logger.info('API stocks collected')
+    backend_logger.info('API stocks collected')
 
     api_stocks_df = pd.DataFrame([{
         'warehouse_name': warehouse.name,
@@ -65,14 +64,14 @@ async def update_warehouses_and_stocks(api_session_fabric, db_session_fabric):
                 name=warehouse.name,
                 warehouse_type=warehouse.warehouse_type,
             ))
-        logger.info('Warehouses created')
+        backend_logger.info('Warehouses created')
 
         # Обновение остатков, у которых current_stock не совпадает с уже установленными
         merged_stocks = pd.merge(api_stocks_df_exploded, db_stocks_df, how='outer', on=('sku', 'name_of_shop', 'market', 'warehouse_name'), indicator=True, suffixes=(None, '__db'))
         to_update_df = merged_stocks[merged_stocks['_merge'] == 'both']
         to_update_df = to_update_df[to_update_df['current_stock'] != to_update_df['current_stock__db']][['id', 'current_stock']]
         await db.update_fbo_stocks(session, to_update_df.to_dict('records'))
-        logger.info(f'FBO stocks updated: {len(to_update_df)}')
+        backend_logger.info(f'FBO stocks updated: {len(to_update_df)}')
 
         # Создание новых остатков
         to_create_df = merged_stocks[merged_stocks['_merge'] == 'left_only'].drop(columns=['offer_id', 'id', '_merge'])
@@ -85,26 +84,26 @@ async def update_warehouses_and_stocks(api_session_fabric, db_session_fabric):
 
         # Создание новых остатков
         await db.create_fbo_stocks_(session, to_create_df.to_dict('records'))
-        logger.info(f'New fbo stocks created: {len(to_create_df)}')
+        backend_logger.info(f'New fbo stocks created: {len(to_create_df)}')
 
         # Создать остатки на складах, которые не были в полученных данных
         await db.fill_empty_stocks(session)
-        logger.info('Empty fbo stocks filled')
+        backend_logger.info('Empty fbo stocks filled')
 
         await db.relate_warehouses_with_clusters(session,
                                                  [{'name': i.name, 'related_warehouses_name': i.related_warehouses_name}
                                                   for i in stocks])
-        logger.info('Related warehouses relation filled')
+        backend_logger.info('Related warehouses relation filled')
 
         # await db.recalculate_clusters(session)
         await db.recalculate_clusters_stocks(session)
         await db.recalculate_super_clusters_stocks(session)
         await db.recalculate_stocks_for_delivery(session)
-        logger.info('Recalculate stocks and clusters for delivery')
+        backend_logger.info('Recalculate stocks and clusters for delivery')
 
     end_time = datetime.now()
 
-    logger.info(f'Update warehouses and stocks completed in {end_time - start_time}')
+    backend_logger.info(f'Update warehouses and stocks completed in {end_time - start_time}')
 
 
 # async def update_or_create_super_clusters():

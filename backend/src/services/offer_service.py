@@ -14,7 +14,7 @@ from src.database.models.models import Offer, CatalogItem
 from src.database.offer import OfferRepository
 from src.database.warehouse_db import create_own_storage_stocks, offer_stocks_list
 from src.params.config import config
-from logs import get_logger
+from logs import backend_logger
 from src.api.wrapper import ApiInteractor
 from src.database.db import async_session, get_db_session
 from src.database import offer as db
@@ -38,7 +38,6 @@ from src.services.synchronization import ReverseSynchronizationInteractor, Synch
 from src.services.update_offer_from_api import UpdateOfferFromApi
 
 
-logger = get_logger(__name__)
 
 CONTROL_CHANGES = (
     'search_words',
@@ -103,14 +102,14 @@ async def setup_offers_data(api_session_fabric: IApiSessionFabric,
         for market in await get_markets(session):
             data = await utils.build_offers_data(yandex_offers_df[((yandex_offers_df['market'] == market.type) & (yandex_offers_df['name_of_shop'] == market.name))], setup_mode=True, market=market)
             await db.create_offers(session, data)
-            logger.info(f'{market.type}({market.name}) offers created: {len(data)}')
+            backend_logger.info(f'{market.type}({market.name}) offers created: {len(data)}')
 
 
 async def update_offers(db_session_fabric,
                         api_session_fabric,
                         user_ids: Sequence[int]):
     """ Метод для обновления информации о карточках магазинов """
-    logger.info('Start update offers')
+    backend_logger.info('Start update offers')
     mapping_fields = ['sku', 'name_of_shop', 'market']
     start_time = datetime.now()
 
@@ -120,7 +119,7 @@ async def update_offers(db_session_fabric,
                            'CatalogItem': CatalogItem}),
         db_session_fabric)
     await reverse_sync_interactor(skus=[])
-    logger.info('Reverse synchronization completed')
+    backend_logger.info('Reverse synchronization completed')
 
     # синхронизируем из каталога в карточки
     sync_interactor = SynchronizationInteractor(
@@ -128,13 +127,13 @@ async def update_offers(db_session_fabric,
                            'CatalogItem': CatalogItem}),
         db_session_fabric)
     await sync_interactor(skus=[])
-    logger.info('Synchronization completed')
+    backend_logger.info('Synchronization completed')
 
 
     async with db_session_fabric() as session:
         # получение информации о маркетах из БД
         markets = await get_markets(session)
-        logger.debug(f"Markets: {markets}")
+        backend_logger.debug(f"Markets: {markets}")
 
         # Перевычисление значений в карточках и их сохранение в БД
         await recalculate_values(session)
@@ -189,19 +188,19 @@ async def update_offers(db_session_fabric,
 
     # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
     to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
-    logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
+    backend_logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
     await update_offers_attributes(to_update_attributes, api_session_fabric, db_session_fabric)
 
     # Создаем новые товары
     for market in markets:
         to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], market, setup_mode=True)
         await db.create_offers(session, to_create_df_chunked)
-        logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df_chunked)}')
+        backend_logger.info(f'New offers for {market.name}({market.type}) created: {len(to_create_df_chunked)}')
 
 
     # Создать новые товары в моих остатках
     await create_own_storage_stocks(session)
-    logger.info('Own storage stocks created')
+    backend_logger.info('Own storage stocks created')
 
     # Обновляем товары из апи для обратной синхронизации
     api_offers = await api_interactor.get_offers_list()
@@ -215,17 +214,17 @@ async def update_offers(db_session_fabric,
     await update_api_interactor(api_offers_df, skus=[])
 
     # Удаляем товары
-    logger.warning(f"Offers to delete: {len(to_delete_offers)}")
+    backend_logger.warning(f"Offers to delete: {len(to_delete_offers)}")
 
     # Пересчитать все
     await recalculate_values(session)
-    logger.info('Offers recalculated')
+    backend_logger.info('Offers recalculated')
 
     await update_logs(session, user_ids[0], {'updated_at': datetime.now()})
     await update_logs(session, user_ids[1], {'updated_at': datetime.now()})
 
     _time = datetime.now() - start_time
-    logger.info(f'Offers update completed in {_time}')
+    backend_logger.info(f'Offers update completed in {_time}')
 
 
 async def delete_offers(offers: list[OfferDelete]):
@@ -245,11 +244,11 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
         data = [i.model_dump() for i in offers]
 
     if not config.is_prod:
-        logger.info(f'Skip update offers prices app mode is not PROD (current - {config.mode})')
+        backend_logger.info(f'Skip update offers prices app mode is not PROD (current - {config.mode})')
         return
 
     if not len(data):
-        logger.info('Skip update prices due to list is empty')
+        backend_logger.info('Skip update prices due to list is empty')
         return
 
     data = [
@@ -281,11 +280,11 @@ async def update_offers_attributes(offers: pd.DataFrame,
     data = offers.to_dict('records')
 
     if not config.is_prod:
-        logger.info(f'Skip update offers attributes app mode is not PROD (current - {config.mode})')
+        backend_logger.info(f'Skip update offers attributes app mode is not PROD (current - {config.mode})')
         return
 
     if not len(data):
-        logger.info('Skip update offers attributes due to list is empty')
+        backend_logger.info('Skip update offers attributes due to list is empty')
         return
 
     data = [
@@ -393,7 +392,7 @@ async def import_offers(data, name_of_shop: str | None = None, market: str | Non
         try:
             await db.update_offers(session, df, mapping_columns=['name_of_shop', 'market'], endswith_sku=False)
         except Exception as e:
-            logger.error('Error while updating offers in import offers', exc_info=e)
+            backend_logger.error('Error while updating offers in import offers', exc_info=e)
             raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Некоректные данные.')
 
         await recalculate_values(session, df[['sku', 'name_of_shop', 'market']])
@@ -444,7 +443,7 @@ async def import_sizes(data, name_of_shop: str | None = None, market: str | None
         try:
             await db.update_offers(session, df, mapping_columns=mapping_columns, endswith_sku=True)
         except Exception:
-            logger.error('Error while update price in import sizes', exc_info=True)
+            backend_logger.error('Error while update price in import sizes', exc_info=True)
             raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Некоректные данные.')
 
         await recalculate_values(session)

@@ -4,13 +4,12 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import text
 
-from logs import get_logger
+from logs import parser_logger
 from src.database.interfaces import IDbSessionFabric
 from src.schemas.query_builders.update_offer import CreateTempTable, UpdateOfferWithTempTable, InsertTempTable
 from src.services.interfaces import IDBMetadataService
 
 
-logger = get_logger(__name__)
 
 class UpdateOfferFromApi:
     exclude_fields = {'id'}
@@ -58,5 +57,5 @@ class UpdateOfferFromApi:
             [await session.execute(text(query_insert), data_insert) for query_insert, data_insert in insert_gen]
             await session.execute(text(query_update))
 
-        logger.info(f'Updated db offers: {len(data)}')
+        parser_logger.info(f'Updated db offers: {len(data)}')
 

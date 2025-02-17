@@ -10,14 +10,13 @@ from aiohttp import ClientSession
 from starlette import status
 from fastapi import HTTPException
 
-from logs import get_logger
+from logs import parser_logger
 from src.api.exceptions import InitializationError
 from src.api.interfaces import IApiGateway, ApiTypes
 from src.api.gateway_template import ApiGateway
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, WarehouseType, \
     APIOfferChangeData, APIOrderData
 
-logger = get_logger(__name__, tags={'marketplace_api': 'ozon'})
 
 
 @dataclass
@@ -41,7 +40,7 @@ class OzonApi(ApiGateway, IApiGateway):
         :param skus: Список СКУ товаров.
         :return: Информация о товарах;
         """
-        url = 'https://api-seller.ozon.ru/v3/products/info/attributes'
+        url = 'https://api-seller.ozon.ru/v4/product/info/attributes'
         chunk_size = 1000
         body = {
             'filter': {
@@ -56,7 +55,7 @@ class OzonApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
 
             if not response.ok:
-                logger.error(f'Cant get info attributes: {response.text}')
+                parser_logger.error(f'Cant get info attributes: {response.text}')
                 continue
 
             json_response = await response.json()
@@ -78,7 +77,7 @@ class OzonApi(ApiGateway, IApiGateway):
         :param data: Список СКУ товаров.
         :return: Информация о цене товаров
         """
-        url = 'https://api-seller.ozon.ru/v4/product/info/prices'
+        url = 'https://api-seller.ozon.ru/v5/product/info/prices'
         results = {}
         chunk_size = 1000
         body = {
@@ -91,7 +90,7 @@ class OzonApi(ApiGateway, IApiGateway):
         while True:
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
             if not response.ok:
-                logger.error(f'Cant collect offers price info: {response.text}')
+                parser_logger.error(f'Cant collect offers price info: {response.text}')
                 break
 
             json_response = await response.json()
@@ -99,11 +98,11 @@ class OzonApi(ApiGateway, IApiGateway):
             for item in json_response.get('result', {}).get('items', []):
                 results[item['offer_id']] = item
 
-            last_id = json_response.get('result', {}).get('last_id', None)
+            last_id = json_response.get('result', {}).get('cursor', None)
             if not last_id or json_response.get('result', {}).get('total', 0) < chunk_size:
                 break
 
-            body['last_id'] = last_id
+            body['cursor'] = last_id
 
         return results
 
@@ -118,12 +117,12 @@ class OzonApi(ApiGateway, IApiGateway):
                 },
                 'limit': chunk_size
             }
-            response = await self.request('POST', url='https://api-seller.ozon.ru/v4/product/info/prices', headers=self.auth_headers,
+            response = await self.request('POST', url='https://api-seller.ozon.ru/v5/product/info/prices', headers=self.auth_headers,
                                          body=body)
 
             data = await self.validate_response(response, body=body)
 
-            for offer in data['result']['items']:
+            for offer in data['items']:
                 result[offer['offer_id']] = {
                     'marketing_seller_price': self._str_to_float(offer['price'].get('marketing_seller_price', None))
                 }
@@ -134,15 +133,12 @@ class OzonApi(ApiGateway, IApiGateway):
                     sales_percent = commissions['sales_percent_fbo']
                     price = self._str_to_float(offer['price']['price'])
 
-                    expenses = sum([
-                        commissions['fbo_return_flow_trans_max_amount'],
-                        commissions['fbo_deliv_to_customer_amount'],
-                    ])
+                    expenses = commissions['fbo_direct_flow_trans_min_amount']
 
                     result[offer['offer_id']]['commissions'] = price * sales_percent / 100 + expenses
 
                 except Exception:
-                    logger.error(f'Error in get commission for offer with sku {offer["offer_id"]}', exc_info=True)
+                    parser_logger.error(f'Error in get commission for offer with sku {offer["offer_id"]}', exc_info=True)
 
         return result
 
@@ -239,10 +235,10 @@ class OzonApi(ApiGateway, IApiGateway):
         invalid_data = [i for i in data if not is_valid_offer_data(i)]
 
         if invalid_data:
-            logger.error(f'Invalid offers data: {len(invalid_data)} / {len(valid_data)}')
+            parser_logger.error(f'Invalid offers data: {len(invalid_data)} / {len(valid_data)}')
 
         if len(valid_data) == 0:
-            logger.warning(f'{self.shop_name}(ozon) has no valid offers data')
+            parser_logger.warning(f'{self.shop_name}(ozon) has no valid offers data')
             return
 
         # Получение информации об офферах с магазина
@@ -257,7 +253,7 @@ class OzonApi(ApiGateway, IApiGateway):
             offer_attributes_info = offers_attributes_info.get(valid_offer.sku, None)
 
             if not offer_attributes_info or not offer_price_info:
-                logger.info(f'Skip update offer sku={offer_attributes_info.get("offer_id", "unknown")} due to has no full data')
+                parser_logger.info(f'Skip update offer sku={offer_attributes_info.get("offer_id", "unknown")} due to has no full data')
                 continue
 
             update_offer_data = offer_attributes_info
@@ -282,7 +278,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 weight_unit = 'g'
 
             if weight % 1 > 0:
-                logger.error(f'Error in offer dimension weight={weight} weight_unit={weight_unit}. Cant parse to Integer.')
+                parser_logger.error(f'Error in offer dimension weight={weight} weight_unit={weight_unit}. Cant parse to Integer.')
                 continue
 
             update_offer_data['weight'] = int(weight)
@@ -334,13 +330,13 @@ class OzonApi(ApiGateway, IApiGateway):
             }
             response = await self.request('POST', url, body=body, headers=self.auth_headers, include_response_logs=True)
             if not response.ok:
-                logger.error(f'Cant update offers data: {response.text}')
+                parser_logger.error(f'Cant update offers data: {response.text}')
                 continue
 
             json_response = await self.validate_response(response)
             task_id = json_response.get('result', {}).get('task_id', None)
             if not task_id:
-                logger.error(f'Cant find task_id: {response.text}')
+                parser_logger.error(f'Cant find task_id: {response.text}')
                 return
 
             await asyncio.sleep(5)
@@ -357,20 +353,20 @@ class OzonApi(ApiGateway, IApiGateway):
         response = await self.request('POST', url='https://api-seller.ozon.ru/v1/product/import/info', body=body, headers=self.auth_headers, include_response_logs=True)
 
         if not response.ok:
-            logger.error(f'Cant check task({task_id}) status {response.text}')
+            parser_logger.error(f'Cant check task({task_id}) status {response.text}')
             return
 
         json_response = await self.validate_response(response)
 
         for item_info in json_response.get('result', {}).get('items', []):
             if item_info.get('status') == 'failed':
-                logger.error(
+                parser_logger.error(
                     f'Offer {item_info.get("offer_id", "unknown")} was loaded with errors: {item_info.get("errors", "unknown")}')
 
             elif item_info.get('status') == 'pending':
-                logger.warning(f'Offer {item_info.get("offer_id", "unknown")} is still in pending')
+                parser_logger.warning(f'Offer {item_info.get("offer_id", "unknown")} is still in pending')
 
-        logger.info(f'Task {task_id} checked. Total {json_response.get("result", {}).get("total", "unknown")}')
+        parser_logger.info(f'Task {task_id} checked. Total {json_response.get("result", {}).get("total", "unknown")}')
 
     async def get_offers_list(self) -> list[APIOffer]:
         offers_identifiers = []
@@ -395,7 +391,8 @@ class OzonApi(ApiGateway, IApiGateway):
             offer['content_rating'] = offers_content_rating.get(offer['market_sku'], None)
             # артикул - product_id
             offer['vendor_code'] = product_ids.get(offer['sku'], None)
-            del offer['market_sku']
+            offer.pop('market_sku', None)
+            offer['photo'] = offer['photo'][0] if len(offer['photo']) > 0 else None
 
         return [APIOffer(**i) for i in offers]
 
@@ -436,10 +433,10 @@ class OzonApi(ApiGateway, IApiGateway):
                         not all((i.is_valid_min_price(), i.is_valid_target_price(), i.is_valid_discount_base_price()))]
 
         if invalid_data:
-            logger.warning(f'Invalid prices data: {len(invalid_data)} / {len(valid_price_data)}')
+            parser_logger.warning(f'Invalid prices data: {len(invalid_data)} / {len(valid_price_data)}')
 
         if not valid_price_data:
-            logger.warning(f'{self.shop_name}(ozon) has no valid price data')
+            parser_logger.warning(f'{self.shop_name}(ozon) has no valid price data')
             return
 
         for i in range(0, len(valid_price_data), chunk_size):
@@ -467,17 +464,15 @@ class OzonApi(ApiGateway, IApiGateway):
                 include_response_logs=True
             )
 
-            # TODO: Check what happened there, probably returned value of this function
-            # should be use
             await self.validate_response(response, body=body)
 
             if response.ok:
                 for offer_result in (await response.json())['result']:
                     if not offer_result['updated']:
-                        logger.warning(
+                        parser_logger.warning(
                             f'Error in update offer with id - {offer_result["offer_id"]} \nErrors: {offer_result["errors"]}')
 
-        logger.info(f'{self.shop_name}(ozon) price updated')
+        parser_logger.info(f'{self.shop_name}(ozon) price updated')
 
     async def _get_offers_identifiers_by_chunks(self) -> AsyncGenerator[list[OfferIdentifier], None]:
         last_id = None
@@ -515,16 +510,16 @@ class OzonApi(ApiGateway, IApiGateway):
             }
             response = await self.request(
                 'POST',
-                url='https://api-seller.ozon.ru/v2/product/info/list',
+                url='https://api-seller.ozon.ru/v3/product/info/list',
                 headers=self.auth_headers,
                 body=body
             )
 
             data = await self.validate_response(response, body=body)
-            for offer in data['result']['items']:
+            for offer in data['items']:
                 offer_status = offer.get('status', {})
                 if offer_status.get('validation_state', 'fail') == 'fail' or offer_status.get('is_failed', True):
-                    logger.warning(f'Error in offer {offer["offer_id"]} data. Status: {offer_status}')
+                    parser_logger.warning(f'Error in offer {offer["offer_id"]} data. Status: {offer_status}')
                 try:
                     price_indexes = offer.get('price_indexes', None)
 
@@ -534,24 +529,29 @@ class OzonApi(ApiGateway, IApiGateway):
                                                             None) if external_index_data is not None else None
 
                     price_index = price_indexes.get('price_index', None) if price_indexes is not None else None
+                    min_market_price = (
+                        self._str_to_float(offer['min_ozon_price'])
+                        if offer.get('min_ozon_price', None) is not None
+                        else None
+                    )
 
                     result.append({
                         'sku': offer['offer_id'],
                         'name': offer['name'],
                         'photo': offer['primary_image'],
                         'current_price': self._str_to_float(offer['price']),
-                        'min_price_in_market': self._str_to_float(offer['min_ozon_price']),
+                        'min_price_in_market': min_market_price,
                         'min_price_without_market': self._str_to_float(minimal_price),
-                        'attractive_price_threshold': self._str_to_float(offer['recommended_price']),
+                        'attractive_price_threshold': None,
                         'market': 'ozon',
                         'barcodes': ', '.join(offer.get('barcodes', [])),
                         'price_index': self._translate_price_index(price_index),
-                        'market_sku': offer['sku'],
+                        'market_sku': offer['sources'][0]['sku'],
                         'your_price_for_buyers': self._str_to_float(offer['marketing_price'])
                     })
 
                 except Exception:
-                    logger.error(f'Error in get base info for offer with sku {offer["offer_id"]}', exc_info=True)
+                    parser_logger.error(f'Error in get base info for offer with sku {offer["offer_id"]}', exc_info=True)
         return result
 
     async def _get_offers_attributes(self, offer_data: list[OfferIdentifier]) -> dict[str, dict[str, Any]]:
@@ -570,7 +570,7 @@ class OzonApi(ApiGateway, IApiGateway):
 
             response = await self.request(
                 'POST',
-                url='https://api-seller.ozon.ru/v3/products/info/attributes',
+                url='https://api-seller.ozon.ru/v4/product/info/attributes',
                 headers=self.auth_headers,
                 body=body
             )
@@ -579,17 +579,16 @@ class OzonApi(ApiGateway, IApiGateway):
             # 4191 description
             for offer in data['result']:
                 description_attributes = [i['values'][0] for i in offer['attributes'] if
-                                          i['attribute_id'] == 4191 and len(i['values'])]
+                                          i['id'] == 4191 and len(i['values'])]
                 descriptions = '. '.join(i['value'] for i in description_attributes)
 
-                # TODO посчитать объем
                 unit_dimension_divider = 1
                 if offer['dimension_unit'] == 'mm':
                     unit_dimension_divider = 10
                 elif offer['dimension_unit'] == 'cm':
                     unit_dimension_divider = 1
 
-                search_attributes = [i for i in offer['attributes'] if i['attribute_id'] == 22336]
+                search_attributes = [i for i in offer['attributes'] if i['id'] == 22336]
                 search_words = '; '.join(
                     ['; '.join([words['value'] for words in item['values']]) for item in search_attributes])
                 if len(search_words) > 255:
@@ -643,7 +642,7 @@ class OzonApi(ApiGateway, IApiGateway):
         response = await self.request('POST', url=url, headers=self.auth_headers, body=body)
 
         if not response.ok:
-            logger.error(f'Cant get orders from {from_date}: {response.text}')
+            parser_logger.error(f'Cant get orders from {from_date}: {response.text}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST,
                                 f'Не удалось получить заказы: {response.json().get("message", "unknown")}')
 
