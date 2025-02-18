@@ -314,7 +314,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 result[item['vendorCode']] = {
                     'current_price': size['price'],
                     'your_promotion_price': size['discountedPrice'],
-                    'discount': item['discount'],
+                    'seller_discount': item['discount'],
                 }
 
             if len(data) < limit:

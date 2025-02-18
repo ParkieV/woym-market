@@ -64,7 +64,7 @@ class ApiInteractor:
                 parser_logger.info(f'{market.name}({market.type}) offers collected: {len(offers)}')
                 if not offers:
                     parser_logger.warning(f'{market.name}({market.type}) returns empty offers list')
-                result.extend([dict(_) for _ in offers])
+                result.extend((offer.model_dump() for offer in offers))
 
         return result
 

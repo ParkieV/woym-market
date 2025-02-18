@@ -53,7 +53,7 @@ CONTROL_CHANGES = (
 async def get_offers_list(session_fabric: IDbSessionFabric, offers_filter: OffersFilter | None = None) -> list[OfferOut]:
     """ Получение списка карточек """
     res = []
-    offer_repository = OfferRepository()
+    offer_repository = OfferRepository[OfferOut]()
 
     async with session_fabric() as session:
         offer_repository.session = session
