@@ -31,6 +31,7 @@ class APIOffer(BaseModel):
     photo: str | None = None
     current_price: float | None = None
     seller_discount: float | None = None
+    old_discount: float | None = None
     business_id: int | None = None
     group_sellers_amount: int | None = None
     attractive_price_threshold: float | None = None

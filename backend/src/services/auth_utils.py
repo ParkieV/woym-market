@@ -76,3 +76,5 @@ def verify_access_token(token: str, credentials_exception):
         raise credentials_exception
 
     return token_data
+if __name__ == '__main__':
+    print(hash_password('bomvog-zyqNe4-hudcuq'))
