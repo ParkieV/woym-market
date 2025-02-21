@@ -202,7 +202,7 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "seller_discount",
                     header: "Скидка продавца",
-                    base: rubleColumn
+                    base: percentColumn
                 },
                 {
                     key: "dollar_cost_price",
