@@ -72,6 +72,8 @@ class Offer(Base):
     total_price_coeff = mapped_column(Float)
     total_price_min_additional = mapped_column(Float)
     total_price = mapped_column(Float, nullable=True)
+    seller_discount = mapped_column(Float, nullable=True)
+    old_discount = mapped_column(Float, nullable=True)
     discount_base_price = mapped_column(Float, nullable=True)
     profit = mapped_column(Float, nullable=True)
     margin = mapped_column(Float, nullable=True)

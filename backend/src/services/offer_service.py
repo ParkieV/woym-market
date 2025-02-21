@@ -186,11 +186,8 @@ async def update_offers(db_session_fabric,
     discounts = await get_seller_discount_from_page(
         to_update_offers[to_update_offers['market'] == 'wildberries']
     )
-    to_update_offers['seller_discount'] = np.where(
-        to_update_offers['id'] in discounts,
-        discounts[to_update_offers['id']],
-        to_update_offers['seller_discount']
-    )
+    to_update_offers.loc[to_update_offers['id'].isin(discounts), 'seller_discount'] = \
+        to_update_offers['id'].map(discounts).fillna(to_update_offers['seller_discount'])
 
     # Двойная синхронизаия полей
     for tracked_column in CONTROL_CHANGES:
