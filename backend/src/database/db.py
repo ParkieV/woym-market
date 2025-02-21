@@ -40,7 +40,7 @@ async def get_db_session() -> AsyncContextManager[AsyncSession]:
             yield session
             await session.commit()
         except Exception as e:
-            backend_logger.error(f'Failed in transaction. {e.__class__.__name__}: {e}')
+            backend_logger.error(f'Failed in transaction. {e.__class__.__name__}: {e}', exc_info=e)
 
 def drop_everything(engine):
     con = engine.connect()
