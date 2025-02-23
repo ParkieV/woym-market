@@ -202,7 +202,8 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                 {
                     key: "seller_discount",
                     header: "Скидка продавца",
-                    base: percentColumn
+                    base: percentColumn,
+                    editable: true
                 },
                 {
                     key: "dollar_cost_price",
