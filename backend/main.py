@@ -69,9 +69,9 @@ app: FastAPI = FastAPI(
 )
 
 if config.is_prod:
-    origins = ['https://dev.woym-market.ru']
-elif config.is_dev:
     origins = ['https://woym-market.ru']
+elif config.is_dev:
+    origins = ['https://dev.woym-market.ru']
 elif config.is_local:
     origins = ['*']
 else:
