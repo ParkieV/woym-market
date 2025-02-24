@@ -13,7 +13,7 @@ def get_seller_discount_from_page(offers: pd.DataFrame) -> dict[str, float]:
             elif offer.seller_discount != offer.old_discount:
                 discounts[offer.id] = offer.seller_discount
         else:
-            discounts[offer.id] = offer.seller_discount
+            discounts[offer.id] = 100 - offer.auto_min_price
     return discounts
 
 def update_discounts(discounts: Mapping[str, float], offers: pd.DataFrame):
