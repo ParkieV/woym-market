@@ -137,6 +137,8 @@ class Offer(Base):
     self_length_changed = mapped_column(Boolean, nullable=False, default=False)
     self_width_changed = mapped_column(Boolean, nullable=False, default=False)
     self_height_changed = mapped_column(Boolean, nullable=False, default=False)
+    seller_discount_changed = mapped_column(Boolean, default=False)
+    old_discount_changed = mapped_column(Boolean, default=False)
 
     pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
     stocks = relationship('OfferStock')

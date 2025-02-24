@@ -1,7 +1,7 @@
 services:
   backend:
     restart: unless-stopped
-    env_file: backend/.env.dev
+    env_file: backend/.env.local
     build:
       context: backend
       dockerfile: Dockerfile
@@ -16,7 +16,7 @@ services:
 
   frontend:
     restart: unless-stopped
-    env_file: front/.env.dev
+    env_file: front/.env.local
     build:
       context: front
       dockerfile: Dockerfile

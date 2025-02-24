@@ -34,7 +34,7 @@ from src.services.db_metadata import DBMetadataService
 from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
-from src.services.seller_discount import get_seller_discount_from_page
+from src.services.seller_discount import get_seller_discount_from_page, update_discounts
 from src.services.synchronization import ReverseSynchronizationInteractor, SynchronizationInteractor
 from src.services.update_offer_from_api import UpdateOfferFromApi
 
@@ -75,6 +75,7 @@ async def change_offers(offers_data: list[OfferChange],
     async with session_fabric() as session:
         await get_user_settings(session, user_id)
 
+        backend_logger.info(f'offer for change: {offers_data[0]}')
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
 
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=['name', 'description', 'barcodes', 'search_words'])
@@ -183,14 +184,10 @@ async def update_offers(db_session_fabric,
         .rename(columns={f'{column}__api': column for column in common_columns})[api_offers_df.columns.tolist()]
     )
 
-    discounts = await get_seller_discount_from_page(
+    discounts = get_seller_discount_from_page(
         to_update_offers[to_update_offers['market'] == 'wildberries']
     )
-    to_update_offers.loc[to_update_offers['id'].isin(discounts), 'seller_discount'] = \
-        to_update_offers['id'].map(discounts).fillna(to_update_offers['seller_discount'])
-
-    to_update_offers.loc[to_update_offers['id'].isin(discounts), 'old_discount'] = \
-        to_update_offers['id'].map(discounts).fillna(to_update_offers['old_discount'])
+    update_discounts(discounts, to_update_offers)
 
     # Двойная синхронизация полей
     for tracked_column in CONTROL_CHANGES:
@@ -201,7 +198,7 @@ async def update_offers(db_session_fabric,
         )
 
     # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
-    to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
+    to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in (*CONTROL_CHANGES, 'seller_discount', 'old_discount')]))
     del to_update_offers
 
     backend_logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')

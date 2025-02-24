@@ -106,6 +106,7 @@ class OfferChange(BaseOffer):
     barcodes: str | None = Field(title='Штрихкоды')
 
     synchronization: bool = Field(title='Синхронизация с каталогом')
+    seller_discount: float | None = Field(title='Скидка продавца')
 
     hidden: bool = Field(False, title='Скрыт')
 
@@ -171,6 +172,8 @@ class OfferOut(OfferChange):
     name_changed: bool = Field(title='Название изменено пользователем')
     description_changed: bool = Field(title='Описание изменено')
     barcodes_changed: bool = Field(title='Штрихкоды изменены')
+    seller_discount_changed: bool = Field(False, title='Изменение скидки')
+    old_discount_changed: bool = Field(False, title='Изменение скидки')
 
     model_config = ConfigDict(extra='allow')
 
