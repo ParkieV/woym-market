@@ -4,12 +4,14 @@ import type { Column, ColumnGroup } from "$lib/datagrid/columns";
 import {
     BooleanColumn,
     DateColumn,
+    intColumn,
     NumberColumn,
-    StringColumn,
-    intColumn
+    StringColumn
 } from "$lib/datagrid/columns/types";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import type { GridOptions } from "ag-grid-enterprise";
+import { fboStocksSelection } from "../selection";
+import { get } from "svelte/store";
 
 export default function fboStocks(): GridDefinition<FboStocks> {
     const options: GridOptions = {
@@ -105,4 +107,14 @@ export function calcToDeliver({
         return boxes * in_box;
     }
     return diff;
+}
+
+export function getSelectedStocks() {
+    const selectedMap = get(fboStocksSelection.selected);
+    const selectedRows = Array.from(selectedMap.values());
+    return selectedRows.map(row => ({
+        id: row.id,
+        warehouse_name: row.warehouse.name,
+        to_deliver_number: calcToDeliver(row)
+    }));
 }
