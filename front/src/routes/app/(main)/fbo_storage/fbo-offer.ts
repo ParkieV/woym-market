@@ -200,9 +200,9 @@ export function getSelectedOrders() {
         sku: row.sku,
         marketplace_name: row.market,
         shop_name: row.name_of_shop,
-        weight: row.self_weight,
-        volume: row.volume,
-        cost_price: row.cost_price,
+        weight: row.self_weight? row.cost_price : 0,
+        volume: row.volume? row.cost_price : 0,
+        cost_price: row.cost_price ? row.cost_price : 0,
         goods_name: row.name,
         to_deliver_number: row.stocks
             .filter(x => x.warehouse.warehouse_type === "warehouse")
