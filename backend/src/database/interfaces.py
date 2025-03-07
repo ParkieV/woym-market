@@ -58,7 +58,7 @@ class IOfferRepository(Protocol[T]):
         raise NotImplementedError
 
     @abstractmethod
-    async def list(self,
+    async def offer_list(self,
                      chunk_size: int | None,
                      query_filter: IBaseFilter | None = None) -> AsyncGenerator[list[T], None]:
         raise NotImplementedError

@@ -47,6 +47,11 @@ LOGGING_CONFIG = dict(
             'level': 'INFO' if config.mode == 'PROD' else 'DEBUG',
             'handlers': ['console', 'console_error', 'file'],
             'propagate': False,
+        },
+        'sqlalchemy': {
+            'level': 'DEBUG',
+            'handlers': ['file'],
+            'propagate': False
         }
     }
 )
