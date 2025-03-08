@@ -3,6 +3,8 @@ import { showFetchModals } from "$lib/modal";
 import { downloadFile } from "$lib/util";
 import { get } from "svelte/store";
 import { fboStorageSelection, fboStocksSelection } from "../../routes/app/(main)/selection";
+import { getSelectedOrders } from "../../routes/app/(main)/fbo_storage/fbo-offer";
+import { v4 } from "uuid";
 
 export abstract class Export {
     public async export(): Promise<{ ok: boolean }> {
@@ -147,5 +149,34 @@ export class ViolatorsExport extends Export {
 
     protected get defaultFileName() {
         return "Нарушители.pdf";
+    }
+}
+
+export class DeliversExport extends Export {
+    // При необходимости можно добавить дополнительные параметры для фильтрации:
+    // public deliveryDate: string | null = null;
+    // public courier: string | null = null;
+
+    protected get url(): string {
+        return `/export/deliver`;
+    }
+
+    protected get body(): string | null {
+        // Если нет необходимости передавать параметры, возвращаем null.
+        // Если же нужны дополнительные данные, можно создать объект, например:
+        /*
+        const data: Record<string, string | null> = {};
+        if (this.deliveryDate) data.deliveryDate = this.deliveryDate;
+        if (this.courier) data.courier = this.courier;
+        return JSON.stringify(data);
+        */
+        const data: Record<string, any> = {}
+        data.orders = getSelectedOrders()
+        data.session_id = v4()
+        return JSON.stringify(data);
+    }
+
+    protected get defaultFileName(): string {
+        return "Поставка.zip";
     }
 }

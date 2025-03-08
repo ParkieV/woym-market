@@ -58,7 +58,7 @@ async def get_offers_list(session_fabric: IDbSessionFabric, offers_filter: Offer
 
     async with session_fabric() as session:
         offer_repository.session = session
-        async for offer_chunk in offer_repository.list(query_filter=offers_filter):
+        async for offer_chunk in offer_repository.offer_list(query_filter=offers_filter):
             res += offer_chunk
 
     return res
@@ -333,7 +333,7 @@ async def recalculate_values(session: AsyncSession, offers_filter: OffersFilter 
     # Получение карточек
     offers: list[OfferOut] = []
     offer_repository = OfferRepository(session)
-    async for offer_chunk in offer_repository.list(query_filter=offers_filter):
+    async for offer_chunk in offer_repository.offer_list(query_filter=offers_filter):
         offers += offer_chunk
 
     df = pd.DataFrame([offer.model_dump() for offer in offers])

@@ -1,6 +1,5 @@
 import asyncio
 import concurrent.futures
-import multiprocessing
 from collections.abc import Callable
 from typing import Sequence
 
