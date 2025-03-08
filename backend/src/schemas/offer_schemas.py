@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from pydantic import BaseModel, Field, computed_field, ConfigDict
 from abc import ABC
 from enum import Enum
@@ -105,6 +106,7 @@ class OfferChange(BaseOffer):
     barcodes: str | None = Field(title='Штрихкоды')
 
     synchronization: bool = Field(title='Синхронизация с каталогом')
+    seller_discount: float | None = Field(title='Скидка продавца')
 
     hidden: bool = Field(False, title='Скрыт')
 
@@ -135,6 +137,8 @@ class OfferOut(OfferChange):
     cost_price: float | None = Field(title='Себестоимость (Закупка у. е. * курс)')
     dollar_cost_price_updated_at: datetime | None = Field(title='Дата изменения стоимости закупки в y. e.')
     total_price: float | None = Field(title='Расчетная цена (Закупка * коэф. + мин. наценка)')
+    seller_discount: float | None = Field(title='Скидка продавца',)
+    old_discount: float | None = Field(title='Старая скидка продавца')
     discount_base_price: float | None = Field(title='Цена до скидки (Текущая цена + 20%)')
     profit: float | None = Field(title='Прибыль (Текущая цена - закупка - FBY)')
     margin: float | None = Field(title='Окупаемость (Прибыль / закупка * 100)')
@@ -168,6 +172,8 @@ class OfferOut(OfferChange):
     name_changed: bool = Field(title='Название изменено пользователем')
     description_changed: bool = Field(title='Описание изменено')
     barcodes_changed: bool = Field(title='Штрихкоды изменены')
+    seller_discount_changed: bool = Field(False, title='Изменение скидки')
+    old_discount_changed: bool = Field(False, title='Изменение скидки')
 
     model_config = ConfigDict(extra='allow')
 

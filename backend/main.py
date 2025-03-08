@@ -40,8 +40,7 @@ from src.shared.exceptions import InitializationError
 
 
 async def scheduler():
-    aioschedule.every(60).minutes.do(start_worker, update_data, (3, 4))
-#     aioschedule.every(60).minutes.do(update_data, (3, 4))
+    aioschedule.every(60).minutes.do(update_data, (3, 4))
 
     while True:
         await aioschedule.run_pending()
@@ -69,9 +68,9 @@ app: FastAPI = FastAPI(
 )
 
 if config.is_prod:
-    origins = ['https://dev.woym-market.ru']
-elif config.is_dev:
     origins = ['https://woym-market.ru']
+elif config.is_dev:
+    origins = ['https://dev.woym-market.ru']
 elif config.is_local:
     origins = ['*']
 else:

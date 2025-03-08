@@ -22,18 +22,18 @@ async def update_data(user_ids: Sequence[int]):
         # Добавление новых карточек в каталог только sku
         await duplicate_offers_to_catalog(get_db_session)
     except Exception as e:
-        parser_logger.error(f'Error in update offers: {str(e)}')
+        parser_logger.error(f'Error in update offers: {str(e)}', exc_info=e)
 
     try:
         # Получение информации о остатках на складах
         await update_warehouses_and_stocks(get_api_session, get_db_session)
     except Exception as e:
-        parser_logger.error(f"Error in update warehouses and stocks: {str(e)}")
+        parser_logger.error(f"Error in update warehouses and stocks: {str(e)}", exc_info=e)
 
     try:
         await setup_orders(get_api_session, get_db_session)
     except Exception as e:
-        parser_logger.error(f'Error in update orders data: {str(e)}')
+        parser_logger.error(f'Error in update orders data: {str(e)}', exc_info=e)
 
     parser_logger.info('Update data finished successful!')
 

@@ -12,7 +12,7 @@ from src.api.interfaces import IApiSessionFabric
 from src.database.interfaces import IDbSessionFabric
 from src.database.models.models import Offer, CatalogItem
 from src.database.offer import OfferRepository
-from src.database.warehouse_db import create_own_storage_stocks, offer_stocks_list
+from src.database.warehouse_db import create_own_storage_stocks
 from src.params.config import config
 from logs import backend_logger
 from src.api.wrapper import ApiInteractor
@@ -34,6 +34,7 @@ from src.services.db_metadata import DBMetadataService
 from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
+from src.services.seller_discount import get_seller_discount_from_page, update_discounts
 from src.services.synchronization import ReverseSynchronizationInteractor, SynchronizationInteractor
 from src.services.update_offer_from_api import UpdateOfferFromApi
 
@@ -53,7 +54,7 @@ CONTROL_CHANGES = (
 async def get_offers_list(session_fabric: IDbSessionFabric, offers_filter: OffersFilter | None = None) -> list[OfferOut]:
     """ Получение списка карточек """
     res = []
-    offer_repository = OfferRepository()
+    offer_repository = OfferRepository[OfferOut]()
 
     async with session_fabric() as session:
         offer_repository.session = session
@@ -74,6 +75,7 @@ async def change_offers(offers_data: list[OfferChange],
     async with session_fabric() as session:
         await get_user_settings(session, user_id)
 
+        backend_logger.info(f'offer for change: {offers_data[0]}')
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
 
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=['name', 'description', 'barcodes', 'search_words'])
@@ -158,6 +160,9 @@ async def update_offers(db_session_fabric,
     await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True],
                               db_session_fabric,
                               api_session_fabric)
+
+    del to_update_price_df
+
     # Получаем товары из апи
     api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
                                    db_session_fabric=db_session_fabric)
@@ -171,6 +176,7 @@ async def update_offers(db_session_fabric,
     to_update_offers = merged_offers[merged_offers['_merge'] == 'both']
     to_delete_offers = merged_offers[merged_offers['_merge'] == 'left_only']
     to_create_offers = merged_offers[merged_offers['_merge'] == 'right_only']
+    del merged_offers
     to_create_offers = (
         to_create_offers
         .drop(columns=common_columns)
@@ -178,7 +184,12 @@ async def update_offers(db_session_fabric,
         .rename(columns={f'{column}__api': column for column in common_columns})[api_offers_df.columns.tolist()]
     )
 
-    # Двойная синхронизаия полей
+    discounts = get_seller_discount_from_page(
+        to_update_offers[to_update_offers['market'] == 'wildberries']
+    )
+    update_discounts(discounts, to_update_offers)
+
+    # Двойная синхронизация полей
     for tracked_column in CONTROL_CHANGES:
         to_update_offers[f'{tracked_column}_changed'] = np.where(
             to_update_offers[tracked_column] != to_update_offers[f'{tracked_column}__api'],
@@ -187,10 +198,12 @@ async def update_offers(db_session_fabric,
         )
 
     # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
-    to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
+    to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in (*CONTROL_CHANGES, 'seller_discount', 'old_discount')]))
+    del to_update_offers
+
     backend_logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
     await update_offers_attributes(to_update_attributes, api_session_fabric, db_session_fabric)
-
+    del to_update_attributes
     # Создаем новые товары
     for market in markets:
         to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], market, setup_mode=True)
