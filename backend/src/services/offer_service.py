@@ -144,25 +144,6 @@ async def update_offers(db_session_fabric,
     db_offers = await get_offers_list(db_session_fabric)
     db_offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
-    # Создаем переменную с данными для отправки цен в апи
-    to_update_price_df = db_offers_df.copy()
-
-    # Считаем значения, которые требуют настроек и целевой цены
-    for market in markets:
-        # пересчет текущей цены до скидки для карточек магазина
-        to_update_price_df['discount_base_price'] = np.where(
-            (to_update_price_df['market'] == market.type) & (to_update_price_df['name_of_shop'] == market.name),
-            to_update_price_df['target_price'] * (1.0 + market.price_before_discount / 100),
-            to_update_price_df['discount_base_price']
-        )
-
-    # Обновление цен для тех карточек, где включен автоконтроль цен
-    await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True],
-                              db_session_fabric,
-                              api_session_fabric)
-
-    del to_update_price_df
-
     # Получаем товары из апи
     api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
                                    db_session_fabric=db_session_fabric)
@@ -188,6 +169,34 @@ async def update_offers(db_session_fabric,
         to_update_offers[to_update_offers['market'] == 'wildberries']
     )
     update_discounts(discounts, to_update_offers)
+
+    # Создаем переменную с данными для отправки цен в апи
+    to_update_price_df = db_offers_df[
+        (db_offers_df['auto_price_control'] == True) &
+        (db_offers_df['total_price'].notna())
+        ][[
+        'sku', 'market', 'name_of_shop', 'target_price',
+        'manual_min_price', 'use_manual_min_price',
+        'total_price', 'auto_min_price', 'auto_participation_in_promotions',
+        'vendor_code', 'discount_base_price', 'seller_discount'
+    ]].copy()
+
+    # Считаем значения, которые требуют настроек и целевой цены
+    for market in markets:
+        # пересчет текущей цены до скидки для карточек магазина
+        to_update_price_df['discount_base_price'] = np.where(
+            (to_update_price_df['market'] == market.type) & (to_update_price_df['name_of_shop'] == market.name),
+            to_update_price_df['target_price'] * (1.0 + market.price_before_discount / 100),
+            to_update_price_df['discount_base_price']
+        )
+
+    # Обновление цен для тех карточек, где включен автоконтроль цен
+    await update_offers_price(to_update_price_df,
+                              db_session_fabric,
+                              api_session_fabric)
+
+    del to_update_price_df
+
 
     # Двойная синхронизация полей
     for tracked_column in CONTROL_CHANGES:
@@ -249,6 +258,10 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
                               db_session_fabric: IDbSessionFabric,
                               api_session_fabric: IApiSessionFabric):
     """ Обновление цен в карточках в магазинах """
+    if not config.is_prod:
+        backend_logger.info(f'Skip update offers prices app mode is not PROD (current - {config.mode})')
+        return
+
     data = []
 
     if isinstance(offers, pd.DataFrame):
@@ -256,11 +269,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
     elif isinstance(offers, list):
         data = [i.model_dump() for i in offers]
 
-    if not config.is_prod:
-        backend_logger.info(f'Skip update offers prices app mode is not PROD (current - {config.mode})')
-        return
-
-    if not len(data):
+    if len(data) == 0:
         backend_logger.info('Skip update prices due to list is empty')
         return
 
@@ -275,10 +284,10 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
             auto_min_price=offer_data['target_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['target_price'], offer_data['auto_min_price'])) else None,
             vendor_code=int(offer_data['vendor_code']) if offer_data['vendor_code'] is not None and not np.isnan(
                 offer_data['vendor_code']) else None,
-            discount_base_price=offer_data['discount_base_price']
-
+            discount_base_price=offer_data['discount_base_price'],
+            discount=offer_data['discount']
         )
-        for offer_data in data if offer_data['total_price'] is not None
+        for offer_data in data
     ]
 
     # изменение цен в магазине
@@ -324,6 +333,7 @@ async def update_offers_attributes(offers: pd.DataFrame,
     api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
                                    db_session_fabric=db_session_fabric)
     await api_interactor.change_offers(data)
+
 
     return data
 

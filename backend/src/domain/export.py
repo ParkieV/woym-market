@@ -170,7 +170,6 @@ class ExportDeliverInteractor:
         else:
             raise FileNotFoundError
 
-
     @staticmethod
     def _remove_directory(filepath: Path | None) -> None:
         if filepath is not None and filepath.exists():

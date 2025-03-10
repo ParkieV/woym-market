@@ -188,6 +188,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                     {
                         "nmID": price_data.vendor_code,
                         "price": round(price_data.target_price),
+                        "discount": round(price_data.discount)
                     }
                     for price_data in valid_price_data[i:i + chunk_size]
                 ]
