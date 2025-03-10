@@ -36,6 +36,7 @@ function columns(): (Column | ColumnGroup)[] {
                     const style = "height: 16px; margin: 0 1px -3px 0;";
                     const img = `<img style=\"${style}\" src=\"${url}\" />`;
                     if (data.warehouse.warehouse_type === "cluster") return `${img} ${value}`;
+                    else if (data.warehouse.warehouse_type === "super_cluster") return `${img} ${value.substring(1)}`;
                     else return `${value}`;
                 }
             }
