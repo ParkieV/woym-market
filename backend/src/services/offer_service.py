@@ -285,7 +285,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
             vendor_code=int(offer_data['vendor_code']) if offer_data['vendor_code'] is not None and not np.isnan(
                 offer_data['vendor_code']) else None,
             discount_base_price=offer_data['discount_base_price'],
-            discount=offer_data['discount']
+            discount=offer_data['discount'] or 0
         )
         for offer_data in data
     ]

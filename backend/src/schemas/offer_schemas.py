@@ -106,7 +106,7 @@ class OfferChange(BaseOffer):
     barcodes: str | None = Field(title='Штрихкоды')
 
     synchronization: bool = Field(title='Синхронизация с каталогом')
-    seller_discount: float | None = Field(title='Скидка продавца')
+    seller_discount: int | None = Field(title='Скидка продавца')
 
     hidden: bool = Field(False, title='Скрыт')
 
@@ -137,8 +137,8 @@ class OfferOut(OfferChange):
     cost_price: float | None = Field(title='Себестоимость (Закупка у. е. * курс)')
     dollar_cost_price_updated_at: datetime | None = Field(title='Дата изменения стоимости закупки в y. e.')
     total_price: float | None = Field(title='Расчетная цена (Закупка * коэф. + мин. наценка)')
-    seller_discount: float | None = Field(title='Скидка продавца',)
-    old_discount: float | None = Field(title='Старая скидка продавца')
+    seller_discount: int | None = Field(title='Скидка продавца',)
+    old_discount: int | None = Field(title='Старая скидка продавца')
     discount_base_price: float | None = Field(title='Цена до скидки (Текущая цена + 20%)')
     profit: float | None = Field(title='Прибыль (Текущая цена - закупка - FBY)')
     margin: float | None = Field(title='Окупаемость (Прибыль / закупка * 100)')

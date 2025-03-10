@@ -30,8 +30,8 @@ class APIOffer(BaseModel):
     volume: float | None = None
     photo: str | None = None
     current_price: float | None = None
-    seller_discount: float | None = None
-    old_discount: float | None = None
+    seller_discount: int | None = None
+    old_discount: int | None = None
     business_id: int | None = None
     group_sellers_amount: int | None = None
     attractive_price_threshold: float | None = None
@@ -91,7 +91,7 @@ class APIPriceChangeData:
     target_price: Union[int, float, None]
     min_price: float
     auto_participation_in_promotions: bool
-    discount: float
+    discount: int
     auto_min_price: float | None = None
     vendor_code: int | None = None
     discount_base_price: float | None = None
