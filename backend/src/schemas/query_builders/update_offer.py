@@ -34,7 +34,7 @@ class CreateTempTable(BaseFilter):
                     query_create += f"{key} INTEGER,\n\t"
                 elif key == 'business_id':
                     query_create += f"{key} INTEGER,\n\t"
-                elif key == 'self_length' or key == 'self_width' or key == 'seller_discount' or key == 'old_discount':
+                elif key == 'self_length' or key == 'self_width':
                     query_create += f"{key} DOUBLE PRECISION,\n\t"
                 else:
                     query_create += f"{key} {_type_python_postgresql_dict[type(value)] if key != 'vendor_code' else 'BIGINT'},\n\t"
