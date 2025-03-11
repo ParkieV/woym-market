@@ -30,9 +30,7 @@ class CreateTempTable(BaseFilter):
 
                 if key == 'price_index':
                     query_create += f"{key} VARCHAR,\n\t"
-                elif key == 'group_sellers_amount':
-                    query_create += f"{key} INTEGER,\n\t"
-                elif key == 'business_id':
+                elif key == 'group_sellers_amount' or key == 'business_id' or key == 'seller_discount' or key == 'old_discount':
                     query_create += f"{key} INTEGER,\n\t"
                 elif key == 'self_length' or key == 'self_width':
                     query_create += f"{key} DOUBLE PRECISION,\n\t"
