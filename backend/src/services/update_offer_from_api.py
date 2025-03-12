@@ -41,7 +41,8 @@ class UpdateOfferFromApi:
         data['vendor_code'].replace({np.nan: None}, inplace=True)
         data['business_id'].replace({np.nan: None}, inplace=True)
         data['group_sellers_amount'].replace({np.nan: None}, inplace=True)
-        # data.replace({None: np.nan}, inplace=True)
+        data['seller_discount'].fillna(0, inplace=True)
+        data['old_discount'].fillna(0, inplace=True)
 
         temp_table_builder = CreateTempTable(data.to_dict('records'))
         insert_temp_table_builder = InsertTempTable(data.to_dict('records'))
