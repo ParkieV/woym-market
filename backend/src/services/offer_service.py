@@ -173,7 +173,8 @@ async def update_offers(db_session_fabric,
     # Создаем переменную с данными для отправки цен в апи
     to_update_price_df = db_offers_df[
         (db_offers_df['auto_price_control'] == True) &
-        (db_offers_df['total_price'].notna())
+        (db_offers_df['total_price'].notna()) &
+        (db_offers_df['id'] == 5413)
         ][[
         'sku', 'market', 'name_of_shop', 'target_price',
         'manual_min_price', 'use_manual_min_price',
@@ -285,7 +286,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
             vendor_code=int(offer_data['vendor_code']) if offer_data['vendor_code'] is not None and not np.isnan(
                 offer_data['vendor_code']) else None,
             discount_base_price=offer_data['discount_base_price'],
-            discount=offer_data['discount'] or 0
+            discount=offer_data['seller_discount'] or 0
         )
         for offer_data in data
     ]
