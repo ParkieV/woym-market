@@ -86,7 +86,7 @@ function columns(): (Column | ColumnGroup)[] {
             editable: true
         },
         {
-                key: "is_deliver_in_boxes",
+            key: "is_deliver_in_boxes",
             header: "Поставлять коробками",
             base: new BooleanColumn(),
             editable: true

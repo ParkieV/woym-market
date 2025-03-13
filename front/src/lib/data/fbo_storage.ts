@@ -55,7 +55,7 @@ export async function fetchFboStorage(fetch_?: FetchInit): Promise<FboStorage[]>
     return data;
 }
 
-export async function patchFboStorage(changed: FboStorage[]): Promise<boolean> {
+export async function patchFboStorage(changed: FboStocks[]): Promise<boolean> {
     let promise = fetchPlain("/stocks/fbo", {
         method: "PATCH",
         body: JSON.stringify(changed),

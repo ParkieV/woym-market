@@ -28,8 +28,13 @@
     onMount(() => fboState.load());
 
     async function save() {
+        const changed_stocks = $fboState
+            .filter(x => get(fboState.changes).isChanged(x.id))
+            .map(x => x.stocks).flat();
+
+        console.log(changed_stocks);
         let ok = await patchFboStorage(
-            $fboState.filter(x => get(fboState.changes).isChanged(x.id))
+            changed_stocks
         );
         if (ok) {
             await invalidateAllState();
