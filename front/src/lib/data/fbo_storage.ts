@@ -8,6 +8,7 @@ export type FboStorage = OfferBase & {
     supplier_available: boolean;
     volume: number;
     margin: number;
+    min_stock: number;
     self_weight: number;
     cost_price: number;
     profit: number;
