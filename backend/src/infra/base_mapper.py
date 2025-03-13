@@ -1,8 +1,8 @@
 import re
 
-from src.common.infra.repository import AbstractRepositoryAggregator
+from src.common.infra.mapper import AbstractMapperAggregator
 
-class RepositoryAggregator(AbstractRepositoryAggregator):
+class MapperAggregator(AbstractMapperAggregator):
 
     def _camel_to_snake(self, name: str) -> str:
         s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)

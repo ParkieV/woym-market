@@ -9,7 +9,7 @@ from src.routers.auth_router import auth_router
 from src.routers.settings_router import settings_router
 from src.routers.debug_router import debug_router
 from src.routers.user_router import user_router
-from src.routers.stocks.stocks_router import router as stocks_router
+from src.routers.stocks import router as stocks_router
 from src.routers.export import router as export_router
 
 

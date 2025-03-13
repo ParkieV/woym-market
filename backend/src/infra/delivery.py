@@ -5,12 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from logs import backend_logger
 from src.common.export import Supply
-from src.common.infra.supply import AbstractSupplyRepository
+from src.common.infra.supply import AbstractSupplyMapper
 from src.database.models.models import Offer, Warehouse, OfferStock
 from src.domain.export import DeliverOrder
 
 
-class SupplyRepository(AbstractSupplyRepository):
+class SupplyMapper(AbstractSupplyMapper):
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session

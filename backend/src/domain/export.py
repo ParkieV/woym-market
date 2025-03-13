@@ -12,10 +12,10 @@ import pandas as pd
 from pydantic import BaseModel, Field, constr, field_validator, computed_field
 
 from logs import backend_logger
-from src.common.infra.repository import AbstractRepository, AbstractMutableRepository
+from src.common.infra.mapper import AbstractMapper, AbstractMutableMapper
 from src.common.infra.uow import AbstractUoW
 from src.database.db import get_db_session
-from src.infra.base_repository import RepositoryAggregator
+from src.infra.base_mapper import MapperAggregator
 from src.infra.uow import SQLAlchemyUnitOfWork
 
 
@@ -267,13 +267,13 @@ class ExportDeliverInteractor:
             self._remove_archive(Path(f"supply_{datetime.now().strftime('%Y.%m.%d_%H:%M')}.{session_id}"))
 
 def create_deliver_interactor(
-        repositories: Iterable[type[AbstractRepository] | type[AbstractMutableRepository]]
+        mappers: Iterable[type[AbstractMapper] | type[AbstractMutableMapper]]
     ) -> Callable[[], ExportDeliverInteractor]:
     def func() -> ExportDeliverInteractor:
         return ExportDeliverInteractor(
             uow=SQLAlchemyUnitOfWork(
-                repositories,
-                RepositoryAggregator,
+                mappers,
+                MapperAggregator,
             ),
             db_session_fabric=get_db_session
         )

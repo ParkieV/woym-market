@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 
-from src.common.infra.repository import AbstractRepositoryAggregator
+from src.common.infra.mapper import AbstractMapperAggregator
 
 
 
 class AbstractUoW(ABC):
-    repositories: AbstractRepositoryAggregator
+    mappers: AbstractMapperAggregator
 
     @abstractmethod
     def commit(self):

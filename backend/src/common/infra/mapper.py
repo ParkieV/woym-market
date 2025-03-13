@@ -5,7 +5,7 @@ from typing import Protocol, TypeVar, Any
 Model = TypeVar("Model")
 ID = TypeVar("ID")
 
-class AbstractRepository(Protocol[Model, ID]):
+class AbstractMapper(Protocol[Model, ID]):
 
     @abstractmethod
     async def read_object_by_id(self, object_id: ID) -> Model: ...
@@ -13,7 +13,7 @@ class AbstractRepository(Protocol[Model, ID]):
     @abstractmethod
     async def read_list(self) -> Sequence[Model]: ...
 
-class AbstractMutableRepository(Protocol[Model, ID]):
+class AbstractMutableMapper(Protocol[Model, ID]):
 
     @abstractmethod
     async def create_object(self, object: Model) -> None: ...
@@ -25,7 +25,7 @@ class AbstractMutableRepository(Protocol[Model, ID]):
     async def delete_object(self, object_id: ID) -> None: ...
 
 
-class AbstractRepositoryAggregator(ABC):
+class AbstractMapperAggregator(ABC):
     
     #: Сессия подключения к БД
     _session = None
@@ -36,7 +36,7 @@ class AbstractRepositoryAggregator(ABC):
     #: Зарегистрированные репозитории
     _registry: dict[str, type]
 
-    def __init__(self, repository_classes: Iterable[type[AbstractRepository] | type[AbstractMutableRepository]]):
+    def __init__(self, repository_classes: Iterable[type[AbstractMapper] | type[AbstractMutableMapper]]):
         self._repos: dict[str, type] = {}
         self._registry: dict[str, type] = {}
         for repo_class in repository_classes:

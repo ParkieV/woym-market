@@ -11,7 +11,7 @@ from starlette import status
 from starlette.responses import JSONResponse
 
 from logs import backend_logger
-from scheduls import update_data, start_worker
+from scheduls import update_data
 from src.routers import api_router
 from src.database.db import db_create
 from src.params.config import config
@@ -64,8 +64,6 @@ if config.is_prod:
 elif config.is_dev:
     origins = ['https://dev.woym-market.ru']
 elif config.is_local:
-
-    print
     origins = ['*']
 else:
     raise InitializationError('Не получилось определить контур развертывания')

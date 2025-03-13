@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends
 from starlette.responses import StreamingResponse
 
 from logs import backend_logger
-from ..common.routers.export_deliver import DeliverRequest
+from ..common.routers.export import DeliverRequest
 from ..dependencies.users import get_current_user
 from ..domain.export import ExportDeliverInteractor, create_deliver_interactor
-from ..infra.delivery import SupplyRepository
+from ..infra.delivery import SupplyMapper
 
 router = APIRouter(prefix="/export", tags=["Экспортtt"])
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/export", tags=["Экспортtt"])
 async def export_deliver_archive(
         body: DeliverRequest | None,
         deliver_interactor: ExportDeliverInteractor = Depends(
-            create_deliver_interactor([SupplyRepository])
+            create_deliver_interactor([SupplyMapper])
         ),
 ):
     backend_logger.debug(f"Request body: {body}")

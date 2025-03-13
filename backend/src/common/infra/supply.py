@@ -3,11 +3,11 @@ from collections.abc import Sequence
 from typing import Any
 
 from src.common.export import Supply
-from src.common.infra.repository import AbstractRepository
+from src.common.infra.mapper import AbstractMapper
 
 sku = str
 
-class AbstractSupplyRepository(AbstractRepository[Supply, sku]):
+class AbstractSupplyMapper(AbstractMapper[Supply, sku]):
 
     async def read_object_by_id(self, object_id: str) -> Supply:
         raise NotImplementedError

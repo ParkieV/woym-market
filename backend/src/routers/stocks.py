@@ -5,10 +5,15 @@ from starlette.background import BackgroundTask
 from starlette.responses import FileResponse
 
 from src.api.gateway_template import get_api_session
+from src.common.routers.stocks import UpdateFboStocksRequest
 from src.database.db import get_db_session
 from src.dependencies.users import get_current_user, require_staff
-from src.routers.stocks.fbo_router import router as fbo_router
-from src.routers.stocks.own_storage_router import router as own_storage_router
+from src.domain.stocks import update_stocks
+from src.infra.base_mapper import MapperAggregator
+from src.infra.offer_stocks import OfferStocksMapper
+from src.infra.uow import SQLAlchemyUnitOfWork
+from src.routers.stocks_routers.fbo_router import router as fbo_router
+from src.routers.stocks_routers.own_storage_router import router as own_storage_router
 from src.schemas.filters.stocks_filter import WarehousesFilter
 from src.schemas.stocks.stocks_schemas import SupplyExportType
 from src.schemas.stocks.warehouses_schemas import WarehouseOut
@@ -23,7 +28,6 @@ router = APIRouter(
 
 router.include_router(fbo_router)
 router.include_router(own_storage_router)
-
 
 @router.post('/warehouses', response_model=list[WarehouseOut], tags=['Склады маркетплейсов'], dependencies=[Depends(get_current_user)], summary='Список складов маркетплейсов')
 async def get_warehouses_list(filter: WarehousesFilter | None = Body(None)):
@@ -70,3 +74,17 @@ async def export_with_own_storage_supply(
     path = Path(await service.export_supply(SupplyExportType.WITH_OWN_STORAGE, warehouses_id, offers_id, place_id=place_id))
     return FileResponse(path=str(path), filename=path.name, media_type='multipart/form-data',
                         background=BackgroundTask(clean_up_files, str(path)))
+
+
+@router.patch("/fbo-storage", dependencies=[Depends(get_current_user)])
+async def update_fbo_stocks(
+    body: UpdateFboStocksRequest
+):
+    uow = SQLAlchemyUnitOfWork(
+        [OfferStocksMapper],
+        MapperAggregator
+    )
+    await update_stocks(
+        uow=uow,
+        stocks=body.stocks
+    )
