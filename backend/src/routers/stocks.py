@@ -10,7 +10,7 @@ from src.database.db import get_db_session
 from src.dependencies.users import get_current_user, require_staff
 from src.domain.stocks import update_stocks
 from src.infra.base_mapper import MapperAggregator
-from src.infra.offer_stocks import OfferStocksMapper
+from src.infra.fbo_stocks import MutableFboStocksMapper
 from src.infra.uow import SQLAlchemyUnitOfWork
 from src.routers.stocks_routers.fbo_router import router as fbo_router
 from src.routers.stocks_routers.own_storage_router import router as own_storage_router
@@ -76,12 +76,12 @@ async def export_with_own_storage_supply(
                         background=BackgroundTask(clean_up_files, str(path)))
 
 
-@router.patch("/fbo-storage", dependencies=[Depends(get_current_user)])
-async def update_fbo_stocks(
+@router.patch("/fbo-", dependencies=[Depends(get_current_user)])
+async def update_fbo_offers(
     body: UpdateFboStocksRequest
 ):
     uow = SQLAlchemyUnitOfWork(
-        [OfferStocksMapper],
+        [MutableFboStocksMapper],
         MapperAggregator
     )
     await update_stocks(

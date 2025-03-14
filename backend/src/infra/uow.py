@@ -9,13 +9,13 @@ from src.database.db import async_session
 class SQLAlchemyUnitOfWork(AbstractUoW):
     def __init__(
             self,
-            repositories: Sequence[type[AbstractMapper] | type[AbstractMutableMapper]],
+            mappers: Sequence[type[AbstractMapper] | type[AbstractMutableMapper]],
             mapper_aggregator: type[AbstractMapperAggregator],
             session_factory=async_session,
     ):
         self.session_factory = session_factory
         backend_logger.debug(f'session factory type: {self.session_factory}')
-        self.repositories = mapper_aggregator(repositories)
+        self.mappers = mapper_aggregator(mappers)
 
 
     async def commit(self):
@@ -27,7 +27,7 @@ class SQLAlchemyUnitOfWork(AbstractUoW):
     async def __aenter__(self):
         self.session = self.session_factory()
         backend_logger.debug(type(self.session))
-        self.repositories.session = self.session
+        self.mappers.session = self.session
         return self
 
     async def __aexit__(self, *args):

@@ -267,7 +267,7 @@ class ExportDeliverInteractor:
             self._remove_archive(Path(f"supply_{datetime.now().strftime('%Y.%m.%d_%H:%M')}.{session_id}"))
 
 def create_deliver_interactor(
-        mappers: Iterable[type[AbstractMapper] | type[AbstractMutableMapper]]
+        mappers: Sequence[type[AbstractMapper] | type[AbstractMutableMapper]]
     ) -> Callable[[], ExportDeliverInteractor]:
     def func() -> ExportDeliverInteractor:
         return ExportDeliverInteractor(

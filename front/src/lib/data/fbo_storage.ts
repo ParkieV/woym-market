@@ -55,10 +55,26 @@ export async function fetchFboStorage(fetch_?: FetchInit): Promise<FboStorage[]>
     return data;
 }
 
-export async function patchFboStorage(changed: FboStocks[]): Promise<boolean> {
-    let promise = fetchPlain("/stocks/fbo", {
+export async function patchFboStocks(changed: FboStocks[]): Promise<boolean> {
+    const promise = fetchPlain("/stocks/fbo", {
         method: "PATCH",
         body: JSON.stringify(changed),
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+    showFetchModals(promise, "Сохранение...");
+    return (await promise).ok;
+}
+
+export async function patchFboStocksOffers(changed: FboStorage[]): Promise<boolean> {
+    const body = {
+        offers: changed
+    }
+    console.log(body)
+    const promise = fetchPlain('/v2/offers/fbo-stocks', {
+        method: "PATCH",
+        body: JSON.stringify(body),
         headers: {
             "Content-Type": "application/json"
         }

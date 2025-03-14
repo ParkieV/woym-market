@@ -12,7 +12,7 @@ from starlette.responses import JSONResponse
 
 from logs import backend_logger
 from scheduls import update_data
-from src.routers import api_router
+from src.routers import api_router, api_router_v2
 from src.database.db import db_create
 from src.params.config import config
 from src.shared.exceptions import InitializationError
@@ -77,6 +77,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+app.include_router(api_router_v2)
 
 
 @app.exception_handler(500)

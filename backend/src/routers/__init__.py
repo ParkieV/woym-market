@@ -1,4 +1,3 @@
-# from src.routers.user_router import user_router
 from fastapi import APIRouter
 
 from src.routers.media_router import router as media_router
@@ -11,10 +10,11 @@ from src.routers.debug_router import debug_router
 from src.routers.user_router import user_router
 from src.routers.stocks import router as stocks_router
 from src.routers.export import router as export_router
+from src.routers.offer import router as offer_router
 
 
 api_router = APIRouter()
-
+api_router_v2 = APIRouter(prefix="/v2", tags=["version 2"])
 api_router.include_router(media_router)
 api_router.include_router(catalog_router)
 api_router.include_router(core_router)
@@ -25,3 +25,5 @@ api_router.include_router(data_router)
 api_router.include_router(stocks_router)
 api_router.include_router(debug_router)
 api_router.include_router(export_router)
+
+api_router_v2.include_router(offer_router)

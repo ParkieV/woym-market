@@ -9,9 +9,11 @@ sku = str
 
 class AbstractSupplyMapper(AbstractMapper[Supply, sku]):
 
+    @abstractmethod
     async def read_object_by_id(self, object_id: str) -> Supply:
         raise NotImplementedError
 
+    @abstractmethod
     async def read_list(self) -> Sequence[Supply]:
         raise NotImplementedError
 
