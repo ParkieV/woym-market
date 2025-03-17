@@ -1,4 +1,4 @@
-from collections.abc import Sequence, Iterable
+from collections.abc import Sequence
 
 from src.common.fbo_stocks import FboOffer, FboStock
 from src.common.infra.uow import AbstractUoW

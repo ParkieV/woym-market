@@ -25,7 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from shutil import make_archive
 
-
+from src.services.offer_service import recalculate_values
 
 
 async def update_warehouses_and_stocks(api_session_fabric, db_session_fabric):
@@ -442,6 +442,7 @@ async def get_offer_fbo_stocks(offer_id: int) -> list[OfferStockOut]:
 async def change_fbo_stocks(data: list[OfferFBOStockUpdate]):
     async with async_session() as session:
         await db.change_fbo_stocks(session, data)
+        await recalculate_values(session)
 
 
 async def aggregate_offers_fbo_stocks(warehouse_ids: list[int] | None = None, ignore_clusters: bool = True) -> list[AggOfferFBOStock]:
