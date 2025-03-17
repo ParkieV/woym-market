@@ -9,7 +9,7 @@ from ..dependencies.users import get_current_user
 from ..domain.export import ExportDeliverInteractor, create_deliver_interactor
 from ..infra.delivery import SupplyMapper
 
-router = APIRouter(prefix="/export", tags=["Экспортtt"])
+router = APIRouter(prefix="/export", tags=["Экспорт"])
 
 
 @router.post("/deliver", dependencies=[Depends(get_current_user)])

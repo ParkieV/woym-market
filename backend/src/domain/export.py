@@ -19,9 +19,9 @@ from src.infra.base_mapper import MapperAggregator
 from src.infra.uow import SQLAlchemyUnitOfWork
 
 
-class DeliverSupply(BaseModel, frozen=True):
+class DeliverSupply(BaseModel):
     sku: int = Field(title="SKU")
-    title: constr(min_length=1, max_length=60) = Field(title="Наименование")
+    title: str = Field(title="Наименование")
     number_of_delivery: int = Field(title="Кол-во")
     weight: float = Field(title="Вес(одного)")
     volume: float | None = Field(title="Объем(одного)")
@@ -54,7 +54,7 @@ class DeliverSupply(BaseModel, frozen=True):
 
 class WarehouseDeliverSupply(BaseModel, frozen=True):
     sku: int = Field(title="артикул")
-    title: constr(min_length=1, max_length=60) | None = Field(title="имя (необязательно)")
+    title: str | None = Field(title="имя (необязательно)")
     number_of_delivery: int = Field(title="количество")
 
 class SupplyWarehouse(BaseModel, frozen=True):
@@ -186,16 +186,24 @@ class ExportDeliverInteractor:
         supply_data = {"all_data": all_data_list}
 
         for order in orders:
-            all_data_list.append(
-                DeliverSupply(
-                    sku=order.sku,
-                    title=order.goods_name,
-                    number_of_delivery=sum(map(lambda x: x.to_deliver_number, order.warehouses)),
-                    weight=order.weight,
-                    volume=order.volume,
-                    cost_price=order.cost_price,
+            fl = False
+            for data in all_data_list:
+                if order.sku == str(data.sku):
+                    fl = True
+                    backend_logger.debug(order.warehouses)
+                    data.number_of_delivery += sum(map(lambda x: x.to_deliver_number, order.warehouses))
+                    break
+            if not fl:
+                all_data_list.append(
+                    DeliverSupply(
+                        sku=order.sku,
+                        title=order.goods_name,
+                        number_of_delivery=sum(map(lambda x: x.to_deliver_number, order.warehouses)),
+                        weight=order.weight,
+                        volume=order.volume,
+                        cost_price=order.cost_price,
+                    )
                 )
-            )
             if order.marketplace_name not in supply_data:
                 supply_data[order.marketplace_name] = {}
             market_supply_data = supply_data[order.marketplace_name]

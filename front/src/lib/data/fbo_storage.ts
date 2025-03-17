@@ -20,6 +20,7 @@ export type FboStocks = {
     min_stock: number;
     warehouse: {
         id: number;
+        market: string;
         name: string;
         warehouse_type: "warehouse" | "cluster";
     };

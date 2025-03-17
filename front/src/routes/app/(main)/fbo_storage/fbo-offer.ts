@@ -126,7 +126,7 @@ function columns(): (Column | ColumnGroup)[] {
                     valueGetter: (params: ValueGetterParams<FboStorage>) => {
                         if (!params.data) return 0;
                         const stocks = params.data.stocks
-                            .filter(x => x.warehouse.warehouse_type !== "cluster")
+                            .filter(x => x.warehouse.warehouse_type === "warehouse")
                             .map(x => x.current_stock)
                             .reduce((a, b) => a + b, 0);
                         return stocks / 2;
@@ -139,7 +139,7 @@ function columns(): (Column | ColumnGroup)[] {
                     valueGetter: (params: ValueGetterParams<FboStorage>) => {
                         if (!params.data) return 0;
                         return params.data.stocks
-                            .filter(x => x.warehouse.warehouse_type !== "cluster" && x.warehouse.warehouse_type !== "super_cluster")
+                            .filter(x => x.warehouse.warehouse_type === "warehouse")
                             .map(x => x.min_stock)
                             .reduce((a, b) => a + b, 0);
                     }
@@ -151,7 +151,7 @@ function columns(): (Column | ColumnGroup)[] {
                     valueGetter: (params: ValueGetterParams<FboStorage>) => {
                         if (!params.data) return 0;
                         return params.data.stocks
-                            .filter(x => x.warehouse.warehouse_type !== "cluster" && x.warehouse.warehouse_type !== "super_cluster")
+                            .filter(x => x.warehouse.warehouse_type === "warehouse")
                             .reduce((sum, storage) => sum + calcToDeliver(storage), 0);
                     }
                 },
@@ -196,6 +196,7 @@ export function calcStocksToDeliver(stock: FboStorage) {
 export function getSelectedOrders() {
     const selectedMap = get(fboStorageSelection.selected); // Получаем выделенные строки в виде Map
     const selectedRows = Array.from(selectedMap.values()); // Преобразуем в массив значений
+    console.log("selected rows:", selectedRows);
     const orders = selectedRows.map(row => ({
         sku: row.sku,
         marketplace_name: row.market,
@@ -207,7 +208,7 @@ export function getSelectedOrders() {
         to_deliver_number: row.stocks
             .filter(x => x.warehouse.warehouse_type === "warehouse")
             .reduce((sum, storage) => sum + calcToDeliver(storage), 0),
-        warehouses: getSelectedStocks()
+        warehouses: getSelectedStocks(row.market)
     }));
     console.log("request orders", orders);
     return orders;

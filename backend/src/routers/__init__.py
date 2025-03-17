@@ -24,6 +24,6 @@ api_router.include_router(settings_router)
 api_router.include_router(data_router)
 api_router.include_router(stocks_router)
 api_router.include_router(debug_router)
-api_router.include_router(export_router)
 
+api_router_v2.include_router(export_router)
 api_router_v2.include_router(offer_router)
