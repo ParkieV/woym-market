@@ -158,7 +158,7 @@ export class DeliversExport extends Export {
     // public courier: string | null = null;
 
     protected get url(): string {
-        return `/export/deliver`;
+        return `/v2/export/deliver`;
     }
 
     protected get body(): string | null {

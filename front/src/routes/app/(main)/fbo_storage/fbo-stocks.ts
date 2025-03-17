@@ -110,10 +110,12 @@ export function calcToDeliver({
     return diff;
 }
 
-export function getSelectedStocks() {
+export function getSelectedStocks(market: string) {
     const selectedMap = get(fboStocksSelection.selected);
     const selectedRows = Array.from(selectedMap.values());
-    return selectedRows.map(row => ({
+    return selectedRows
+        .filter(x => x.warehouse.warehouse_type === "warehouse" && x.warehouse.market === market)
+        .map(row => ({
         id: row.id,
         warehouse_name: row.warehouse.name,
         to_deliver_number: calcToDeliver(row)
