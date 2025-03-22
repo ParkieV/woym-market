@@ -500,8 +500,8 @@ async def recalculate_super_clusters_stocks(session: AsyncSession):
             func.sum(OfferStock.current_stock).label('current_stock')
         )
         .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
-        .group_by(OfferStock.offer_id)
         .where(Warehouse.warehouse_type == 'warehouse')
+        .group_by(OfferStock.offer_id)
     ).subquery('stocks_subquery')
 
     current_super_cluster_stock_subquery = (
