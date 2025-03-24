@@ -40,13 +40,18 @@ LOGGING_CONFIG = dict(
     loggers={
         'woym_market': {
             'level': 'INFO' if config.mode == 'PROD' else 'DEBUG',
-            'handlers': ['console_error', 'file'],
+            'handlers': ['console', 'console_error', 'file'],
             'propagate': False
         },
         'parser': {
             'level': 'INFO' if config.mode == 'PROD' else 'DEBUG',
-            'handlers': ['console_error', 'file'],
+            'handlers': ['console', 'console_error', 'file'],
             'propagate': False,
+        },
+        'sqlalchemy': {
+            'level': 'DEBUG',
+            'handlers': ['file'],
+            'propagate': False
         }
     }
 )

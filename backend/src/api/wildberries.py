@@ -144,7 +144,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                     warehouse_type=WarehouseType.WAREHOUSE
                 )
             )
-        result.append(APIWarehouse(market='wildberries', offers=[], name='Кластер все магазины', warehouse_type=WarehouseType.SUPER_CLUSTER))
+        result.append(APIWarehouse(market='wildberries', offers=[], name='!Кластер все магазины', warehouse_type=WarehouseType.SUPER_CLUSTER))
         return result
 
     async def _check_price_update_result(self, task_id: int) -> None:
@@ -186,6 +186,10 @@ class WildberriesApi(ApiGateway, IApiGateway):
             body = {
                 'data': [
                     {
+                        "nmID": price_data.vendor_code,
+                        "price": round(price_data.target_price),
+                        "discount": int(price_data.discount)
+                    } if price_data.sku == '28071' else {
                         "nmID": price_data.vendor_code,
                         "price": round(price_data.target_price),
                     }
@@ -314,7 +318,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 result[item['vendorCode']] = {
                     'current_price': size['price'],
                     'your_promotion_price': size['discountedPrice'],
-                    'discount': item['discount'],
+                    'seller_discount': item['discount'],
                 }
 
             if len(data) < limit:

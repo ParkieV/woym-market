@@ -4,12 +4,14 @@ import type { Column, ColumnGroup } from "$lib/datagrid/columns";
 import {
     BooleanColumn,
     DateColumn,
+    intColumn,
     NumberColumn,
-    StringColumn,
-    intColumn
+    StringColumn
 } from "$lib/datagrid/columns/types";
 import { BASE_GRID_OPTIONS } from "$lib/grid/base";
 import type { GridOptions } from "ag-grid-enterprise";
+import { fboStocksSelection } from "../selection";
+import { get } from "svelte/store";
 
 export default function fboStocks(): GridDefinition<FboStocks> {
     const options: GridOptions = {
@@ -34,6 +36,7 @@ function columns(): (Column | ColumnGroup)[] {
                     const style = "height: 16px; margin: 0 1px -3px 0;";
                     const img = `<img style=\"${style}\" src=\"${url}\" />`;
                     if (data.warehouse.warehouse_type === "cluster") return `${img} ${value}`;
+                    else if (data.warehouse.warehouse_type === "super_cluster") return `${img} ${value.substring(1)}`;
                     else return `${value}`;
                 }
             }
@@ -105,4 +108,16 @@ export function calcToDeliver({
         return boxes * in_box;
     }
     return diff;
+}
+
+export function getSelectedStocks(market: string) {
+    const selectedMap = get(fboStocksSelection.selected);
+    const selectedRows = Array.from(selectedMap.values());
+    return selectedRows
+        .filter(x => x.warehouse.warehouse_type === "warehouse" && x.warehouse.market === market)
+        .map(row => ({
+        id: row.id,
+        warehouse_name: row.warehouse.name,
+        to_deliver_number: calcToDeliver(row)
+    }));
 }

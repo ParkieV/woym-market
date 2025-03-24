@@ -22,7 +22,7 @@ async def setup_catalog_items(session_fabric: IDbSessionFabric) -> None:
     async with session_fabric() as session:
         offer_repository.session = session
         db_offers: list[OfferOut] = []
-        async for offer_chunk in offer_repository.list():
+        async for offer_chunk in offer_repository.offer_list():
             db_offers += offer_chunk
 
         db_offers_df = pd.DataFrame([i.model_dump() for i in db_offers])

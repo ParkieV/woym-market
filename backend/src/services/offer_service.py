@@ -12,7 +12,7 @@ from src.api.interfaces import IApiSessionFabric
 from src.database.interfaces import IDbSessionFabric
 from src.database.models.models import Offer, CatalogItem
 from src.database.offer import OfferRepository
-from src.database.warehouse_db import create_own_storage_stocks, offer_stocks_list
+from src.database.warehouse_db import create_own_storage_stocks
 from src.params.config import config
 from logs import backend_logger
 from src.api.wrapper import ApiInteractor
@@ -34,6 +34,7 @@ from src.services.db_metadata import DBMetadataService
 from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
+from src.services.seller_discount import get_seller_discount_from_page, update_discounts
 from src.services.synchronization import ReverseSynchronizationInteractor, SynchronizationInteractor
 from src.services.update_offer_from_api import UpdateOfferFromApi
 
@@ -53,11 +54,11 @@ CONTROL_CHANGES = (
 async def get_offers_list(session_fabric: IDbSessionFabric, offers_filter: OffersFilter | None = None) -> list[OfferOut]:
     """ Получение списка карточек """
     res = []
-    offer_repository = OfferRepository()
+    offer_repository = OfferRepository[OfferOut]()
 
     async with session_fabric() as session:
         offer_repository.session = session
-        async for offer_chunk in offer_repository.list(query_filter=offers_filter):
+        async for offer_chunk in offer_repository.offer_list(query_filter=offers_filter):
             res += offer_chunk
 
     return res
@@ -74,6 +75,7 @@ async def change_offers(offers_data: list[OfferChange],
     async with session_fabric() as session:
         await get_user_settings(session, user_id)
 
+        backend_logger.info(f'offer for change: {offers_data[0]}')
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
 
         await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=['name', 'description', 'barcodes', 'search_words'])
@@ -142,22 +144,6 @@ async def update_offers(db_session_fabric,
     db_offers = await get_offers_list(db_session_fabric)
     db_offers_df = pd.DataFrame([offer.model_dump() for offer in db_offers])
 
-    # Создаем переменную с данными для отправки цен в апи
-    to_update_price_df = db_offers_df.copy()
-
-    # Считаем значения, которые требуют настроек и целевой цены
-    for market in markets:
-        # пересчет текущей цены до скидки для карточек магазина
-        to_update_price_df['discount_base_price'] = np.where(
-            (to_update_price_df['market'] == market.type) & (to_update_price_df['name_of_shop'] == market.name),
-            to_update_price_df['target_price'] * (1.0 + market.price_before_discount / 100),
-            to_update_price_df['discount_base_price']
-        )
-
-    # Обновление цен для тех карточек, где включен автоконтроль цен
-    await update_offers_price(to_update_price_df[to_update_price_df['auto_price_control'] == True],
-                              db_session_fabric,
-                              api_session_fabric)
     # Получаем товары из апи
     api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
                                    db_session_fabric=db_session_fabric)
@@ -171,6 +157,7 @@ async def update_offers(db_session_fabric,
     to_update_offers = merged_offers[merged_offers['_merge'] == 'both']
     to_delete_offers = merged_offers[merged_offers['_merge'] == 'left_only']
     to_create_offers = merged_offers[merged_offers['_merge'] == 'right_only']
+    del merged_offers
     to_create_offers = (
         to_create_offers
         .drop(columns=common_columns)
@@ -178,7 +165,41 @@ async def update_offers(db_session_fabric,
         .rename(columns={f'{column}__api': column for column in common_columns})[api_offers_df.columns.tolist()]
     )
 
-    # Двойная синхронизаия полей
+    discounts = get_seller_discount_from_page(
+        to_update_offers[to_update_offers['market'] == 'wildberries']
+    )
+    update_discounts(discounts, to_update_offers)
+
+    # Создаем переменную с данными для отправки цен в апи
+    to_update_price_df = db_offers_df[
+        (db_offers_df['auto_price_control'] == True) &
+        (db_offers_df['total_price'].notna()) &
+        (db_offers_df['id'] == 5413)
+        ][[
+        'sku', 'market', 'name_of_shop', 'target_price',
+        'manual_min_price', 'use_manual_min_price',
+        'total_price', 'auto_min_price', 'auto_participation_in_promotions',
+        'vendor_code', 'discount_base_price', 'seller_discount'
+    ]].copy()
+
+    # Считаем значения, которые требуют настроек и целевой цены
+    for market in markets:
+        # пересчет текущей цены до скидки для карточек магазина
+        to_update_price_df['discount_base_price'] = np.where(
+            (to_update_price_df['market'] == market.type) & (to_update_price_df['name_of_shop'] == market.name),
+            to_update_price_df['target_price'] * (1.0 + market.price_before_discount / 100),
+            to_update_price_df['discount_base_price']
+        )
+
+    # Обновление цен для тех карточек, где включен автоконтроль цен
+    await update_offers_price(to_update_price_df,
+                              db_session_fabric,
+                              api_session_fabric)
+
+    del to_update_price_df
+
+
+    # Двойная синхронизация полей
     for tracked_column in CONTROL_CHANGES:
         to_update_offers[f'{tracked_column}_changed'] = np.where(
             to_update_offers[tracked_column] != to_update_offers[f'{tracked_column}__api'],
@@ -187,10 +208,12 @@ async def update_offers(db_session_fabric,
         )
 
     # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
-    to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in CONTROL_CHANGES]))
+    to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in (*CONTROL_CHANGES, 'seller_discount', 'old_discount')]))
+    del to_update_offers
+
     backend_logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
     await update_offers_attributes(to_update_attributes, api_session_fabric, db_session_fabric)
-
+    del to_update_attributes
     # Создаем новые товары
     for market in markets:
         to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], market, setup_mode=True)
@@ -236,6 +259,10 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
                               db_session_fabric: IDbSessionFabric,
                               api_session_fabric: IApiSessionFabric):
     """ Обновление цен в карточках в магазинах """
+    if not config.is_prod:
+        backend_logger.info(f'Skip update offers prices app mode is not PROD (current - {config.mode})')
+        return
+
     data = []
 
     if isinstance(offers, pd.DataFrame):
@@ -243,11 +270,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
     elif isinstance(offers, list):
         data = [i.model_dump() for i in offers]
 
-    if not config.is_prod:
-        backend_logger.info(f'Skip update offers prices app mode is not PROD (current - {config.mode})')
-        return
-
-    if not len(data):
+    if len(data) == 0:
         backend_logger.info('Skip update prices due to list is empty')
         return
 
@@ -262,10 +285,10 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
             auto_min_price=offer_data['target_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['target_price'], offer_data['auto_min_price'])) else None,
             vendor_code=int(offer_data['vendor_code']) if offer_data['vendor_code'] is not None and not np.isnan(
                 offer_data['vendor_code']) else None,
-            discount_base_price=offer_data['discount_base_price']
-
+            discount_base_price=offer_data['discount_base_price'],
+            discount=offer_data['seller_discount'] or 0
         )
-        for offer_data in data if offer_data['total_price'] is not None
+        for offer_data in data
     ]
 
     # изменение цен в магазине
@@ -312,6 +335,7 @@ async def update_offers_attributes(offers: pd.DataFrame,
                                    db_session_fabric=db_session_fabric)
     await api_interactor.change_offers(data)
 
+
     return data
 
 
@@ -320,7 +344,7 @@ async def recalculate_values(session: AsyncSession, offers_filter: OffersFilter 
     # Получение карточек
     offers: list[OfferOut] = []
     offer_repository = OfferRepository(session)
-    async for offer_chunk in offer_repository.list(query_filter=offers_filter):
+    async for offer_chunk in offer_repository.offer_list(query_filter=offers_filter):
         offers += offer_chunk
 
     df = pd.DataFrame([offer.model_dump() for offer in offers])

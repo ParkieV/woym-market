@@ -41,7 +41,7 @@ SENTRY_SDK_DSN=https://316d8287e77f4a2d184d9b495df0c2b8@o4506834496126976.ingest
 LOKI_URL=http://loki:3100/loki/api/v1/push
 LOG_ENDPOINTS=True
 ```
-8) В папке `frontend/` создаем файл `.env.<ТИП_КОНТУРА>` со следующей структурой
+8) В папке `front/` создаем файл `.env.<ТИП_КОНТУРА>` со следующей структурой
 ```
 PUBLIC_BASE_URL="https://<ДОМЕН_КОНТУРА>/backend"
 PUBLIC_LOCAL_BASE_URL="https://<ДОМЕН_КОНТУРА>/backend"

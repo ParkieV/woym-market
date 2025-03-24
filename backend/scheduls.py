@@ -1,5 +1,6 @@
 import asyncio
-import multiprocessing
+import concurrent.futures
+from collections.abc import Callable
 from typing import Sequence
 
 from logs import parser_logger
@@ -20,30 +21,32 @@ async def update_data(user_ids: Sequence[int]):
         # Добавление новых карточек в каталог только sku
         await duplicate_offers_to_catalog(get_db_session)
     except Exception as e:
-        parser_logger.error(f'Error in update offers: {str(e)}')
+        parser_logger.error(f'Error in update offers: {str(e)}', exc_info=e)
 
     try:
         # Получение информации о остатках на складах
         await update_warehouses_and_stocks(get_api_session, get_db_session)
     except Exception as e:
-        parser_logger.error(f"Error in update warehouses and stocks: {str(e)}")
+        parser_logger.error(f"Error in update warehouses and stocks: {str(e)}", exc_info=e)
 
     try:
         await setup_orders(get_api_session, get_db_session)
     except Exception as e:
-        parser_logger.error(f'Error in update orders data: {str(e)}')
+        parser_logger.error(f'Error in update orders data: {str(e)}', exc_info=e)
 
-    parser_logger.info('Scheduler finished successful!')
+    parser_logger.info('Update data finished successful!')
 
+def run_async(async_func, *args):
+    asyncio.run(async_func(*args))
 
-async def start_worker(async_func, *args, **kwargs):
-    def run_async():
-        asyncio.run(async_func(*args, **kwargs))
-    print('Worker started!')
-    process = multiprocessing.Process(target=run_async)
-    process.start()
-    process.join()
-    print('Worker finished!')
+async def start_worker(async_func: Callable, *args):
+    parser_logger.debug(f'Worker args: {async_func}, {args}')
+
+    loop = asyncio.get_running_loop()
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        parser_logger.info('Start worker!')
+        result = await loop.run_in_executor(executor, run_async, async_func, *args)
+        parser_logger.info(f'Finish worker! Result: {result}')
 
 if __name__ == '__main__':
     asyncio.run(update_data([3, 4]))

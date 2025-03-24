@@ -421,7 +421,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 temp[warehouse_stock['warehouse_name']]['offers'].append(stock)
         result = [APIWarehouse(**i) for i in temp.values()]
         result.extend(await self._get_clusters_info())
-        result.append(APIWarehouse(market='ozon', name='Кластер все магазины', offers=[], warehouse_type=WarehouseType.SUPER_CLUSTER))
+        result.append(APIWarehouse(market='ozon', name='!Кластер все магазины', offers=[], warehouse_type=WarehouseType.SUPER_CLUSTER))
         return result
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:

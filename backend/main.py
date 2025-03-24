@@ -2,6 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 
 # import sentry_sdk
+import aioschedule
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
@@ -11,17 +12,8 @@ from starlette.responses import JSONResponse
 
 from logs import backend_logger
 from scheduls import update_data
-from src.routers.user_router import user_router
-from src.routers.auth_router import auth_router
-from src.routers.offers.base_router import router as data_router
-from src.routers.debug_router import debug_router
-from src.routers.stocks.stocks_router import router as stocks_router
-from src.routers.settings_router import settings_router
-from src.routers.core_router import router as core_router
-from src.routers.catalog_router import router as catalog_router
-from src.routers.media_router import router as media_router
+from src.routers import api_router, api_router_v2
 from src.database.db import db_create
-import aioschedule
 from src.params.config import config
 from src.shared.exceptions import InitializationError
 
@@ -40,13 +32,11 @@ from src.shared.exceptions import InitializationError
 
 
 async def scheduler():
-#     aioschedule.every(5).minutes.do(start_worker, update_data, (3, 4))
     aioschedule.every(60).minutes.do(update_data, (3, 4))
 
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)
-
 
 async def to_startup():
     if config.schedule_update:
@@ -57,6 +47,7 @@ async def to_startup():
 async def startup(_: FastAPI):
     db_create()
     await to_startup()
+    backend_logger.info('Worker start!')
     yield
 
 
@@ -69,9 +60,9 @@ app: FastAPI = FastAPI(
 )
 
 if config.is_prod:
-    origins = ['https://dev.woym-market.ru']
-elif config.is_dev:
     origins = ['https://woym-market.ru']
+elif config.is_dev:
+    origins = ['https://dev.woym-market.ru']
 elif config.is_local:
     origins = ['*']
 else:
@@ -85,15 +76,8 @@ app.add_middleware(
     allow_headers=['*']
 )
 
-app.include_router(media_router)
-app.include_router(catalog_router)
-app.include_router(core_router)
-app.include_router(auth_router)
-app.include_router(user_router)
-app.include_router(settings_router)
-app.include_router(data_router)
-app.include_router(stocks_router)
-app.include_router(debug_router)
+app.include_router(api_router)
+app.include_router(api_router_v2)
 
 
 @app.exception_handler(500)

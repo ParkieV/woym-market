@@ -17,7 +17,8 @@ import { get } from "svelte/store";
 import { userCanModify } from "$lib/data/user";
 import type { ChangeList } from "$lib/datagrid/plugins/changes";
 import { selectedContextMenuItems } from "./selected";
-import { calcToDeliver } from "./fbo-stocks";
+import { calcToDeliver, getSelectedStocks } from "./fbo-stocks";
+import { fboStorageSelection } from "../selection";
 
 export default function fboOffersGrid(
     changes: ChangeList<FboStorage, number>,
@@ -105,13 +106,13 @@ function columns(): (Column | ColumnGroup)[] {
                     base: floatColumn,
                     key: "self_weight",
                     header: "Вес, кг",
-                    valueGetter: e => e.data.self_weight * e.getValue("to_deliver")
+                    valueGetter: (e: ValueGetterParams<FboStorage>) => (e.data?.self_weight || 0) * e.getValue("to_deliver")
                 },
                 {
                     base: floatColumn,
                     key: "volume",
                     header: "Объём, л",
-                    valueGetter: e => e.data.volume * e.getValue("to_deliver")
+                    valueGetter: (e: ValueGetterParams<FboStorage>) => (e.data?.volume || 0) * e.getValue("to_deliver")
                 }
             ]
         },
@@ -125,10 +126,10 @@ function columns(): (Column | ColumnGroup)[] {
                     valueGetter: (params: ValueGetterParams<FboStorage>) => {
                         if (!params.data) return 0;
                         const stocks = params.data.stocks
-                            .filter(x => x.warehouse.warehouse_type !== "cluster")
+                            .filter(x => x.warehouse.warehouse_type === "warehouse")
                             .map(x => x.current_stock)
                             .reduce((a, b) => a + b, 0);
-                        return stocks / 2;
+                        return stocks;
                     }
                 },
                 {
@@ -138,7 +139,7 @@ function columns(): (Column | ColumnGroup)[] {
                     valueGetter: (params: ValueGetterParams<FboStorage>) => {
                         if (!params.data) return 0;
                         return params.data.stocks
-                            .filter(x => x.warehouse.warehouse_type !== "cluster" && x.warehouse.warehouse_type !== "super_cluster")
+                            .filter(x => x.warehouse.warehouse_type === "warehouse")
                             .map(x => x.min_stock)
                             .reduce((a, b) => a + b, 0);
                     }
@@ -150,7 +151,7 @@ function columns(): (Column | ColumnGroup)[] {
                     valueGetter: (params: ValueGetterParams<FboStorage>) => {
                         if (!params.data) return 0;
                         return params.data.stocks
-                            .filter(x => x.warehouse.warehouse_type !== "cluster" && x.warehouse.warehouse_type !== "super_cluster")
+                            .filter(x => x.warehouse.warehouse_type === "warehouse")
                             .reduce((sum, storage) => sum + calcToDeliver(storage), 0);
                     }
                 },
@@ -190,4 +191,25 @@ function columns(): (Column | ColumnGroup)[] {
 
 export function calcStocksToDeliver(stock: FboStorage) {
     return stock.stocks.reduce((sum, storage) => sum + calcToDeliver(storage), 0);
+}
+
+export function getSelectedOrders() {
+    const selectedMap = get(fboStorageSelection.selected); // Получаем выделенные строки в виде Map
+    const selectedRows = Array.from(selectedMap.values()); // Преобразуем в массив значений
+    console.log("selected rows:", selectedRows);
+    const orders = selectedRows.map(row => ({
+        sku: row.sku,
+        marketplace_name: row.market,
+        shop_name: row.name_of_shop,
+        weight: row.self_weight !== null? row.self_weight : 0,
+        volume: row.volume !== null? row.volume : 0,
+        cost_price: row.cost_price !== null? row.cost_price : 0,
+        goods_name: row.name,
+        to_deliver_number: row.stocks
+            .filter(x => x.warehouse.warehouse_type === "warehouse")
+            .reduce((sum, storage) => sum + calcToDeliver(storage), 0),
+        warehouses: getSelectedStocks(row.market)
+    }));
+    console.log("request orders", orders);
+    return orders;
 }

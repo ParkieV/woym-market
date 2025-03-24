@@ -42,9 +42,9 @@ class OfferRepository(IOfferRepository[PydanticModel]):
                   identification: str) -> PydanticModel:
         ...
 
-    async def list(self,
-                   chunk_size: int | None = None,
-                   query_filter: IBaseFilter | None = None) -> AsyncGenerator[list[PydanticModel], None]:
+    async def offer_list(self,
+                         chunk_size: int | None = None,
+                         query_filter: IBaseFilter | None = None) -> AsyncGenerator[list[PydanticModel], None]:
         """
         Get offers from DB using chunks
         :param session: SQLAlchemy asynchronous session
@@ -122,7 +122,6 @@ class OfferRepository(IOfferRepository[PydanticModel]):
 
         query = text(query)
         await self.session.execute(query)
-
 
 def _dataframe_to_valid_dict(data: pd.DataFrame | list[dict]):
     '''Converts data to a valid sqlalchemy entry. If data is not a DataFrame, returns data'''

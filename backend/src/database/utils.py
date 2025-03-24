@@ -1,4 +1,3 @@
-import asyncio
 from typing import Type, Any, Literal
 
 from pydantic import BaseModel
@@ -7,12 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
 from logs import backend_logger
-from src.database.models.base import Base
-from src.schemas.catalog_schemas import CatalogItemCreate
-from src.shared.exceptions import MappingError
-from src.database.offer import OfferRepository
 from src.database.catalog import create_catalog_items
+from src.database.models.base import Base
+from src.database.offer import OfferRepository
+from src.schemas.catalog_schemas import CatalogItemCreate
 from src.schemas.filters.offers_filter import SKUOnlyOffersFilter
+from src.shared.exceptions import MappingError
+
 
 
 async def row_to_dict(row) -> dict:
@@ -92,7 +92,7 @@ async def duplicate_offers_to_catalog(session_factory) -> None:
 
     async with session_factory() as session:
         offer_repository.session = session
-        async for offers in offer_repository.list(chunk_size=1000, query_filter=offer_filter):
+        async for offers in offer_repository.offer_list(chunk_size=1000, query_filter=offer_filter):
             # print("chunks size:", len(offers))
             # print("first chunk:", offers[0].model_dump())
             sku_set = set([offers.sku for offers in offers])
@@ -126,9 +126,3 @@ def mapping_pydantic_to_sqlalchemy_dict(
             return {k: v for k, v in data.items() if sqlalchemy_mapper.columns[k]}
         except KeyError as key_err:
             MappingError(f"Не удалось представить объект {pydantic_model.__class__.__name__} в виде словаря: {sqlalc_model.__class__.__name__} не содержит атрибут '{key_err.args[0]}'")
-
-
-if __name__ == '__main__':
-    backend_logger.info('Duplicate started!')
-    asyncio.run(duplicate_offers_to_catalog())
-    backend_logger.info('Duplicate finished!')

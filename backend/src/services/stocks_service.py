@@ -17,7 +17,7 @@ from src.schemas.filters.stocks_filter import WarehousesFilter
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks.own_storages_schemas import OwnStorageUpdate, OwnStoragePlaceCreate, \
     OwnStoragePlaceOut, OwnStoragePlaceUpdate
-from src.schemas.stocks.fbo_schemas import OfferFBOStockUpdate, OfferStockOut, AggOfferFBOStock
+from src.schemas.stocks.fbo_schemas import OfferFBOStockUpdate, OfferStockOut, AggOfferFBOStock, OfferWithStocks
 from src.schemas.stocks.stocks_schemas import SupplyExportType, GeneralOrderData
 from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 from src.services.base_utils import error_handler, clean_up_files, validate_dataframe
@@ -25,7 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from shutil import make_archive
 
-
+from src.services.offer_service import recalculate_values
 
 
 async def update_warehouses_and_stocks(api_session_fabric, db_session_fabric):
@@ -442,12 +442,13 @@ async def get_offer_fbo_stocks(offer_id: int) -> list[OfferStockOut]:
 async def change_fbo_stocks(data: list[OfferFBOStockUpdate]):
     async with async_session() as session:
         await db.change_fbo_stocks(session, data)
+        await recalculate_values(session)
 
 
 async def aggregate_offers_fbo_stocks(warehouse_ids: list[int] | None = None, ignore_clusters: bool = True) -> list[AggOfferFBOStock]:
     async with async_session() as session:
         return await db.get_agg_fbo_data(session, warehouse_ids, ignore_clusters)
 
-async def get_fbo_offers():
+async def get_fbo_offers() -> list[OfferWithStocks]:
     async with async_session() as session:
         return await db.get_fbo_offers(session)

@@ -36,6 +36,7 @@
         "ag-grid-enterprise": "^31.3.2",
         "js-cookie": "^3.0.5",
         "svelte-modals": "^1.3.0",
-        "svelte-persisted-store": "^0.8.0"
+        "svelte-persisted-store": "^0.8.0",
+        "uuid": "^11.1.0"
     }
 }

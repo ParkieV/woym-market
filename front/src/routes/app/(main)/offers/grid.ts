@@ -200,6 +200,12 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     base: rubleColumn
                 },
                 {
+                    key: "seller_discount",
+                    header: "Скидка продавца",
+                    base: percentColumn,
+                    editable: true
+                },
+                {
                     key: "dollar_cost_price",
                     header: "Закупка у. е.",
                     base: dollarColumn

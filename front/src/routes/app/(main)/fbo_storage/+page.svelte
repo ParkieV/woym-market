@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { patchFboStorage, type FboStorage } from "$lib/data/fbo_storage";
+    import { type FboStorage, patchFboStocks, patchFboStocksOffers } from "$lib/data/fbo_storage";
     import Footer from "../Footer.svelte";
     import Grid from "$lib/grid/Grid.svelte";
     import { get } from "svelte/store";
@@ -28,10 +28,16 @@
     onMount(() => fboState.load());
 
     async function save() {
-        let ok = await patchFboStorage(
-            $fboState.filter(x => get(fboState.changes).isChanged(x.id))
-        );
-        if (ok) {
+        const changed_offers = $fboState.filter(x => get(fboState.changes).isChanged(x.id))
+        const changed_stocks = changed_offers.map(x => x.stocks).flat();
+        const offer_ok = await patchFboStocksOffers(changed_offers);
+        let stock_ok = false
+        if (offer_ok) {
+            (changed_stocks.length > 0)
+            ? stock_ok = await patchFboStocks(changed_stocks)
+            : true;
+        }
+        if (offer_ok && stock_ok) {
             await invalidateAllState();
             await fboState.forceReload();
             fboStocksChanges.clear();

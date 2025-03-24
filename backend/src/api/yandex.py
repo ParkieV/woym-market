@@ -367,7 +367,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 name=warehouses[warehouse_id]['name'],
             )
             result.append(warehouse)
-        result.append(APIWarehouse(name='Кластер все магазины', offers=[], warehouse_type=WarehouseType.SUPER_CLUSTER, market='yandex'))
+        result.append(APIWarehouse(name='!Кластер все магазины', offers=[], warehouse_type=WarehouseType.SUPER_CLUSTER, market='yandex'))
         return result
 
     async def _get_warehouses_info(self) -> dict[int, dict[str, Any]]:

@@ -72,6 +72,8 @@ class Offer(Base):
     total_price_coeff = mapped_column(Float)
     total_price_min_additional = mapped_column(Float)
     total_price = mapped_column(Float, nullable=True)
+    seller_discount = mapped_column(Float, nullable=True)
+    old_discount = mapped_column(Float, nullable=True)
     discount_base_price = mapped_column(Float, nullable=True)
     profit = mapped_column(Float, nullable=True)
     margin = mapped_column(Float, nullable=True)
@@ -135,6 +137,8 @@ class Offer(Base):
     self_length_changed = mapped_column(Boolean, nullable=False, default=False)
     self_width_changed = mapped_column(Boolean, nullable=False, default=False)
     self_height_changed = mapped_column(Boolean, nullable=False, default=False)
+    seller_discount_changed = mapped_column(Boolean, default=False)
+    old_discount_changed = mapped_column(Boolean, default=False)
 
     pricing_scheme = relationship('PricingScheme', back_populates='offers', lazy='immediate', uselist=False)
     stocks = relationship('OfferStock')
