@@ -614,7 +614,7 @@ async def get_offer_fbo_stocks(session: AsyncSession, offer_id: int) -> list[Off
     result = (await session.execute(query)).scalars()
     return [OfferStockOut.model_validate(i, from_attributes=True) for i in result]
 
-async def get_fbo_offers(session: AsyncSession):
+async def get_fbo_offers(session: AsyncSession) -> list[OfferWithStocks]:
     query = (
         select(Offer)
         .options(subqueryload(Offer.stocks)

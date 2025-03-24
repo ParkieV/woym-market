@@ -17,7 +17,7 @@ from src.schemas.filters.stocks_filter import WarehousesFilter
 from src.schemas.offer_schemas import OfferOut
 from src.schemas.stocks.own_storages_schemas import OwnStorageUpdate, OwnStoragePlaceCreate, \
     OwnStoragePlaceOut, OwnStoragePlaceUpdate
-from src.schemas.stocks.fbo_schemas import OfferFBOStockUpdate, OfferStockOut, AggOfferFBOStock
+from src.schemas.stocks.fbo_schemas import OfferFBOStockUpdate, OfferStockOut, AggOfferFBOStock, OfferWithStocks
 from src.schemas.stocks.stocks_schemas import SupplyExportType, GeneralOrderData
 from src.schemas.stocks.warehouses_schemas import WarehouseCreate, WarehouseOut
 from src.services.base_utils import error_handler, clean_up_files, validate_dataframe
@@ -449,6 +449,6 @@ async def aggregate_offers_fbo_stocks(warehouse_ids: list[int] | None = None, ig
     async with async_session() as session:
         return await db.get_agg_fbo_data(session, warehouse_ids, ignore_clusters)
 
-async def get_fbo_offers():
+async def get_fbo_offers() -> list[OfferWithStocks]:
     async with async_session() as session:
         return await db.get_fbo_offers(session)

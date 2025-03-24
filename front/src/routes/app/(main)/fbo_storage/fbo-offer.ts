@@ -129,7 +129,7 @@ function columns(): (Column | ColumnGroup)[] {
                             .filter(x => x.warehouse.warehouse_type === "warehouse")
                             .map(x => x.current_stock)
                             .reduce((a, b) => a + b, 0);
-                        return stocks / 2;
+                        return stocks;
                     }
                 },
                 {
