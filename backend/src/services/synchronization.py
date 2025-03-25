@@ -35,6 +35,7 @@ class ReverseSynchronizationInteractor:
         async with self.session_fabric() as session:
             catalog_repo.session = session
             await catalog_repo.synchronization_catalog_from_offer(updating_columns, skus)
+            await session.commit()
 
 
 class SynchronizationInteractor:
@@ -66,3 +67,4 @@ class SynchronizationInteractor:
         async with self.session_fabric() as session:
             offer_repository.session = session
             await offer_repository.synchronization_offer_from_catalog(updating_columns, skus)
+            await session.commit()
