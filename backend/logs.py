@@ -48,11 +48,11 @@ LOGGING_CONFIG = dict(
             'handlers': ['console', 'console_error', 'file'],
             'propagate': False,
         },
-        'sqlalchemy': {
-            'level': 'DEBUG',
-            'handlers': ['file'],
-            'propagate': False
-        }
+        # 'sqlalchemy': {
+        #     'level': 'DEBUG',
+        #     'handlers': ['file' if ],
+        #     'propagate': False
+        # }
     }
 )
 
