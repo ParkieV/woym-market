@@ -500,8 +500,8 @@ async def recalculate_super_clusters_stocks(session: AsyncSession):
             func.sum(OfferStock.current_stock).label('current_stock')
         )
         .join(Warehouse, Warehouse.id == OfferStock.warehouse_id)
-        .group_by(OfferStock.offer_id)
         .where(Warehouse.warehouse_type == 'warehouse')
+        .group_by(OfferStock.offer_id)
     ).subquery('stocks_subquery')
 
     current_super_cluster_stock_subquery = (
@@ -614,7 +614,7 @@ async def get_offer_fbo_stocks(session: AsyncSession, offer_id: int) -> list[Off
     result = (await session.execute(query)).scalars()
     return [OfferStockOut.model_validate(i, from_attributes=True) for i in result]
 
-async def get_fbo_offers(session: AsyncSession):
+async def get_fbo_offers(session: AsyncSession) -> list[OfferWithStocks]:
     query = (
         select(Offer)
         .options(subqueryload(Offer.stocks)
