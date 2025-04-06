@@ -38,8 +38,8 @@
             : true;
         }
         if (offer_ok && stock_ok) {
-            await invalidateAllState();
-            await fboState.forceReload();
+            // await invalidateAllState();
+            // await fboState.forceReload();
             fboStocksChanges.clear();
         }
     }

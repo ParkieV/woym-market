@@ -100,7 +100,7 @@ export function calcToDeliver({
     is_deliver_in_boxes,
     in_box
 }: FboStocks): number {
-    let diff = Math.max(0, min_stock - current_stock);
+    let diff = Math.max(0, current_stock - min_stock);
     if (is_deliver_in_boxes) {
         let boxes_remainder = 0;
         if (diff % in_box !== 0) boxes_remainder = 1;
@@ -114,7 +114,7 @@ export function getSelectedStocks(market: string) {
     const selectedMap = get(fboStocksSelection.selected);
     const selectedRows = Array.from(selectedMap.values());
     return selectedRows
-        .filter(x => x.warehouse.warehouse_type === "warehouse" && x.warehouse.market === market)
+        .filter(x => x.warehouse.market === market)
         .map(row => ({
         id: row.id,
         warehouse_name: row.warehouse.name,
