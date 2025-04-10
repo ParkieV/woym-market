@@ -9,7 +9,10 @@ def get_seller_discount_from_page(offers: pd.DataFrame) -> dict[str, float]:
     for offer in offers.itertuples():
         if offer.auto_participation_in_promotions:
             if offer.auto_price_control:
-                discounts[offer.id] = offer.seller_discount
+                if offer.seller_discount__api < offer.seller_discount:
+                    discounts[offer.id] = offer. seller_discount__api
+                else:
+                    discounts[offer.id] = offer.seller_discount
             else:
                 if offer.seller_discount__api != offer.old_discount:
                     if offer.seller_discount__api < 100 - offer.auto_min_price:
