@@ -18,9 +18,6 @@ from src.schemas.base_api_schemas import APIPriceChangeData, APIWarehouse, APIOf
 
 class WildberriesApi(ApiGateway, IApiGateway):
     market_type = 'Wildberries'
-    __characteristic_ids = {
-        'self_weight': 88953
-    }
 
     def __init__(self, token: str, entity_id: int | None, shop_name: str, session: ClientSession) -> None: #type: ignore
         try:
@@ -77,10 +74,12 @@ class WildberriesApi(ApiGateway, IApiGateway):
             body = []
             for offer_data in valid_offers_data[i:i + chunk_size]:
                 characteristics = items[offer_data.sku].get('characteristics', [])
-                characteristics = [i for i in characteristics if i['id'] != self.__characteristic_ids['self_weight']]
+
+                characteristics = [i for i in characteristics if i['id'] != 88952]
                 characteristics.append({
-                    "id": self.__characteristic_ids['self_weight'],
-                    'value': offer_data.self_weight
+                    'id': 88952,
+                    'name': 'Вес товара с упаковкой (г)',
+                    'value': offer_data.self_weight * 1000,
                 })
 
                 body_item = {
@@ -94,6 +93,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                         'length': ceil(offer_data.self_length),
                         'width': ceil(offer_data.self_width),
                         'height': ceil(offer_data.self_height),
+                        'weightBrutto': offer_data.self_weight,
                     },
                     'characteristics': characteristics
                 }
@@ -262,7 +262,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         result = []
         for item in items:
             self_weight = [i for i in item.get('characteristics', []) if
-                             i.get('id', None) == self.__characteristic_ids['self_weight']]
+                             i.get('id', None) == 88953]
             self_weight = self_weight[0].get('value', None) if self_weight else None
 
             offer = {

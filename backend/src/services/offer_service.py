@@ -236,7 +236,7 @@ async def update_offers(db_session_fabric,
     await update_api_interactor(api_offers_df, skus=[])
 
     # Удаляем товары
-    backend_logger.warning(f"Offers to delete: {len(to_delete_offers)}")
+    backend_logger.info(f"Offers to delete: {len(to_delete_offers)}")
 
     # Пересчитать все
     await recalculate_values(session)
