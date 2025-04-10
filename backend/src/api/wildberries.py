@@ -189,9 +189,6 @@ class WildberriesApi(ApiGateway, IApiGateway):
                         "nmID": price_data.vendor_code,
                         "price": round(price_data.target_price),
                         "discount": int(price_data.discount)
-                    } if price_data.sku == '28071' else {
-                        "nmID": price_data.vendor_code,
-                        "price": round(price_data.target_price),
                     }
                     for price_data in valid_price_data[i:i + chunk_size]
                 ]
