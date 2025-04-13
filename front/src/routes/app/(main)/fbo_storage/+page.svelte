@@ -16,7 +16,7 @@
     import DetailGridPlugin from "$lib/datagrid/plugins/detail";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
     import { SummaryPlugin } from "$lib/datagrid/plugins/summary";
-    import { fboState, fboStocksChanges, invalidateAllState } from "../state";
+    import { fboState, fboStocksChanges } from "../state";
     import ZoomPlugin from "$lib/datagrid/plugins/zoom";
     import { onMount } from "svelte";
     import StatePlugin from "$lib/datagrid/plugins/state";
@@ -38,8 +38,7 @@
             : true;
         }
         if (offer_ok && stock_ok) {
-            // await invalidateAllState();
-            // await fboState.forceReload();
+            fboState.apply();
             fboStocksChanges.clear();
         }
     }
