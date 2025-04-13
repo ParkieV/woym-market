@@ -72,7 +72,6 @@ export async function patchFboStocksOffers(changed: FboStorage[]): Promise<boole
     const body = {
         offers: changed
     }
-    console.log(body)
     const promise = fetchPlain('/v2/offers/fbo-stocks', {
         method: "PATCH",
         body: JSON.stringify(body),
