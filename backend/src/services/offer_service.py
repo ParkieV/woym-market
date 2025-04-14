@@ -171,17 +171,17 @@ async def update_offers(db_session_fabric,
     update_discounts(discounts, to_update_offers)
 
     # Создаем переменную с данными для отправки цен в апи
-    to_update_price_df = db_offers_df[
+    to_update_price_df = to_update_offers[
         (
-            (db_offers_df['auto_price_control'] == True) &
-            (db_offers_df['total_price'].notna())
+            (to_update_offers['auto_price_control'] == True) &
+            (to_update_offers['total_price'].notna())
         )
         ][[
-        'sku', 'market', 'name_of_shop', 'target_price',
-        'manual_min_price', 'use_manual_min_price',
-        'total_price', 'auto_min_price', 'auto_participation_in_promotions',
-        'vendor_code', 'discount_base_price', 'seller_discount'
-    ]].copy()
+            'sku', 'market', 'name_of_shop', 'target_price',
+            'manual_min_price', 'use_manual_min_price',
+            'total_price', 'auto_min_price', 'auto_participation_in_promotions',
+            'vendor_code', 'discount_base_price', 'seller_discount'
+        ]].copy()
 
     # Считаем значения, которые требуют настроек и целевой цены
     for market in markets:
