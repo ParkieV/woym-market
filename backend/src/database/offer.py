@@ -421,8 +421,8 @@ async def reset_all_track_offers_markers(session: AsyncSession):
     await session.commit()
 
 
-async def update_price_in_db(session, vendor_code: str, price: int):
-    await session.execute(
+async def update_target_price_in_offers(session, vendor_code: str, price: int):
+    update_target_price = await session.execute(
         update(Offer)
         .where(Offer.vendor_code == vendor_code)
         .values(target_price=price)

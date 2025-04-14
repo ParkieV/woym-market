@@ -25,7 +25,7 @@ class JsonFormatter(logging.Formatter):
 class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
     def __init__(self, filename, when, interval, backupCount=0, encoding='utf-8', logger_name="default", datefmt=None):
         self.datefmt = datefmt
-        super().__init__('/dev/null', when, interval, backupCount, encoding=encoding, utc=True)
+        super().__init__(os.devnull, when, interval, backupCount, encoding=encoding, utc=True)
 
     def _generate_timestamp(self, str_timestamp: str):
         return dateutil.parser.parse(str_timestamp).strftime(self.datefmt)

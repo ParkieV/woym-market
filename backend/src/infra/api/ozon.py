@@ -1,19 +1,7 @@
 import asyncio
 import re
 
-import aiohttp
 from playwright.async_api import async_playwright
-
-
-async def wildberries_customer_price(vendor_code):
-    url = f"https://card.wb.ru/cards/v1/detail?appType=1&curr=rub&dest=-1257786&spp=30&nm={vendor_code}"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            data = await response.json()
-            product = data['data']['products'][0]
-            return {
-                "salePrice": product["salePriceU"] / 100
-            }
 
 
 async def ozon_customer_price(vendor_code):
@@ -82,10 +70,6 @@ async def ozon_customer_price(vendor_code):
     except Exception as e:
         return f'Критическая ошибка: {str(e)}'
 
-
-async def yandex_customer_price(vendor_code):
-    url = "https://market.yandex.ru/product--oblozhka-na-studencheskii-bilet-ne-otchisliaite-mem/{vendor_code}"
-    pass
-
-result = asyncio.run(ozon_customer_price(1801141474))
-print(result)
+if __name__ == '__main__':
+    result = asyncio.run(ozon_customer_price(1875949425))
+    print(result)
