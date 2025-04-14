@@ -172,8 +172,11 @@ async def update_offers(db_session_fabric,
 
     # Создаем переменную с данными для отправки цен в апи
     to_update_price_df = db_offers_df[
-        (db_offers_df['auto_price_control'] == True) &
-        (db_offers_df['total_price'].notna())
+        (
+            (db_offers_df['sku'] == '28071') &
+            (db_offers_df['market'] == 'wildberries') &
+            (db_offers_df['name_of_shop'] == 'SkrabPlus')
+        )
         ][[
         'sku', 'market', 'name_of_shop', 'target_price',
         'manual_min_price', 'use_manual_min_price',
