@@ -95,11 +95,11 @@ class OzonApi(ApiGateway, IApiGateway):
 
             json_response = await response.json()
 
-            for item in json_response.get('result', {}).get('items', []):
+            for item in json_response.get('items', []):
                 results[item['offer_id']] = item
 
-            last_id = json_response.get('result', {}).get('cursor', None)
-            if not last_id or json_response.get('result', {}).get('total', 0) < chunk_size:
+            last_id = json_response.get('cursor', None)
+            if not last_id or json_response.get('total', 0) < chunk_size:
                 break
 
             body['cursor'] = last_id
@@ -257,12 +257,12 @@ class OzonApi(ApiGateway, IApiGateway):
                 continue
 
             update_offer_data = offer_attributes_info
-            update_offer_data['price'] = offer_price_info['price']['price']
-            update_offer_data['old_price'] = offer_price_info['price']['old_price']
-            update_offer_data['vat'] = offer_price_info['price']['vat']
+            update_offer_data.pop('id')
+            update_offer_data['price'] = str(offer_price_info['price']['price'])
+            update_offer_data['old_price'] = str(offer_price_info['price']['old_price'])
+            update_offer_data['vat'] = str(offer_price_info['price']['vat'])
             update_offer_data['name'] = valid_offer.name
             update_offer_data['images'] = update_offer_data.get('images', [])
-            update_offer_data['images'] = [i['file_name'] for i in update_offer_data['images']]
             update_offer_data['new_description_category_id'] = update_offer_data['description_category_id']
 
             update_offer_data['height'] = ceil(valid_offer.self_height)
@@ -284,14 +284,13 @@ class OzonApi(ApiGateway, IApiGateway):
             update_offer_data['weight'] = int(weight)
             update_offer_data['weight_unit'] = weight_unit
 
-            update_offer_data['attributes'] = update_offer_data['attributes'] or []
+            update_offer_data['attributes'] = update_offer_data.get('attributes', [])
 
             for attr in update_offer_data['attributes']:
-                attr['id'] = attr.pop('attribute_id')
+                attr['id'] = attr.pop('id')
 
             for complex_attrs in update_offer_data['complex_attributes']:
-                for complex_attr in complex_attrs['attributes']:
-                    complex_attr['id'] = complex_attr.pop('attribute_id')
+                    complex_attrs['id'] = complex_attrs.pop('id')
 
             update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] if attr['id'] not in (22336, 4191)]
             update_offer_data['attributes'].extend(
@@ -517,8 +516,8 @@ class OzonApi(ApiGateway, IApiGateway):
 
             data = await self.validate_response(response, body=body)
             for offer in data['items']:
-                offer_status = offer.get('status', {})
-                if offer_status.get('validation_state', 'fail') == 'fail' or offer_status.get('is_failed', True):
+                offer_status = offer.get('statuses', {})
+                if offer_status.get('validation_status', 'fail') == 'fail' or offer_status.get('status_failed', '') != '':
                     parser_logger.warning(f'Error in offer {offer["offer_id"]} data. Status: {offer_status}')
                 try:
                     price_indexes = offer.get('price_indexes', None)
@@ -528,10 +527,12 @@ class OzonApi(ApiGateway, IApiGateway):
                     minimal_price = external_index_data.get('minimal_price',
                                                             None) if external_index_data is not None else None
 
+                    # TODO: Надо починить, смотри старую ручку Озона,
+                    #  логика стала другой
                     price_index = price_indexes.get('price_index', None) if price_indexes is not None else None
                     min_market_price = (
-                        self._str_to_float(offer['min_ozon_price'])
-                        if offer.get('min_ozon_price', None) is not None
+                        self._str_to_float(offer['ozon_index_price']['minimal_price'])
+                        if offer.get('ozon_index_price', None) is not None
                         else None
                     )
 
