@@ -190,7 +190,10 @@ function columns(): (Column | ColumnGroup)[] {
 }
 
 export function calcStocksToDeliver(stock: FboStorage) {
-    return stock.stocks.reduce((sum, storage) => sum + calcToDeliver(storage), 0);
+    const num = stock.stocks
+        .filter(x => x.warehouse.warehouse_type === "warehouse")
+        .reduce((sum, storage) => sum + calcToDeliver(storage), 0);
+    return num;
 }
 
 export function getSelectedOrders() {
@@ -210,6 +213,5 @@ export function getSelectedOrders() {
             .reduce((sum, storage) => sum + calcToDeliver(storage), 0),
         warehouses: getSelectedStocks(row.market)
     }));
-    console.log("request orders", orders);
     return orders;
 }
