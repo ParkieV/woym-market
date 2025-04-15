@@ -209,7 +209,7 @@ async def update_offers(db_session_fabric,
         )
 
     # Обновляем атрибуты у тех товаров, в которых были изменения по полям для двойной синхронизации
-    to_update_attributes = to_update_offers[to_update_offers['market'] == ApiTypes.OZON].query(' | '.join([f'{i}_changed' for i in (*CONTROL_CHANGES, 'seller_discount', 'old_discount')]))
+    to_update_attributes = to_update_offers.query(' | '.join([f'{i}_changed' for i in (*CONTROL_CHANGES, 'seller_discount', 'old_discount')]))
     del to_update_offers
 
     backend_logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
