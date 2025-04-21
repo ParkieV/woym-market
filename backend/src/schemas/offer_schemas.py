@@ -250,3 +250,8 @@ class ViolatorDTO(BaseModel):
         if 'sku' in captured:
             return ', '.join(captured['sku'])
         return 'Не найден'
+
+class OfferOutVendorForPars(BaseModel):
+    id: int = Field(title='id')
+    vendor_code: int | None = Field(title='Артикул')
+    market: str

@@ -47,5 +47,5 @@ async def wildberries_customer_price(vendor_code):
         return int(price_number) if price_number else "Ошибка при извлечении числа"
 
 if __name__ == '__main__':
-    result = asyncio.run(wb_customer_price("189328347"))
+    result = asyncio.run(wildberries_customer_price("189328347"))
     print(result)

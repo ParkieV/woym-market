@@ -59,7 +59,7 @@ async def ozon_customer_price(vendor_code):
                 if not price:
                     raise ValueError("Не удалось извлечь цену")
 
-                return f"Актуальная цена: {price} руб."
+                return price
 
             except Exception as e:
                 return f'Ошибка: {str(e)}'

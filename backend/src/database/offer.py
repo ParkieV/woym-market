@@ -8,7 +8,8 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func, text
 from sqlalchemy.orm import selectinload
-from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
+from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, \
+    PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO, OfferOutVendorForPars
 from .interfaces import IOfferRepository
 from .models.models import Offer, PricingScheme, PricingSchemeField, \
     remaining_stocks_subuery, OfferStock, Warehouse
@@ -420,6 +421,23 @@ async def reset_all_track_offers_markers(session: AsyncSession):
     await session.execute(stmp)
     await session.commit()
 
+
+async def get_offers_vendor_data(
+    session: AsyncSession,
+    model_schema: Type[BaseModel] = OfferOutVendorForPars
+) -> list[dict[str, Any]]:
+    query = select(
+        Offer.id,
+        Offer.vendor_code,
+        Offer.market
+    )
+
+    query_result = await session.execute(query)
+
+    return [
+        model_schema.model_validate(row._asdict(), from_attributes=True).model_dump()
+        for row in query_result.all()
+    ]
 
 async def update_target_price_in_offers(session, vendor_code: str, price: int):
     update_target_price = await session.execute(
