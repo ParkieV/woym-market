@@ -1,3 +1,4 @@
+import asyncio
 from collections import defaultdict
 from datetime import datetime
 from math import ceil
@@ -9,7 +10,7 @@ from starlette import status
 
 from logs import parser_logger
 from src.api.exceptions import InitializationError
-from src.api.gateway_template import ApiGateway
+from src.api.gateway_template import ApiGateway, get_api_session
 from src.api.interfaces import IApiGateway, ApiTypes
 from src.schemas.base_api_schemas import APIPriceChangeData, APIWarehouse, APIOffer, WarehouseType, APIWarehouseOffer, \
     APIOfferChangeData, APIOrderData
@@ -107,6 +108,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         errors = await self._errors_in_update()
         if errors:
+            # ERROR: Источник - parser_2025-04-17.log:131
             parser_logger.error(f'Errors in offers: {errors}')
 
     async def get_offers_list(self) -> list[APIOffer]:
@@ -197,6 +199,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
+                # ERROR: Источник - parser_2025-04-17.log:131
                 parser_logger.error(f'Cant change price: {response.reason}: {await response.json()}')
 
             response_json = await self.validate_response(response)
@@ -211,8 +214,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         url = 'https://content-api.wildberries.ru/content/v2/get/cards/list?locale=ru'
         limit = 100
         cursor = {
-            "limit": limit,
-            "nmID": 0,
+            "limit": limit
         }
 
         result = []
@@ -233,7 +235,9 @@ class WildberriesApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
 
             if not response.ok:
-                parser_logger.error(f'Cant get offers base info: {response.text}')
+                # ERROR: Здесь выкидывается ошибка 500
+                #  пример: parser_2025-04-17.log:24
+                parser_logger.error(f'Cant get offers base info: {await response.text()}')
                 return result
 
             response_data = await self.validate_response(response)
@@ -252,6 +256,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             cursor['updatedAt'] = cursor_data['updatedAt']
             cursor['nmID'] = cursor_data['nmID']
 
+        print('Result length:', len(result))
         return result
 
     async def _get_offers_base_info(self) -> list[dict]:
@@ -412,8 +417,8 @@ class WildberriesApi(ApiGateway, IApiGateway):
         response = await self.request('GET', url=url, headers=self.auth_headers, params=params)
 
         if not response.ok:
-            parser_logger.error(f'Cant get orders from {from_date}: {response.text}')
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалоь получить заказы: {response.text}')
+            parser_logger.error(f'Cant get orders from {from_date}: {await response.text()}')
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалоь получить заказы: {await response.text()}')
 
         response_json = await self.validate_response(response)
         result = []
@@ -437,3 +442,19 @@ class WildberriesApi(ApiGateway, IApiGateway):
             result.append(order_item)
 
         return result
+
+
+async def main():
+    async with get_api_session() as session:
+        wb_client = WildberriesApi(
+            token="eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjQxMDE2djEiLCJ0eXAiOiJKV1QifQ.eyJlbnQiOjEsImV4cCI6MTc0NTgwMDc4MSwiaWQiOiIwMTkyY2RmZC00YWIyLTc5N2QtOWUzYi01YjQwNmY3NmFmZTYiLCJpaWQiOjMzMzQ2Mzk1LCJvaWQiOjIxODM3OCwicyI6NzkzNCwic2lkIjoiMTQ1ZTUwYWQtM2YyZS00MzE1LTkxMDQtZDhlMTAyN2E3MGFmIiwidCI6ZmFsc2UsInVpZCI6MzMzNDYzOTV9.G1VJm1St2q_kHGq3dMTuNjRfY0AF0ExZ7GgCogeiRHYl8dBNRDFSh9LPIIew9iVWXCfDVZzVmA_g0pBL9MnVlw",
+            entity_id=None,
+            shop_name="SkrabPlus",
+            session=session
+        )
+
+        result = await wb_client._get_base_offer_data()
+        print(result)
+
+if __name__ == '__main__':
+    asyncio.run(main())
