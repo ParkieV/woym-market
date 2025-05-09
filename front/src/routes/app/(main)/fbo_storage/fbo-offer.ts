@@ -1,5 +1,5 @@
 import type { Column, ColumnGroup } from "$lib/datagrid/columns";
-import type { GetContextMenuItems, ValueGetterParams } from "ag-grid-enterprise";
+import type { GetContextMenuItems, GridApi, ValueGetterParams } from "ag-grid-enterprise";
 import type { FboStorage, FboStocks } from "$lib/data/fbo_storage";
 import {
     BooleanColumn,
@@ -19,6 +19,8 @@ import type { ChangeList } from "$lib/datagrid/plugins/changes";
 import { selectedContextMenuItems } from "./selected";
 import { calcToDeliver, getSelectedStocks } from "./fbo-stocks";
 import { fboStorageSelection } from "../selection";
+
+export const detailApiMap = new Map<number, GridApi>();
 
 export default function fboOffersGrid(
     changes: ChangeList<FboStorage, number>,
@@ -199,7 +201,7 @@ export function calcStocksToDeliver(stock: FboStorage) {
 export function getSelectedOrders() {
     const selectedMap = get(fboStorageSelection.selected); // Получаем выделенные строки в виде Map
     const selectedRows = Array.from(selectedMap.values()); // Преобразуем в массив значений
-    console.log("selected rows:", selectedRows);
+    console.log("selected offers:", selectedRows);
     const orders = selectedRows.map(row => ({
         sku: row.sku,
         marketplace_name: row.market,
@@ -211,7 +213,8 @@ export function getSelectedOrders() {
         to_deliver_number: row.stocks
             .filter(x => x.warehouse.warehouse_type === "warehouse")
             .reduce((sum, storage) => sum + calcToDeliver(storage), 0),
-        warehouses: getSelectedStocks(row.market)
+        warehouses: getSelectedStocks(row.id, detailApiMap)
     }));
+    console.log("orders:", orders);
     return orders;
 }

@@ -4,7 +4,7 @@
     import Grid from "$lib/grid/Grid.svelte";
     import { get } from "svelte/store";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
-    import fboOffersGrid, { calcStocksToDeliver } from "./fbo-offer";
+    import fboOffersGrid, { calcStocksToDeliver, detailApiMap } from "./fbo-offer";
     import { userCanModify } from "$lib/data/user";
     import Toolbar from "./Toolbar.svelte";
     import fboStocks from "./fbo-stocks";
@@ -42,7 +42,6 @@
             fboStocksChanges.clear();
         }
     }
-
     const definition = (() => {
         const detail = fboStocks()
             .plugin(new FilterPlugin(fboStocksFilter))
@@ -63,7 +62,7 @@
             .plugin(
                 new RowSelectionPlugin(fboStocksSelection, {
                     key: ({ warehouse }) => warehouse.id,
-                    sync: true
+                    sync: false
                 })
             );
 
@@ -75,7 +74,7 @@
             .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(new ClassesPlugin())
             .plugin(new RowSelectionPlugin(fboStorageSelection, { key: x => x.id }))
-            .plugin(new DetailGridPlugin(detail, data => data.stocks))
+            .plugin(new DetailGridPlugin(detail, data => data.stocks, detailApiMap))
             .plugin(
                 new SummaryPlugin<FboStorage>({
                     sku: () => "Итого",
