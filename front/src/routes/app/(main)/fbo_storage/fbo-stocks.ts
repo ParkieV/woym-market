@@ -111,6 +111,9 @@ export function calcToDeliver({
 
 export function getSelectedStocks(parentId: number, apiMap: Map<number, any>) {
     const api: GridApi = apiMap.get(parentId);
+    if (api.isDestroyed()) {
+        return [];
+    }
     return api.getSelectedRows().map((row: FboStocks) => ({
         id: row.id,
         warehouse_name: row.warehouse.name,
