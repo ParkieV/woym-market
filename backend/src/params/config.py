@@ -27,6 +27,10 @@ class Config(BaseSettings):
         return self.mode == "PROD"
 
     @property
+    def is_test(self) -> bool:
+        return self.mode == "TEST"
+
+    @property
     def is_local(self) -> bool:
         return self.mode == "LOCAL"
 
