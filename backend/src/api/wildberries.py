@@ -237,7 +237,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             if not response.ok:
                 # ERROR: Здесь выкидывается ошибка 500
                 #  пример: parser_2025-04-17.log:24
-                parser_logger.error(f'Cant get offers base info: {await response.text()}')
+                parser_logger.error(f'Cant get offers base info: status {response.status}, {await response.text()}')
                 return result
 
             response_data = await self.validate_response(response)
