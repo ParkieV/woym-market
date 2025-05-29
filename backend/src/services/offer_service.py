@@ -174,7 +174,10 @@ async def update_offers(db_session_fabric,
     to_update_price_df = to_update_offers[
         (
             (to_update_offers['auto_price_control'] == True) &
-            (to_update_offers['total_price'].notna())
+            (to_update_offers['total_price'].notna()) &
+            (to_update_offers['sku'] == '28411') &
+            (to_update_offers['market'] == 'wildberries') &
+            (to_update_offers['name_of_shop'] == 'SkrabBerries')
         )
         ][[
             'sku', 'market', 'name_of_shop', 'target_price',
@@ -193,9 +196,9 @@ async def update_offers(db_session_fabric,
         )
 
     # Обновление цен для тех карточек, где включен автоконтроль цен
-    await update_offers_price(to_update_price_df,
-                              db_session_fabric,
-                              api_session_fabric)
+    # await update_offers_price(to_update_price_df,
+    #                           db_session_fabric,
+    #                           api_session_fabric)
 
     del to_update_price_df
 
@@ -213,7 +216,7 @@ async def update_offers(db_session_fabric,
     del to_update_offers
 
     backend_logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
-    await update_offers_attributes(to_update_attributes, api_session_fabric, db_session_fabric)
+    # await update_offers_attributes(to_update_attributes, api_session_fabric, db_session_fabric)
     del to_update_attributes
     # Создаем новые товары
     for market in markets:
@@ -230,14 +233,13 @@ async def update_offers(db_session_fabric,
     api_offers = await api_interactor.get_offers_list()
     api_offers_df = pd.DataFrame(api_offers)
 
-    # update_discounts(discounts, api_offers_df)
 
     for tracked_column in CONTROL_CHANGES:
         api_offers_df[f'{tracked_column}_changed'] = False
 
     update_api_interactor = UpdateOfferFromApi(DBMetadataService({'Offer': Offer,
                                                                   'CatalogItem': CatalogItem}), get_db_session)
-    await update_api_interactor(api_offers_df, skus=[], exclude_fields={})
+    await update_api_interactor(api_offers_df, skus=[], exclude_fields={'seller_discount'})
 
     # Удаляем товары
     backend_logger.info(f"Offers to delete: {len(to_delete_offers)}")
