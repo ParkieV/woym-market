@@ -230,7 +230,7 @@ async def update_offers(db_session_fabric,
     api_offers = await api_interactor.get_offers_list()
     api_offers_df = pd.DataFrame(api_offers)
 
-    update_discounts(discounts, api_offers_df)
+    # update_discounts(discounts, api_offers_df)
 
     for tracked_column in CONTROL_CHANGES:
         api_offers_df[f'{tracked_column}_changed'] = False
