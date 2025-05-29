@@ -230,12 +230,14 @@ async def update_offers(db_session_fabric,
     api_offers = await api_interactor.get_offers_list()
     api_offers_df = pd.DataFrame(api_offers)
 
+    update_discounts(discounts, api_offers_df)
+
     for tracked_column in CONTROL_CHANGES:
         api_offers_df[f'{tracked_column}_changed'] = False
 
     update_api_interactor = UpdateOfferFromApi(DBMetadataService({'Offer': Offer,
                                                                   'CatalogItem': CatalogItem}), get_db_session)
-    await update_api_interactor(api_offers_df, skus=[], exclude_fields={'seller_discount', 'old_discount'})
+    await update_api_interactor(api_offers_df, skus=[], exclude_fields={})
 
     # Удаляем товары
     backend_logger.info(f"Offers to delete: {len(to_delete_offers)}")
