@@ -37,19 +37,26 @@ def update_discounts(discounts: Mapping[str, float], offers: pd.DataFrame):
     old_seller = offers.loc[mask, 'seller_discount']
     updated_seller = new_values.fillna(old_seller)
     offers.loc[mask, 'seller_discount'] = updated_seller
-    if 'seller_discount_changed' in offers:
-        offers.loc[mask, 'seller_discount_changed'] = np.where(
-            (old_seller == updated_seller) | (old_seller.isna() & updated_seller.isna()),
-            False,
-            True
-        )
+    offers.loc[mask, 'seller_discount_changed'] = np.where(
+        (old_seller == updated_seller) | (old_seller.isna() & updated_seller.isna()),
+        False,
+        True
+    )
 
-    if 'old_discount' in offers:
-        old_old = offers.loc[mask, 'old_discount']
-        updated_old = new_values.fillna(old_old)
-        offers.loc[mask, 'old_discount'] = updated_old
-        offers.loc[mask, 'old_discount_changed'] = np.where(
-            (old_old == updated_old) | (old_old.isna() & updated_old.isna()),
-            False,
-            True
-        )
+    old_old = offers.loc[mask, 'old_discount']
+    updated_old = new_values.fillna(old_old)
+    offers.loc[mask, 'old_discount'] = updated_old
+    offers.loc[mask, 'old_discount_changed'] = np.where(
+        (old_old == updated_old) | (old_old.isna() & updated_old.isna()),
+        False,
+        True
+    )
+
+def update_api_discounts(discounts: Mapping[str, float], offers: pd.DataFrame):
+    """ Обновления данных о скидках в offers """
+    mask = offers['id'].isin(discounts) & (offers['market'] == 'wildberries')
+    new_values = offers.loc[mask, 'id'].map(discounts)
+
+    old_seller = offers.loc[mask, 'seller_discount']
+    updated_seller = new_values.fillna(old_seller)
+    offers.loc[mask, 'seller_discount'] = updated_seller

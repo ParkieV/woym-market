@@ -34,7 +34,7 @@ from src.services.db_metadata import DBMetadataService
 from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
-from src.services.seller_discount import get_seller_discount_from_page, update_discounts
+from src.services.seller_discount import get_seller_discount_from_page, update_discounts, update_api_discounts
 from src.services.synchronization import ReverseSynchronizationInteractor, SynchronizationInteractor
 from src.services.update_offer_from_api import UpdateOfferFromApi
 
@@ -232,6 +232,10 @@ async def update_offers(db_session_fabric,
     # Обновляем товары из апи для обратной синхронизации
     api_offers = await api_interactor.get_offers_list()
     api_offers_df = pd.DataFrame(api_offers)
+    db_offers_small_df = db_offers_df[['id', 'sku', 'market', 'name_of_shop']]
+    merged_offers = api_offers_df.merge(db_offers_small_df, on=['sku', 'market', 'name_of_shop'])
+
+    update_api_discounts(discounts, merged_offers)
 
 
     for tracked_column in CONTROL_CHANGES:
@@ -239,7 +243,7 @@ async def update_offers(db_session_fabric,
 
     update_api_interactor = UpdateOfferFromApi(DBMetadataService({'Offer': Offer,
                                                                   'CatalogItem': CatalogItem}), get_db_session)
-    await update_api_interactor(api_offers_df, skus=[], exclude_fields={'seller_discount'})
+    await update_api_interactor(merged_offers, skus=[], exclude_fields={})
 
     # Удаляем товары
     backend_logger.info(f"Offers to delete: {len(to_delete_offers)}")
