@@ -196,9 +196,9 @@ async def update_offers(db_session_fabric,
         )
 
     # Обновление цен для тех карточек, где включен автоконтроль цен
-    # await update_offers_price(to_update_price_df,
-    #                           db_session_fabric,
-    #                           api_session_fabric)
+    await update_offers_price(to_update_price_df,
+                              db_session_fabric,
+                              api_session_fabric)
 
     del to_update_price_df
 
