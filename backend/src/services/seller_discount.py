@@ -60,3 +60,7 @@ def update_api_discounts(discounts: Mapping[str, float], offers: pd.DataFrame):
     old_seller = offers.loc[mask, 'seller_discount']
     updated_seller = new_values.fillna(old_seller)
     offers.loc[mask, 'seller_discount'] = updated_seller
+
+    old_old = offers.loc[mask, 'old_discount']
+    updated_old = new_values.fillna(old_old)
+    offers.loc[mask, 'old_discount'] = updated_old
