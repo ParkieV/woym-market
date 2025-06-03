@@ -175,9 +175,7 @@ async def update_offers(db_session_fabric,
         (
             (to_update_offers['auto_price_control'] == True) &
             (to_update_offers['total_price'].notna()) &
-            (to_update_offers['sku'] == '28411') &
-            (to_update_offers['market'] == 'wildberries') &
-            (to_update_offers['name_of_shop'] == 'SkrabBerries')
+            (to_update_offers['seller_discount_changed'] == True)
         )
         ][[
             'sku', 'market', 'name_of_shop', 'target_price',
