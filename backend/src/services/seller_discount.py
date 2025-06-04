@@ -34,7 +34,7 @@ def update_discounts(discounts: Mapping[str, float], offers: pd.DataFrame):
     mask = offers['id'].isin(discounts) & (offers['market'] == 'wildberries')
     new_values = offers.loc[mask, 'id'].map(discounts)
 
-    old_seller = offers.loc[mask, 'seller_discount']
+    old_seller = offers.loc[mask, 'seller_discount__api'].copy()
     updated_seller = new_values.fillna(old_seller)
     offers.loc[mask, 'seller_discount'] = updated_seller
     offers.loc[mask, 'seller_discount_changed'] = np.where(
@@ -43,7 +43,7 @@ def update_discounts(discounts: Mapping[str, float], offers: pd.DataFrame):
         True
     )
 
-    old_old = offers.loc[mask, 'old_discount']
+    old_old = offers.loc[mask, 'old_discount'].copy()
     updated_old = new_values.fillna(old_old)
     offers.loc[mask, 'old_discount'] = updated_old
     offers.loc[mask, 'old_discount_changed'] = np.where(
