@@ -184,6 +184,10 @@ async def update_offers(db_session_fabric,
             'vendor_code', 'discount_base_price', 'seller_discount'
         ]].copy()
 
+    backend_logger.info('Update dataframe length: %s', len(to_update_offers))
+
+    backend_logger.info('Update price dataframe length: %s', len(to_update_price_df))
+
     # Считаем значения, которые требуют настроек и целевой цены
     for market in markets:
         # пересчет текущей цены до скидки для карточек магазина
