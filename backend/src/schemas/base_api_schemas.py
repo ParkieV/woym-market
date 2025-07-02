@@ -95,6 +95,7 @@ class APIPriceChangeData:
     auto_min_price: float | None = None
     vendor_code: int | None = None
     discount_base_price: float | None = None
+    discount_changed: bool | None = None
 
     def is_valid_target_price(self) -> bool:
         return isinstance(self.target_price, (float, int)) and not np.isnan(self.target_price)

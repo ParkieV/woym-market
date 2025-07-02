@@ -186,20 +186,25 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         for i in range(0, len(valid_price_data), chunk_size):
             body = {
-                'data': [
-                    {
+                'data': []
+            }
+            for price_data in valid_price_data[i:i + chunk_size]:
+                if price_data.discount_changed is True:
+                    data = {
                         "nmID": price_data.vendor_code,
                         "price": round(price_data.target_price),
                         "discount": int(price_data.discount)
                     }
-                    for price_data in valid_price_data[i:i + chunk_size]
-                ]
-            }
+                else:
+                    data = {
+                        "nmID": price_data.vendor_code,
+                        "price": round(price_data.target_price),
+                    }
+                body['data'].append(data)
             parser_logger.info(body)
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
-                # ERROR: Источник - parser_2025-04-17.log:131
                 parser_logger.error(f'Cant change price: {response.reason}: {await response.json()}')
 
             response_json = await self.validate_response(response)

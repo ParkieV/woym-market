@@ -180,7 +180,7 @@ async def update_offers(db_session_fabric,
             'sku', 'market', 'name_of_shop', 'target_price',
             'manual_min_price', 'use_manual_min_price',
             'total_price', 'auto_min_price', 'auto_participation_in_promotions',
-            'vendor_code', 'discount_base_price', 'seller_discount'
+            'vendor_code', 'discount_base_price', 'seller_discount', 'seller_discount_changed'
         ]].copy()
 
     backend_logger.info('Update dataframe length: %s', len(to_update_offers))
@@ -296,7 +296,8 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
             vendor_code=int(offer_data['vendor_code']) if offer_data['vendor_code'] is not None and not np.isnan(
                 offer_data['vendor_code']) else None,
             discount_base_price=offer_data['discount_base_price'],
-            discount=offer_data['seller_discount'] or 0
+            discount=offer_data['seller_discount'] or 0,
+            discount_changed=offer_data['seller_discount_changed'],
         )
         for offer_data in data
     ]
