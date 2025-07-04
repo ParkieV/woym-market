@@ -177,7 +177,7 @@ async def update_offers(db_session_fabric,
             (to_update_offers['total_price'].notna())
         )
         ][[
-            'sku', 'market', 'name_of_shop', 'target_price',
+            'sku', 'market', 'name_of_shop', 'target_price', 'current_price__api'
             'manual_min_price', 'use_manual_min_price',
             'total_price', 'auto_min_price', 'auto_participation_in_promotions',
             'vendor_code', 'discount_base_price', 'seller_discount', 'seller_discount_changed'
@@ -290,6 +290,7 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
             market=offer_data['market'],
             name_of_shop=offer_data['name_of_shop'],
             target_price=offer_data['target_price'],
+            api_current_price=offer_data['current_price__api'],
             min_price=offer_data['manual_min_price'] if offer_data['use_manual_min_price'] else offer_data['total_price'] * offer_data['auto_min_price'] / 100,
             auto_participation_in_promotions=offer_data['auto_participation_in_promotions'],
             auto_min_price=offer_data['target_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['target_price'], offer_data['auto_min_price'])) else None,

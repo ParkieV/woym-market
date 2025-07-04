@@ -89,6 +89,7 @@ class APIPriceChangeData:
     market: str
     name_of_shop: str
     target_price: Union[int, float, None]
+    api_current_price: Union[int, float, None]
     min_price: float
     auto_participation_in_promotions: bool
     discount: int

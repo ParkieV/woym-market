@@ -189,19 +189,16 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 'data': []
             }
             for price_data in valid_price_data[i:i + chunk_size]:
+                data = {
+                    "nmID": price_data.vendor_code,
+                }
+                if price_data.target_price != price_data.api_current_price:
+                    data["price"] = round(price_data.target_price),
                 if price_data.discount_changed is True:
-                    data = {
-                        "nmID": price_data.vendor_code,
-                        "price": round(price_data.target_price),
-                        "discount": int(price_data.discount)
-                    }
-                else:
-                    data = {
-                        "nmID": price_data.vendor_code,
-                        "price": round(price_data.target_price),
-                    }
-                body['data'].append(data)
-            parser_logger.info(body)
+                    data["discount"] = int(price_data.discount)
+
+                if len(data.keys()) > 1:
+                    body['data'].append(data)
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
