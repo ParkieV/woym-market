@@ -177,7 +177,7 @@ async def update_offers(db_session_fabric,
             (to_update_offers['total_price'].notna())
         )
         ][[
-            'sku', 'market', 'name_of_shop', 'target_price', 'current_price__api'
+            'sku', 'market', 'name_of_shop', 'target_price', 'current_price__api',
             'manual_min_price', 'use_manual_min_price',
             'total_price', 'auto_min_price', 'auto_participation_in_promotions',
             'vendor_code', 'discount_base_price', 'seller_discount', 'seller_discount_changed'
