@@ -439,18 +439,19 @@ class OzonApi(ApiGateway, IApiGateway):
             return
 
         for i in range(0, len(valid_price_data), chunk_size):
-            post_data = [
-                {
+            post_data = []
+            for price in valid_price_data[i:i + chunk_size]:
+                data = {
                     'offer_id': price.sku,
-                    'price': str(price.target_price),
                     'currency_code': 'RUB',
                     'auto_action_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
                     'price_strategy_enabled': 'UNKNOWN',
                     'min_price': str(price.min_price),
                     'old_price': str(round(price.discount_base_price))
                 }
-                for price in valid_price_data[i:i + chunk_size]
-            ]
+                if price.target_price != price.api_current_price:
+                    data['price'] =str(price.target_price)
+                post_data.append(data)
             body = {
                 'prices': post_data
             }
