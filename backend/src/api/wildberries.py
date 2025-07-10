@@ -193,7 +193,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                     "nmID": price_data.vendor_code,
                 }
                 if price_data.target_price != price_data.api_current_price:
-                    data["price"] = round(price_data.target_price),
+                    data["price"] = round(price_data.target_price)
                 if price_data.discount_changed is True:
                     data["discount"] = int(price_data.discount)
 
