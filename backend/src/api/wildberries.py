@@ -189,26 +189,28 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 'data': []
             }
             for price_data in valid_price_data[i:i + chunk_size]:
-                data = {
+                if price_data.sku == '20069':
+                    pass
+                data_dict = {
                     "nmID": price_data.vendor_code,
                 }
                 if price_data.target_price != price_data.api_current_price:
-                    data["price"] = round(price_data.target_price)
+                    data_dict["price"] = round(price_data.target_price)
                 if price_data.discount_changed is True:
-                    data["discount"] = int(price_data.discount)
+                    data_dict["discount"] = int(price_data.discount)
 
-                if len(data.keys()) > 1:
-                    body['data'].append(data)
-            response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
+                if len(data_dict.keys()) > 1:
+                    body['data'].append(data_dict)
+            if len(body['data']) > 0:
+                response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
-            if not response.ok:
-                parser_logger.error(f'Cant change price: {response.reason}: {await response.json()}')
+                if not response.ok:
+                    parser_logger.error(f'Cant change price: {response.reason}: {await response.json()}')
 
-            response_json = await self.validate_response(response)
+                response_json = await self.validate_response(response)
 
-
-            if response_json.get('data', None):
-                await self._check_price_update_result(response_json['data'].get('id', None))
+                if response_json.get('data', None) and response_json['data'].get('id', None):
+                    await self._check_price_update_result(response_json['data'].get('id', None))
 
         parser_logger.info(f'{self.shop_name}(wildberries) prices updated: {len(valid_price_data)} of {len(data)}')
 

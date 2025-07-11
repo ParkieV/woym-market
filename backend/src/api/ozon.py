@@ -446,11 +446,12 @@ class OzonApi(ApiGateway, IApiGateway):
                     'currency_code': 'RUB',
                     'auto_action_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
                     'price_strategy_enabled': 'UNKNOWN',
-                    'min_price': str(price.min_price),
                     'old_price': str(round(price.discount_base_price))
                 }
                 if price.target_price != price.api_current_price:
-                    data['price'] =str(price.target_price)
+                    data['price'] = str(price.target_price)
+                    data['min_price'] = str(price.min_price)
+
                 post_data.append(data)
             body = {
                 'prices': post_data
@@ -466,7 +467,9 @@ class OzonApi(ApiGateway, IApiGateway):
 
             await self.validate_response(response, body=body)
 
-            if response.ok:
+            if not response.ok:
+                parser_logger.error(f'Cant change price: {response.reason}: {await response.json()}')
+            else:
                 for offer_result in (await response.json())['result']:
                     if not offer_result['updated']:
                         parser_logger.warning(
