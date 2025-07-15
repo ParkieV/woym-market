@@ -174,7 +174,8 @@ async def update_offers(db_session_fabric,
     to_update_price_df = to_update_offers[
         (
             (to_update_offers['auto_price_control'] == True) &
-            (to_update_offers['total_price'].notna())
+            ((to_update_offers['target_price'] != to_update_offers['current_price__api']) |
+             (to_update_offers['seller_discount'] != to_update_offers['seller_discount__api']))
         )
         ][[
             'sku', 'market', 'name_of_shop', 'target_price', 'current_price__api',
@@ -291,7 +292,6 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
             name_of_shop=offer_data['name_of_shop'],
             target_price=offer_data['target_price'],
             api_current_price=offer_data['current_price__api'],
-            min_price=offer_data['manual_min_price'] if offer_data['use_manual_min_price'] else offer_data['total_price'] * offer_data['auto_min_price'] / 100,
             auto_participation_in_promotions=offer_data['auto_participation_in_promotions'],
             auto_min_price=offer_data['target_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['target_price'], offer_data['auto_min_price'])) else None,
             vendor_code=int(offer_data['vendor_code']) if offer_data['vendor_code'] is not None and not np.isnan(
