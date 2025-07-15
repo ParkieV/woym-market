@@ -218,7 +218,7 @@ async def update_offers(db_session_fabric,
     del to_update_offers
 
     backend_logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
-    # await update_offers_attributes(to_update_attributes, api_session_fabric, db_session_fabric)
+    await update_offers_attributes(to_update_attributes, api_session_fabric, db_session_fabric)
     del to_update_attributes
     # Создаем новые товары
     for market in markets:
@@ -250,6 +250,8 @@ async def update_offers(db_session_fabric,
     # Удаляем товары
     backend_logger.info(f"Offers to delete: {len(to_delete_offers)}")
 
+    await delete_offers(to_delete_offers)
+
     # Пересчитать все
     await recalculate_values(session)
     backend_logger.info('Offers recalculated')
@@ -261,9 +263,18 @@ async def update_offers(db_session_fabric,
     backend_logger.info(f'Offers update completed in {_time}')
 
 
-async def delete_offers(offers: list[OfferDelete]):
+async def delete_offers(offers: pd.DataFrame):
+    del_offers = [
+        OfferDelete(
+            sku=offer['sku'],
+            name_of_shop=offer['name_of_shop'],
+            market=offer['market'],
+        )
+        for _, offer in offers.iterrows()
+    ]
+
     async with async_session() as session:
-        return await db.delete_offers(session, [offer.model_dump() for offer in offers])
+        return await db.delete_offers(session, del_offers)
 
 
 async def update_offers_price(offers: pd.DataFrame | list[OfferOut],

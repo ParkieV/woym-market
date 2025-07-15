@@ -8,6 +8,8 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func, text
 from sqlalchemy.orm import selectinload
+
+from schemas.offer_schemas import OfferDelete
 from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
 from .interfaces import IOfferRepository
 from .models.models import Offer, PricingScheme, PricingSchemeField, \
@@ -151,11 +153,14 @@ async def create_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) 
     await session.commit()
 
 
-async def delete_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) -> None:
-    data = _dataframe_to_valid_dict(data)
+async def delete_offers(session: AsyncSession, data: Iterable[OfferDelete]) -> None:
 
     for offer in data:
-        query = delete(Offer).filter_by(**offer)
+        query = delete(Offer).where(
+            Offer.sku == offer.sku,
+            Offer.name_of_shop == offer.name_of_shop,
+            Offer.market == offer.market
+        )
         await session.execute(query)
 
     await session.commit()

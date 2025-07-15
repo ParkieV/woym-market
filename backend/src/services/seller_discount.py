@@ -14,15 +14,10 @@ def get_seller_discount_from_page(offers: pd.DataFrame) -> dict[str, float]:
                         discounts[offer.id] = offer.seller_discount__api
                     else:
                         discounts[offer.id] = offer.seller_discount
+                elif offer.seller_discount != offer.old_discount:
+                    discounts[offer.id] = offer.seller_discount
                 else:
                     discounts[offer.id] = offer.seller_discount
-                if offer.seller_discount__api < offer.seller_discount:
-                    discounts[offer.id] = offer.seller_discount__api
-                else:
-                    if offer.seller_discount__api > 100 - offer.auto_min_price:
-                        discounts[offer.id] = offer.seller_discount
-                    else:
-                        discounts[offer.id] = offer.seller_discount__api
             else:
                 discounts[offer.id] = offer.seller_discount
         else:
