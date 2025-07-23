@@ -250,8 +250,6 @@ async def update_offers(db_session_fabric,
     # Удаляем товары
     backend_logger.info(f"Offers to delete: {len(to_delete_offers)}")
 
-    await delete_offers(to_delete_offers)
-
     # Пересчитать все
     await recalculate_values(session)
     backend_logger.info('Offers recalculated')
