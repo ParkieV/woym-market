@@ -75,13 +75,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             body = []
             for offer_data in valid_offers_data[i:i + chunk_size]:
                 characteristics = items[offer_data.sku].get('characteristics', [])
-
                 characteristics = [i for i in characteristics if i['id'] != 88952]
-                characteristics.append({
-                    'id': 88952,
-                    'name': 'Вес товара с упаковкой (г)',
-                    'value': offer_data.self_weight * 1000,
-                })
 
                 body_item = {
                     'nmID': offer_data.vendor_code,

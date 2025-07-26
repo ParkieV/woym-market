@@ -220,6 +220,7 @@ async def update_offers(db_session_fabric,
     backend_logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
     await update_offers_attributes(to_update_attributes, api_session_fabric, db_session_fabric)
     del to_update_attributes
+
     # Создаем новые товары
     for market in markets:
         to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], market, setup_mode=True)
