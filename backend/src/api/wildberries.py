@@ -217,6 +217,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         result = []
 
+        i = 0
         while True:
             body = {
                 "settings": {
@@ -230,6 +231,8 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 }
             }
 
+            if i % 5 == 0:
+                await asyncio.sleep(1)
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
 
             if not response.ok:
@@ -253,6 +256,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
             cursor['updatedAt'] = cursor_data['updatedAt']
             cursor['nmID'] = cursor_data['nmID']
+            i += 1
 
         print('Result length:', len(result))
         return result

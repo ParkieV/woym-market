@@ -199,7 +199,6 @@ class OzonApi(ApiGateway, IApiGateway):
     async def _get_clusters_info(self) -> list[APIWarehouse]:
         # url = 'https://seller-edu.ozon.ru/document-manager-api.kms/api/v2/seller-edu/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
         url = 'https://seller-edu.ozon.ru/document-manager-api/seller-edu/api/v3/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
-        #
         response = await self.request('GET', url=url)
 
         data = await self.validate_response(response)
