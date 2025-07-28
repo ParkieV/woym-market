@@ -231,7 +231,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 }
             }
 
-            if i % 5 == 0:
+            if i % 4 == 0:
                 await asyncio.sleep(1)
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
 
