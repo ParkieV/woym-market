@@ -47,8 +47,6 @@ services:
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - db-data-local:/var/lib/postgresql/data
-    expose:
-      - 5432
     ports:
       - "5432:5432"
 
