@@ -81,7 +81,7 @@ class ApiGateway(IApiGateway):
         data_json = await response.json()
 
         if response.status != 200:
-            raise RequestException(f'status: {response.status} \ndetail: {data_json}')
+            parser_logger.error(f'status: {response.status} \ndetail: {data_json}', exc_info=True)
 
         return data_json
 

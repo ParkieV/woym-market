@@ -75,13 +75,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             body = []
             for offer_data in valid_offers_data[i:i + chunk_size]:
                 characteristics = items[offer_data.sku].get('characteristics', [])
-
                 characteristics = [i for i in characteristics if i['id'] != 88952]
-                characteristics.append({
-                    'id': 88952,
-                    'name': 'Вес товара с упаковкой (г)',
-                    'value': offer_data.self_weight * 1000,
-                })
 
                 body_item = {
                     'nmID': offer_data.vendor_code,
@@ -186,27 +180,31 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         for i in range(0, len(valid_price_data), chunk_size):
             body = {
-                'data': [
-                    {
-                        "nmID": price_data.vendor_code,
-                        "price": round(price_data.target_price),
-                        "discount": int(price_data.discount)
-                    }
-                    for price_data in valid_price_data[i:i + chunk_size]
-                ]
+                'data': []
             }
-            parser_logger.info(body)
-            response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
+            for price_data in valid_price_data[i:i + chunk_size]:
+                if price_data.sku == '20069':
+                    pass
+                data_dict = {
+                    "nmID": price_data.vendor_code,
+                }
+                if price_data.target_price != price_data.api_current_price:
+                    data_dict["price"] = round(price_data.target_price)
+                if price_data.discount_changed is True:
+                    data_dict["discount"] = int(price_data.discount)
 
-            if not response.ok:
-                # ERROR: Источник - parser_2025-04-17.log:131
-                parser_logger.error(f'Cant change price: {response.reason}: {await response.json()}')
+                if len(data_dict.keys()) > 1:
+                    body['data'].append(data_dict)
+            if len(body['data']) > 0:
+                response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
-            response_json = await self.validate_response(response)
+                if not response.ok:
+                    parser_logger.error(f'Cant change price: {response.reason}: {await response.json()}')
 
+                response_json = await self.validate_response(response)
 
-            if response_json.get('data', None):
-                await self._check_price_update_result(response_json['data'].get('id', None))
+                if response_json.get('data', None) and response_json['data'].get('id', None):
+                    await self._check_price_update_result(response_json['data'].get('id', None))
 
         parser_logger.info(f'{self.shop_name}(wildberries) prices updated: {len(valid_price_data)} of {len(data)}')
 
@@ -219,6 +217,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         result = []
 
+        i = 0
         while True:
             body = {
                 "settings": {
@@ -232,6 +231,8 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 }
             }
 
+            if i % 4 == 0:
+                await asyncio.sleep(1)
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
 
             if not response.ok:
@@ -255,6 +256,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
             cursor['updatedAt'] = cursor_data['updatedAt']
             cursor['nmID'] = cursor_data['nmID']
+            i += 1
 
         print('Result length:', len(result))
         return result
