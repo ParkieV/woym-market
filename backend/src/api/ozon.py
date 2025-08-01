@@ -180,7 +180,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 stock_data = {
                     'value': stock['free_to_sell_amount'],
                     'market_sku': stock['sku'],
-                    'warehouse_name': stock['warehouse_name'].replace('_', ' ').title()
+                    'warehouse_name': self._validate_warehouse_name(stock['warehouse_name'])
                 }
                 result.append(stock_data)
 
@@ -196,28 +196,36 @@ class OzonApi(ApiGateway, IApiGateway):
 
         return {offer['market_sku']: offer['sku'] for offer in offers if offer['market_sku'] != 0}
 
+    def _validate_warehouse_name(self, warehouse_name: str) -> str:
+        abbreviations = ('рфц', 'мпсц', 'мрфц')
+        result_name = ' '.join(
+            name.title() if name.lower() not in abbreviations else name.upper()
+            for name in warehouse_name.split('_')
+        )
+        return result_name
+
     async def _get_clusters_info(self) -> list[APIWarehouse]:
         # url = 'https://seller-edu.ozon.ru/document-manager-api.kms/api/v2/seller-edu/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
-        url = 'https://seller-edu.ozon.ru/document-manager-api/seller-edu/api/v3/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
-        response = await self.request('GET', url=url)
+        url = 'https://api-seller.ozon.ru/v1/cluster/list'
+        response = await self.request(
+            'POST', url=url, headers=self.auth_headers,
+            body={
+                    "cluster_type": "CLUSTER_TYPE_OZON"
+            }
+        )
 
         data = await self.validate_response(response)
-        content_json = json.loads(data['document']['contentJson'])
-        spoilers = [i for i in content_json['content'] if i['type'] == 'spoiler']
-        spoilers = spoilers[len(spoilers) // 2:len(spoilers) + 1]
+        clusters = []
+        for cluster in data['clusters']:
+            clusters.append(
+                APIWarehouse(name=cluster['name'], market='ozon', offers=[], warehouse_type=WarehouseType.CLUSTER,
+                             related_warehouses_name=[
+                                 self._validate_warehouse_name(warehouse['name'])
+                                 for lc in cluster['logistic_clusters']
+                                 for warehouse in lc['warehouses'] if warehouse['type'] == 'FULL_FILLMENT'
+                             ]))
 
-        clasters = []
-
-        for spoiler in spoilers:
-            claster_name = spoiler['attrs']['title']
-            warehouses = [
-                i['content'][0]['content'][0]['text'].replace('-', ' ').title().replace('Мо ', '').replace('Спб', '')
-                for i in spoiler['content'][0]['content']]
-            clasters.append(
-                APIWarehouse(name=claster_name, market='ozon', offers=[], warehouse_type=WarehouseType.CLUSTER,
-                             related_warehouses_name=warehouses))
-
-        return clasters
+        return clusters
 
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
         """
