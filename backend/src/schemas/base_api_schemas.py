@@ -89,12 +89,14 @@ class APIPriceChangeData:
     market: str
     name_of_shop: str
     target_price: Union[int, float, None]
-    min_price: float
+    api_current_price: Union[int, float, None]
     auto_participation_in_promotions: bool
     discount: int
+    min_price: float | None = None
     auto_min_price: float | None = None
     vendor_code: int | None = None
     discount_base_price: float | None = None
+    discount_changed: bool | None = None
 
     def is_valid_target_price(self) -> bool:
         return isinstance(self.target_price, (float, int)) and not np.isnan(self.target_price)

@@ -34,7 +34,7 @@ from src.services.db_metadata import DBMetadataService
 from src.services.base_utils import parce_sizes_list, parce_purchase_list
 from src.schemas.settings_schemas import MarketOut
 from src.services.base_utils import error_handler
-from src.services.seller_discount import get_seller_discount_from_page, update_discounts
+from src.services.seller_discount import get_seller_discount_from_page, update_discounts, update_api_discounts
 from src.services.synchronization import ReverseSynchronizationInteractor, SynchronizationInteractor
 from src.services.update_offer_from_api import UpdateOfferFromApi
 
@@ -174,14 +174,19 @@ async def update_offers(db_session_fabric,
     to_update_price_df = to_update_offers[
         (
             (to_update_offers['auto_price_control'] == True) &
-            (to_update_offers['total_price'].notna())
+            ((to_update_offers['target_price'] != to_update_offers['current_price__api']) |
+             (to_update_offers['seller_discount'] != to_update_offers['seller_discount__api']))
         )
         ][[
-            'sku', 'market', 'name_of_shop', 'target_price',
+            'sku', 'market', 'name_of_shop', 'target_price', 'current_price__api',
             'manual_min_price', 'use_manual_min_price',
             'total_price', 'auto_min_price', 'auto_participation_in_promotions',
-            'vendor_code', 'discount_base_price', 'seller_discount'
+            'vendor_code', 'discount_base_price', 'seller_discount', 'seller_discount_changed'
         ]].copy()
+
+    backend_logger.info('Update dataframe length: %s', len(to_update_offers))
+
+    backend_logger.info('Update price dataframe length: %s', len(to_update_price_df))
 
     # Считаем значения, которые требуют настроек и целевой цены
     for market in markets:
@@ -215,6 +220,7 @@ async def update_offers(db_session_fabric,
     backend_logger.info(f'Found offers to update attributes: {len(to_update_attributes)}')
     await update_offers_attributes(to_update_attributes, api_session_fabric, db_session_fabric)
     del to_update_attributes
+
     # Создаем новые товары
     for market in markets:
         to_create_df_chunked = await utils.build_offers_data(to_create_offers[((to_create_offers['market'] == market.type) & (to_create_offers['name_of_shop'] == market.name))], market, setup_mode=True)
@@ -229,13 +235,18 @@ async def update_offers(db_session_fabric,
     # Обновляем товары из апи для обратной синхронизации
     api_offers = await api_interactor.get_offers_list()
     api_offers_df = pd.DataFrame(api_offers)
+    db_offers_small_df = db_offers_df[['id', 'sku', 'market', 'name_of_shop']]
+    merged_offers = api_offers_df.merge(db_offers_small_df, on=['sku', 'market', 'name_of_shop'])
+
+    update_api_discounts(discounts, merged_offers)
+
 
     for tracked_column in CONTROL_CHANGES:
         api_offers_df[f'{tracked_column}_changed'] = False
 
     update_api_interactor = UpdateOfferFromApi(DBMetadataService({'Offer': Offer,
                                                                   'CatalogItem': CatalogItem}), get_db_session)
-    await update_api_interactor(api_offers_df, skus=[], exclude_fields={'seller_discount', 'old_discount'})
+    await update_api_interactor(merged_offers, skus=[], exclude_fields={})
 
     # Удаляем товары
     backend_logger.info(f"Offers to delete: {len(to_delete_offers)}")
@@ -251,9 +262,18 @@ async def update_offers(db_session_fabric,
     backend_logger.info(f'Offers update completed in {_time}')
 
 
-async def delete_offers(offers: list[OfferDelete]):
+async def delete_offers(offers: pd.DataFrame):
+    del_offers = [
+        OfferDelete(
+            sku=offer['sku'],
+            name_of_shop=offer['name_of_shop'],
+            market=offer['market'],
+        )
+        for _, offer in offers.iterrows()
+    ]
+
     async with async_session() as session:
-        return await db.delete_offers(session, [offer.model_dump() for offer in offers])
+        return await db.delete_offers(session, del_offers)
 
 
 async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
@@ -281,13 +301,14 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
             market=offer_data['market'],
             name_of_shop=offer_data['name_of_shop'],
             target_price=offer_data['target_price'],
-            min_price=offer_data['manual_min_price'] if offer_data['use_manual_min_price'] else offer_data['total_price'] * offer_data['auto_min_price'] / 100,
+            api_current_price=offer_data['current_price__api'],
             auto_participation_in_promotions=offer_data['auto_participation_in_promotions'],
             auto_min_price=offer_data['target_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['target_price'], offer_data['auto_min_price'])) else None,
             vendor_code=int(offer_data['vendor_code']) if offer_data['vendor_code'] is not None and not np.isnan(
                 offer_data['vendor_code']) else None,
             discount_base_price=offer_data['discount_base_price'],
-            discount=offer_data['seller_discount'] or 0
+            discount=offer_data['seller_discount'] or 0,
+            discount_changed=offer_data['seller_discount_changed'],
         )
         for offer_data in data
     ]

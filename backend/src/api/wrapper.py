@@ -115,7 +115,7 @@ class ApiInteractor:
                     parser_logger.info(f'{market.name}({market.type}) offers length: {len(price_data)}')
                     await api.change_prices(price_data)
                 except Exception as e:
-                    parser_logger.error(f"Failed to change prices in {market.type}({market.name}). {e.__class__.__name__}: {e}")
+                    parser_logger.error(f"Failed to change prices in {market.type}({market.name}). {e.__class__.__name__}: {e}", exc_info=True)
                     continue
 
     async def change_offers(self, data: list[APIOfferChangeData]) -> None:
