@@ -172,7 +172,7 @@ class OzonApi(ApiGateway, IApiGateway):
                                          headers=self.auth_headers, body=body)
 
             data = await self.validate_response(response, body)
-
+            await asyncio.sleep(1)
             if not data['result']['rows']:
                 break
 
@@ -588,7 +588,6 @@ class OzonApi(ApiGateway, IApiGateway):
             )
 
             data = await self.validate_response(response, body=body)
-            # 4191 description
             for offer in data['result']:
                 description_attributes = [i['values'][0] for i in offer['attributes'] if
                                           i['id'] == 4191 and len(i['values'])]
