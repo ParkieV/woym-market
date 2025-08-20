@@ -42,34 +42,37 @@ class OzonApi(ApiGateway, IApiGateway):
         """
         url = 'https://api-seller.ozon.ru/v4/product/info/attributes'
         chunk_size = 1000
-        body = {
-            'filter': {
-                'offer_id': skus or []
-            },
-            'limit': chunk_size
-        }
+        for l in range(0, len(skus), chunk_size):
+            body = {
+                'filter': {
+                    'offer_id': skus[l:min(l + chunk_size, len(skus))] if len(skus) > 0 else []
+                },
+                'limit': chunk_size
+            }
 
-        results = {}
+            results = {}
 
-        while True:
-            response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
+            while True:
+                response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
+                await asyncio.sleep(1)
 
-            if not response.ok:
-                parser_logger.error(f'Cant get info attributes: {response.text}')
-                continue
+                if not response.ok:
+                    parser_logger.error(f'Error body: {body}')
+                    parser_logger.error(f'Cant get info attributes: {response.text}')
+                    break
 
-            json_response = await response.json()
+                json_response = await response.json()
 
-            for item in json_response.get('result', []):
-                results[item['offer_id']] = item
+                for item in json_response.get('result', []):
+                    results[item['offer_id']] = item
 
-            last_id = json_response.get('last_id', None)
-            if not last_id:
-                break
+                last_id = json_response.get('last_id', None)
+                if not last_id:
+                    break
 
-            body['last_id'] = last_id
+                body['last_id'] = last_id
 
-        return results
+            return results
 
     async def _get_offers_prices_by_sku(self, data: Sequence[str] | None = None) -> dict[str, Any]:
         """
@@ -80,29 +83,30 @@ class OzonApi(ApiGateway, IApiGateway):
         url = 'https://api-seller.ozon.ru/v5/product/info/prices'
         results = {}
         chunk_size = 1000
-        body = {
-            "filter": {
-                "offer_id": data or [],
-                "visibility": "ALL"
-            },
-            "limit": chunk_size
-        }
-        while True:
-            response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
-            if not response.ok:
-                parser_logger.error(f'Cant collect offers price info: {response.text}')
-                break
+        for l in range(0, len(data), chunk_size):
+            body = {
+                "filter": {
+                    "offer_id": data[l:min(l + chunk_size, len(data))] if len(data) > 0 else [],
+                    "visibility": "ALL"
+                },
+                "limit": chunk_size
+            }
+            while True:
+                response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
+                if not response.ok:
+                    parser_logger.error(f'Cant collect offers price info: {response.text}')
+                    break
 
-            json_response = await response.json()
+                json_response = await response.json()
 
-            for item in json_response.get('items', []):
-                results[item['offer_id']] = item
+                for item in json_response.get('items', []):
+                    results[item['offer_id']] = item
 
-            last_id = json_response.get('cursor', None)
-            if not last_id or json_response.get('total', 0) < chunk_size:
-                break
+                last_id = json_response.get('cursor', None)
+                if not last_id or json_response.get('total', 0) < chunk_size:
+                    break
 
-            body['cursor'] = last_id
+                body['cursor'] = last_id
 
         return results
 
@@ -152,6 +156,7 @@ class OzonApi(ApiGateway, IApiGateway):
             }
             response = await self.request('POST', url='https://api-seller.ozon.ru/v1/product/rating-by-sku',
                                          headers=self.auth_headers, body=body)
+            await asyncio.sleep(1)
             data = await self.validate_response(response, body=body)
             result.update({item['sku']: item['rating'] for item in data['products']})
 
@@ -260,7 +265,11 @@ class OzonApi(ApiGateway, IApiGateway):
             offer_attributes_info = offers_attributes_info.get(valid_offer.sku, None)
 
             if not offer_attributes_info or not offer_price_info:
-                parser_logger.info(f'Skip update offer sku={offer_attributes_info.get("offer_id", "unknown")} due to has no full data')
+                log_msg = 'Skip update offer sku={0} due to has no full data'.format(
+                    offer_attributes_info.get("offer_id", "unknown") if offer_attributes_info
+                    else offer_price_info.get("offer_id", "unknown")
+                )
+                parser_logger.info(log_msg)
                 continue
 
             update_offer_data = offer_attributes_info
@@ -499,8 +508,10 @@ class OzonApi(ApiGateway, IApiGateway):
                 headers=self.auth_headers,
                 body=body
             )
+            await asyncio.sleep(1)
+            data = (await self.validate_response(response))
 
-            data = (await self.validate_response(response))['result']
+            data = data['result']
             items = data['items']
 
             if len(items) == 0:
