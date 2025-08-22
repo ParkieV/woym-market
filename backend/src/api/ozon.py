@@ -461,6 +461,8 @@ class OzonApi(ApiGateway, IApiGateway):
                     'offer_id': price.sku,
                     'currency_code': 'RUB',
                     'auto_action_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
+                    'min_price_for_auto_actions_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
+                    'auto_add_to_ozon_actions_list_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
                     'price_strategy_enabled': 'UNKNOWN',
                     'old_price': str(round(price.discount_base_price))
                 }
