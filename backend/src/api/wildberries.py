@@ -159,7 +159,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         if response_json.get('error', None):
             parser_logger.error(f'Cant check price update result: {response_json.get("errorText", "unknown error")}')
 
-        task_result_info = response_json.get('data', {})
+        task_result_info = response_json.get('data', None) or {}
 
         parser_logger.info(
             f'Task price upload ID({task_result_info.get("uploadID", "unknown")}) with status: {task_result_info.get("status", "unknown")} checked. \nAll goods: {task_result_info.get("overAllGoodsNumber", "unknown")}, without errors: {task_result_info.get("successGoodsNumber", "unknown")}')
@@ -202,9 +202,12 @@ class WildberriesApi(ApiGateway, IApiGateway):
                     parser_logger.error(f'Cant change price: {response.reason}: {await response.json()}')
 
                 response_json = await self.validate_response(response)
-
-                if response_json.get('data', None) and response_json['data'].get('id', None):
-                    await self._check_price_update_result(response_json['data'].get('id', None))
+                try:
+                    if response_json.get('data', None) is not None and response_json['data'].get('id', None):
+                        await self._check_price_update_result(response_json['data'].get('id', None))
+                except Exception as e:
+                    parser_logger.error(f'Cant change price: {e.__class__.__name__}: {e}')
+                    raise e
 
         parser_logger.info(f'{self.shop_name}(wildberries) prices updated: {len(valid_price_data)} of {len(data)}')
 
