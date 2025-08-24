@@ -443,12 +443,11 @@ class OzonApi(ApiGateway, IApiGateway):
         chunk_size = 1000
 
         valid_price_data = [i for i in data if
-                            all((i.is_valid_min_price(), i.is_valid_target_price(), i.is_valid_discount_base_price()))]
-        invalid_data = [i for i in data if
-                        not all((i.is_valid_min_price(), i.is_valid_target_price(), i.is_valid_discount_base_price()))]
+                            all((i.is_valid_target_price(), i.is_valid_discount_base_price()))]
+        invalid_data_length = len(data) - len(valid_price_data)
 
-        if invalid_data:
-            parser_logger.warning(f'Invalid prices data: {len(invalid_data)} / {len(valid_price_data)}')
+        if invalid_data_length > 0:
+            parser_logger.warning(f'Invalid prices data: {invalid_data_length} / {len(data)}')
 
         if not valid_price_data:
             parser_logger.warning(f'{self.shop_name}(ozon) has no valid price data')
