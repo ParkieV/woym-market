@@ -460,14 +460,14 @@ class OzonApi(ApiGateway, IApiGateway):
                     'offer_id': price.sku,
                     'currency_code': 'RUB',
                     'auto_action_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
-                    'min_price_for_auto_actions_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
+                    'min_price_for_auto_actions_enabled': True if price.auto_participation_in_promotions else False,
                     'auto_add_to_ozon_actions_list_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
                     'price_strategy_enabled': 'UNKNOWN',
                     'old_price': str(round(price.discount_base_price))
                 }
                 if price.target_price != price.api_current_price:
                     data['price'] = str(price.target_price)
-                    # data['min_price'] = str(price.min_price)
+                    data['min_price'] = str(price.min_price)
 
                 post_data.append(data)
             body = {
