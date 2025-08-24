@@ -467,7 +467,8 @@ class OzonApi(ApiGateway, IApiGateway):
                 }
                 if price.target_price != price.api_current_price:
                     data['price'] = str(price.target_price)
-                    data['min_price'] = str(price.min_price)
+                    if price.min_price is not None:
+                        data['min_price'] = float(price.min_price)
 
                 post_data.append(data)
             body = {
