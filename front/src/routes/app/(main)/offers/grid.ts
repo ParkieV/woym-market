@@ -166,7 +166,7 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     base: rubleColumn,
                     valueGetter: ({ data }: { data: Offer }) => {
                         if (data.target_price === null) return null;
-                        return data.target_price * data.auto_min_price / 100;
+                        return Math.ceil(data.target_price * data.auto_min_price / 100);
                     }
                 },
                 {
