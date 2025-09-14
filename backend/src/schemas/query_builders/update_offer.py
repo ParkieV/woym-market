@@ -11,13 +11,19 @@ class CreateTempTable(BaseFilter):
         self.data = data
 
     def __call__(self, query):
-        _type_python_postgresql_dict = {
+        type_python_postgresql_dict = {
             int: 'INT',
             dict: 'DICT',
             float: 'DOUBLE PRECISION',
             bool: 'BOOLEAN',
             str: 'VARCHAR',
             NoneType: 'VARCHAR',
+        }
+        double_prec_attrs = {
+            'self_length', 'self_width', 'self_weight', 'self_weight', 'volume',
+            'seller_discount', 'old_discount', 'attractive_price_threshold',
+            'moderately_attractive_price_threshold', 'min_price_in_market',
+            'min_general_markets_price'
         }
         query_create = query
 
@@ -27,15 +33,14 @@ class CreateTempTable(BaseFilter):
             for key, value in row.items():
                 if key == 'search_words':
                     value = ''
-
                 if key == 'price_index':
                     query_create += f"{key} VARCHAR,\n\t"
-                elif key == 'group_sellers_amount' or key == 'business_id' or key == 'seller_discount' or key == 'old_discount':
+                elif key == 'group_sellers_amount' or key == 'business_id':
                     query_create += f"{key} INTEGER,\n\t"
-                elif key == 'self_length' or key == 'self_width':
+                elif key in double_prec_attrs:
                     query_create += f"{key} DOUBLE PRECISION,\n\t"
                 else:
-                    query_create += f"{key} {_type_python_postgresql_dict[type(value)] if key != 'vendor_code' else 'BIGINT'},\n\t"
+                    query_create += f"{key} {type_python_postgresql_dict[type(value)] if key != 'vendor_code' else 'BIGINT'},\n\t"
             break
 
         query = query_create[:-3] + '\n);'
