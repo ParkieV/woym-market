@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.interfaces import ApiTypes
+from src.api.interfaces import ApiTypes
 from src.schemas import settings_schemas as schema
 from src.database.models.models import Logs, Settings, TableInfo, Market
 from src.schemas.settings_schemas import TableInfoOut, TableInfoCreate, MarketCreate, MarketOut, MarketFullOut, TableInfoUpdate
