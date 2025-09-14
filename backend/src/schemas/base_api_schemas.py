@@ -92,7 +92,7 @@ class APIPriceChangeData:
     api_current_price: Union[int, float, None]
     auto_participation_in_promotions: bool
     discount: int
-    min_price: float | None = None
+    min_price: str | None = None
     auto_min_price: float | None = None
     vendor_code: int | None = None
     discount_base_price: float | None = None

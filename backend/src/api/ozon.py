@@ -450,26 +450,24 @@ class OzonApi(ApiGateway, IApiGateway):
             parser_logger.warning(f'Invalid prices data: {invalid_data_length} / {len(data)}')
 
         if not valid_price_data:
-            parser_logger.warning(f'{self.shop_name}(ozon) has no valid price data')
+            parser_logger.warning(f'{self.shop_name}(ozon) has no valid price_data data')
             return
 
         for i in range(0, len(valid_price_data), chunk_size):
             post_data = []
-            for price in valid_price_data[i:i + chunk_size]:
+            for price_data in valid_price_data[i:i + chunk_size]:
                 data = {
-                    'offer_id': price.sku,
+                    'offer_id': price_data.sku,
                     'currency_code': 'RUB',
-                    'auto_action_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
-                    'min_price_for_auto_actions_enabled': True if price.auto_participation_in_promotions else False,
-                    'auto_add_to_ozon_actions_list_enabled': 'ENABLED' if price.auto_participation_in_promotions else 'DISABLED',
+                    'auto_action_enabled': 'ENABLED' if price_data.auto_participation_in_promotions else 'DISABLED',
+                    'min_price_for_auto_actions_enabled': True if price_data.auto_participation_in_promotions else False,
+                    'auto_add_to_ozon_actions_list_enabled': 'ENABLED' if price_data.auto_participation_in_promotions else 'DISABLED',
                     'price_strategy_enabled': 'UNKNOWN',
-                    'old_price': str(round(price.discount_base_price))
+                    'old_price': str(round(price_data.discount_base_price)),
+                    'price': str(price_data.target_price)
                 }
-                if price.target_price != price.api_current_price:
-                    data['price'] = str(price.target_price)
-                    # if price.min_price is not None:
-                    #     data['min_price'] = float(price.min_price)
-
+                if price_data.min_price is not None:
+                    data['min_price'] = price_data.min_price
                 post_data.append(data)
             body = {
                 'prices': post_data

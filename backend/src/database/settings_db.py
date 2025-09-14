@@ -1,14 +1,32 @@
-from collections.abc import Mapping
-from typing import Type, Any
+from collections.abc import Mapping, Callable, Awaitable, Iterable
+from typing import Type, Any, ParamSpec, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from api.interfaces import ApiTypes
 from src.schemas import settings_schemas as schema
 from src.database.models.models import Logs, Settings, TableInfo, Market
 from src.schemas.settings_schemas import TableInfoOut, TableInfoCreate, MarketCreate, MarketOut, MarketFullOut, TableInfoUpdate
 from .utils import _update_or_create_object
 
+P = ParamSpec('P')
+T = TypeVar('T')
+
+
+# для src.database.settings.db.get_markets
+def _skip_markets(removed_markets: Iterable[str]) -> Callable[P, Awaitable[list[T]]]:
+    removed_markets = set(removed_markets)
+    def decorator(func: Callable[P, Awaitable[list[T]]]) -> Callable[P, Awaitable[list[T]]]:
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> list[T]:
+            markets = await func(*args, **kwargs)
+
+            return [market for market in markets if market.type not in removed_markets]
+
+        return wrapper
+
+    return decorator
 
 async def create_logs(session: AsyncSession, user_id: int) -> Logs:
     logs_db = Logs(user_id=user_id)
@@ -91,7 +109,7 @@ async def create_market(session: AsyncSession, data: MarketCreate, model_schema:
     await session.commit()
     return model_schema.model_validate(market_db, from_attributes=True)
 
-
+@_skip_markets([ApiTypes.YANDEX])
 async def get_markets(session: AsyncSession, model_schema: Type[BaseModel] = MarketOut) -> list[BaseModel]:
     """ Метод для получения данных о магазинах """
     query = select(Market)

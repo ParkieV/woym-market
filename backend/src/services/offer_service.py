@@ -295,28 +295,45 @@ async def update_offers_price(offers: pd.DataFrame | list[OfferOut],
         backend_logger.info('Skip update prices due to list is empty')
         return
 
-    data = [
-        APIPriceChangeData(
-            sku=offer_data['sku'],
-            market=offer_data['market'],
-            name_of_shop=offer_data['name_of_shop'],
-            target_price=offer_data['target_price'],
-            api_current_price=offer_data['current_price__api'],
-            auto_participation_in_promotions=offer_data['auto_participation_in_promotions'],
-            auto_min_price=offer_data['target_price'] * offer_data['auto_min_price'] / 100 if all((offer_data['target_price'], offer_data['auto_min_price'])) else None,
-            vendor_code=int(offer_data['vendor_code']) if offer_data['vendor_code'] is not None and not np.isnan(
-                offer_data['vendor_code']) else None,
-            discount_base_price=offer_data['discount_base_price'],
-            discount=offer_data['seller_discount'] or 0,
-            discount_changed=offer_data['seller_discount_changed'],
+    update_data = []
+    for row in data:
+        auto_min_price_rub = (
+            row['target_price'] * row['auto_min_price'] / 100
+            if all((row['target_price'], row['auto_min_price']))
+            else None
         )
-        for offer_data in data
-    ]
+        vendor_code = (
+            int(row['vendor_code'])
+            if row['vendor_code'] is not None and not np.isnan(row['vendor_code'])
+            else None
+        )
+        min_price_rub = (
+            str(row['manual_min_price'])
+            if row['use_manual_min_price']
+            else str(auto_min_price_rub)
+        )
+
+        update_data.append(
+            APIPriceChangeData(
+                sku=row['sku'],
+                market=row['market'],
+                name_of_shop=row['name_of_shop'],
+                target_price=row['target_price'],
+                api_current_price=row['current_price__api'],
+                auto_participation_in_promotions=row['auto_participation_in_promotions'],
+                auto_min_price=auto_min_price_rub,
+                vendor_code=vendor_code,
+                discount_base_price=row['discount_base_price'],
+                discount=row['seller_discount'] or 0,
+                discount_changed=row['seller_discount_changed'],
+                min_price=min_price_rub,
+            )
+        )
 
     # изменение цен в магазине
     api_interactor = ApiInteractor(api_session_fabric=api_session_fabric,
                                    db_session_fabric=db_session_fabric)
-    await api_interactor.change_prices(data)
+    await api_interactor.change_prices(update_data)
 
 
 async def update_offers_attributes(offers: pd.DataFrame,
