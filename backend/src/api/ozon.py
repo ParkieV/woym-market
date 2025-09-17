@@ -125,6 +125,7 @@ class OzonApi(ApiGateway, IApiGateway):
                                          body=body)
 
             data = await self.validate_response(response, body=body)
+            await asyncio.sleep(1)
 
             for offer in data['items']:
                 result[offer['offer_id']] = {
