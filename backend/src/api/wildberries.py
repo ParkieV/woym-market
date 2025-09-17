@@ -237,6 +237,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             if i % 4 == 0:
                 await asyncio.sleep(1)
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
+            await asyncio.sleep(1)
 
             if not response.ok:
                 # ERROR: Здесь выкидывается ошибка 500
