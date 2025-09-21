@@ -6,7 +6,6 @@ from enum import Enum
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
 
-
 class PricingSchemeFieldCreate(BaseModel):
     key: str
     name: str
@@ -155,10 +154,10 @@ class OfferOut(OfferChange):
     best_place_wm: str | None = Field(title='Площадка с лучшей ценой (без учета Маркета)')
     min_price_without_market: float | None = Field(title='Цена площадки (без учета Маркета)')
     best_place_im: str | None = Field(title='Площадка с лучшей ценой (на Маркете)')
-    min_price_in_market: float | None = Field(title='Цена площадки (на Маркете)')
+    turnover_curr_balance: dict | None = Field(title='Оборачиваемость текущих остатков')
     best_place_im_link: str | None = Field(title='Ссылка на магазин с лучшей ценой', exclude=True)
     your_price_for_buyers: float | None = Field(title='Ваша цена для покупателей')
-    min_general_markets_price: float | None = Field(title='Лучшая цена среди всех площадок')
+    turnover_avg_balance: dict | None = Field(title='Оборачиваемость средних остатков')
     vendor_code: int | None = Field(title='Артикул')
     recommended_retail_price: float | None = Field(title='РРЦ')
     stop_price: float | None = Field(title='Стоп цена')
@@ -200,11 +199,11 @@ class OfferOut(OfferChange):
     @computed_field()
     @property
     def violator(self) -> str:
-        if not all((self.recommended_retail_price, self.min_price_in_market)):
+        if not all((self.recommended_retail_price, self.turnover_curr_balance)):
             return ''
 
-        if self.recommended_retail_price > self.min_price_in_market:
-            return f'SKU: {self.violator_sku}, Маркетплейс: {self.market}, Магазин: {self.best_place_im}, Цена: {round(self.min_price_in_market)}, РРЦ: {round(self.recommended_retail_price)}'
+        if self.recommended_retail_price > self.turnover_curr_balance:
+            return f'SKU: {self.violator_sku}, Маркетплейс: {self.market}, Магазин: {self.best_place_im}, Цена: {round(self.turnover_curr_balance)}, РРЦ: {round(self.recommended_retail_price)}'
 
         return ''
 

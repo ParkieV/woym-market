@@ -8,7 +8,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.services.base_utils
-from src.api.interfaces import IApiSessionFabric, ApiTypes
+from src.api.interfaces import IApiSessionFabric
 from src.database.interfaces import IDbSessionFabric
 from src.database.models.models import Offer, CatalogItem
 from src.database.offer import OfferRepository
