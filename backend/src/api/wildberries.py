@@ -193,7 +193,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         if response_json.get('error', None):
             parser_logger.error(f'Cant check price update result: {response_json.get("errorText", "unknown error")}')
 
-        task_result_info = response_json.get('data', {})
+        task_result_info = response_json.get('data', dict())
 
         parser_logger.info(
             f'Task price upload ID({task_result_info.get("uploadID", "unknown")}) with status: {task_result_info.get("status", "unknown")} checked. \nAll goods: {task_result_info.get("overAllGoodsNumber", "unknown")}, without errors: {task_result_info.get("successGoodsNumber", "unknown")}')

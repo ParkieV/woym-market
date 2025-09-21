@@ -168,8 +168,8 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     header: "Авто мин. цена (руб)",
                     base: rubleColumn,
                     valueGetter: ({ data }: { data: Offer }) => {
-                        if (data.total_price === null) return null;
-                        return data.total_price * (data.auto_min_price / 100);
+                        if (data.target_price === null) return null;
+                        return Math.ceil(data.target_price * data.auto_min_price / 100);
                     }
                 },
                 {
