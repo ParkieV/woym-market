@@ -1,19 +1,17 @@
 import asyncio
-import inspect
 from math import ceil
 from typing import Any, AsyncIterator
 from datetime import datetime
 from dataclasses import dataclass
-from collections.abc import Sequence, Mapping, AsyncGenerator, Iterable
+from collections.abc import Sequence, Mapping, AsyncGenerator
 
 from aiohttp import ClientSession
 from starlette import status
 from fastapi import HTTPException
 from tenacity import retry_if_exception, retry, stop_after_attempt, wait_random
 
-from api.exceptions import MarketplaceAPIException, RequestException
-from infra.policies.rate_limit import rate_limiter, rate_limiter_gen
-from infra.policies.timeout import timeout, DeadlineExceededError
+from src.api.exceptions import MarketplaceAPIException, RequestException
+from src.infra.policies.rate_limit import rate_limiter_gen
 from logs import parser_logger
 from src.api.exceptions import InitializationError
 from src.api.interfaces import IApiGateway, ApiTypes
