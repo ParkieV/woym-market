@@ -102,12 +102,6 @@ async def calculate_price(data: pd.DataFrame, market_settings: MarketOut) -> pd.
     df.reset_index(drop=True, inplace=True)
     df.drop('min_level', axis=1, inplace=True)
 
-    df['target_price'] = np.where(
-        (df['best_place_im'] == df['name_of_shop']),
-        (df['target_price'] * 1.05).round(),
-        df['target_price'].round()
-    )
-
     if market_settings.consider_logistic_cost:
         df['target_price'] = df['target_price'] + df['logistic_price'] * (np.ceil(data['self_width'] * data['self_height'] * data['self_length'] / 1000) - 1)
 
