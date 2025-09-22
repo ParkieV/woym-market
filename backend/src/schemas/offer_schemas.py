@@ -196,17 +196,6 @@ class OfferOut(OfferChange):
         return 'Не найден'
 
 
-    @computed_field()
-    @property
-    def violator(self) -> str:
-        if not all((self.recommended_retail_price, self.turnover_curr_balance)):
-            return ''
-
-        if self.recommended_retail_price > self.turnover_curr_balance:
-            return f'SKU: {self.violator_sku}, Маркетплейс: {self.market}, Магазин: {self.best_place_im}, Цена: {round(self.turnover_curr_balance)}, РРЦ: {round(self.recommended_retail_price)}'
-
-        return ''
-
 
 class OfferOutWithPriceScheme(OfferOut):
     pricing_scheme: PricingSchemeOut | None = None

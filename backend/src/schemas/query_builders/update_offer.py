@@ -1,6 +1,7 @@
 from collections.abc import Iterable, Mapping, Generator
 from types import NoneType
 from typing import Any
+import json
 
 from src.schemas.filters.filter_schemas import BaseFilter
 
@@ -13,7 +14,7 @@ class CreateTempTable(BaseFilter):
     def __call__(self, query):
         type_python_postgresql_dict = {
             int: 'INT',
-            dict: 'DICT',
+            dict: 'JSONB',
             float: 'DOUBLE PRECISION',
             bool: 'BOOLEAN',
             str: 'VARCHAR',
@@ -22,8 +23,7 @@ class CreateTempTable(BaseFilter):
         double_prec_attrs = {
             'self_length', 'self_width', 'self_weight', 'self_weight', 'volume',
             'seller_discount', 'old_discount', 'attractive_price_threshold',
-            'moderately_attractive_price_threshold', 'turnover_curr_balance',
-            'turnover_avg_balance'
+            'moderately_attractive_price_threshold',
         }
         query_create = query
 
@@ -51,8 +51,9 @@ class InsertTempTable:
                  data: list[Mapping[str, Any]]):
         self.data = data
 
-    def __call__(self, query: str, chunk_size: int = 500) -> Generator[list[str], list[dict[str, Any]]]:
+    def __call__(self, query: str, chunk_size: int = 500) -> Generator[tuple[str, dict[str, Any]], None, None]:
         data = self.data
+        json_cols = {k for k, v in data[0].items() if isinstance(v, dict)}
 
         key_list = [key for key in data[0].keys()]
 
@@ -66,8 +67,15 @@ class InsertTempTable:
             query_second = ""
             # Разбиваем данные по чанкам для обхода ограничения на количество значений в одном запросе SQLAlchemy
             for j in range(chunk_size * i, min(len(data), chunk_size * (i + 1))):
-                insert_data.update({f'{key}_{j}': data[j][key] for key in key_list})
-                row_str = '(' + ', '.join([f':{column}_{j}' for column in key_list]) + ')'
+                row_values = []
+                for key in key_list:
+                    val = data[j][key]
+                    if key in json_cols and val is not None:
+                        val = json.dumps(val, ensure_ascii=False)
+                    insert_data[f'{key}_{j}'] = val
+                    placeholder = f'CAST(:{key}_{j} AS JSONB)' if key in json_cols else f':{key}_{j}'
+                    row_values.append(placeholder)
+                row_str = '(' + ', '.join(row_values) + ')'
                 query_second += f"{row_str},\n\t"
             if len(insert_data) == 0:
                 return
