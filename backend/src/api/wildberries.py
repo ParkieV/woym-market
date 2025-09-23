@@ -1,7 +1,7 @@
 import asyncio
 import inspect
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import ceil
 from typing import Any, AsyncGenerator
 
@@ -11,7 +11,8 @@ from fastapi import HTTPException
 from starlette import status
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random
 
-from src.infra.policies.rate_limit import rate_limiter_gen
+from api.gateway_template import get_api_session
+from src.infra.policies.rate_limit import rate_limiter_gen, rate_limiter
 from src.infra.policies.timeout import DeadlineExceededError
 from logs import parser_logger
 from src.api.exceptions import InitializationError, RequestException, MarketplaceAPIException
@@ -123,6 +124,14 @@ class WildberriesApi(ApiGateway, IApiGateway):
             parser_logger.error(
                 f"Method {inspect.currentframe().f_code.co_name} "
                 "canceled by timeout policy"
+            )
+            offers_turnovers = {
+                offer['vendor_code']: (None, None)
+                for offer in offers
+            }
+        except Exception as e:
+            parser_logger.error(
+                f'Unexpected error while getting offers turnovers: {str(e)}'
             )
             offers_turnovers = {
                 offer['vendor_code']: (None, None)
@@ -564,3 +573,78 @@ class WildberriesApi(ApiGateway, IApiGateway):
                         }
                     )
             yield result_batch
+
+    @rate_limiter(max_rate=3, secs=61)
+    async def _check_turnover(
+            self,
+            date_start: str,
+            date_end: str,
+    ) -> dict[str, float]:
+        url = 'https://seller-analytics-api.wildberries.ru/api/v2/stocks-report/products/groups'
+        body = {
+            "nmIDs": [244422976],
+            "currentPeriod": {
+                "start": date_start,
+                "end": date_end
+            },
+            "stockType": "wb",
+            "skipDeletedNm": True,
+            "availabilityFilters": [
+                "deficient", "actual", "nonActual",
+                "balanced", "nonLiquid", "invalidData"
+            ],
+            "orderBy": {
+                "field": "ordersCount",
+                "mode": "desc"
+            },
+            "offset": 0,
+            "limit": 1
+        }
+
+        # отправка запроса
+        response = await self.request('POST', url=url, headers=self.auth_headers, body=body)
+        try:
+            await self._validate_response(response)
+        except RequestException as e:
+            err_msg = f'Cant get turnover that starts with nmID=244422976: {str(e)}'
+            parser_logger.critical(err_msg)
+            raise MarketplaceAPIException(api_type=str(ApiTypes.WILDBERRIES), details=err_msg)
+
+
+        resp_body = await response.json()
+
+        item = resp_body["data"]["groups"][0]["items"][0]
+        return item["metrics"]["saleRate"]
+
+
+async def main():
+    date_end = datetime.now()
+    duration = timedelta(days=0)
+
+    async with get_api_session() as session:
+        api = WildberriesApi(
+            token="eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjUwNDE3djEiLCJ0eXAiOiJKV1QifQ.eyJlbnQiOjEsImV4cCI6MTc2MjAzMDQ2MiwiaWQiOiIwMTk2OTU1YS04ZjI2LTc0ZGEtYTgxYi0yMzFiMzdmYmYyMjMiLCJpaWQiOjMzMzQ2Mzk1LCJvaWQiOjIxODM3OCwicyI6NzkzNCwic2lkIjoiMTQ1ZTUwYWQtM2YyZS00MzE1LTkxMDQtZDhlMTAyN2E3MGFmIiwidCI6ZmFsc2UsInVpZCI6MzMzNDYzOTV9.gsWLlEkVDKpkS3nw_8FmlJstxAIAXkKCAQu-nhP4pjtBoelUsekicklbdd5JKDw3Nn5_UNUiEwQ4iC8ptpfNog",
+            entity_id=None,
+            shop_name="SkrabPlus",
+            session=session
+        )
+
+        for _ in range(90):
+            result = await api._check_turnover(
+                date_start=(date_end - duration).strftime('%Y-%m-%d'),
+                date_end=date_end.strftime('%Y-%m-%d'),
+            )
+            if 59 < result.get("days", 0) < 62:
+                print(
+                    f"date_start: {(date_end - duration).strftime('%Y-%m-%d')}, date_end: {date_end.strftime('%Y-%m-%d')}\n"
+                    f"{result}\n\n"
+                )
+            else:
+                print(
+                    f"date_start: {(date_end - duration).strftime('%Y-%m-%d')}, date_end: {date_end.strftime('%Y-%m-%d')}\n"
+                    f"not suited\n\n"
+                )
+            duration += timedelta(days=1)
+
+if __name__ == '__main__':
+    asyncio.run(main())
