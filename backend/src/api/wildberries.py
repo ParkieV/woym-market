@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from starlette import status
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random
 
-from api.gateway_template import get_api_session
+from src.api.gateway_template import get_api_session
 from src.infra.policies.rate_limit import rate_limiter_gen, rate_limiter
 from src.infra.policies.timeout import DeadlineExceededError
 from logs import parser_logger
