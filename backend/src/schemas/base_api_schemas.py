@@ -40,8 +40,8 @@ class APIOffer(BaseModel):
     min_price_without_market: float | None = None
     best_place_im: str = ''
     best_place_im_link: str = ''
-    min_price_in_market: float | None = None
-    min_general_markets_price: float | None = None
+    turnover_curr_balance: dict[str, Any] | None = None
+    turnover_avg_balance: dict[str, Any] | None = None
     your_price_for_buyers: float | None = None
     fbo: float | None = None
     barcodes: str | None = None

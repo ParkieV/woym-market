@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
@@ -5,6 +6,7 @@ from datetime import datetime
 from io import BytesIO
 from typing import Any
 
+import aiohttp
 import pandas as pd
 from aiohttp import ClientSession, ClientResponse
 
@@ -12,8 +14,6 @@ from logs import parser_logger
 from src.api.exceptions import RequestException
 from src.api.interfaces import IApiGateway
 from src.schemas.base_api_schemas import APIOfferChangeData, APIOffer, APIWarehouse, APIPriceChangeData, APIOrderData
-
-
 
 @asynccontextmanager
 async def get_api_session() -> AsyncGenerator[ClientSession, None]:
@@ -23,6 +23,8 @@ async def get_api_session() -> AsyncGenerator[ClientSession, None]:
         except RequestException as exc:
             parser_logger.error(exc)
             raise exc
+        finally:
+            await session.close()
 
 
 class ApiGateway(IApiGateway):
@@ -59,7 +61,7 @@ class ApiGateway(IApiGateway):
         try:
             response = await self.session.request(method=method, url=url, headers=headers, json=body, params=params)
         except Exception as e:
-            parser_logger.fatal(f'[FATAL] {response_log_message}', exc_info=e)
+            parser_logger.error(f'{response_log_message}', exc_info=e)
             raise RequestException(response_log_message)
         else:
             response_status = 'OK' if response.ok else 'FAILED'
@@ -77,7 +79,45 @@ class ApiGateway(IApiGateway):
         output.write(await response.read())
         return pd.read_excel(output, engine='openpyxl')
 
-    async def validate_response(self, response: ClientResponse, body: Any = None) -> Any:
+    @staticmethod
+    def _is_retryable(e: BaseException) -> bool:
+        if isinstance(e, aiohttp.ClientResponseError):
+            return e.status in (408, 429) or 500 <= e.status < 600
+        return isinstance(e, (
+            aiohttp.ServerTimeoutError,
+            aiohttp.ClientOSError,
+            aiohttp.ServerDisconnectedError,
+            asyncio.TimeoutError,
+        ))
+
+    @staticmethod
+    async def _validate_response(response: ClientResponse) -> None:
+        if not response.ok:
+            if response.status in (429, 503):
+                ra = response.headers.get("Retry-After")
+                if ra and ra.isdigit():
+                    await asyncio.sleep(int(ra))
+                raise aiohttp.ClientResponseError(
+                    request_info=response.request_info,
+                    history=response.history,
+                    status=response.status,
+                    message=await response.text()
+                )
+            # ретраим 5xx
+            elif 500 <= response.status < 600:
+                raise aiohttp.ClientResponseError(
+                    request_info=response.request_info,
+                    history=response.history,
+                    status=response.status,
+                    message=await response.text()
+                )
+            else:
+                raise RequestException(
+                    await response.text()
+                )
+
+    @staticmethod
+    async def _get_resp_body_json(response: ClientResponse, body: Any = None) -> Any:
         data_json = await response.json()
 
         if response.status != 200:

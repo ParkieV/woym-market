@@ -16,10 +16,13 @@ import {
     GroupColumn,
     ImageColumn
 } from "$lib/datagrid/columns/types";
+import { formatTurnover } from "$lib/util";
 
 export default function offerGrid(templates: Template[]): GridDefinition<Offer> {
     return new GridDefinition(BASE_GRID_OPTIONS, columns(templates));
 }
+
+
 
 function columns(templates: Template[]): (Column | ColumnGroup)[] {
     return [
@@ -285,14 +288,16 @@ function columns(templates: Template[]): (Column | ColumnGroup)[] {
                     base: new StringColumn()
                 },
                 {
-                    key: "min_price_in_market",
-                    header: "Цена площадки (на Маркете)",
-                    base: rubleColumn
+                    key: "turnover_curr_balance",
+                    header: "Оборачиваемость текущих остатков",
+                    base: new StringColumn(),
+                    valueGetter: ({ data }: { data: Offer }) => formatTurnover((data as Offer).turnover_curr_balance)
                 },
                 {
-                    key: "min_general_markets_price",
-                    header: "Минимальная цена в группе",
-                    base: rubleColumn
+                    key: "turnover_avg_balance",
+                    header: "Оборачиваемость средних остатков",
+                    base: new StringColumn(),
+                    valueGetter: ({ data }: { data: Offer }) => formatTurnover((data as Offer).turnover_avg_balance)
                 },
                 {
                     key: "target_price",

@@ -1,7 +1,6 @@
-import json
 import asyncio
 from math import ceil
-from typing import Any
+from typing import Any, AsyncIterator
 from datetime import datetime
 from dataclasses import dataclass
 from collections.abc import Sequence, Mapping, AsyncGenerator
@@ -9,11 +8,14 @@ from collections.abc import Sequence, Mapping, AsyncGenerator
 from aiohttp import ClientSession
 from starlette import status
 from fastapi import HTTPException
+from tenacity import retry_if_exception, retry, stop_after_attempt, wait_random
 
+from src.api.exceptions import MarketplaceAPIException, RequestException
+from src.infra.policies.rate_limit import rate_limiter_gen
 from logs import parser_logger
 from src.api.exceptions import InitializationError
 from src.api.interfaces import IApiGateway, ApiTypes
-from src.api.gateway_template import ApiGateway
+from src.api.gateway_template import ApiGateway, get_api_session
 from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehouse, APIPriceChangeData, WarehouseType, \
     APIOfferChangeData, APIOrderData
 
@@ -124,7 +126,7 @@ class OzonApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url='https://api-seller.ozon.ru/v5/product/info/prices', headers=self.auth_headers,
                                          body=body)
 
-            data = await self.validate_response(response, body=body)
+            data = await self._get_resp_body_json(response, body=body)
 
             for offer in data['items']:
                 result[offer['offer_id']] = {
@@ -157,7 +159,7 @@ class OzonApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url='https://api-seller.ozon.ru/v1/product/rating-by-sku',
                                          headers=self.auth_headers, body=body)
             await asyncio.sleep(1)
-            data = await self.validate_response(response, body=body)
+            data = await self._get_resp_body_json(response, body=body)
             result.update({item['sku']: item['rating'] for item in data['products']})
 
         return result
@@ -176,7 +178,7 @@ class OzonApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url='https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses',
                                          headers=self.auth_headers, body=body)
 
-            data = await self.validate_response(response, body)
+            data = await self._get_resp_body_json(response, body)
             await asyncio.sleep(1)
             if not data['result']['rows']:
                 break
@@ -219,7 +221,7 @@ class OzonApi(ApiGateway, IApiGateway):
             }
         )
 
-        data = await self.validate_response(response)
+        data = await self._get_resp_body_json(response)
         clusters = []
         for cluster in data['clusters']:
             clusters.append(
@@ -348,7 +350,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 parser_logger.error(f'Cant update offers data: {response.text}')
                 continue
 
-            json_response = await self.validate_response(response)
+            json_response = await self._get_resp_body_json(response)
             task_id = json_response.get('result', {}).get('task_id', None)
             if not task_id:
                 parser_logger.error(f'Cant find task_id: {response.text}')
@@ -371,7 +373,7 @@ class OzonApi(ApiGateway, IApiGateway):
             parser_logger.error(f'Cant check task({task_id}) status {response.text}')
             return
 
-        json_response = await self.validate_response(response)
+        json_response = await self._get_resp_body_json(response)
 
         for item_info in json_response.get('result', {}).get('items', []):
             if item_info.get('status') == 'failed':
@@ -384,7 +386,7 @@ class OzonApi(ApiGateway, IApiGateway):
         parser_logger.info(f'Task {task_id} checked. Total {json_response.get("result", {}).get("total", "unknown")}')
 
     async def get_offers_list(self) -> list[APIOffer]:
-        offers_identifiers = []
+        offers_identifiers: list[OfferIdentifier] = []
         async for chunk in self._get_offers_identifiers_by_chunks():
             offers_identifiers += chunk
         offers = await self._get_offers_base_info(offers_identifiers)
@@ -392,12 +394,38 @@ class OzonApi(ApiGateway, IApiGateway):
         offers_content_rating = await self._get_content_ratings(
             [offer['market_sku'] for offer in offers if offer['market_sku'] > 0])
         offers_prices = await self._get_offers_prices_by_identifiers(offers_identifiers)
+        offers_turnovers = {}
+        # try:
+        #     async for turnover in self.get_turnover(
+        #         [identification.offer_id for identification in offers_identifiers]
+        #     ):
+        #         offers_turnovers.update(turnover)
+        # except DeadlineExceededError:
+        #     parser_logger.error(
+        #         f"Method {inspect.currentframe().f_code.co_name} "
+        #         "canceled by timeout policy"
+        #     )
+        #     offers_turnovers = {
+        #         identification.offer_id: (None, None)
+        #         for identification in offers_identifiers
+        #     }
 
         product_ids = {ident.offer_id: ident.product_id for ident in offers_identifiers}
 
+        # Не заменять, опасно!
+        # Проверь, где используется
+        turnover_default = {
+            "hours": -3.0
+        }
+
         for offer in offers:
-            attrs = offers_attributes.get(offer['sku'], None)
+            attrs = offers_attributes.get(offer['sku'])
             prices = offers_prices.get(offer['sku'], {})
+            turnovers = offers_turnovers.get(
+                offer['sku'], (
+                    turnover_default, turnover_default
+                )
+            )
 
             offer.update(attrs)
             offer['name_of_shop'] = self.shop_name
@@ -408,6 +436,8 @@ class OzonApi(ApiGateway, IApiGateway):
             offer['vendor_code'] = product_ids.get(offer['sku'], None)
             offer.pop('market_sku', None)
             offer['photo'] = offer['photo'][0] if len(offer['photo']) > 0 else None
+            offer['turnover_avg_balance'] = turnovers[0]
+            offer['turnover_curr_balance'] = turnovers[1]
 
         return [APIOffer(**i) for i in offers]
 
@@ -481,7 +511,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 include_response_logs=True
             )
 
-            await self.validate_response(response, body=body)
+            await self._get_resp_body_json(response, body=body)
 
             if not response.ok:
                 parser_logger.error(f'Cant change price: {response.reason}: {await response.json()}')
@@ -509,7 +539,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 body=body
             )
             await asyncio.sleep(1)
-            data = (await self.validate_response(response))
+            data = (await self._get_resp_body_json(response))
 
             data = data['result']
             items = data['items']
@@ -536,7 +566,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 body=body
             )
 
-            data = await self.validate_response(response, body=body)
+            data = await self._get_resp_body_json(response, body=body)
             for offer in data['items']:
                 offer_status = offer.get('statuses', {})
                 if offer_status.get('validation_status', 'fail') == 'fail' or offer_status.get('status_failed', '') != '':
@@ -563,7 +593,7 @@ class OzonApi(ApiGateway, IApiGateway):
                         'name': offer['name'],
                         'photo': offer['primary_image'],
                         'current_price': self._str_to_float(offer['price']),
-                        'min_price_in_market': min_market_price,
+                        'turnover_curr_balance': min_market_price,
                         'min_price_without_market': self._str_to_float(minimal_price),
                         'attractive_price_threshold': None,
                         'market': 'ozon',
@@ -598,7 +628,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 body=body
             )
 
-            data = await self.validate_response(response, body=body)
+            data = await self._get_resp_body_json(response, body=body)
             for offer in data['result']:
                 description_attributes = [i['values'][0] for i in offer['attributes'] if
                                           i['id'] == 4191 and len(i['values'])]
@@ -668,7 +698,7 @@ class OzonApi(ApiGateway, IApiGateway):
             raise HTTPException(status.HTTP_400_BAD_REQUEST,
                                 f'Не удалось получить заказы: {response.json().get("message", "unknown")}')
 
-        json_response = await self.validate_response(response)
+        json_response = await self._get_resp_body_json(response)
         result = []
 
         for order in json_response.get('result', []):
@@ -692,3 +722,92 @@ class OzonApi(ApiGateway, IApiGateway):
                 result.append(order_item_data)
 
         return result
+
+    @retry(
+        retry=retry_if_exception(ApiGateway._is_retryable),
+        stop=stop_after_attempt(3),
+        wait=wait_random(0, 1),
+        reraise=True
+    )
+    @rate_limiter_gen(secs=61)
+    async def get_turnover(
+            self,
+            skus: list[str],
+            size: int | None = None,
+            batch_size: int | None = 1000,
+    ) -> AsyncIterator[dict[str, tuple[dict, dict]]]:
+        """ Возвращает информацию об оборачиваемости остатков """
+        if batch_size > 1000:
+            raise ValueError("parameter \"batch_size\" must be less than or equal to 1000.")
+        if size and size < 0:
+            raise ValueError("parameter \"size\" must be positive number.")
+
+        if not skus:
+            return
+
+        offset = 0
+        while True:
+            # формирование запроса
+            if size:
+                current_batch_size = min(batch_size, size - offset)
+            else:
+                current_batch_size = min(batch_size, len(skus) - offset)
+
+            if current_batch_size < 1:
+                return
+            current_batch = skus[offset:offset + current_batch_size]
+            offset += current_batch_size
+
+            url = 'https://api-seller.ozon.ru/v1/analytics/turnover/stocks'
+            body = {
+                "sku": current_batch,
+            }
+
+            # отправка запроса
+            response = await self.request('POST', url=url, headers=self.auth_headers, body=body)
+            try:
+                await self._validate_response(response)
+            except RequestException as e:
+                err_msg = f'Cant get turnover that starts with sku={skus[0]}: {str(e)}'
+                parser_logger.critical(err_msg)
+                raise MarketplaceAPIException(api_type=str(ApiTypes.OZON), details=err_msg)
+
+            # обработка ответа
+            result_batch: dict[str, tuple[dict, dict]] = {}
+
+            resp_body = await response.json()
+            for item in resp_body["items"]:
+                turnover = item.get('turnover', -3.0)
+                idc = item.get('idc', -3.0)
+
+                result_batch[item["sku"]] = (
+                    {
+                        "days": turnover
+                    } if turnover != -3.0
+                    else {
+                        "hours": turnover
+                    },
+                    {
+                        "days": idc
+                    } if idc != -3.0
+                    else {
+                        "hours": idc
+                    },
+                )
+            yield result_batch
+
+async def main():
+    async with get_api_session() as session:
+        api = OzonApi(
+            token="1eb50510-54a8-409c-a727-9a0d5f24387a",
+            entity_id="532844",
+            shop_name="SkrabPlus",
+            session=session
+        )
+        async for batch in await api.get_turnover([
+            "20068", "20069"
+        ]):
+            print(batch)
+
+if __name__ == '__main__':
+    asyncio.run(main())

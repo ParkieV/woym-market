@@ -389,10 +389,10 @@ async def get_violators(session: AsyncSession, market: str | None = None, name_o
     query = select(
         Offer.best_place_im.label('name_of_shop'),
         Offer.market,
-        Offer.min_price_in_market.label('price'),
+        Offer.turnover_curr_balance.label('price'),
         Offer.recommended_retail_price,
         Offer.best_place_im_link.label('link')
-    ).where(Offer.recommended_retail_price > Offer.min_price_in_market)
+    ).where(Offer.recommended_retail_price > Offer.turnover_curr_balance)
 
     if market:
         query = query.where(Offer.market == market)
