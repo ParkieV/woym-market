@@ -61,12 +61,10 @@ app: FastAPI = FastAPI(
 
 if config.is_prod:
     origins = ['https://woym-market.ru']
-elif config.is_dev:
-    origins = ['https://dev.woym-market.ru']
 elif config.is_test:
     origins = ['https://test.woym-market.ru']
-elif config.is_local:
-    origins = ['*']
+elif config.is_dev:
+    origins = ['http://localhost:5173']
 else:
     raise InitializationError('Не получилось определить контур развертывания')
 
@@ -90,4 +88,4 @@ async def pull_response_headers(request, exc):
 
 
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+    uvicorn.run(app, host='0.0.0.0', port=8001)
