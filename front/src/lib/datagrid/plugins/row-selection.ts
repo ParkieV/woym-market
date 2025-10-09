@@ -14,16 +14,19 @@ export default class RowSelectionPlugin<T, K> implements GridPlugin<T> {
             key: (val: T) => K;
             checkbox?: boolean;
             sync?: boolean;
+            match?: (selected: Map<K, T>, data: T, key: (val: T) => K) => boolean;
         }
     ) {}
 
     init(opts: MyGridOptions<T>): void | Promise<void> {
-        let { checkbox = true, key, sync = false } = this.options ?? {};
+        let { checkbox = true, key, sync = false, match } = this.options ?? {};
 
         opts.rowSelection = "multiple";
 
+        let isSyncing = false;
         let func = opts.onRowSelected;
         opts.onRowSelected = e => {
+            if (isSyncing) return;
             let selected = get(this.selection.selected);
             e.api.forEachNode(node => {
                 if (node.data === undefined) return;
@@ -34,6 +37,18 @@ export default class RowSelectionPlugin<T, K> implements GridPlugin<T> {
                 }
             });
             this.selection.selected.set(selected);
+            if (match) {
+                isSyncing = true;
+                try {
+                    e.api.forEachNode(node => {
+                        if (node.data === undefined) return;
+                        const shouldBeSelected = match(get(this.selection.selected), node.data, key);
+                        if (node.isSelected() !== shouldBeSelected) node.setSelected(shouldBeSelected);
+                    });
+                } finally {
+                    isSyncing = false;
+                }
+            }
             func?.(e);
         };
 
@@ -42,7 +57,7 @@ export default class RowSelectionPlugin<T, K> implements GridPlugin<T> {
             const callback = (selected: Map<K, T>) => {
                 e.api.forEachNode(node => {
                     if (node.data === undefined) return;
-                    let isSelected = selected.has(key(node.data));
+                    let isSelected = match?.(selected, node.data, key) ?? selected.has(key(node.data));
                     node.setSelected(isSelected);
                 });
             };

@@ -4,10 +4,10 @@
     import Grid from "$lib/grid/Grid.svelte";
     import { get } from "svelte/store";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
-    import fboOffersGrid, { calcStocksToDeliver, detailApiMap } from "./fbo-offer";
+    import fboOffersGrid, { detailApiMap } from "./fbo-offer";
     import { userCanModify } from "$lib/data/user";
     import Toolbar from "./Toolbar.svelte";
-    import fboStocks from "./fbo-stocks";
+    import fboStocks, { calcToDeliver } from "./fbo-stocks";
     import { browser } from "$app/environment";
     import ChangesPlugin from "$lib/datagrid/plugins/changes";
     import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
@@ -61,8 +61,22 @@
             .plugin(new ClassesPlugin())
             .plugin(
                 new RowSelectionPlugin(fboStocksSelection, {
-                    key: ({ warehouse }) => warehouse.id,
-                    sync: false
+                    key: ({ warehouse }) => {
+                        // Use wildcard key for clusters to represent selecting all warehouses of the market
+                        if (warehouse.warehouse_type !== "warehouse") {
+                            return `${warehouse.market}:*`;
+                        }
+                        return `${warehouse.market}:${warehouse.name}`;
+                    },
+                    sync: true,
+                    match: (selected, data, key) => {
+                        const k = key(data) as string;
+                        if (selected.has(k as any)) return true;
+                        // allow cluster shortcut: market:* selects all warehouses of the same market
+                        const [market] = k.split(":");
+                        const wildcard = `${market}:*` as any;
+                        return selected.has(wildcard);
+                    }
                 })
             );
 
@@ -77,23 +91,37 @@
             .plugin(new DetailGridPlugin(detail, data => data.stocks, detailApiMap))
             .plugin(
                 new SummaryPlugin<FboStorage>({
-                    sku: () => "Итого",
+                    sku: () => "Всего:",
                     volume: ({ rows }) =>
-                        rows.reduce((sum, row) => sum + row.volume * calcStocksToDeliver(row), 0),
+                        rows.reduce((sum, row) => sum + row.volume * selectedToDeliver(row), 0),
                     self_weight: ({ rows }) =>
                         rows.reduce(
-                            (sum, row) => sum + row.self_weight * calcStocksToDeliver(row),
+                            (sum, row) => sum + row.self_weight * selectedToDeliver(row),
                             0
                         ),
                     cost_price: ({ rows }) =>
                         rows.reduce(
-                            (sum, row) => sum + row.cost_price * calcStocksToDeliver(row),
+                            (sum, row) => sum + row.cost_price * selectedToDeliver(row),
                             0
                         ),
                     profit: ({ rows }) =>
-                        rows.reduce((sum, row) => sum + row.profit * calcStocksToDeliver(row), 0)
+                        rows.reduce((sum, row) => sum + row.profit * selectedToDeliver(row), 0)
                 })
             );
+        function selectedToDeliver(row: FboStorage): number {
+            const selected = get(fboStocksSelection.selected);
+            if (!selected || selected.size === 0) return 0;
+            return row.stocks
+                .filter(x => x.warehouse.warehouse_type === "warehouse")
+                .reduce((sum, storage) => {
+                    const key = `${storage.warehouse.market}:${storage.warehouse.name}` as any;
+                    const wildcard = `${storage.warehouse.market}:*` as any;
+                    if (selected.has(key) || selected.has(wildcard)) {
+                        return sum + calcToDeliver(storage);
+                    }
+                    return sum;
+                }, 0);
+        }
         return master;
     })();
 </script>
