@@ -76,7 +76,7 @@ async def export_with_own_storage_supply(
                         background=BackgroundTask(clean_up_files, str(path)))
 
 
-@router.patch("/fbo-", dependencies=[Depends(get_current_user)])
+@router.patch("/fbo-storage", dependencies=[Depends(get_current_user)])
 async def update_fbo_offers(
     body: UpdateFboStocksRequest
 ):
