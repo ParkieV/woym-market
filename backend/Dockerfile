@@ -1,4 +1,4 @@
-FROM python:3.10.5-slim as base
+FROM python:3.10.5-slim AS base
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -15,7 +15,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       ca-certificates libstdc++6 libpq5 git && \
     rm -rf /var/lib/apt/lists/*
 
-FROM base as builder
+FROM base AS builder
 
 ENV VENV_PATH=/opt/venv
 ENV PATH="${VENV_PATH}/bin:${PATH}" \
@@ -31,7 +31,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=/tmp/requirements.txt \
     pip install -r /tmp/requirements.txt
 
-FROM base as runtime
+FROM base AS runtime
 
 COPY --from=builder /opt/venv /opt/venv
 

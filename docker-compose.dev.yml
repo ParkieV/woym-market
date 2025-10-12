@@ -16,7 +16,7 @@ services:
 
   frontend:
     restart: unless-stopped
-    env_file: front/.env.dev
+    env_file: front/.env
     build:
       context: front
       dockerfile: Dockerfile
