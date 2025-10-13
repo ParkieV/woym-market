@@ -99,7 +99,7 @@ export function calcToDeliver({
     is_deliver_in_boxes,
     in_box
 }: FboStocks): number {
-        const diff = Math.max(0, current_stock - min_stock);
+        const diff = Math.max(0, min_stock - current_stock);
     if (is_deliver_in_boxes) {
         let boxes_remainder = 0;
         if (diff % in_box !== 0) boxes_remainder = 1;
