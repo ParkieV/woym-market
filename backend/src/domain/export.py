@@ -241,7 +241,7 @@ class ExportDeliverInteractor:
 
     async def _generate_dir(self, order_data: dict[str, Any], base_dir: Path) -> Path:
         self._generate_supplies_excel(
-            base_dir / f'Заказ, {datetime.now().strftime("%Y.%m.%d, %H:%M")}.xlsx',
+            base_dir / f'Заказ, {datetime.now().strftime("%Y_%m_%d_%H%M")}.xlsx',
             list(order_data.get("all_data", []))
         )
         order_data.pop("all_data")
@@ -249,7 +249,7 @@ class ExportDeliverInteractor:
             for shop in order_data.get(market, []):
                 for warehouse in order_data[market].get(shop, []):
                     self._generate_supplies_excel(
-                        filepath=base_dir / market / shop / f"{warehouse}, {datetime.now().strftime('%Y.%m.%d, %H:%M')}.xlsx",
+                        filepath=base_dir / market / shop / f"{warehouse}, {datetime.now().strftime('%Y_%m_%d_%H%M')}.xlsx",
                         supplies=order_data[market][shop].get(warehouse, [])
                     )
         return base_dir
