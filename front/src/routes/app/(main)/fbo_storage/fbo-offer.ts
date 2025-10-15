@@ -18,7 +18,7 @@ import { userCanModify } from "$lib/data/user";
 import type { ChangeList } from "$lib/datagrid/plugins/changes";
 import { selectedContextMenuItems } from "./selected";
 import { calcToDeliver, getSelectedStocks } from "./fbo-stocks";
-import { fboStorageSelection } from "../selection";
+import { fboStorageSelection, fboStocksSelection } from "../selection";
 
 export const detailApiMap = new Map<number, GridApi>();
 
@@ -199,22 +199,39 @@ export function calcStocksToDeliver(stock: FboStorage) {
 }
 
 export function getSelectedOrders() {
-    const selectedMap = get(fboStorageSelection.selected); // Получаем выделенные строки в виде Map
-    const selectedRows = Array.from(selectedMap.values()); // Преобразуем в массив значений
+    const selectedOffersMap = get(fboStorageSelection.selected); // Получаем выделенные товары
+    const selectedStocksMap = get(fboStocksSelection.selected); // Получаем выделенные склады
+    const selectedRows = Array.from(selectedOffersMap.values()); // Преобразуем в массив значений
     console.log("selected offers:", selectedRows);
-    const orders = selectedRows.map(row => ({
-        sku: row.sku,
-        marketplace_name: row.market,
-        shop_name: row.name_of_shop,
-        weight: row.self_weight !== null? row.self_weight : 0,
-        volume: row.volume !== null? row.volume : 0,
-        cost_price: row.cost_price !== null? row.cost_price : 0,
-        goods_name: row.name,
-        to_deliver_number: row.stocks
-            .filter(x => x.warehouse.warehouse_type === "warehouse")
-            .reduce((sum, storage) => sum + calcToDeliver(storage), 0),
-        warehouses: getSelectedStocks(row.id, detailApiMap)
-    }));
+    console.log("selected stocks:", selectedStocksMap);
+    
+    const orders = selectedRows.map(row => {
+        // Получаем только выбранные склады для этого товара
+        const selectedStocksForOffer = row.stocks.filter(stock => {
+            const stockKey = `${stock.warehouse.market}:${stock.warehouse.name}`;
+            return selectedStocksMap.has(stockKey);
+        });
+        
+        return {
+            sku: row.sku,
+            marketplace_name: row.market,
+            shop_name: row.name_of_shop,
+            weight: row.self_weight !== null? row.self_weight : 0,
+            volume: row.volume !== null? row.volume : 0,
+            cost_price: row.cost_price !== null? row.cost_price : 0,
+            goods_name: row.name,
+            to_deliver_number: selectedStocksForOffer
+                .filter(x => x.warehouse.warehouse_type === "warehouse")
+                .reduce((sum, storage) => sum + calcToDeliver(storage), 0),
+            warehouses: selectedStocksForOffer
+                .filter(x => x.warehouse.warehouse_type === "warehouse")
+                .map(stock => ({
+                    id: stock.id,
+                    warehouse_name: stock.warehouse.name,
+                    to_deliver_number: calcToDeliver(stock)
+                }))
+        };
+    });
     console.log("orders:", orders);
     return orders;
 }

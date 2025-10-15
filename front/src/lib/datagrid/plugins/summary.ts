@@ -91,8 +91,8 @@ export class SummaryPlugin<T> implements GridPlugin<T> {
     }
 
     private setData(api: GridApi<T>) {
-        let rows = api.getSelectedRows();
-        if (rows.length === 0) rows = api.getGridOption("rowData") ?? [];
+        // Always compute summary against all rows; getters can use external selection state
+        const rows = api.getGridOption("rowData") ?? [];
 
         let data: Record<string, any> = {};
         for (const key in this.getters) {
