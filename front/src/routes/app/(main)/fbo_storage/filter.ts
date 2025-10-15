@@ -25,5 +25,9 @@ export const fboStorageFilter = derived(filterState, state => {
 
 export const fboStocksFilter = derived(filterState, state => {
     return (stocks: FboStocks): boolean =>
-        !state.hideUnmarkedWarehouses || get(fboStocksSelection.selected).has(stocks.id);
+        !state.hideUnmarkedWarehouses ||
+        // When toggle is ON, show only selected rows (both warehouses and clusters)
+        (get(fboStocksSelection.selected) as Map<string, FboStocks>).has(
+            `${stocks.warehouse.market}:${stocks.warehouse.name}`
+        );
 });
