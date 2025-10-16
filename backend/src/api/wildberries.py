@@ -1,9 +1,10 @@
 import asyncio
+import functools
 import inspect
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from math import ceil
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Callable, Awaitable, ParamSpec, TypeVar
 
 from aiohttp import ClientSession
 from dateutil.relativedelta import relativedelta
@@ -11,8 +12,7 @@ from fastapi import HTTPException
 from starlette import status
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random
 
-from src.api.gateway_template import get_api_session
-from src.infra.policies.rate_limit import rate_limiter_gen, rate_limiter
+from src.infra.policies.rate_limit import rate_limiter_gen
 from src.infra.policies.timeout import DeadlineExceededError
 from logs import parser_logger
 from src.api.exceptions import InitializationError, RequestException, MarketplaceAPIException
@@ -21,6 +21,34 @@ from src.api.interfaces import IApiGateway, ApiTypes
 from src.schemas.base_api_schemas import APIPriceChangeData, APIWarehouse, APIOffer, WarehouseType, APIWarehouseOffer, \
     APIOfferChangeData, APIOrderData
 
+
+P = ParamSpec("P")
+R = TypeVar("R", bound=list)
+AsyncFunc = Callable[P, Awaitable[R]]
+
+
+def add_custom_warehouses(get_warehouse_func: AsyncFunc) -> AsyncFunc:
+    @functools.wraps(get_warehouse_func)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> Awaitable[R]:
+        warehouses = await get_warehouse_func(*args, **kwargs)
+        warehouses.extend([
+            {
+                'market': 'wildberries',
+                'name': 'Астана Карагандинское шоссе',
+                'warehouse_type': WarehouseType.WAREHOUSE,
+            }, {
+                'market': 'wildberries',
+                'name': 'Самара (Новосемейкино)',
+                'warehouse_type': WarehouseType.WAREHOUSE,
+            }, {
+                'market': 'wildberries',
+                'name': 'Екатеринбург - Перспективный 12',
+                'warehouse_type': WarehouseType.WAREHOUSE,
+            }
+        ])
+        return warehouses
+
+    return wrapper
 
 
 class WildberriesApi(ApiGateway, IApiGateway):
@@ -379,6 +407,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         return result
 
+    @add_custom_warehouses
     async def _get_warehouses(self) -> list[dict]:
         url = 'https://supplies-api.wildberries.ru/api/v1/warehouses'
         result = []
@@ -395,7 +424,6 @@ class WildberriesApi(ApiGateway, IApiGateway):
             result.append({
                 'market': 'wildberries',
                 'name': item['name'],
-                'warehouse_id': item['ID'],
                 'warehouse_type': WarehouseType.WAREHOUSE,
             })
 
