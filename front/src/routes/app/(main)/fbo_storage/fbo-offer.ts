@@ -221,10 +221,8 @@ export function getSelectedOrders() {
             cost_price: row.cost_price !== null? row.cost_price : 0,
             goods_name: row.name,
             to_deliver_number: selectedStocksForOffer
-                .filter(x => x.warehouse.warehouse_type === "warehouse")
                 .reduce((sum, storage) => sum + calcToDeliver(storage), 0),
             warehouses: selectedStocksForOffer
-                .filter(x => x.warehouse.warehouse_type === "warehouse")
                 .map(stock => ({
                     id: stock.id,
                     warehouse_name: stock.warehouse.name,
