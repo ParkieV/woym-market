@@ -1,5 +1,6 @@
 from collections.abc import Mapping, Callable, Awaitable, Iterable
-from typing import Type, Any, ParamSpec, TypeVar
+from functools import wraps
+from typing import Type, Any, ParamSpec, TypeVar, Callable, List, Awaitable
 
 from pydantic import BaseModel
 from sqlalchemy import select, update, delete
@@ -16,9 +17,13 @@ T = TypeVar('T')
 
 
 # для src.database.settings.db.get_markets
-def _skip_markets(removed_markets: Iterable[str]) -> Callable[P, Awaitable[list[T]]]:
+def _skip_markets(removed_markets: Iterable[str]) -> Callable[
+    [Callable[P, Awaitable[list[T]]]], Callable[P, Awaitable[list[T]]]]:
     removed_markets = set(removed_markets)
+
     def decorator(func: Callable[P, Awaitable[list[T]]]) -> Callable[P, Awaitable[list[T]]]:
+
+        @wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> list[T]:
             markets = await func(*args, **kwargs)
 

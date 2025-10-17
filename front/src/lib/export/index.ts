@@ -1,5 +1,5 @@
 import { fetchPlain } from "$lib/fetch";
-import { showFetchModals } from "$lib/modal";
+import { showFetchModals, showNotification } from "$lib/modal";
 import { downloadFile } from "$lib/util";
 import { get } from "svelte/store";
 import { fboStorageSelection, fboStocksSelection } from "../../routes/app/(main)/selection";
@@ -153,6 +153,15 @@ export class ViolatorsExport extends Export {
 }
 
 export class DeliversExport extends Export {
+    public async export(): Promise<{ ok: boolean }> {
+        const orders = getSelectedOrders();
+        if (!orders || orders.length === 0) {
+            showNotification("Для формирования документов необходимо выбрать товар", "");
+            return { ok: false };
+        }
+        return super.export();
+    }
+
     constructor(private _url: string) {
         super();
     }

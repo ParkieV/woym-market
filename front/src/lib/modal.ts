@@ -1,11 +1,13 @@
-import { showLoadingModal, showNotification } from "./components/modal/Modals.svelte";
+import { openModal } from "svelte-modals";
+import ConfirmationDialog from "$lib/components/modal/ConfirmationDialog.svelte";
+import FetchDialog from "$lib/components/modal/FetchDialog.svelte";
 
 export async function showFetchModals<R extends Response | Response[]>(
     promise: Promise<R>,
     loadingHeader?: string,
     errorHeader?: string
 ) {
-    showLoadingModal(promise, loadingHeader ?? "Загрузка...");
+    openModal(FetchDialog, { header: loadingHeader ?? "Загрузка...", promise });
 
     promise.then(
         async response => {
@@ -33,4 +35,8 @@ export async function showFetchModals<R extends Response | Response[]>(
             return "Неожиданная ошибка";
         }
     }
+}
+
+export function showNotification(header: string, text: string) {
+    openModal(ConfirmationDialog, { header, text, showCancelButton: false });
 }

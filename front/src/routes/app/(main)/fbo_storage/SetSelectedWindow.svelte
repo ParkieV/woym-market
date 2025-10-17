@@ -26,7 +26,8 @@
             if (node.data === undefined || !$selectedStocks.has(node.data.id)) return;
             changes.add(node.data.id);
             for (const stock of node.data.stocks) {
-                if ($selectedStorage.has(stock.warehouse.id)) {
+                const stockKey = `${stock.warehouse.market}:${stock.warehouse.name}`;
+                if ($selectedStorage.has(stockKey)) {
                     changedStocks.add(node);
                     innerChanges.add(stock.id);
                     stock.min_stock = target;
