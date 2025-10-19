@@ -25,14 +25,8 @@ class DeliverSupply(BaseModel):
     number_of_delivery: int = Field(title="Кол-во")
     weight: float = Field(title="Вес(одного)")
     volume: float | None = Field(title="Объем(одного)")
-    cost_price: Decimal | None = Field(title="Себестоимость(одного)")
+    cost_price: float | None = Field(title="Себестоимость(одного)")
 
-    @field_validator("cost_price", mode="after")
-    @classmethod
-    def validate_cost_price(cls, price: Decimal):
-        if price is not None:
-            return price.quantize(Decimal("0.00"))
-        return price
 
     @computed_field(title="Вес кг")
     def deliver_weight(self) -> float | None:
@@ -46,7 +40,7 @@ class DeliverSupply(BaseModel):
             return None
 
     @computed_field(title="Себестоимость")
-    def deliver_cost_price(self) -> Decimal | None:
+    def deliver_cost_price(self) -> float | None:
         if self.cost_price is not None:
             return self.cost_price * self.number_of_delivery
         else:
