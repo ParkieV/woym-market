@@ -90,3 +90,9 @@ class IOfferRepository(Protocol[T]):
                  updating_columns: Iterable[str],
                  skus: Sequence[str] | None = None) -> None:
         raise NotImplementedError
+
+class MarketplacePageParser(Protocol[T]):
+
+    @abstractmethod
+    async def get_price(self, vendor_code: str) -> float:
+        raise NotImplementedError

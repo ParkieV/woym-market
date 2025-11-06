@@ -238,3 +238,12 @@ class ViolatorDTO(BaseModel):
         if 'sku' in captured:
             return ', '.join(captured['sku'])
         return 'Не найден'
+
+class OfferListing(BaseModel):
+    id: int
+    vendor_code: str
+    market: Market
+
+class OfferTargetPrice(BaseModel):
+    offer_listing: OfferListing
+    price: float
