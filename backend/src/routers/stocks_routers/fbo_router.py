@@ -30,7 +30,6 @@ async def get_fbo_data(
 @router.patch('', dependencies=[Depends(require_staff)], summary='Изменение данных об остатках товаров')
 async def change_fbo_stocks(stocks: list[OfferFBOStockUpdate]):
     await service.change_fbo_stocks(stocks)
-    return {'status': 'OK'}
 
 
 @router.get('/offers/{offer_id}', response_model=list[OfferStockOut], dependencies=[Depends(get_current_user)], summary='Остатки товара', description='Список данных и настроек остатков товара по каждому складу, которые доступен для маркетплейса')

@@ -11,28 +11,19 @@ services:
       - ./logs:/backend/logs
     expose:
       - 8000
+    ports:
+      - "8000:8000"
 
   frontend:
     restart: unless-stopped
-    env_file: front/.env.dev
+    env_file: front/.env
     build:
       context: front
       dockerfile: Dockerfile
     depends_on:
       - backend
-
-  nginx:
-    image: nginx:1.27
-    restart: unless-stopped
-    depends_on:
-      - backend
-    volumes:
-      - ./nginx/dev:/etc/nginx/conf.d
-      - /etc/letsencrypt:/etc/letsencrypt
-      - /var/www/html:/var/www/html
     ports:
-      - 80:80
-      - 443:443
+      - "3000:3000"
 
   database:
     restart: unless-stopped
@@ -43,9 +34,9 @@ services:
       POSTGRES_PASSWORD: ${DB_ROOT_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     volumes:
-      - db-data-dev:/var/lib/postgresql/data
-    expose:
-      - 5432
+      - db-data-local:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
 volumes:
-  db-data-dev:
+  db-data-local:

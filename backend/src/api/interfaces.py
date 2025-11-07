@@ -51,10 +51,6 @@ class IApiGateway(Protocol):
     async def request(self, method: str, url: str, body: dict[str, Any] | None = None, params: dict[str, Any] | None = None,  headers: dict[str, Any] | None = None, include_response_logs: bool = False) -> ClientResponse:
         raise NotImplementedError
 
-    @abstractmethod
-    async def validate_response(self, response: ClientResponse, body: Any = None) -> Any:
-        raise NotImplementedError
-
 class IApiGatewayFactory(Protocol):
     api_types: dict[ApiTypes, type[IApiGateway]]
 

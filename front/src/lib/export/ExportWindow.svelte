@@ -49,8 +49,7 @@
                 <option value={new SimpleExport("/stocks/fbo/export")}>FBO остатки: Таблица</option>
                 <option value={new ViolatorsExport()}>Нарушители РРЦ</option>
                 {#if $page.url.pathname === "/app/fbo_storage"}
-                    <option value="{new DeliversExport()}">Поставки</option>
-<!--                    <option value={new SupplyExport()}>Поставка</option>-->
+                    <option value="{new DeliversExport(`/v2/export/deliver`)}">Поставки</option>
                 {/if}
             </select>
         </label>

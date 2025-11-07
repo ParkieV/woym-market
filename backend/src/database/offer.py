@@ -8,8 +8,9 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func, text
 from sqlalchemy.orm import selectinload
-from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, \
-    PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO, OfferOutVendorForPars
+
+from src.schemas.offer_schemas import OfferDelete
+from src.schemas.offer_schemas import OfferOut, PricingSchemeOut, PricingSchemeCreate, PricingSchemeFieldCreate, PricingSchemeFieldOut, PricingSchemeFieldChange, PricingSchemeChange, ViolatorDTO
 from .interfaces import IOfferRepository
 from .models.models import Offer, PricingScheme, PricingSchemeField, \
     remaining_stocks_subuery, OfferStock, Warehouse
@@ -152,11 +153,14 @@ async def create_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) 
     await session.commit()
 
 
-async def delete_offers(session: AsyncSession, data: list[dict] | pd.DataFrame) -> None:
-    data = _dataframe_to_valid_dict(data)
+async def delete_offers(session: AsyncSession, data: Iterable[OfferDelete]) -> None:
 
     for offer in data:
-        query = delete(Offer).filter_by(**offer)
+        query = delete(Offer).where(
+            Offer.sku == offer.sku,
+            Offer.name_of_shop == offer.name_of_shop,
+            Offer.market == offer.market
+        )
         await session.execute(query)
 
     await session.commit()
@@ -385,10 +389,10 @@ async def get_violators(session: AsyncSession, market: str | None = None, name_o
     query = select(
         Offer.best_place_im.label('name_of_shop'),
         Offer.market,
-        Offer.min_price_in_market.label('price'),
+        Offer.turnover_curr_balance.label('price'),
         Offer.recommended_retail_price,
         Offer.best_place_im_link.label('link')
-    ).where(Offer.recommended_retail_price > Offer.min_price_in_market)
+    ).where(Offer.recommended_retail_price > Offer.turnover_curr_balance)
 
     if market:
         query = query.where(Offer.market == market)

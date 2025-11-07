@@ -86,49 +86,23 @@ async def calculate_price(data: pd.DataFrame, market_settings: MarketOut) -> pd.
                 data['min_level']
             )
 
-    data['min_price_in_market'] = data['min_price_in_market'].replace({None: np.nan})
-
-    data['min_level'] = np.where(
-        (data['min_level'] < data['min_price_in_market']) | (data['min_level'].isna()),
-        data['min_price_in_market'],
-        data['min_level']
-    )
     data['min_level'] = data['min_level'].replace(0, np.nan)
 
     # используем ручную мин планку
     sub_data_2 = data[data['use_manual_min_price'] == True]
-    sub_data_2.loc[:, 'target_price'] = np.where(
-        (sub_data_2['current_price'] >= sub_data_2['min_price_in_market']),
-        sub_data_2[['min_level', 'manual_min_price']].max(axis=1),
-        sub_data_2[['total_price', 'min_level']].min(axis=1)
-    )
+
     # total_price = верхняя планка
     #  используем автоматическую мин планку
     sub_data_3 = data[data['use_manual_min_price'] == False]
     sub_data_3['temp_auto_min_price'] = sub_data_3['total_price'] * sub_data_3['auto_min_price'] / 100
-    sub_data_3.loc[:, 'target_price'] = np.where(
-        sub_data_3['current_price'] >= sub_data_3['min_price_in_market'],
-        sub_data_3[['min_level', 'temp_auto_min_price']].max(axis=1),
-        sub_data_3[['total_price', 'min_level']].min(axis=1)
-    )
+
     sub_data_3.drop('temp_auto_min_price', axis=1, inplace=True)
 
     df = pd.concat([sub_data_2, sub_data_3])
     df.reset_index(drop=True, inplace=True)
     df.drop('min_level', axis=1, inplace=True)
 
-    # прибовляем 5% если магазин с лучшей ценой это текущий магазин
-    df[['target_price', 'min_price_in_market']] = df[['target_price', 'min_price_in_market']].astype(float)
-
-    df['target_price'] = np.where(
-        (df['best_place_im'] == df['name_of_shop']) & (df['min_price_in_market'].round() == df['target_price'].round()),
-        (df['target_price'] * 1.05).round(),
-        df['target_price'].round()
-    )
-
-    if market_settings.consider_logistic_cost:
-        df['target_price'] = df['target_price'] + df['logistic_price'] * (np.ceil(data['self_width'] * data['self_height'] * data['self_length'] / 1000) - 1)
-
+    df['target_price'] = df['total_price']
     return df
 
 

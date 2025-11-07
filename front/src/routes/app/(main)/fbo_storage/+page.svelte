@@ -4,10 +4,10 @@
     import Grid from "$lib/grid/Grid.svelte";
     import { get } from "svelte/store";
     import ImageWindow from "$lib/components/windows/ImageWindow.svelte";
-    import fboOffersGrid, { calcStocksToDeliver } from "./fbo-offer";
+    import fboOffersGrid, { detailApiMap } from "./fbo-offer";
     import { userCanModify } from "$lib/data/user";
     import Toolbar from "./Toolbar.svelte";
-    import fboStocks from "./fbo-stocks";
+    import fboStocks, { calcToDeliver } from "./fbo-stocks";
     import { browser } from "$app/environment";
     import ChangesPlugin from "$lib/datagrid/plugins/changes";
     import ReadonlyPlugin from "$lib/datagrid/plugins/readonly";
@@ -16,7 +16,7 @@
     import DetailGridPlugin from "$lib/datagrid/plugins/detail";
     import FilterPlugin from "$lib/datagrid/plugins/filter";
     import { SummaryPlugin } from "$lib/datagrid/plugins/summary";
-    import { fboState, fboStocksChanges, invalidateAllState } from "../state";
+    import { fboState, fboStocksChanges } from "../state";
     import ZoomPlugin from "$lib/datagrid/plugins/zoom";
     import { onMount } from "svelte";
     import StatePlugin from "$lib/datagrid/plugins/state";
@@ -38,12 +38,10 @@
             : true;
         }
         if (offer_ok && stock_ok) {
-            await invalidateAllState();
-            await fboState.forceReload();
+            fboState.apply();
             fboStocksChanges.clear();
         }
     }
-
     const definition = (() => {
         const detail = fboStocks()
             .plugin(new FilterPlugin(fboStocksFilter))
@@ -63,7 +61,7 @@
             .plugin(new ClassesPlugin())
             .plugin(
                 new RowSelectionPlugin(fboStocksSelection, {
-                    key: ({ warehouse }) => warehouse.id,
+                    key: ({ warehouse }) => `${warehouse.market}:${warehouse.name}`,
                     sync: true
                 })
             );
@@ -76,26 +74,93 @@
             .plugin(new ZoomPlugin(href => (selected_image = href)))
             .plugin(new ClassesPlugin())
             .plugin(new RowSelectionPlugin(fboStorageSelection, { key: x => x.id }))
-            .plugin(new DetailGridPlugin(detail, data => data.stocks))
+            .plugin(new DetailGridPlugin(detail, data => data.stocks, detailApiMap))
             .plugin(
                 new SummaryPlugin<FboStorage>({
-                    sku: () => "Итого",
-                    volume: ({ rows }) =>
-                        rows.reduce((sum, row) => sum + row.volume * calcStocksToDeliver(row), 0),
-                    self_weight: ({ rows }) =>
-                        rows.reduce(
-                            (sum, row) => sum + row.self_weight * calcStocksToDeliver(row),
+                    sku: ({ api }) => {
+                        const selectedRows = api.getSelectedRows();
+                        return selectedRows.length > 0 ? `Всего (${selectedRows.length}):` : "Всего:";
+                    },
+                    current_stock: ({ api }) => {
+                        const selectedRows = api.getSelectedRows();
+                        return selectedRows.reduce((sum, row) => sum + selectedCurrentStock(row), 0);
+                    },
+                    min_stock: ({ api }) => {
+                        const selectedRows = api.getSelectedRows();
+                        return selectedRows.reduce((sum, row) => sum + selectedMinStock(row), 0);
+                    },
+                    to_deliver: ({ api }) => {
+                        const selectedRows = api.getSelectedRows();
+                        return selectedRows.reduce((sum, row) => sum + selectedToDeliver(row), 0);
+                    },
+                    volume: ({ api }) => {
+                        const selectedRows = api.getSelectedRows();
+                        return selectedRows.reduce((sum, row) => sum + row.volume * selectedToDeliver(row), 0);
+                    },
+                    self_weight: ({ api }) => {
+                        const selectedRows = api.getSelectedRows();
+                        return selectedRows.reduce(
+                            (sum, row) => sum + row.self_weight * selectedToDeliver(row),
                             0
-                        ),
-                    cost_price: ({ rows }) =>
-                        rows.reduce(
-                            (sum, row) => sum + row.cost_price * calcStocksToDeliver(row),
+                        );
+                    },
+                    cost_price: ({ api }) => {
+                        const selectedRows = api.getSelectedRows();
+                        return selectedRows.reduce(
+                            (sum, row) => sum + row.cost_price * selectedToDeliver(row),
                             0
-                        ),
-                    profit: ({ rows }) =>
-                        rows.reduce((sum, row) => sum + row.profit * calcStocksToDeliver(row), 0)
+                        );
+                    },
+                    profit: ({ api }) => {
+                        const selectedRows = api.getSelectedRows();
+                        return selectedRows.reduce((sum, row) => sum + row.profit * selectedToDeliver(row), 0);
+                    }
                 })
             );
+        function selectedToDeliver(row: FboStorage): number {
+            const selected = get(fboStocksSelection.selected);
+            if (!selected || selected.size === 0) return 0;
+            return row.stocks
+                .filter(x => x.warehouse.warehouse_type === "warehouse")
+                .reduce((sum, storage) => {
+                    const key = `${storage.warehouse.market}:${storage.warehouse.name}` as any;
+                    const wildcard = `${storage.warehouse.market}:*` as any;
+                    if (selected.has(key) || selected.has(wildcard)) {
+                        return sum + calcToDeliver(storage);
+                    }
+                    return sum;
+                }, 0);
+        }
+
+        function selectedCurrentStock(row: FboStorage): number {
+            const selected = get(fboStocksSelection.selected);
+            if (!selected || selected.size === 0) return 0;
+            return row.stocks
+                .filter(x => x.warehouse.warehouse_type === "warehouse")
+                .reduce((sum, storage) => {
+                    const key = `${storage.warehouse.market}:${storage.warehouse.name}` as any;
+                    const wildcard = `${storage.warehouse.market}:*` as any;
+                    if (selected.has(key) || selected.has(wildcard)) {
+                        return sum + storage.current_stock;
+                    }
+                    return sum;
+                }, 0);
+        }
+
+        function selectedMinStock(row: FboStorage): number {
+            const selected = get(fboStocksSelection.selected);
+            if (!selected || selected.size === 0) return 0;
+            return row.stocks
+                .filter(x => x.warehouse.warehouse_type === "warehouse")
+                .reduce((sum, storage) => {
+                    const key = `${storage.warehouse.market}:${storage.warehouse.name}` as any;
+                    const wildcard = `${storage.warehouse.market}:*` as any;
+                    if (selected.has(key) || selected.has(wildcard)) {
+                        return sum + storage.min_stock;
+                    }
+                    return sum;
+                }, 0);
+        }
         return master;
     })();
 </script>

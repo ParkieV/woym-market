@@ -1,5 +1,5 @@
 import { ChangeList } from "$lib/datagrid/plugins/changes";
-import { writable, type Writable } from "svelte/store";
+import { get, writable, type Writable } from "svelte/store";
 import { setLocalUpdateTime, shouldReload } from "./data/settings";
 
 /** Managed state of the grid5. */
@@ -50,6 +50,10 @@ export class GridState<T, K> implements Writable<T[]> {
     public cancel() {
         this.changes.clear();
         this.current.set(structuredClone(this.initial));
+    }
+    public apply() {
+        this.initial = structuredClone(get(this.current));
+        this.changes.clear();
     }
 
     /** Cancels changes and marks state as unloaded. */

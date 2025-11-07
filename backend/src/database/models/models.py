@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     select, func, BigInteger
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql.expression import text
 from sqlalchemy.orm import relationship, mapped_column, DeclarativeBase
 
@@ -84,9 +85,9 @@ class Offer(Base):
     best_place_wm = mapped_column(String, nullable=True)
     min_price_without_market = mapped_column(Float, nullable=True)
     best_place_im = mapped_column(String, nullable=True)
-    min_price_in_market = mapped_column(Float, nullable=True)
+    turnover_curr_balance = mapped_column(JSONB, nullable=True)
     your_price_for_buyers = mapped_column(Float, nullable=True)
-    min_general_markets_price = mapped_column(Float, nullable=True)
+    turnover_avg_balance = mapped_column(JSONB, nullable=True)
 
     current_price = mapped_column(Float, nullable=True)
     target_price = mapped_column(Float, nullable=True, default=None)

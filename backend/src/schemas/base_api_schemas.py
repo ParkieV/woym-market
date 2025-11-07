@@ -40,8 +40,8 @@ class APIOffer(BaseModel):
     min_price_without_market: float | None = None
     best_place_im: str = ''
     best_place_im_link: str = ''
-    min_price_in_market: float | None = None
-    min_general_markets_price: float | None = None
+    turnover_curr_balance: dict[str, Any] | None = None
+    turnover_avg_balance: dict[str, Any] | None = None
     your_price_for_buyers: float | None = None
     fbo: float | None = None
     barcodes: str | None = None
@@ -89,12 +89,14 @@ class APIPriceChangeData:
     market: str
     name_of_shop: str
     target_price: Union[int, float, None]
-    min_price: float
+    api_current_price: Union[int, float, None]
     auto_participation_in_promotions: bool
     discount: int
+    min_price: str | None = None
     auto_min_price: float | None = None
     vendor_code: int | None = None
     discount_base_price: float | None = None
+    discount_changed: bool | None = None
 
     def is_valid_target_price(self) -> bool:
         return isinstance(self.target_price, (float, int)) and not np.isnan(self.target_price)

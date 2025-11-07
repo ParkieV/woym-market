@@ -1,0 +1,11 @@
+.venv
+logs
+migrations
+tests
+run
+*.env*
+.del_envs
+.gitignore
+alembic.ini
+Dockerfile
+pyproject.toml

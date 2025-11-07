@@ -2,7 +2,7 @@
 
 
 class RequestException(Exception):
-    """ Класс предназначенный для работы с исключениями из API """
+    """ Исключения во время отправки запросов """
 
 
 class InitializationError(Exception):
@@ -14,3 +14,8 @@ class InitializationError(Exception):
 
     def __str__(self):
         return f"Initialization of {self.api_type} API is failed. {self.detail}."
+
+class MarketplaceAPIException(Exception):
+    """ Исключения при работе с API маркетплейсов """
+    def __init__(self, api_type: str, details: str) -> None:
+        super().__init__(f"[{api_type}], details: {details}")

@@ -1,6 +1,6 @@
 import { fetchJSON, fetchPlain } from "$lib/fetch";
 import { showFetchModals } from "$lib/modal";
-import type { DateString } from "$lib/util";
+import type { DateString, Turnover } from "$lib/util";
 
 /** Basic information about the offer. */
 export type OfferBase = {
@@ -67,6 +67,9 @@ export type Offer = OfferBase & {
     best_price_im: number;
 
     dollar_cost_price_updated_at: DateString | null;
+
+    turnover_curr_balance: Turnover;
+    turnover_avg_balance: Turnover;
 
     /** Sets if automatic control of the current price is enabled. */
     auto_price_control: boolean;

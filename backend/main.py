@@ -61,10 +61,10 @@ app: FastAPI = FastAPI(
 
 if config.is_prod:
     origins = ['https://woym-market.ru']
+elif config.is_test:
+    origins = ['https://test.woym-market.ru']
 elif config.is_dev:
-    origins = ['https://dev.woym-market.ru']
-elif config.is_local:
-    origins = ['*']
+    origins = ['http://localhost:5173']
 else:
     raise InitializationError('Не получилось определить контур развертывания')
 

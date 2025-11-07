@@ -1,5 +1,5 @@
 import { fetchPlain } from "$lib/fetch";
-import { showFetchModals } from "$lib/modal";
+import { showFetchModals, showNotification } from "$lib/modal";
 import { downloadFile } from "$lib/util";
 import { get } from "svelte/store";
 import { fboStorageSelection, fboStocksSelection } from "../../routes/app/(main)/selection";
@@ -153,23 +153,24 @@ export class ViolatorsExport extends Export {
 }
 
 export class DeliversExport extends Export {
-    // При необходимости можно добавить дополнительные параметры для фильтрации:
-    // public deliveryDate: string | null = null;
-    // public courier: string | null = null;
+    public async export(): Promise<{ ok: boolean }> {
+        const orders = getSelectedOrders();
+        if (!orders || orders.length === 0) {
+            showNotification("Для формирования документов необходимо выбрать товар", "");
+            return { ok: false };
+        }
+        return super.export();
+    }
+
+    constructor(private _url: string) {
+        super();
+    }
 
     protected get url(): string {
-        return `/v2/export/deliver`;
+        return this._url;
     }
 
     protected get body(): string | null {
-        // Если нет необходимости передавать параметры, возвращаем null.
-        // Если же нужны дополнительные данные, можно создать объект, например:
-        /*
-        const data: Record<string, string | null> = {};
-        if (this.deliveryDate) data.deliveryDate = this.deliveryDate;
-        if (this.courier) data.courier = this.courier;
-        return JSON.stringify(data);
-        */
         const data: Record<string, any> = {}
         data.orders = getSelectedOrders()
         data.session_id = v4()

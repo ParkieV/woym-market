@@ -91,12 +91,12 @@ class YandexMarketApi(ApiGateway, IApiGateway):
             if not response.ok:
                 parser_logger.error(f'Cant update offers data: {response.text}')
 
-            response_json = await self.validate_response(response)
+            response_json = await self._get_resp_body_json(response)
 
             if not response.ok:
                 parser_logger.error(f'Cant update offers data: {response_json.get("errors", "unknown")}')
 
-    async def validate_response(self, response: ClientResponse, body: Any = None) -> Any:
+    async def _get_resp_body_json(self, response: ClientResponse, body: Any = None) -> Any:
         data_json = await response.json()
 
         if response.status != 200 :
@@ -123,8 +123,8 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 'best_place_wm': _ if (_ := report_line.get('best_place_wm', '')) is not None else '',
                 'min_price_without_market': _ if (_ := report_line.get('min_price_without_market', 0)) else 0,
                 'best_place_im': report_line.get('best_place_im', ''),
-                'min_price_in_market': _ if (_ := report_line.get('min_price_in_market', 0)) else 0,
-                'min_general_markets_price': _ if (_ := report_line.get('min_general_markets_price', 0)) else 0,
+                'turnover_curr_balance': _ if (_ := report_line.get('turnover_curr_balance', 0)) else 0,
+                'turnover_avg_balance': _ if (_ := report_line.get('turnover_avg_balance', 0)) else 0,
                 'your_price_for_buyers': _ if (_ := report_line.get('your_price_for_buyers', 0)) else 0,
                 'group_sellers_amount': 0,
                 'name_of_shop': self.shop_name,
@@ -141,7 +141,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
         """ Получить магазины, доступные по данному токену"""
         response = await self.request('GET', url='https://api.partner.market.yandex.ru/campaigns', headers=self.auth_headers)
 
-        data = await self.validate_response(response)
+        data = await self._get_resp_body_json(response)
 
         return {str(campaign['id']): {'business_id': campaign['business']['id'], 'name': campaign['business']['name']} for
                 campaign in data['campaigns']}
@@ -155,7 +155,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 url=f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offers/stocks?page_token={page_token}',
                 headers=self.auth_headers
             )
-            data = await self.validate_response(response)
+            data = await self._get_resp_body_json(response)
             warehouses.extend(data['result']['warehouses'])
 
             page_token = data['result']['paging'].get('nextPageToken', None)
@@ -180,7 +180,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 headers=self.auth_headers
             )
 
-            data = await self.validate_response(response)
+            data = await self._get_resp_body_json(response)
 
             offer_chunk = data['result']['offerMappings']
 
@@ -274,14 +274,14 @@ class YandexMarketApi(ApiGateway, IApiGateway):
     async def _get_market_prices_report(self, business_id: int) -> dict[str, dict[str, Any]]:
         response = await self.request('POST', url='https://api.partner.market.yandex.ru/reports/prices/generate', body={'businessId': business_id}, headers=self.auth_headers)
 
-        data = await self.validate_response(response)
+        data = await self._get_resp_body_json(response)
 
         report_id = data['result']['reportId']
 
         while True:
             response = await self.request('GET', url=f'https://api.partner.market.yandex.ru/reports/info/{report_id}',
                                         headers=self.auth_headers)
-            data = await self.validate_response(response)
+            data = await self._get_resp_body_json(response)
             if data['result']['status'] == 'DONE':
 
                 output = BytesIO()
@@ -297,9 +297,9 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 df.drop([0, 1, 2, 3], inplace=True)
                 new_df = pd.DataFrame()
                 new_df[['sku', 'attractive_price_threshold', 'moderately_attractive_price_threshold',
-                        'your_price_for_buyers', 'min_general_markets_price', 'best_place_wm',
+                        'your_price_for_buyers', 'turnover_avg_balance', 'best_place_wm',
                         'min_price_without_market', 'best_place_im',
-                        'min_price_in_market']] = df.iloc[:, [0, 3, 4, 6, 11, 12, 13, 14, 15]]
+                        'turnover_curr_balance']] = df.iloc[:, [0, 3, 4, 6, 11, 12, 13, 14, 15]]
                 new_df.replace({'–': np.nan}, inplace=True)
                 new_df['best_place_im_link'] = links_series
                 new_df[['best_place_wm', 'best_place_im']] = new_df[['best_place_wm', 'best_place_im']].fillna('')
@@ -314,9 +314,9 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                         'moderately_attractive_price_threshold': None
                                                         if (_ := i.get('moderately_attractive_price_threshold')) or _ == np.nan
                                                         else i['moderately_attractive_price_threshold'],
-                        'min_general_markets_price': None
-                                                        if (_ := i.get('min_general_markets_price')) or _ == np.nan
-                                                        else i['min_general_markets_price'],
+                        'turnover_avg_balance': None
+                                                        if (_ := i.get('turnover_avg_balance')) or _ == np.nan
+                                                        else i['turnover_avg_balance'],
                         'best_place_wm': None
                                             if (_ := i.get('best_place_wm')) or _ == np.nan
                                             else i['best_place_wm'],
@@ -324,9 +324,9 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                                                     if (_ := i.get('min_price_without_market')) or _ == np.nan
                                                     else i['min_price_without_market'],
                         'best_place_im': str(i['best_place_im']).replace(' • FBY', '').replace(' • FBS', ''),
-                        'min_price_in_market': None
-                                                if (_ := i.get('min_price_in_market')) or _ == np.nan
-                                                else i['min_price_in_market'],
+                        'turnover_curr_balance': None
+                                                if (_ := i.get('turnover_curr_balance')) or _ == np.nan
+                                                else i['turnover_curr_balance'],
                         'your_price_for_buyers': None
                                                     if (_ := i.get('your_price_for_buyers')) or _ == np.nan
                                                     else i['your_price_for_buyers'],
@@ -372,7 +372,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
 
     async def _get_warehouses_info(self) -> dict[int, dict[str, Any]]:
         response = await self.request('GET', url='https://api.partner.market.yandex.ru/warehouses', headers=self.auth_headers)
-        data = await self.validate_response(response)
+        data = await self._get_resp_body_json(response)
 
         result = dict()
         for warehouse in data['result']['warehouses']:
@@ -391,7 +391,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 'POST',
                 url=f'https://api.partner.market.yandex.ru/campaigns/{campaign_id}/offer-prices?page_token={page_token}',
                 headers=self.auth_headers)
-            data = self.validate_response(response)
+            data = self._get_resp_body_json(response)
 
 
             for offer_data in data['offers']:
@@ -417,7 +417,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 headers=self.auth_headers,
                 body=body
             )
-            data = await self.validate_response(response)
+            data = await self._get_resp_body_json(response)
 
             for offer_price_info in data['result']['offers']:
                 if 'price' not in offer_price_info or 'value' not in offer_price_info['price']:
@@ -454,7 +454,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 headers=self.auth_headers,
                 body=body
             )
-            await self.validate_response(response, body=body)
+            await self._get_resp_body_json(response, body=body)
 
     async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
         if (to_date - from_date).days > 30:
@@ -478,7 +478,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 parser_logger.error(f'Cant collect orders: {response.text}')
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Не удалось получить информацию о заказах')
 
-            json_response = await self.validate_response(response)
+            json_response = await self._get_resp_body_json(response)
 
             if not json_response['orders']:
                 break

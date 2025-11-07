@@ -1,26 +1,58 @@
+import asyncio
+import functools
+import inspect
 from collections import defaultdict
 from datetime import datetime
 from math import ceil
-from typing import Any
+from typing import Any, AsyncGenerator, Callable, Awaitable, ParamSpec, TypeVar
 
 from aiohttp import ClientSession
+from dateutil.relativedelta import relativedelta
 from fastapi import HTTPException
 from starlette import status
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random
 
+from src.infra.policies.rate_limit import rate_limiter_gen
+from src.infra.policies.timeout import DeadlineExceededError
 from logs import parser_logger
-from src.api.exceptions import InitializationError
+from src.api.exceptions import InitializationError, RequestException, MarketplaceAPIException
 from src.api.gateway_template import ApiGateway
 from src.api.interfaces import IApiGateway, ApiTypes
 from src.schemas.base_api_schemas import APIPriceChangeData, APIWarehouse, APIOffer, WarehouseType, APIWarehouseOffer, \
     APIOfferChangeData, APIOrderData
 
 
+P = ParamSpec("P")
+R = TypeVar("R", bound=list)
+AsyncFunc = Callable[P, Awaitable[R]]
+
+
+def add_custom_warehouses(get_warehouse_func: AsyncFunc) -> AsyncFunc:
+    @functools.wraps(get_warehouse_func)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> Awaitable[R]:
+        warehouses = await get_warehouse_func(*args, **kwargs)
+        warehouses.extend([
+            {
+                'market': 'wildberries',
+                'name': 'Астана Карагандинское шоссе',
+                'warehouse_type': WarehouseType.WAREHOUSE,
+            }, {
+                'market': 'wildberries',
+                'name': 'Самара (Новосемейкино)',
+                'warehouse_type': WarehouseType.WAREHOUSE,
+            }, {
+                'market': 'wildberries',
+                'name': 'Екатеринбург - Перспективный 12',
+                'warehouse_type': WarehouseType.WAREHOUSE,
+            }
+        ])
+        return warehouses
+
+    return wrapper
+
 
 class WildberriesApi(ApiGateway, IApiGateway):
     market_type = 'Wildberries'
-    __characteristic_ids = {
-        'self_weight': 88953
-    }
 
     def __init__(self, token: str, entity_id: int | None, shop_name: str, session: ClientSession) -> None: #type: ignore
         try:
@@ -40,7 +72,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                                 f'Ошибка проверки данных авторизации сервиса {self.shop_name}(wildberries)')
 
-        data = self.validate_response(response)
+        data = self._get_resp_body_json()
         if not data['Ok']:
             raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                                 f'Ошибка проверки данных(токена) авторизации сервиса {self.shop_name}(wildberries)')
@@ -77,11 +109,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             body = []
             for offer_data in valid_offers_data[i:i + chunk_size]:
                 characteristics = items[offer_data.sku].get('characteristics', [])
-                characteristics = [i for i in characteristics if i['id'] != self.__characteristic_ids['self_weight']]
-                characteristics.append({
-                    "id": self.__characteristic_ids['self_weight'],
-                    'value': offer_data.self_weight
-                })
+                characteristics = [i for i in characteristics if i['id'] != 88952]
 
                 body_item = {
                     'nmID': offer_data.vendor_code,
@@ -94,6 +122,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                         'length': ceil(offer_data.self_length),
                         'width': ceil(offer_data.self_width),
                         'height': ceil(offer_data.self_height),
+                        'weightBrutto': offer_data.self_weight,
                     },
                     'characteristics': characteristics
                 }
@@ -107,16 +136,54 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         errors = await self._errors_in_update()
         if errors:
+            # ERROR: Источник - parser_2025-04-17.log:131
             parser_logger.error(f'Errors in offers: {errors}')
 
     async def get_offers_list(self) -> list[APIOffer]:
         offers = await self._get_offers_base_info()
         offers_prices = await self._get_offers_prices()
+        offers_turnovers = {}
+        try:
+            async for turnover in self.get_turnover(
+                [offer['vendor_code'] for offer in offers]
+            ):
+                offers_turnovers.update(turnover)
+        except DeadlineExceededError:
+            parser_logger.error(
+                f"Method {inspect.currentframe().f_code.co_name} "
+                "canceled by timeout policy"
+            )
+            offers_turnovers = {
+                offer['vendor_code']: (None, None)
+                for offer in offers
+            }
+        except Exception as e:
+            parser_logger.error(
+                f'Unexpected error while getting offers turnovers: {str(e)}'
+            )
+            offers_turnovers = {
+                offer['vendor_code']: (None, None)
+                for offer in offers
+            }
 
         result = []
+        # Не изменять, опасно!
+        # Проверь, где используется
+        turnover_default = {
+            "hours": -3.0
+        }
 
         for offer in offers:
+            turnovers = offers_turnovers.get(
+                offer['vendor_code'], (
+                    turnover_default, turnover_default
+                )
+            )
+
             offer.update(offers_prices[offer['sku']])
+            offer['turnover_avg_balance'] = turnovers[0]
+            offer['turnover_curr_balance'] = turnovers[1]
+
             result.append(
                 APIOffer(**offer)
             )
@@ -158,12 +225,12 @@ class WildberriesApi(ApiGateway, IApiGateway):
         if not response.ok:
             parser_logger.error(f'Cant check price update result: {response.text}')
 
-        response_json = await self.validate_response(response)
+        response_json = await self._get_resp_body_json()
 
         if response_json.get('error', None):
             parser_logger.error(f'Cant check price update result: {response_json.get("errorText", "unknown error")}')
 
-        task_result_info = response_json.get('data', {})
+        task_result_info = response_json.get('data', dict())
 
         parser_logger.info(
             f'Task price upload ID({task_result_info.get("uploadID", "unknown")}) with status: {task_result_info.get("status", "unknown")} checked. \nAll goods: {task_result_info.get("overAllGoodsNumber", "unknown")}, without errors: {task_result_info.get("successGoodsNumber", "unknown")}')
@@ -184,29 +251,34 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         for i in range(0, len(valid_price_data), chunk_size):
             body = {
-                'data': [
-                    {
-                        "nmID": price_data.vendor_code,
-                        "price": round(price_data.target_price),
-                        "discount": int(price_data.discount)
-                    } if price_data.sku == '28071' else {
-                        "nmID": price_data.vendor_code,
-                        "price": round(price_data.target_price),
-                    }
-                    for price_data in valid_price_data[i:i + chunk_size]
-                ]
+                'data': []
             }
-            parser_logger.info(body)
-            response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
+            for price_data in valid_price_data[i:i + chunk_size]:
+                if price_data.sku == '20069':
+                    pass
+                data_dict = {
+                    "nmID": price_data.vendor_code,
+                }
+                if price_data.target_price != price_data.api_current_price:
+                    data_dict["price"] = round(price_data.target_price)
+                if price_data.discount_changed is True:
+                    data_dict["discount"] = int(price_data.discount)
 
-            if not response.ok:
-                parser_logger.error(f'Cant change price: {response.reason}: {await response.json()}')
+                if len(data_dict.keys()) > 1:
+                    body['data'].append(data_dict)
+            if len(body['data']) > 0:
+                response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
-            response_json = await self.validate_response(response)
+                if not response.ok:
+                    parser_logger.error(f'Cant change price: {response.reason}: {await response.json()}')
 
-
-            if response_json.get('data', None):
-                await self._check_price_update_result(response_json['data'].get('id', None))
+                response_json = await self._get_resp_body_json(response)
+                try:
+                    if response_json.get('data') is not None and response_json['data'].get('id'):
+                        await self._check_price_update_result(response_json['data'].get('id'))
+                except Exception as e:
+                    parser_logger.error(f'Cant change price: {e.__class__.__name__}: {e}')
+                    raise e
 
         parser_logger.info(f'{self.shop_name}(wildberries) prices updated: {len(valid_price_data)} of {len(data)}')
 
@@ -214,12 +286,12 @@ class WildberriesApi(ApiGateway, IApiGateway):
         url = 'https://content-api.wildberries.ru/content/v2/get/cards/list?locale=ru'
         limit = 100
         cursor = {
-            "limit": limit,
-            "nmID": 0,
+            "limit": limit
         }
 
         result = []
 
+        i = 0
         while True:
             body = {
                 "settings": {
@@ -233,13 +305,18 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 }
             }
 
+            if i % 4 == 0:
+                await asyncio.sleep(1)
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
+            await asyncio.sleep(1)
 
             if not response.ok:
-                parser_logger.error(f'Cant get offers base info: {response.text}')
+                # ERROR: Здесь выкидывается ошибка 500
+                #  пример: parser_2025-04-17.log:24
+                parser_logger.error(f'Cant get offers base info: status {response.status}, {await response.text()}')
                 return result
 
-            response_data = await self.validate_response(response)
+            response_data = await self._get_resp_body_json(response)
 
             cards_data = response_data['cards']
             cursor_data = response_data['cursor']
@@ -254,7 +331,9 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
             cursor['updatedAt'] = cursor_data['updatedAt']
             cursor['nmID'] = cursor_data['nmID']
+            i += 1
 
+        print('Result length:', len(result))
         return result
 
     async def _get_offers_base_info(self) -> list[dict]:
@@ -262,7 +341,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         result = []
         for item in items:
             self_weight = [i for i in item.get('characteristics', []) if
-                             i.get('id', None) == self.__characteristic_ids['self_weight']]
+                             i.get('id', None) == 88953]
             self_weight = self_weight[0].get('value', None) if self_weight else None
 
             offer = {
@@ -298,7 +377,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 parser_logger.error(f'Cant get price info: {response.text}')
                 break
 
-            response_data = await self.validate_response(response)
+            response_data = await self._get_resp_body_json(response)
             data = response_data['data']['listGoods']
 
             if not data:
@@ -328,6 +407,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         return result
 
+    @add_custom_warehouses
     async def _get_warehouses(self) -> list[dict]:
         url = 'https://supplies-api.wildberries.ru/api/v1/warehouses'
         result = []
@@ -338,13 +418,12 @@ class WildberriesApi(ApiGateway, IApiGateway):
             parser_logger.error(f'Cant get warehouses: {response.text}')
             return []
 
-        response_data = await self.validate_response(response)
+        response_data = await self._get_resp_body_json(response)
 
         for item in response_data:
             result.append({
                 'market': 'wildberries',
                 'name': item['name'],
-                'warehouse_id': item['ID'],
                 'warehouse_type': WarehouseType.WAREHOUSE,
             })
 
@@ -353,7 +432,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
     async def _errors_in_update(self) -> list[dict]:
         url = 'https://content-api.wildberries.ru/content/v2/cards/error/list'
         response = await self.request('GET', url=url, headers=self.auth_headers)
-        json_response = await self.validate_response(response)
+        json_response = await self._get_resp_body_json(response)
         return json_response.get('data', [])
 
     async def _get_stocks_on_warehouse(self, warehouse_id: int, data: dict[str, Any]) -> list[APIWarehouseOffer]:
@@ -369,7 +448,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             parser_logger.error(f'Cant get stocks on warehouse id({warehouse_id}): {response.text}')
             return result
 
-        json_data = await self.validate_response(response)
+        json_data = await self._get_resp_body_json(response)
 
         if not json_data['stocks']:
             return result
@@ -391,7 +470,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             parser_logger.error(f'Cant get stocks: {response.text}')
             return defaultdict()
 
-        response_json = await self.validate_response(response)
+        response_json = await self._get_resp_body_json(response)
         result = defaultdict(list)
 
         if not response_json:
@@ -415,10 +494,10 @@ class WildberriesApi(ApiGateway, IApiGateway):
         response = await self.request('GET', url=url, headers=self.auth_headers, params=params)
 
         if not response.ok:
-            parser_logger.error(f'Cant get orders from {from_date}: {response.text}')
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалоь получить заказы: {response.text}')
+            parser_logger.error(f'Cant get orders from {from_date}: {await response.text()}')
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f'Не удалоь получить заказы: {await response.text()}')
 
-        response_json = await self.validate_response(response)
+        response_json = await self._get_resp_body_json(response)
         result = []
 
         for item in response_json:
@@ -440,3 +519,85 @@ class WildberriesApi(ApiGateway, IApiGateway):
             result.append(order_item)
 
         return result
+
+    @retry(
+        retry=retry_if_exception(ApiGateway._is_retryable),
+        stop=stop_after_attempt(3),
+        wait=wait_random(0, 1),
+        reraise=True
+    )
+    @rate_limiter_gen(max_rate=3, secs=61)
+    async def get_turnover(
+            self,
+            vendor_codes: list[int],
+            size: int | None = None,
+            batch_size: int | None = 1000,
+    ) -> AsyncGenerator[list[dict[str, float]], None]:
+        """ Возвращает информацию об оборачиваемости остатков """
+        if batch_size > 1000:
+            raise ValueError("parameter \"batch_size\" must be less than or equal to 1000.")
+        if size and size > len(vendor_codes):
+            raise ValueError("parameter \"size\" must be less than or equal to length of skus.")
+        if size and size < 0:
+            raise ValueError("parameter \"size\" must be positive number.")
+
+        if not vendor_codes:
+            return
+
+        offset = 0
+        while True:
+            # формирование запроса
+            if size is not None:
+                current_batch_size = min(batch_size, size - offset)
+            else:
+                current_batch_size = min(batch_size, len(vendor_codes) - offset)
+
+            if current_batch_size < 1:
+                return
+            current_batch = vendor_codes[offset:offset + current_batch_size]
+            offset += current_batch_size
+
+            url = 'https://seller-analytics-api.wildberries.ru/api/v2/stocks-report/products/groups'
+            body = {
+                "nmIDs": current_batch,
+                "currentPeriod": {
+                    "start": (datetime.now() - relativedelta(months=1)).strftime('%Y-%m-%d'),
+                    "end": datetime.now().strftime('%Y-%m-%d')
+                },
+                "stockType": "wb",
+                "skipDeletedNm": True,
+                "availabilityFilters": [
+                    "deficient", "actual", "nonActual",
+                    "balanced", "nonLiquid", "invalidData"
+                ],
+                "orderBy": {
+                    "field": "ordersCount",
+                    "mode": "desc"
+                },
+                "offset": 0
+            }
+
+            # отправка запроса
+            response = await self.request('POST', url=url, headers=self.auth_headers, body=body)
+            try:
+                await self._validate_response(response)
+            except RequestException as e:
+                err_msg = f'Cant get turnover that starts with nmID={vendor_codes[0]}: {str(e)}'
+                parser_logger.critical(err_msg)
+                raise MarketplaceAPIException(api_type=str(ApiTypes.WILDBERRIES), details=err_msg)
+
+            # обработка ответа
+            result_batch = {}
+
+            resp_body = await response.json()
+            for group in resp_body["data"]["groups"]:
+                for item in group['items']:
+                    result_batch[item["nmID"]] = (
+                        item["metrics"]["avgStockTurnover"] or {
+                            "hours": -3.0
+                        },
+                        item["metrics"]["saleRate"] or {
+                            "hours": -3.0
+                        }
+                    )
+            yield result_batch

@@ -4,6 +4,9 @@
  * @param words - An array of three strings representing the word forms for singular, plural ending in 2-5 except 11-19, and other plurals.
  * @returns The word corresponding to the numeric value based on the provided rules.
  */
+
+export type Turnover = { days?: number; hours?: number } | null | undefined;
+
 export function num_word(value: number, words: [string, string, string]) {
     value = Math.abs(value) % 100;
     var num = value % 10;
@@ -47,5 +50,15 @@ export function filterUnique<T extends string | number | boolean | boolean | nul
 ) {
     return array.indexOf(value) === index;
 }
+
+
+export const formatTurnover = (v: Turnover) => {
+    if (!v || typeof v !== "object") return null;
+    const { days, hours } = v;
+    if (typeof hours === "number" && hours < 0) return "N/A";
+    const d = typeof days === "number" ? days : 0;
+    const h = typeof hours === "number" ? hours : 0;
+    return `Дней: ${d}, часов: ${h}`;
+};
 
 export type DateString = `${number}-${number}-${number}T${number}:${number}:${number}.${number}`;

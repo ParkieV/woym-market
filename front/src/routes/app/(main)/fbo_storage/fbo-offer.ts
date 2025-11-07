@@ -1,5 +1,5 @@
 import type { Column, ColumnGroup } from "$lib/datagrid/columns";
-import type { GetContextMenuItems, ValueGetterParams } from "ag-grid-enterprise";
+import type { GetContextMenuItems, GridApi, ValueGetterParams } from "ag-grid-enterprise";
 import type { FboStorage, FboStocks } from "$lib/data/fbo_storage";
 import {
     BooleanColumn,
@@ -18,7 +18,9 @@ import { userCanModify } from "$lib/data/user";
 import type { ChangeList } from "$lib/datagrid/plugins/changes";
 import { selectedContextMenuItems } from "./selected";
 import { calcToDeliver, getSelectedStocks } from "./fbo-stocks";
-import { fboStorageSelection } from "../selection";
+import { fboStorageSelection, fboStocksSelection } from "../selection";
+
+export const detailApiMap = new Map<number, GridApi>();
 
 export default function fboOffersGrid(
     changes: ChangeList<FboStorage, number>,
@@ -190,26 +192,44 @@ function columns(): (Column | ColumnGroup)[] {
 }
 
 export function calcStocksToDeliver(stock: FboStorage) {
-    return stock.stocks.reduce((sum, storage) => sum + calcToDeliver(storage), 0);
+    const num = stock.stocks
+        .filter(x => x.warehouse.warehouse_type === "warehouse")
+        .reduce((sum, storage) => sum + calcToDeliver(storage), 0);
+    return num;
 }
 
 export function getSelectedOrders() {
-    const selectedMap = get(fboStorageSelection.selected); // Получаем выделенные строки в виде Map
-    const selectedRows = Array.from(selectedMap.values()); // Преобразуем в массив значений
-    console.log("selected rows:", selectedRows);
-    const orders = selectedRows.map(row => ({
-        sku: row.sku,
-        marketplace_name: row.market,
-        shop_name: row.name_of_shop,
-        weight: row.self_weight !== null? row.self_weight : 0,
-        volume: row.volume !== null? row.volume : 0,
-        cost_price: row.cost_price !== null? row.cost_price : 0,
-        goods_name: row.name,
-        to_deliver_number: row.stocks
-            .filter(x => x.warehouse.warehouse_type === "warehouse")
-            .reduce((sum, storage) => sum + calcToDeliver(storage), 0),
-        warehouses: getSelectedStocks(row.market)
-    }));
-    console.log("request orders", orders);
+    const selectedOffersMap = get(fboStorageSelection.selected); // Получаем выделенные товары
+    const selectedStocksMap = get(fboStocksSelection.selected); // Получаем выделенные склады
+    const selectedRows = Array.from(selectedOffersMap.values()); // Преобразуем в массив значений
+    console.log("selected offers:", selectedRows);
+    console.log("selected stocks:", selectedStocksMap);
+    
+    const orders = selectedRows.map(row => {
+        // Получаем только выбранные склады для этого товара
+        const selectedStocksForOffer = row.stocks.filter(stock => {
+            const stockKey = `${stock.warehouse.market}:${stock.warehouse.name}`;
+            return selectedStocksMap.has(stockKey);
+        });
+        
+        return {
+            sku: row.sku,
+            marketplace_name: row.market,
+            shop_name: row.name_of_shop,
+            weight: row.self_weight !== null? row.self_weight : 0,
+            volume: row.volume !== null? row.volume : 0,
+            cost_price: row.cost_price !== null? row.cost_price : 0,
+            goods_name: row.name,
+            to_deliver_number: selectedStocksForOffer
+                .reduce((sum, storage) => sum + calcToDeliver(storage), 0),
+            warehouses: selectedStocksForOffer
+                .map(stock => ({
+                    id: stock.id,
+                    warehouse_name: stock.warehouse.name,
+                    to_deliver_number: calcToDeliver(stock)
+                }))
+        };
+    });
+    console.log("orders:", orders);
     return orders;
 }

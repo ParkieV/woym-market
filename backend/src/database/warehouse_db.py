@@ -624,8 +624,14 @@ async def get_fbo_offers(session: AsyncSession) -> list[OfferWithStocks]:
     result = await session.execute(query)
     offers = result.scalars().all()
 
+    offer_list = []
+    for offer in offers:
+        for stock in offer.stocks:
+            if stock.current_stock is None:
+                stock.current_stock = 0
+        offer_list.append(OfferWithStocks.model_validate(offer, from_attributes=True))
 
-    return [OfferWithStocks.model_validate(i, from_attributes=True) for i in offers]
+    return offer_list
 
 async def offer_stocks_list(session: AsyncSession, chunk_size: int | None = None, offset: int | None = 0):
     query = select(OfferStock.offer_id, OfferStock.current_stock)
