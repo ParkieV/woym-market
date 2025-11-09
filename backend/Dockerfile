@@ -34,7 +34,6 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 FROM base AS runtime
 
 COPY --from=builder /opt/venv /opt/venv
-RUN mkdir data
 
 ENV PATH="/opt/venv/bin:$PATH" \
     VIRTUAL_ENV="/opt/venv" \
