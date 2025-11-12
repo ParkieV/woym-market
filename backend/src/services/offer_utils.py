@@ -6,22 +6,30 @@ from src.api.interfaces import ApiTypes
 from src.database.offer import get_pricing_schemes
 from src.database.db import async_session
 from src.schemas.settings_schemas import MarketOut
+from src.schemas.offer_schemas import PricingSchemeOut
 
 
-async def calculate_offers_values(data: pd.DataFrame, market_settings: MarketOut) -> pd.DataFrame:
+async def calculate_offers_values(data: pd.DataFrame, market_settings: MarketOut, pricing_schemes: dict[str, PricingSchemeOut] | None = None) -> pd.DataFrame:
     """
     Расчёт вычисляемых значений в карточках
 
     data - список карточек в виде таблицы
     market_settings - настройки магазинов для вычисления значений
+    pricing_schemes - схемы ценообразования
 
     Список карточек с обновленными вычисляемыми значениями
     """
+    if pricing_schemes is None:
+        async with async_session() as session:
+            pricing_schemes = await get_pricing_schemes(session)
+
+    data = data.copy()
+
     # Расчет объёма
-    data['volume'] = data['self_width'] * data['self_height'] * data['self_length'] / 1000
+    data.loc[:, 'volume'] = data['self_width'] * data['self_height'] * data['self_length'] / 1000
 
     # Расчет стоимости поставки в долларах
-    data['dollar_cost_price'] = np.where(
+    data.loc[:, 'dollar_cost_price'] = np.where(
         data['wholesale_dollar_cost_price'].isna(),
         data['dollar_cost_price'],
         np.where(
@@ -31,79 +39,119 @@ async def calculate_offers_values(data: pd.DataFrame, market_settings: MarketOut
         )
     )
     # Расчет стоимости
-    data['cost_price'] = data['dollar_cost_price'] * market_settings.rate + (np.ceil(data['volume']) - market_settings.volume_threshold_for_additional_logistics) * market_settings.cost_of_additional_logistics_per_liter
-    data['total_price'] = data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional']
-    data['recommended_retail_price'] = market_settings.first_variable_for_recommended_retail_price + (data['wholesale_dollar_cost_price'] * market_settings.rate) + (market_settings.second_variable_for_recommended_retail_price / 100 * data['wholesale_dollar_cost_price'] * market_settings.rate)
-    data['stop_price'] = market_settings.first_variable_for_stop_price + (data['wholesale_dollar_cost_price'] * market_settings.rate) + (market_settings.second_variable_for_stop_price / 100 * data['wholesale_dollar_cost_price'] * market_settings.rate)
+    data.loc[:, 'cost_price'] = (
+        data['dollar_cost_price'] * market_settings.rate +
+        (np.ceil(data['volume']) - market_settings.volume_threshold_for_additional_logistics) *
+        market_settings.cost_of_additional_logistics_per_liter
+    )
+    data.loc[:, 'total_price'] = (
+        data['cost_price'] * data['total_price_coeff'] + data['total_price_min_additional']
+    )
+    data.loc[:, 'recommended_retail_price'] = (
+        market_settings.first_variable_for_recommended_retail_price +
+        (data['wholesale_dollar_cost_price'] * market_settings.rate) +
+        (market_settings.second_variable_for_recommended_retail_price / 100 *
+         data['wholesale_dollar_cost_price'] * market_settings.rate)
+    )
+    data.loc[:, 'stop_price'] = (
+        market_settings.first_variable_for_stop_price +
+        (data['wholesale_dollar_cost_price'] * market_settings.rate) +
+        (market_settings.second_variable_for_stop_price / 100 *
+         data['wholesale_dollar_cost_price'] * market_settings.rate)
+    )
 
-    data = await calculate_price(data, market_settings)
+    data = await calculate_price(data, market_settings, pricing_schemes)
 
-    data['logistic_price'] = np.where(
+    data.loc[:, 'logistic_price'] = np.where(
         data['volume'] > market_settings.volume_threshold_for_additional_logistics,
-        np.ceil(data['volume'] - market_settings.volume_threshold_for_additional_logistics) * market_settings.cost_of_additional_logistics_per_liter,
+        np.ceil(data['volume'] - market_settings.volume_threshold_for_additional_logistics) *
+        market_settings.cost_of_additional_logistics_per_liter,
         0
     )
     data['logistic_price'].fillna(0, inplace=True)
-    data['fbo'] = (data['current_price'] * (market_settings.fbo_sales_commission / 100)) + data['logistic_price']
+    data.loc[:, 'fbo'] = (
+        data['current_price'] * (market_settings.fbo_sales_commission / 100)
+    ) + data['logistic_price']
 
-    data['market_discount_in_percent'] = 100 - data['your_price_for_buyers'] * 100 / data['your_promotion_price']
+    
+    data.loc[:, 'market_discount_in_percent'] = np.where(
+        data['your_promotion_price'] > 0,
+        100 - data['your_price_for_buyers'] * 100 / data['your_promotion_price'],
+        0
+    )
 
-    data['profit'] = np.nan
-    data['days_to_zero_profit'] = np.nan
+    data.loc[:, 'profit'] = np.nan
+    data.loc[:, 'days_to_zero_profit'] = np.nan
 
-    data['profit'] = data['your_promotion_price'] * (1 - market_settings.tax / 100) - data['fbo'] - data['cost_price']
-    data['days_to_zero_profit'] = data['profit'] / (market_settings.long_term_storage_cost or np.nan)
+    data.loc[:, 'profit'] = (
+        data['your_promotion_price'] * (1 - market_settings.tax / 100)
+        - data['fbo'] - data['cost_price']
+    )
+    
+    
+    data.loc[:, 'days_to_zero_profit'] = np.where(
+        (market_settings.long_term_storage_cost or 0) > 0,
+        data['profit'] / market_settings.long_term_storage_cost,
+        np.nan
+    )
 
-    data['margin'] = data['profit'] / data['cost_price'] * 100
+    
+    data.loc[:, 'margin'] = np.where(
+        data['cost_price'] > 0,
+        data['profit'] / data['cost_price'] * 100,
+        np.nan
+    )
 
-    data['volume_profitability_ratio'] = np.where(
+    data.loc[:, 'volume_profitability_ratio'] = np.where(
         data['volume'] == 0,
         0,
         data['profit'] / data['volume']
     )
-    data.drop(columns=['volume'])
+    data.drop(columns=['volume'], inplace=True)
 
-    data['discount_base_price'] = data['current_price'] * (1.0 + market_settings.price_before_discount / 100)
+    data.loc[:, 'discount_base_price'] = data['current_price'] * (1.0 + market_settings.price_before_discount / 100)
 
     data = round_values(data)
 
     return data
 
 
-async def calculate_price(data: pd.DataFrame, market_settings: MarketOut) -> pd.DataFrame:
+async def calculate_price(data: pd.DataFrame, market_settings: MarketOut, pricing_schemes: dict[str, PricingSchemeOut]) -> pd.DataFrame:
     data = data.copy()
     data['min_level'] = np.nan
 
-    async with async_session() as session:
-        for price_scheme in await get_pricing_schemes(session):
-            sum_fields = price_scheme.active_fields()
-            n = price_scheme.n
-            m = price_scheme.m
+    for price_scheme in pricing_schemes.values():
+        sum_fields = price_scheme.active_fields()
+        n = price_scheme.n
+        m = price_scheme.m
 
-            data['min_level'] = np.where(
-                data['pricing_scheme_name'] == price_scheme.name,
-                (data[sum_fields].sum(axis=1, skipna=False) / n) + (data[sum_fields].sum(axis=1, skipna=False) / n) * (m / 100),
-                data['min_level']
-            )
+        data['min_level'] = np.where(
+            data['pricing_scheme_name'] == price_scheme.name,
+            (data[sum_fields].sum(axis=1, skipna=False) / n) + (data[sum_fields].sum(axis=1, skipna=False) / n) * (m / 100),
+            data['min_level']
+        )
 
     data['min_level'] = data['min_level'].replace(0, np.nan)
 
+    data['final_min_price'] = np.nan
+    
     # используем ручную мин планку
-    sub_data_2 = data[data['use_manual_min_price'] == True]
-
-    # total_price = верхняя планка
+    manual_mask = data['use_manual_min_price'] == True
+    data.loc[manual_mask, 'final_min_price'] = data.loc[manual_mask, 'min_level']
+    
     #  используем автоматическую мин планку
-    sub_data_3 = data[data['use_manual_min_price'] == False]
-    sub_data_3['temp_auto_min_price'] = sub_data_3['total_price'] * sub_data_3['auto_min_price'] / 100
+    auto_mask = data['use_manual_min_price'] == False
+    data.loc[auto_mask, 'final_min_price'] = (
+        data.loc[auto_mask, 'total_price'] * data.loc[auto_mask, 'auto_min_price'] / 100
+    )
 
-    sub_data_3.drop('temp_auto_min_price', axis=1, inplace=True)
+    data['target_price'] = data[['total_price', 'final_min_price']].max(axis=1)
+    
+    data['target_price'] = data['target_price'].fillna(data['total_price'])
 
-    df = pd.concat([sub_data_2, sub_data_3])
-    df.reset_index(drop=True, inplace=True)
-    df.drop('min_level', axis=1, inplace=True)
+    data.drop(columns=['min_level'], inplace=True)
 
-    df['target_price'] = df['total_price']
-    return df
+    return data
 
 
 async def build_offers_data(data: pd.DataFrame, market, total_price_coeff: float = 2.4, total_price_min_additional: float = 200, setup_mode: bool = False, default_price_scheme_id: int = 1) -> pd.DataFrame:

@@ -13,7 +13,8 @@ router = APIRouter(
 
 @router.get('', response_model=list[PricingSchemeOut], dependencies=[Depends(get_current_user)], summary='Список схем ценообразования')
 async def get_pricing_schemes():
-    return await service.get_pricing_schemes()
+    schemes_dict = await service.get_pricing_schemes()
+    return list(schemes_dict.values())
 
 
 @router.post('', dependencies=[Depends(require_staff)], summary='Создание схемы ценообразования')

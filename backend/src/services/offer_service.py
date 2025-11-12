@@ -395,9 +395,16 @@ async def recalculate_values(session: AsyncSession, offers_filter: OffersFilter 
     if df.empty:
         return
 
+    # Получение схем ценообразования
+    pricing_schemes = await db.get_pricing_schemes(session)
+
     for market in await get_markets(session):
         # выбираем карточки с конкретного магазина и обновляем значения в них
-        df1 = await utils.calculate_offers_values(df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], market)
+        df1 = await utils.calculate_offers_values(
+            df[((df['name_of_shop'] == market.name) & (df['market'] == market.type))], 
+            market, 
+            pricing_schemes=pricing_schemes
+        )
         df1.replace({np.nan: None}, inplace=True)
         exclude_columns = set(df1.columns.values.tolist()) - set(i.name for i in Offer.__table__.columns)
         df1.drop(columns=exclude_columns, inplace=True)
@@ -530,7 +537,7 @@ async def export_offers(offers_filter: OffersFilter | None = None) -> str:
     df.to_excel(excel_path, index=False)
     return str(excel_path)
 
-async def get_pricing_schemes() -> list[PricingSchemeOut]:
+async def get_pricing_schemes() -> dict[str, PricingSchemeOut]:
     async with async_session() as session:
         return await db.get_pricing_schemes(session)
 

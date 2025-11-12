@@ -340,12 +340,12 @@ async def delete_pricing_scheme(session: AsyncSession, names: list[str]):
     await session.commit()
 
 
-async def get_pricing_schemes(session: AsyncSession) -> list[PricingSchemeOut]:
+async def get_pricing_schemes(session: AsyncSession) -> dict[str, PricingSchemeOut]:
     query = select(PricingScheme).options(selectinload(PricingScheme.fields))
     scheme_db = await session.execute(query)
 
-    return [PricingSchemeOut.model_validate(scheme, from_attributes=True) for scheme in
-            scheme_db.unique().scalars().all()]
+    schemes = scheme_db.unique().scalars().all()
+    return {scheme.name: PricingSchemeOut.model_validate(scheme, from_attributes=True) for scheme in schemes}
 
 
 async def check_pricing_schemes_exists(session: AsyncSession, name: str):
