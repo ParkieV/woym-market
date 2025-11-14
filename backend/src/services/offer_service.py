@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 from typing import Sequence
 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -524,8 +525,10 @@ async def export_offers(offers_filter: OffersFilter | None = None) -> str:
     df['dollar_cost_price_updated_at'] = df['dollar_cost_price_updated_at'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S.%f').strftime('%d/%m/%Y') if x else x)
     df.drop(columns=list(exclude_columns), errors='ignore', inplace=True)
     df.rename(columns=OfferOut.fields(), inplace=True)
-    df.to_excel('data/out-offers.xlsx', index=False)
-    return 'data/out-offers.xlsx'
+    excel_path = Path('data/out-offers.xlsx')
+    excel_path.parent.mkdir(exist_ok=True)
+    df.to_excel(excel_path, index=False)
+    return str(excel_path)
 
 async def get_pricing_schemes() -> list[PricingSchemeOut]:
     async with async_session() as session:

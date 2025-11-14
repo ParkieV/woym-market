@@ -22,6 +22,8 @@ class OffersSourceFilter(BasePydanticFilter):
 
 class OffersFilter(OffersSourceFilter):
     offer_ids: list[int] | None = Field(default=None, title='ID Карточки товара в системе')
+    market: str | None = Field(default=None)
+    name_of_shop: str | None = Field(default=None)
     pricing_scheme_name: str | None = Field(default=None, title='Схема ценообразования')
     synchronization: bool | None = Field(default=None, title='Синхронизация карточки товара с каталогом')
     reverse_synchronization: bool | None = Field(default=None, title='Обратная синхронизация')
@@ -31,6 +33,12 @@ class OffersFilter(OffersSourceFilter):
 
         if self.offer_ids:
             query = query.where(Offer.id.in_(self.offer_ids))
+
+        if self.market:
+            query = query.where(Offer.market == self.market)
+
+        if self.name_of_shop:
+            query = query.where(Offer.name_of_shop == self.name_of_shop)
 
         if self.pricing_scheme_name:
             query = query.where(Offer.pricing_scheme_name == self.pricing_scheme_name)
