@@ -600,7 +600,7 @@ class OzonApi(ApiGateway, IApiGateway):
                         'barcodes': ', '.join(offer.get('barcodes', [])),
                         'price_index': self._translate_price_index(price_index),
                         'market_sku': offer['sources'][0]['sku'],
-                        'your_price_for_buyers': self._str_to_float(offer['marketing_price'])
+                        'your_price_for_buyers': self._str_to_float(offer['price'])
                     })
 
                 except Exception:
