@@ -10,6 +10,7 @@ from starlette import status
 from fastapi import HTTPException
 from tenacity import retry_if_exception, retry, stop_after_attempt, wait_random
 
+from infra.description_formatter import html_to_md_linear
 from src.api.exceptions import MarketplaceAPIException, RequestException
 from src.infra.policies.rate_limit import rate_limiter_gen
 from logs import parser_logger
@@ -632,7 +633,8 @@ class OzonApi(ApiGateway, IApiGateway):
             for offer in data['result']:
                 description_attributes = [i['values'][0] for i in offer['attributes'] if
                                           i['id'] == 4191 and len(i['values'])]
-                descriptions = '. '.join(i['value'] for i in description_attributes)
+                descriptions = html_to_md_linear('. '.join(i['value'] for i in description_attributes))
+
 
                 unit_dimension_divider = 1
                 if offer['dimension_unit'] == 'mm':

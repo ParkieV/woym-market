@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from starlette import status
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random
 
+from infra.description_formatter import html_to_md_linear
 from src.infra.policies.rate_limit import rate_limiter_gen
 from src.infra.policies.timeout import DeadlineExceededError
 from logs import parser_logger
@@ -225,7 +226,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         if not response.ok:
             parser_logger.error(f'Cant check price update result: {response.text}')
 
-        response_json = await self._get_resp_body_json()
+        response_json = await self._get_resp_body_json(response)
 
         if response_json.get('error', None):
             parser_logger.error(f'Cant check price update result: {response_json.get("errorText", "unknown error")}')
@@ -343,11 +344,12 @@ class WildberriesApi(ApiGateway, IApiGateway):
             self_weight = [i for i in item.get('characteristics', []) if
                              i.get('id', None) == 88953]
             self_weight = self_weight[0].get('value', None) if self_weight else None
+            description = item.get('description')
 
             offer = {
                 'sku': item['vendorCode'],
                 'name': item['title'],
-                'description': item.get('description', None),
+                'description': html_to_md_linear(description) if description else None,
                 'name_of_shop': self.shop_name,
                 'market': 'wildberries',
                 'self_length': ceil(item['dimensions']['length']),
