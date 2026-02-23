@@ -121,7 +121,7 @@ class APIOfferChangeData(BaseModel):
     name: str | None = None
     description: str | None = None
     vendor_code: int | None = None
-    search_words: str | None = None
+    search_words: str | None = None # UsamG1t: Меняем на хештеги
     barcodes: str | None = None
     self_weight: float | None = None
     self_length: float | None = Field(default=None, strict=False)
@@ -140,7 +140,7 @@ class APIOfferChangeData(BaseModel):
     def is_valid_description(self) -> bool:
         return isinstance(self.description, str)
 
-    def is_valid_search_words(self) -> bool:
+    def is_valid_search_words(self) -> bool: # UsamG1t: Меняем под хештеги
         return isinstance(self.search_words, str)
 
     def is_valid_sizes(self) -> (bool, dict):

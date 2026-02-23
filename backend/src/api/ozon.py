@@ -67,7 +67,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 json_response = await response.json()
 
                 for item in json_response.get('result', []):
-                    results[item['offer_id']] = item
+                    results[item['offer_id']] = item # UsamG1t: мы получаем здесь поисковые слова или уже хештеги?
 
                 last_id = json_response.get('last_id', None)
                 if not last_id:
@@ -244,6 +244,7 @@ class OzonApi(ApiGateway, IApiGateway):
 
         # Лямбда-выражение, определяющее корректность данных карточек
         def is_valid_offer_data(x):
+            # UsamG1t: поменять проверку
             return all((x.is_valid_name(), x.is_valid_description(), x.is_valid_search_words(), x.is_valid_sizes()))
 
         valid_data = [i for i in data if is_valid_offer_data(i)]
@@ -311,16 +312,19 @@ class OzonApi(ApiGateway, IApiGateway):
             for complex_attrs in update_offer_data['complex_attributes']:
                     complex_attrs['id'] = complex_attrs.pop('id')
 
-            update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] if attr['id'] not in (22336, 4191)]
+            update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] 
+                                               if attr['id'] not in (22336, 4191)] # UsamG1t:Поменять на 23171, атрибут хештегов
+            
+            # UsamG1t: собрать из поисковых слов хештеги
             update_offer_data['attributes'].extend(
                 [
                     {
-                        "id": 22336,  # поисковые слова
+                        "id": 22336,  # поисковые слова # UsamG1t:Поменять на 23171, атрибут хештегов
                         "complex_id": 0,
                         "values": [
                             {
                                 "dictionary_value_id": 0,
-                                "value": valid_offer.search_words
+                                "value": valid_offer.search_words # UsamG1t: поменять поисковые слова на хештеги  
                             }
                         ]
                     },
@@ -642,18 +646,18 @@ class OzonApi(ApiGateway, IApiGateway):
                 elif offer['dimension_unit'] == 'cm':
                     unit_dimension_divider = 1
 
-                search_attributes = [i for i in offer['attributes'] if i['id'] == 22336]
+                search_attributes = [i for i in offer['attributes'] if i['id'] == 22336] # UsamG1t: Поменять на 23171, атрибут хештегов 
                 search_words = '; '.join(
-                    ['; '.join([words['value'] for words in item['values']]) for item in search_attributes])
+                    ['; '.join([words['value'] for words in item['values']]) for item in search_attributes]) # UsamG1t: Поменять правила сборки строк хештегов
                 if len(search_words) > 255:
-                    search_words = search_words[:search_words[:256].rfind(';')]
+                    search_words = search_words[:search_words[:256].rfind(';')] # UsamG1t: Нужна ли проверка длины в новом поле?
 
                 result[offer['offer_id']] = {
                     'self_height': offer['height'] / unit_dimension_divider if offer['height'] else offer['height'],
                     'self_length': offer['depth'] / unit_dimension_divider if offer['depth'] else offer['depth'],
                     'self_width': offer['width'] / unit_dimension_divider if offer['width'] else offer['width'],
                     'self_weight': offer['weight'] / 1000 if offer['weight'] else offer['weight'],
-                    'search_words': search_words,
+                    'search_words': search_words, # UsamG1t: Заменить на хештеги
                     'description': descriptions
                 }
 

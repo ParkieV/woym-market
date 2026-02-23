@@ -45,11 +45,12 @@ class OfferRepository(IOfferRepository[PydanticModel]):
         ...
 
     async def offer_list(self,
+                         # UsamG1t: А хорошо ли писать session в документацию параметром, если это атрибут-дескриптор объекта?
                          chunk_size: int | None = None,
                          query_filter: IBaseFilter | None = None) -> AsyncGenerator[list[PydanticModel], None]:
         """
         Get offers from DB using chunks
-        :param session: SQLAlchemy asynchronous session
+        :param session: SQLAlchemy asynchronous session 
         :param chunk_size: size of chunk
         :param query_filter: filters for selecting offers
         :return: Batch of offers

@@ -355,7 +355,7 @@ async def update_offers_attributes(offers: pd.DataFrame,
             sku=offer_data['sku'],
             market=offer_data['market'],
             name_of_shop=offer_data['name_of_shop'],
-            search_words=offer_data['search_words'],
+            search_words=offer_data['search_words'], # UsamG1t: Замена или проброс (через условие)
             name=offer_data['name'],
             description=offer_data['description'],
             barcodes=offer_data['barcodes'],
