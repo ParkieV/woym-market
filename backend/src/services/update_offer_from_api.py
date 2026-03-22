@@ -44,6 +44,10 @@ class UpdateOfferFromApi:
         data['seller_discount'].fillna(0, inplace=True)
         data['old_discount'].fillna(0, inplace=True)
 
+        if data["market"] == 'ozon':
+            data['hashtags'].fillna('', inplace=True)
+
+
         temp_table_builder = CreateTempTable(data.to_dict('records'))
         insert_temp_table_builder = InsertTempTable(data.to_dict('records'))
         query_builder = UpdateOfferWithTempTable(data.columns.tolist(), synced_columns)

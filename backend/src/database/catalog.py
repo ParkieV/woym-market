@@ -166,13 +166,20 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
         (Offer.market == 'ozon', func.coalesce(CatalogItem.search_words, Offer.search_words))
         , else_=Offer.search_words)}
 
+    # UsamG1t: Добавляем проверку хештегов строго для озона
+    update_hashtags = {'hashtags': case(
+        (Offer.market == 'ozon', func.coalesce(CatalogItem.hashtags, Offer.hashtags))
+        , else_=Offer.hashtags)}
+
+
     # Штрихкоды изменяются только у яндекса
     update_barcodes = {'barcodes': case(
         (Offer.market == 'yandex', func.coalesce(CatalogItem.barcodes, Offer.barcodes))
         , else_=Offer.barcodes)}
 
-    update_values.update(update_barcodes)
     update_values.update(update_search_words)
+    update_values.update(update_hashtags)
+    update_values.update(update_barcodes)
 
     # Формируем словарь значений для проверки, что поле было изменено
     detect_changes_values = {
@@ -194,7 +201,18 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
             else_=Offer.search_words_changed)
     }
 
-    # # Штрихкоды изменяемые только для яндекса, поэтому тречим изменения только у него
+    # UsamG1t: Трек изменений хештегов у озона
+    detect_hashtags_changes_for_ozon = {
+        'hashtags_changed': case(
+            (Offer.market == 'ozon', or_(
+                Offer.hashtags_changed,
+                func.concat(Offer.hashtags, '') != func.concat(
+                    func.coalesce(CatalogItem.hashtags, Offer.hashtags), '')
+            )),
+            else_=Offer.hashtags_changed)
+    }
+
+    # Штрихкоды изменяемые только для яндекса, поэтому тречим изменения только у него
     detect_barcodes_changes_for_yandex = {
         'barcodes_changed': case(
             (Offer.market == 'yandex', or_(
@@ -205,9 +223,10 @@ async def sync_catalog_items_with_offers(session: AsyncSession, skus: list[str] 
             else_=Offer.barcodes_changed)
     }
 
-    update_values.update(detect_barcodes_changes_for_yandex)
     update_values.update(detect_changes_values)
     update_values.update(detect_search_words_changes_for_ozon)
+    update_values.update(detect_hashtags_changes_for_ozon)
+    update_values.update(detect_barcodes_changes_for_yandex)
 
     stmp = (
         update(Offer)
@@ -260,6 +279,7 @@ async def reset_all_track_catalog_markers(session: AsyncSession):
         supplier_available_changed=False,
         description_changed=False,
         search_words_changed=False,
+        hashtags_changed=False,
         name_changed=False,
         barcodes_changed=False,
     )

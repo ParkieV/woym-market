@@ -20,6 +20,7 @@ class CatalogItemUpdate(BaseCatalogItem):
     name: str | None = Field(title='Название', default=None)
     description: str | None = Field(title='Аннотация', default=None)
     search_words: str | None = Field(title='Поисковые слова', default=None)
+    hasgtags: str | None = Field(title='Хештеги', default=None)
     barcodes: str | None = Field(title='Штрихкоды', default=None)
 
     self_weight: float | None = Field(title='Вес', default=None)

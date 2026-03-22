@@ -67,7 +67,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 json_response = await response.json()
 
                 for item in json_response.get('result', []):
-                    results[item['offer_id']] = item # UsamG1t: мы получаем здесь поисковые слова или уже хештеги?
+                    results[item['offer_id']] = item # UsamG1t: мы получаем здесь поисковые слова ИЛИ хештеги
 
                 last_id = json_response.get('last_id', None)
                 if not last_id:
@@ -103,7 +103,8 @@ class OzonApi(ApiGateway, IApiGateway):
                 json_response = await response.json()
 
                 for item in json_response.get('items', []):
-                    results[item['offer_id']] = item
+                    results[item['offer_id']] = item  # UsamG1t: мы получаем здесь поисковые слова ИЛИ хештеги
+
 
                 last_id = json_response.get('cursor', None)
                 if not last_id or json_response.get('total', 0) < chunk_size:
@@ -247,8 +248,25 @@ class OzonApi(ApiGateway, IApiGateway):
             # UsamG1t: поменять проверку
             return all((x.is_valid_name(), x.is_valid_description(), x.is_valid_search_words(), x.is_valid_sizes()))
 
-        valid_data = [i for i in data if is_valid_offer_data(i)]
-        invalid_data = [i for i in data if not is_valid_offer_data(i)]
+        # Лямбда-выражение, определяющее корректность данных карточек для новых карточек с хештегами
+        def is_valid_new_offer_data(x):
+            return all((x.is_valid_name(), x.is_valid_description(), x.is_valid_hashtags(), x.is_valid_sizes()))
+
+
+        valid_data, invalid_data = [], []
+        for i in data:
+            if i.hashtags is not None:
+                parser_logger.info("Work with already updated offer: validating offer")
+                if is_valid_new_offer_data(i):
+                    valid_data.append(i)
+                else:
+                    invalid_data.append(i)
+            else:                
+                parser_logger.info("Work with old-format offer: validating offer")
+                if is_valid_offer_data(i):
+                    valid_data.append(i)
+                else:
+                    invalid_data.append(i)
 
         if invalid_data:
             parser_logger.error(f'Invalid offers data: {len(invalid_data)} / {len(valid_data)}')
@@ -312,34 +330,66 @@ class OzonApi(ApiGateway, IApiGateway):
             for complex_attrs in update_offer_data['complex_attributes']:
                     complex_attrs['id'] = complex_attrs.pop('id')
 
-            update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] 
-                                               if attr['id'] not in (22336, 4191)] # UsamG1t:Поменять на 23171, атрибут хештегов
+            if valid_offer.hashtags is not None:
+                parser_logger.info("Work with already updated offer: fix attributes")
+
+                update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] 
+                                               if attr['id'] not in (23171, 4191)] # UsamG1t:Поменяли с 22336 на 23171, атрибут хештегов
             
-            # UsamG1t: собрать из поисковых слов хештеги
-            update_offer_data['attributes'].extend(
-                [
-                    {
-                        "id": 22336,  # поисковые слова # UsamG1t:Поменять на 23171, атрибут хештегов
-                        "complex_id": 0,
-                        "values": [
-                            {
-                                "dictionary_value_id": 0,
-                                "value": valid_offer.search_words # UsamG1t: поменять поисковые слова на хештеги  
-                            }
-                        ]
-                    },
-                    {
-                        "id": 4191,  # описание
-                        "complex_id": 0,
-                        "values": [
-                            {
-                                "dictionary_value_id": 0,
-                                "value": valid_offer.description
-                            }
-                        ]
-                    }
-                ]
-            )
+                update_offer_data['attributes'].extend(
+                    [
+                        {
+                            "id": 23171, # UsamG1t: Поменяли с 22336 на 23171, атрибут хештегов
+                            "complex_id": 0,
+                            "values": [
+                                {
+                                    "dictionary_value_id": 0,
+                                    "value": valid_offer.hashtags # UsamG1t: поменяли поисковые слова на хештеги  
+                                }
+                            ]
+                        },
+                        {
+                            "id": 4191,
+                            "complex_id": 0,
+                            "values": [
+                                {
+                                    "dictionary_value_id": 0,
+                                    "value": valid_offer.description
+                                }
+                            ]
+                        }
+                    ]
+                )
+            else:
+                parser_logger.info("Work with old-format offer: fix attributes")
+
+                update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] 
+                                                if attr['id'] not in (22336, 4191)]
+                
+                update_offer_data['attributes'].extend(
+                    [
+                        {
+                            "id": 22336,
+                            "complex_id": 0,
+                            "values": [
+                                {
+                                    "dictionary_value_id": 0,
+                                    "value": valid_offer.search_words   
+                                }
+                            ]
+                        },
+                        {
+                            "id": 4191,  
+                            "complex_id": 0,
+                            "values": [
+                                {
+                                    "dictionary_value_id": 0,
+                                    "value": valid_offer.description
+                                }
+                            ]
+                        }
+                    ]
+                )
 
             to_update_offers_data.append(update_offer_data)
 
@@ -646,18 +696,32 @@ class OzonApi(ApiGateway, IApiGateway):
                 elif offer['dimension_unit'] == 'cm':
                     unit_dimension_divider = 1
 
-                search_attributes = [i for i in offer['attributes'] if i['id'] == 22336] # UsamG1t: Поменять на 23171, атрибут хештегов 
+                search_attributes = [i for i in offer['attributes'] if i['id'] == 22336]  
+                hashtags_attributes = [i for i in offer['attributes'] if i['id'] == 23171] # UsamG1t: Поменяли на 23171, атрибут хештегов
+                
                 search_words = '; '.join(
-                    ['; '.join([words['value'] for words in item['values']]) for item in search_attributes]) # UsamG1t: Поменять правила сборки строк хештегов
+                    ['; '.join([words['value'] for words in item['values']]) for item in search_attributes])
                 if len(search_words) > 255:
-                    search_words = search_words[:search_words[:256].rfind(';')] # UsamG1t: Нужна ли проверка длины в новом поле?
+                    search_words = search_words[:search_words[:256].rfind(';')]
+                
+                hashtags = ' '.join(
+                    ' '.join(tag['value'] for tag in tags['values']) for tags in hashtags_attributes
+                )
 
+                # UsamG1t: Если хештегов нет — собираем их из поиcковых слов
+                if len(hashtags) == 0:
+                    hashtags = '#' + search_words.replace(' ', '_').replace(';_', ' #').lower()
+
+                if len(hashtags) > 255:
+                    hashtags = hashtags[:hashtags[:256].rfind(';')] # UsamG1t: В API описание не нашёл, оставил старую проверку
+                
                 result[offer['offer_id']] = {
                     'self_height': offer['height'] / unit_dimension_divider if offer['height'] else offer['height'],
                     'self_length': offer['depth'] / unit_dimension_divider if offer['depth'] else offer['depth'],
                     'self_width': offer['width'] / unit_dimension_divider if offer['width'] else offer['width'],
                     'self_weight': offer['weight'] / 1000 if offer['weight'] else offer['weight'],
-                    'search_words': search_words, # UsamG1t: Заменить на хештеги
+                    'search_words': search_words, 
+                    'hashtags': hashtags, # UsamG1t: Добавили хештеги
                     'description': descriptions
                 }
 

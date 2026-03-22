@@ -182,8 +182,12 @@ async def update_offers(
             del offer['id']
 
         # Поисковые слова изменяются только у озона
-        if 'search_words' in offer and offer.get('market', None) != 'ozon':
+        if 'search_words' in offer and offer.get('market', None) != 'ozon': # UsamG1t: Будут ли меняться хештеги
             del offer['search_words']
+
+        # UsamG1t: Хештеги — только у озона
+        if 'hashtags' in offer and offer.get('market', None) != 'ozon': 
+            del offer['hashtags']
 
         if 'barcodes' in offer and offer.get('market', None) != 'yandex':
             del offer['barcodes']
@@ -422,6 +426,7 @@ async def reset_all_track_offers_markers(session: AsyncSession):
         self_height_changed=False,
         barcodes_changed=False,
         search_words_changed=False
+        hashtags_changed=False
     )
     await session.execute(stmp)
     await session.commit()
