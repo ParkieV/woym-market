@@ -1,5 +1,7 @@
 import asyncio
+import re
 from collections import deque
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
@@ -105,33 +107,39 @@ def html_to_md_linear(html: str) -> str:
 
     return ''.join(res).strip()
 
+def search_words_to_hashtags(text: str) -> str:
+    if len(text) == 0:
+        return text
+    refactored_text = '#' + re.sub(r'\s*;\s*', ' #', text)
+    return refactored_text
 
 async def sasat():
     print("Start")
-    engine2 = create_async_engine(
+    engine1 = create_async_engine(
         'postgresql+asyncpg://4jkEBoIe2dFve73:ruskys-nuzvok-puzFa2@localhost:5432/local_db'
     )
-    engine1 = create_async_engine(
+    engine2 = create_async_engine(
         'postgresql+asyncpg://hGjP58cDJH4GE6U:zapkAp-cerwen-9xiqfy@10.0.0.3:5432/woym_market_db'
     )
 
-    session_maker1 = async_sessionmaker(engine1)
+    # session_maker1 = async_sessionmaker(engine1)
+    session_maker2 = async_sessionmaker(engine2)
 
-    async with session_maker1() as session1:
-        result = await session1.execute(
-            text('SELECT id, description FROM offers')
-        )
-
-        print("Start poehali")
-        for row in result:
-            await session1.execute(
-                text(
-                    'UPDATE offers SET description = :desc WHERE id = :id'
-                ),
-                {'desc': html_to_md_linear(row.description), 'id': row.id}
+    async with session_maker2() as session2:
+            result = await session2.execute(
+                text("SELECT id, search_words FROM offers WHERE market = 'ozon'")
             )
 
-        await session1.commit()
+            for row in result:
+                search_words = '#' + re.sub(r'\s*;\s*', ' #', row.search_words)
+                await session2.execute(
+                    text(
+                        'UPDATE offers SET search_words = :search_words WHERE id = :id and market = :market'
+                    ),
+                    {'search_words': search_words, 'id': row.id, 'market': 'ozon'}
+                )
+
+            await session2.commit()
 
 
 if __name__ == '__main__':

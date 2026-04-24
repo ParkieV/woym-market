@@ -1,4 +1,5 @@
 import asyncio
+from enum import Enum
 from math import ceil
 from typing import Any, AsyncIterator
 from datetime import datetime
@@ -10,7 +11,7 @@ from starlette import status
 from fastapi import HTTPException
 from tenacity import retry_if_exception, retry, stop_after_attempt, wait_random
 
-from src.infra.description_formatter import html_to_md_linear
+from src.infra.formatters import html_to_md_linear
 from src.api.exceptions import MarketplaceAPIException, RequestException
 from src.infra.policies.rate_limit import rate_limiter_gen
 from logs import parser_logger
@@ -26,6 +27,11 @@ from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehou
 class OfferIdentifier:
     product_id: int
     offer_id: str
+
+class AttributeIdentifications(Enum):
+    hashtag = 23171
+    description = 4191
+    search_words = 22336
 
 
 class OzonApi(ApiGateway, IApiGateway):
@@ -311,11 +317,13 @@ class OzonApi(ApiGateway, IApiGateway):
             for complex_attrs in update_offer_data['complex_attributes']:
                     complex_attrs['id'] = complex_attrs.pop('id')
 
-            update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] if attr['id'] not in (22336, 4191)]
+            update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] if attr['id'] not in (
+                AttributeIdentifications.hashtag, AttributeIdentifications.description
+            )]
             update_offer_data['attributes'].extend(
                 [
                     {
-                        "id": 22336,  # поисковые слова
+                        "id": AttributeIdentifications.hashtag,
                         "complex_id": 0,
                         "values": [
                             {
@@ -325,7 +333,7 @@ class OzonApi(ApiGateway, IApiGateway):
                         ]
                     },
                     {
-                        "id": 4191,  # описание
+                        "id": AttributeIdentifications.description,
                         "complex_id": 0,
                         "values": [
                             {
@@ -643,10 +651,10 @@ class OzonApi(ApiGateway, IApiGateway):
                     unit_dimension_divider = 1
 
                 search_attributes = [i for i in offer['attributes'] if i['id'] == 22336]
-                search_words = '; '.join(
-                    ['; '.join([words['value'] for words in item['values']]) for item in search_attributes])
+                search_words = ' #'.join(
+                    [' #'.join([words['value'] for words in item['values']]) for item in search_attributes])
                 if len(search_words) > 255:
-                    search_words = search_words[:search_words[:256].rfind(';')]
+                    search_words = search_words[:search_words[:256].rfind('#')]
 
                 result[offer['offer_id']] = {
                     'self_height': offer['height'] / unit_dimension_divider if offer['height'] else offer['height'],

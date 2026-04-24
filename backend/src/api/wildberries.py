@@ -12,7 +12,7 @@ from fastapi import HTTPException
 from starlette import status
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random
 
-from src.infra.description_formatter import html_to_md_linear
+from src.infra.formatters import html_to_md_linear
 from src.infra.policies.rate_limit import rate_limiter_gen
 from src.infra.policies.timeout import DeadlineExceededError
 from logs import parser_logger
@@ -180,14 +180,14 @@ class WildberriesApi(ApiGateway, IApiGateway):
                     turnover_default, turnover_default
                 )
             )
+            if offers_prices.get(offer['sku']):
+                offer.update(offers_prices[offer['sku']])
+                offer['turnover_avg_balance'] = turnovers[0]
+                offer['turnover_curr_balance'] = turnovers[1]
 
-            offer.update(offers_prices[offer['sku']])
-            offer['turnover_avg_balance'] = turnovers[0]
-            offer['turnover_curr_balance'] = turnovers[1]
-
-            result.append(
-                APIOffer(**offer)
-            )
+                result.append(
+                    APIOffer(**offer)
+                )
 
         return result
 
