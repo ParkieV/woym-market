@@ -318,12 +318,12 @@ class OzonApi(ApiGateway, IApiGateway):
                     complex_attrs['id'] = complex_attrs.pop('id')
 
             update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] if attr['id'] not in (
-                AttributeIdentifications.hashtag, AttributeIdentifications.description
+                AttributeIdentifications.hashtag.value, AttributeIdentifications.description.value
             )]
             update_offer_data['attributes'].extend(
                 [
                     {
-                        "id": AttributeIdentifications.hashtag,
+                        "id": AttributeIdentifications.hashtag.value,
                         "complex_id": 0,
                         "values": [
                             {
@@ -333,7 +333,7 @@ class OzonApi(ApiGateway, IApiGateway):
                         ]
                     },
                     {
-                        "id": AttributeIdentifications.description,
+                        "id": AttributeIdentifications.description.value,
                         "complex_id": 0,
                         "values": [
                             {
