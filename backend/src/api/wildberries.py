@@ -132,7 +132,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url=update_url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
-                parser_logger.error(f'Cant update offers data: {response.text}')
+                parser_logger.error(f'Cant update offers data: {await response.text()}')
                 continue
 
         errors = await self._errors_in_update()
@@ -224,7 +224,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         response = await self.request('GET', url=url, headers=self.auth_headers, params={'uploadID': task_id})
 
         if not response.ok:
-            parser_logger.error(f'Cant check price update result: {response.text}')
+            parser_logger.error(f'Cant check price update result: {await response.text()}')
 
         response_json = await self._get_resp_body_json(response)
 
@@ -376,14 +376,14 @@ class WildberriesApi(ApiGateway, IApiGateway):
             response = await self.request('GET', url=url, params={'limit': limit, 'offset': offset}, headers=self.auth_headers)
 
             if not response.ok:
-                parser_logger.error(f'Cant get price info: {response.text}')
+                parser_logger.error(f'Cant get price info: {await response.text()}')
                 break
 
             response_data = await self._get_resp_body_json(response)
             data = response_data['data']['listGoods']
 
             if not data:
-                parser_logger.error(f'Cant get price info: {response.text}')
+                parser_logger.error(f'Cant get price info: {await response.text()}')
                 break
 
             for item in data:
@@ -410,7 +410,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         return result
 
     @add_custom_warehouses
-    @rate_limiter(max_rate=6, secs=10)  # TODO: уточнить лимит по документации supplies-api.wildberries.ru/api/v1/warehouses
+    @rate_limiter(max_rate=6, period=60, interval=10)
     async def _get_warehouses(self) -> list[dict]:
         url = 'https://supplies-api.wildberries.ru/api/v1/warehouses'
         result = []
@@ -418,7 +418,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         response = await self.request('GET', url=url, headers=self.auth_headers)
 
         if not response.ok:
-            parser_logger.error(f'Cant get warehouses: {response.text}')
+            parser_logger.error(f'Cant get warehouses: {await response.text()}')
             return []
 
         response_data = await self._get_resp_body_json(response)
@@ -448,7 +448,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         response = await self.request('POST', url=url, headers=self.auth_headers, body=body)
 
         if not response.ok:
-            parser_logger.error(f'Cant get stocks on warehouse id({warehouse_id}): {response.text}')
+            parser_logger.error(f'Cant get stocks on warehouse id({warehouse_id}): {await response.text()}')
             return result
 
         json_data = await self._get_resp_body_json(response)
@@ -471,7 +471,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         response = await self.request('GET', url=url, headers=self.auth_headers)
         if not response.ok:
-            parser_logger.error(f'Cant get stocks: {response.text}')
+            parser_logger.error(f'Cant get stocks: {await response.text()}')
             return defaultdict()
 
         response_json = await self._get_resp_body_json(response)
@@ -530,7 +530,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         wait=wait_random(0, 1),
         reraise=True
     )
-    @rate_limiter_gen(max_rate=3, secs=61)
+    @rate_limiter_gen(max_rate=3, period=61)
     async def get_turnover(
             self,
             vendor_codes: list[int],

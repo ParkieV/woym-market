@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import Callable, Awaitable, AsyncIterator
 from functools import wraps
 from typing import ParamSpec, TypeVar
@@ -9,7 +10,7 @@ R = TypeVar('R')
 
 
 def rate_limiter(
-        max_rate: int = 1, secs: int = 1
+        max_rate: int = 1, period: int = 1, interval: float | None = None
 ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     limiter = AsyncLimiter(max_rate, secs)
 
@@ -17,7 +18,10 @@ def rate_limiter(
         @wraps(func)
         async def wrapper(*args, **kwargs) -> R:
             async with limiter:
-                return await func(*args, **kwargs)
+                result = await func(*args, **kwargs)
+                if interval is not None:
+                    await asyncio.sleep(interval)
+                return result
 
         return wrapper
 

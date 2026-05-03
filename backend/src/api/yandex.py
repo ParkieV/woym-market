@@ -89,7 +89,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url=url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
-                parser_logger.error(f'Cant update offers data: {response.text}')
+                parser_logger.error(f'Cant update offers data: {await response.text()}')
 
             response_json = await self._get_resp_body_json(response)
 
@@ -265,7 +265,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
                 include_response_logs=True
             )
             if not response.ok:
-                parser_logger.error(f'{self.shop_name}(yandex) has invalid price data: {response.text}')
+                parser_logger.error(f'{self.shop_name}(yandex) has invalid price data: {await response.text()}')
 
         await self._set_cofinance_offers_price(data)
 
@@ -475,7 +475,7 @@ class YandexMarketApi(ApiGateway, IApiGateway):
             response = await self.request('GET', url=url, headers=self.auth_headers, params=params)
 
             if not response.ok:
-                parser_logger.error(f'Cant collect orders: {response.text}')
+                parser_logger.error(f'Cant collect orders: {await response.text()}')
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Не удалось получить информацию о заказах')
 
             json_response = await self._get_resp_body_json(response)

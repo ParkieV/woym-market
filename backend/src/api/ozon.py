@@ -67,7 +67,7 @@ class OzonApi(ApiGateway, IApiGateway):
 
                 if not response.ok:
                     parser_logger.error(f'Error body: {body}')
-                    parser_logger.error(f'Cant get info attributes: {response.text}')
+                    parser_logger.error(f'Cant get info attributes: {await response.text()}')
                     break
 
                 json_response = await response.json()
@@ -103,7 +103,7 @@ class OzonApi(ApiGateway, IApiGateway):
             while True:
                 response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
                 if not response.ok:
-                    parser_logger.error(f'Cant collect offers price info: {response.text}')
+                    parser_logger.error(f'Cant collect offers price info: {await response.text()}')
                     break
 
                 json_response = await response.json()
@@ -356,13 +356,13 @@ class OzonApi(ApiGateway, IApiGateway):
             }
             response = await self.request('POST', url, body=body, headers=self.auth_headers, include_response_logs=True)
             if not response.ok:
-                parser_logger.error(f'Cant update offers data: {response.text}')
+                parser_logger.error(f'Cant update offers data: {await response.text()}')
                 continue
 
             json_response = await self._get_resp_body_json(response)
             task_id = json_response.get('result', {}).get('task_id', None)
             if not task_id:
-                parser_logger.error(f'Cant find task_id: {response.text}')
+                parser_logger.error(f'Cant find task_id: {await response.text()}')
                 return
 
             await asyncio.sleep(5)
@@ -379,7 +379,7 @@ class OzonApi(ApiGateway, IApiGateway):
         response = await self.request('POST', url='https://api-seller.ozon.ru/v1/product/import/info', body=body, headers=self.auth_headers, include_response_logs=True)
 
         if not response.ok:
-            parser_logger.error(f'Cant check task({task_id}) status {response.text}')
+            parser_logger.error(f'Cant check task({task_id}) status {await response.text()}')
             return
 
         json_response = await self._get_resp_body_json(response)
@@ -704,7 +704,7 @@ class OzonApi(ApiGateway, IApiGateway):
         response = await self.request('POST', url=url, headers=self.auth_headers, body=body)
 
         if not response.ok:
-            parser_logger.error(f'Cant get orders from {from_date}: {response.text}')
+            parser_logger.error(f'Cant get orders from {from_date}: {await response.text()}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST,
                                 f'Не удалось получить заказы: {response.json().get("message", "unknown")}')
 
@@ -739,7 +739,7 @@ class OzonApi(ApiGateway, IApiGateway):
         wait=wait_random(0, 1),
         reraise=True
     )
-    @rate_limiter_gen(secs=61)
+    @rate_limiter_gen(period=61)
     async def get_turnover(
             self,
             skus: list[str],
