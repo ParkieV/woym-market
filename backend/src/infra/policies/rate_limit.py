@@ -9,10 +9,10 @@ P = ParamSpec('P')
 R = TypeVar('R')
 
 
-def rate_limiter(
+def async_rate_limiter(
         max_rate: int = 1, period: int = 1, interval: float | None = None
 ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
-    limiter = AsyncLimiter(max_rate, secs)
+    limiter = AsyncLimiter(max_rate, period)
 
     def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(func)
@@ -28,8 +28,8 @@ def rate_limiter(
     return decorator
 
 
-def rate_limiter_gen(max_rate: int = 1, secs: int = 1):
-    limiter = AsyncLimiter(max_rate, secs)
+def rate_limiter_gen(max_rate: int = 1, period: int = 1, interval: float | None = None):
+    limiter = AsyncLimiter(max_rate, period)
 
     def decorator(func):
         @wraps(func)
@@ -38,7 +38,9 @@ def rate_limiter_gen(max_rate: int = 1, secs: int = 1):
             try:
                 while True:
                     async with limiter:
-                        item = await agen.__anext__()   # лимитируем каждый шаг
+                        item = await agen.__anext__()
+                        if interval is not None:
+                            await asyncio.sleep(interval)
                     yield item
             except StopAsyncIteration:
                 return
