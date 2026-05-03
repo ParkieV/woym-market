@@ -11,3 +11,4 @@ db-data/
 static/
 nginx/*
 !nginx/server.conf
+.claude/
