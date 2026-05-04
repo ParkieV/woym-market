@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 
 def html_to_md_linear(html: str) -> str:
-    if html[0] == '\'' and html[-1] == '\'':
+    if not html:
+        return ''
+    if html.startswith("'") and html.endswith("'"):
         html = html[1:-1]
     res = []
     i = 0
