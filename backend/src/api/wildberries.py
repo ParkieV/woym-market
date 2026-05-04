@@ -365,6 +365,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         return result
 
+    @async_rate_limiter(max_rate=10, period=6, interval=0.6)
     async def _get_offers_prices(self) -> dict[str, Any]:
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter'
 
