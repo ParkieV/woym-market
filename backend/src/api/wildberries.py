@@ -13,7 +13,7 @@ from starlette import status
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random
 
 from src.infra.formatters import html_to_md_linear
-from src.infra.policies.rate_limit import async_rate_limiter
+from src.infra.policies.rate_limit import async_rate_limiter, rate_limiter_gen
 from src.infra.policies.timeout import DeadlineExceededError
 from logs import parser_logger
 from src.api.exceptions import InitializationError, RequestException, MarketplaceAPIException
