@@ -10,7 +10,7 @@ from starlette import status
 from fastapi import HTTPException
 from tenacity import retry_if_exception, retry, stop_after_attempt, wait_random
 
-from src.infra.description_formatter import html_to_md_linear
+from src.infra.formatter import html_to_md_linear
 from src.api.exceptions import MarketplaceAPIException, RequestException
 from src.infra.policies.rate_limit import rate_limiter_gen
 from logs import parser_logger
