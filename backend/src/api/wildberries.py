@@ -12,8 +12,8 @@ from fastapi import HTTPException
 from starlette import status
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random
 
-from src.infra.formatters import html_to_md_linear
-from src.infra.policies.rate_limit import async_rate_limiter, rate_limiter_gen
+from src.infra.description_formatter import html_to_md_linear
+from src.infra.policies.rate_limit import rate_limiter_gen
 from src.infra.policies.timeout import DeadlineExceededError
 from logs import parser_logger
 from src.api.exceptions import InitializationError, RequestException, MarketplaceAPIException
@@ -181,7 +181,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
                 )
             )
 
-            offer.update(offers_prices[offer['sku']])
+            offer.update(offers_prices.get(offer['sku'], {}))
             offer['turnover_avg_balance'] = turnovers[0]
             offer['turnover_curr_balance'] = turnovers[1]
 
@@ -369,7 +369,6 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         return result
 
-    @async_rate_limiter(max_rate=10, period=6, interval=0.6)
     async def _get_offers_prices(self) -> dict[str, Any]:
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter'
 
@@ -386,9 +385,18 @@ class WildberriesApi(ApiGateway, IApiGateway):
                         f'Wildberries token EXPIRED for shop "{self.shop_name}". '
                         f'Update token at https://seller.wildberries.ru/supplier-settings/access-to-api'
                     )
+                    break
+                elif response.status == 429:
+                    retry_after = int(response.headers.get('Retry-After', 60))
+                    parser_logger.warning(
+                        f'WB {self.shop_name} rate limit (429) on prices offset={offset}. '
+                        f'Retrying after {retry_after}s...'
+                    )
+                    await asyncio.sleep(retry_after)
+                    continue
                 else:
                     parser_logger.error(f'Cant get price info: {await response.text()}')
-                break
+                    break
 
             response_data = await self._get_resp_body_json(response)
             data = response_data['data']['listGoods']
@@ -421,7 +429,6 @@ class WildberriesApi(ApiGateway, IApiGateway):
         return result
 
     @add_custom_warehouses
-    @async_rate_limiter(max_rate=6, period=60, interval=10)
     async def _get_warehouses(self) -> list[dict]:
         url = 'https://supplies-api.wildberries.ru/api/v1/warehouses'
         result = []
@@ -481,7 +488,6 @@ class WildberriesApi(ApiGateway, IApiGateway):
             ))
         return result
 
-    @async_rate_limiter(max_rate=1, period=60)
     async def _get_stocks(self) -> defaultdict[Any, list]:
         date_from = '2000-06-20'
         url = f'https://statistics-api.wildberries.ru/api/v1/supplier/stocks?dateFrom={date_from}'
@@ -553,7 +559,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         wait=wait_random(0, 1),
         reraise=True
     )
-    @rate_limiter_gen(max_rate=3, period=60, interval=20)
+    @rate_limiter_gen(max_rate=3, secs=61)
     async def get_turnover(
             self,
             vendor_codes: list[int],

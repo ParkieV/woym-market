@@ -17,6 +17,7 @@ async def calculate_offers_values(data: pd.DataFrame, market_settings: MarketOut
 
     Список карточек с обновленными вычисляемыми значениями
     """
+    data = data.copy()
     # Расчет объёма
     data['volume'] = data['self_width'] * data['self_height'] * data['self_length'] / 1000
 
@@ -93,7 +94,7 @@ async def calculate_price(data: pd.DataFrame, market_settings: MarketOut) -> pd.
 
     # total_price = верхняя планка
     #  используем автоматическую мин планку
-    sub_data_3 = data[data['use_manual_min_price'] == False]
+    sub_data_3 = data[data['use_manual_min_price'] == False].copy()
     sub_data_3['temp_auto_min_price'] = sub_data_3['total_price'] * sub_data_3['auto_min_price'] / 100
 
     sub_data_3.drop('temp_auto_min_price', axis=1, inplace=True)

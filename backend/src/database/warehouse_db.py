@@ -120,7 +120,7 @@ async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[
             update(Warehouse).where(Warehouse.name.in_(storage['related_warehouses_name'])).where(
                 Warehouse.market == 'ozon')
             .values(parent_warehouse_id=(
-                select(Warehouse.id).where(Warehouse.market == 'ozon').where(Warehouse.name == storage['name'])))
+                select(Warehouse.id).where(Warehouse.market == 'ozon').where(Warehouse.name == storage['name']).scalar_subquery()))
         )
         await session.execute(stmp)
 
@@ -133,9 +133,13 @@ async def relate_warehouses_with_clusters(session: AsyncSession, storages: list[
             """)
     await session.execute(stmp)
 
-    stmp = update(OfferStock).options(selectinload(OfferStock.warehouse)).where(
-        Warehouse.warehouse_type == 'cluster').where(OfferStock.current_stock is None).values(current_stock=0)
-
+    cluster_ids_subquery = select(Warehouse.id).where(Warehouse.warehouse_type == 'cluster')
+    stmp = (
+        update(OfferStock)
+        .where(OfferStock.warehouse_id.in_(cluster_ids_subquery))
+        .where(OfferStock.current_stock.is_(None))
+        .values(current_stock=0)
+    )
     await session.execute(stmp)
     await session.commit()
 
@@ -580,7 +584,7 @@ async def fill_empty_stocks(session: AsyncSession):
         func.upper(cast(Market.type, String)).label('market'),
         func.array(
             (select(Warehouse.id).where(
-                func.upper(cast(Warehouse.market, String)) == func.upper(cast(Market.type, String))))
+                func.upper(cast(Warehouse.market, String)) == func.upper(cast(Market.type, String))).scalar_subquery())
         ).label('warehouses')
     )
     markets_warehouses = {i.market: set(i.warehouses) for i in (await session.execute(markets_query)).all()}
@@ -591,7 +595,7 @@ async def fill_empty_stocks(session: AsyncSession):
         func.upper(cast(Offer.market, String)).label('market'),
         Offer.name_of_shop,
         func.array(
-            (select(OfferStock.warehouse_id).where(OfferStock.offer_id == Offer.id))
+            (select(OfferStock.warehouse_id).where(OfferStock.offer_id == Offer.id).scalar_subquery())
         ).label('warehouses')
     )
     result = (await session.execute(query)).all()
