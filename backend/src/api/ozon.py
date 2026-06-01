@@ -1,5 +1,4 @@
 import asyncio
-from enum import Enum
 from math import ceil
 from typing import Any, AsyncIterator
 from datetime import datetime
@@ -11,7 +10,7 @@ from starlette import status
 from fastapi import HTTPException
 from tenacity import retry_if_exception, retry, stop_after_attempt, wait_random
 
-from src.infra.formatters import html_to_md_linear
+from src.infra.description_formatter import html_to_md_linear
 from src.api.exceptions import MarketplaceAPIException, RequestException
 from src.infra.policies.rate_limit import rate_limiter_gen
 from logs import parser_logger
@@ -27,11 +26,6 @@ from src.schemas.base_api_schemas import APIOffer, APIWarehouseOffer, APIWarehou
 class OfferIdentifier:
     product_id: int
     offer_id: str
-
-class AttributeIdentifications(Enum):
-    hashtag = 23171
-    description = 4191
-    search_words = 22336
 
 
 class OzonApi(ApiGateway, IApiGateway):
@@ -67,7 +61,7 @@ class OzonApi(ApiGateway, IApiGateway):
 
                 if not response.ok:
                     parser_logger.error(f'Error body: {body}')
-                    parser_logger.error(f'Cant get info attributes: {await response.text()}')
+                    parser_logger.error(f'Cant get info attributes: {response.text}')
                     break
 
                 json_response = await response.json()
@@ -103,7 +97,7 @@ class OzonApi(ApiGateway, IApiGateway):
             while True:
                 response = await self.request('POST', url=url, body=body, headers=self.auth_headers)
                 if not response.ok:
-                    parser_logger.error(f'Cant collect offers price info: {await response.text()}')
+                    parser_logger.error(f'Cant collect offers price info: {response.text}')
                     break
 
                 json_response = await response.json()
@@ -274,11 +268,14 @@ class OzonApi(ApiGateway, IApiGateway):
             offer_attributes_info = offers_attributes_info.get(valid_offer.sku, None)
 
             if not offer_attributes_info or not offer_price_info:
-                log_msg = 'Skip update offer sku={0} due to has no full data'.format(
-                    offer_attributes_info.get("offer_id", "unknown") if offer_attributes_info
-                    else offer_price_info.get("offer_id", "unknown")
+                missing = []
+                if not offer_attributes_info:
+                    missing.append('attributes')
+                if not offer_price_info:
+                    missing.append('price')
+                parser_logger.warning(
+                    f'Skip update offer sku={valid_offer.sku}: missing {", ".join(missing)} data'
                 )
-                parser_logger.info(log_msg)
                 continue
 
             update_offer_data = offer_attributes_info
@@ -288,7 +285,14 @@ class OzonApi(ApiGateway, IApiGateway):
             update_offer_data['vat'] = str(offer_price_info['price']['vat'])
             update_offer_data['name'] = valid_offer.name
             update_offer_data['images'] = update_offer_data.get('images', [])
-            update_offer_data['new_description_category_id'] = update_offer_data['description_category_id']
+            desc_category_id = update_offer_data.get('description_category_id', 0) or 0
+            if int(desc_category_id) <= 0:
+                parser_logger.warning(
+                    f'Skip offer sku={valid_offer.sku}: description_category_id is 0 or missing '
+                    f'(Ozon rejects TypeId=0)'
+                )
+                continue
+            update_offer_data['new_description_category_id'] = desc_category_id
 
             update_offer_data['height'] = ceil(valid_offer.self_height)
             update_offer_data['width'] = ceil(valid_offer.self_width)
@@ -317,13 +321,11 @@ class OzonApi(ApiGateway, IApiGateway):
             for complex_attrs in update_offer_data['complex_attributes']:
                     complex_attrs['id'] = complex_attrs.pop('id')
 
-            update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] if attr['id'] not in (
-                AttributeIdentifications.hashtag.value, AttributeIdentifications.description.value
-            )]
+            update_offer_data['attributes'] = [attr for attr in update_offer_data['attributes'] if attr['id'] not in (22336, 4191)]
             update_offer_data['attributes'].extend(
                 [
                     {
-                        "id": AttributeIdentifications.hashtag.value,
+                        "id": 22336,  # поисковые слова
                         "complex_id": 0,
                         "values": [
                             {
@@ -333,7 +335,7 @@ class OzonApi(ApiGateway, IApiGateway):
                         ]
                     },
                     {
-                        "id": AttributeIdentifications.description.value,
+                        "id": 4191,  # описание
                         "complex_id": 0,
                         "values": [
                             {
@@ -379,7 +381,7 @@ class OzonApi(ApiGateway, IApiGateway):
         response = await self.request('POST', url='https://api-seller.ozon.ru/v1/product/import/info', body=body, headers=self.auth_headers, include_response_logs=True)
 
         if not response.ok:
-            parser_logger.error(f'Cant check task({task_id}) status {await response.text()}')
+            parser_logger.error(f'Cant check task({task_id}) status {response.text}')
             return
 
         json_response = await self._get_resp_body_json(response)
@@ -576,10 +578,14 @@ class OzonApi(ApiGateway, IApiGateway):
             )
 
             data = await self._get_resp_body_json(response, body=body)
+            not_updated_count = 0
             for offer in data['items']:
                 offer_status = offer.get('statuses', {})
-                if offer_status.get('validation_status', 'fail') == 'fail' or offer_status.get('status_failed', '') != '':
-                    parser_logger.warning(f'Error in offer {offer["offer_id"]} data. Status: {offer_status}')
+                if offer_status.get('status_description') == 'Не обновлен':
+                    not_updated_count += 1
+                    parser_logger.debug(f'Offer {offer["offer_id"]} is not updated on Ozon. Status: {offer_status}')
+                elif offer_status.get('validation_status', '') == 'fail':
+                    parser_logger.warning(f'Offer {offer["offer_id"]} has validation fail. Status: {offer_status}')
                 try:
                     price_indexes = offer.get('price_indexes', None)
 
@@ -614,6 +620,11 @@ class OzonApi(ApiGateway, IApiGateway):
 
                 except Exception:
                     parser_logger.error(f'Error in get base info for offer with sku {offer["offer_id"]}', exc_info=True)
+            if not_updated_count:
+                parser_logger.info(
+                    f'Ozon {self.shop_name}: {not_updated_count} offers with status "Не обновлен" '
+                    f'(chunk {i // chunk_size + 1})'
+                )
         return result
 
     async def _get_offers_attributes(self, offer_data: list[OfferIdentifier]) -> dict[str, dict[str, Any]]:
@@ -651,10 +662,10 @@ class OzonApi(ApiGateway, IApiGateway):
                     unit_dimension_divider = 1
 
                 search_attributes = [i for i in offer['attributes'] if i['id'] == 22336]
-                search_words = ' #'.join(
-                    [' #'.join([words['value'] for words in item['values']]) for item in search_attributes])
+                search_words = '; '.join(
+                    ['; '.join([words['value'] for words in item['values']]) for item in search_attributes])
                 if len(search_words) > 255:
-                    search_words = search_words[:search_words[:256].rfind('#')]
+                    search_words = search_words[:search_words[:256].rfind(';')]
 
                 result[offer['offer_id']] = {
                     'self_height': offer['height'] / unit_dimension_divider if offer['height'] else offer['height'],
@@ -704,7 +715,7 @@ class OzonApi(ApiGateway, IApiGateway):
         response = await self.request('POST', url=url, headers=self.auth_headers, body=body)
 
         if not response.ok:
-            parser_logger.error(f'Cant get orders from {from_date}: {await response.text()}')
+            parser_logger.error(f'Cant get orders from {from_date}: {response.text}')
             raise HTTPException(status.HTTP_400_BAD_REQUEST,
                                 f'Не удалось получить заказы: {response.json().get("message", "unknown")}')
 
@@ -739,7 +750,7 @@ class OzonApi(ApiGateway, IApiGateway):
         wait=wait_random(0, 1),
         reraise=True
     )
-    @rate_limiter_gen(max_rate=1, period=60)
+    @rate_limiter_gen(secs=61)
     async def get_turnover(
             self,
             skus: list[str],
@@ -820,4 +831,4 @@ async def main():
             print(batch)
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    asyncio.run(main())j

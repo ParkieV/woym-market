@@ -12,8 +12,8 @@ from fastapi import HTTPException
 from starlette import status
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random
 
-from src.infra.formatters import html_to_md_linear
-from src.infra.policies.rate_limit import rate_limiter_gen, async_rate_limiter
+from src.infra.description_formatter import html_to_md_linear
+from src.infra.policies.rate_limit import rate_limiter_gen
 from src.infra.policies.timeout import DeadlineExceededError
 from logs import parser_logger
 from src.api.exceptions import InitializationError, RequestException, MarketplaceAPIException
@@ -132,7 +132,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             response = await self.request('POST', url=update_url, body=body, headers=self.auth_headers, include_response_logs=True)
 
             if not response.ok:
-                parser_logger.error(f'Cant update offers data: {await response.text()}')
+                parser_logger.error(f'Cant update offers data: {response.text}')
                 continue
 
         errors = await self._errors_in_update()
@@ -180,14 +180,14 @@ class WildberriesApi(ApiGateway, IApiGateway):
                     turnover_default, turnover_default
                 )
             )
-            if offers_prices.get(offer['sku']):
-                offer.update(offers_prices[offer['sku']])
-                offer['turnover_avg_balance'] = turnovers[0]
-                offer['turnover_curr_balance'] = turnovers[1]
 
-                result.append(
-                    APIOffer(**offer)
-                )
+            offer.update(offers_prices[offer['sku']])
+            offer['turnover_avg_balance'] = turnovers[0]
+            offer['turnover_curr_balance'] = turnovers[1]
+
+            result.append(
+                APIOffer(**offer)
+            )
 
         return result
 
@@ -224,7 +224,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         response = await self.request('GET', url=url, headers=self.auth_headers, params={'uploadID': task_id})
 
         if not response.ok:
-            parser_logger.error(f'Cant check price update result: {await response.text()}')
+            parser_logger.error(f'Cant check price update result: {response.text}')
 
         response_json = await self._get_resp_body_json(response)
 
@@ -312,9 +312,13 @@ class WildberriesApi(ApiGateway, IApiGateway):
             await asyncio.sleep(1)
 
             if not response.ok:
-                # ERROR: Здесь выкидывается ошибка 500
-                #  пример: parser_2025-04-17.log:24
-                parser_logger.error(f'Cant get offers base info: status {response.status}, {await response.text()}')
+                if response.status == 401:
+                    parser_logger.critical(
+                        f'Wildberries token EXPIRED for shop "{self.shop_name}". '
+                        f'Update token at https://seller.wildberries.ru/supplier-settings/access-to-api'
+                    )
+                else:
+                    parser_logger.error(f'Cant get offers base info: status {response.status}, {await response.text()}')
                 return result
 
             response_data = await self._get_resp_body_json(response)
@@ -334,7 +338,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             cursor['nmID'] = cursor_data['nmID']
             i += 1
 
-        print('Result length:', len(result))
+        parser_logger.debug(f'WB {self.shop_name} cards fetched: {len(result)}')
         return result
 
     async def _get_offers_base_info(self) -> list[dict]:
@@ -365,7 +369,6 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         return result
 
-    @async_rate_limiter(max_rate=10, period=6, interval=0.6)
     async def _get_offers_prices(self) -> dict[str, Any]:
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter'
 
@@ -377,14 +380,20 @@ class WildberriesApi(ApiGateway, IApiGateway):
             response = await self.request('GET', url=url, params={'limit': limit, 'offset': offset}, headers=self.auth_headers)
 
             if not response.ok:
-                parser_logger.error(f'Cant get price info: {await response.text()}')
+                if response.status == 401:
+                    parser_logger.critical(
+                        f'Wildberries token EXPIRED for shop "{self.shop_name}". '
+                        f'Update token at https://seller.wildberries.ru/supplier-settings/access-to-api'
+                    )
+                else:
+                    parser_logger.error(f'Cant get price info: {await response.text()}')
                 break
 
             response_data = await self._get_resp_body_json(response)
             data = response_data['data']['listGoods']
 
             if not data:
-                parser_logger.error(f'Cant get price info: {await response.text()}')
+                parser_logger.info(f'WB {self.shop_name}: no price data in response (offset={offset})')
                 break
 
             for item in data:
@@ -411,7 +420,6 @@ class WildberriesApi(ApiGateway, IApiGateway):
         return result
 
     @add_custom_warehouses
-    @async_rate_limiter(max_rate=6, period=60, interval=10)
     async def _get_warehouses(self) -> list[dict]:
         url = 'https://supplies-api.wildberries.ru/api/v1/warehouses'
         result = []
@@ -419,7 +427,13 @@ class WildberriesApi(ApiGateway, IApiGateway):
         response = await self.request('GET', url=url, headers=self.auth_headers)
 
         if not response.ok:
-            parser_logger.error(f'Cant get warehouses: {await response.text()}')
+            if response.status == 401:
+                parser_logger.critical(
+                    f'Wildberries token EXPIRED for shop "{self.shop_name}". '
+                    f'Update token at https://seller.wildberries.ru/supplier-settings/access-to-api'
+                )
+            else:
+                parser_logger.error(f'Cant get warehouses: {await response.text()}')
             return []
 
         response_data = await self._get_resp_body_json(response)
@@ -465,14 +479,19 @@ class WildberriesApi(ApiGateway, IApiGateway):
             ))
         return result
 
-    @async_rate_limiter(max_rate=1, period=60)
     async def _get_stocks(self) -> defaultdict[Any, list]:
         date_from = '2000-06-20'
         url = f'https://statistics-api.wildberries.ru/api/v1/supplier/stocks?dateFrom={date_from}'
 
         response = await self.request('GET', url=url, headers=self.auth_headers)
         if not response.ok:
-            parser_logger.error(f'Cant get stocks: {await response.text()}')
+            if response.status == 401:
+                parser_logger.critical(
+                    f'Wildberries token EXPIRED for shop "{self.shop_name}". '
+                    f'Update token at https://seller.wildberries.ru/supplier-settings/access-to-api'
+                )
+            else:
+                parser_logger.error(f'Cant get stocks: {await response.text()}')
             return defaultdict()
 
         response_json = await self._get_resp_body_json(response)
@@ -531,7 +550,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         wait=wait_random(0, 1),
         reraise=True
     )
-    @rate_limiter_gen(max_rate=3, period=60, interval=20)
+    @rate_limiter_gen(max_rate=3, secs=61)
     async def get_turnover(
             self,
             vendor_codes: list[int],
