@@ -13,7 +13,7 @@ from starlette import status
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random
 
 from src.infra.description_formatter import html_to_md_linear
-from src.infra.policies.rate_limit import rate_limiter_gen
+from src.infra.policies.rate_limit import async_rate_limiter
 from src.infra.policies.timeout import DeadlineExceededError
 from logs import parser_logger
 from src.api.exceptions import InitializationError, RequestException, MarketplaceAPIException
@@ -369,6 +369,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
         return result
 
+    @async_rate_limiter(max_rate=10, period=6, interval=0.6)
     async def _get_offers_prices(self) -> dict[str, Any]:
         url = 'https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter'
 
@@ -420,6 +421,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         return result
 
     @add_custom_warehouses
+    @async_rate_limiter(max_rate=6, period=60, interval=10)
     async def _get_warehouses(self) -> list[dict]:
         url = 'https://supplies-api.wildberries.ru/api/v1/warehouses'
         result = []
@@ -479,6 +481,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             ))
         return result
 
+    @async_rate_limiter(max_rate=1, period=60)
     async def _get_stocks(self) -> defaultdict[Any, list]:
         date_from = '2000-06-20'
         url = f'https://statistics-api.wildberries.ru/api/v1/supplier/stocks?dateFrom={date_from}'
@@ -550,7 +553,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         wait=wait_random(0, 1),
         reraise=True
     )
-    @rate_limiter_gen(max_rate=3, secs=61)
+    @rate_limiter_gen(max_rate=3, period=60, interval=20)
     async def get_turnover(
             self,
             vendor_codes: list[int],

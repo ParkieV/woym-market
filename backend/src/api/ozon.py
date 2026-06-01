@@ -750,7 +750,7 @@ class OzonApi(ApiGateway, IApiGateway):
         wait=wait_random(0, 1),
         reraise=True
     )
-    @rate_limiter_gen(secs=61)
+    @rate_limiter_gen(max_rate=1, period=60)
     async def get_turnover(
             self,
             skus: list[str],
