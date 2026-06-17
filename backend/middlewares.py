@@ -1,10 +1,12 @@
 import logging
+import time
 from typing import Any
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 from logs import backend_logger
+from metrics import HTTP_ERRORS_TOTAL, HTTP_REQUEST_DURATION, HTTP_REQUESTS_TOTAL
 
 
 
@@ -33,3 +35,30 @@ class EndpointLoggingMiddleware(BaseHTTPMiddleware):
 
         return response
 
+
+class PrometheusMetricsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        method = request.method
+        start = time.perf_counter()
+        status_code = 500
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            return response
+        except Exception as exc:
+            HTTP_ERRORS_TOTAL.labels(
+                path=self._route_path(request),
+                error_type=type(exc).__name__,
+            ).inc()
+            raise
+        finally:
+            path = self._route_path(request)
+            HTTP_REQUESTS_TOTAL.labels(method=method, path=path, status_code=status_code).inc()
+            HTTP_REQUEST_DURATION.labels(method=method, path=path).observe(
+                time.perf_counter() - start
+            )
+
+    @staticmethod
+    def _route_path(request: Request) -> str:
+        route = request.scope.get("route")
+        return route.path if route else request.url.path

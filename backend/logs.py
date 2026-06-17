@@ -60,3 +60,14 @@ logging.config.dictConfig(LOGGING_CONFIG)
 
 backend_logger = logging.getLogger('woym_market')
 parser_logger = logging.getLogger('parser')
+
+if config.loki_url:
+    import logging_loki
+
+    _loki_handler = logging_loki.LokiHandler(
+        url=f"{config.loki_url}/loki/api/v1/push",
+        tags={"app": "woym-market", "env": config.mode.lower()},
+        version="1",
+    )
+    backend_logger.addHandler(_loki_handler)
+    parser_logger.addHandler(_loki_handler)

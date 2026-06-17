@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 # import sentry_sdk
@@ -7,15 +8,19 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import make_asgi_app
 from starlette import status
 from starlette.responses import JSONResponse
 
 from logs import backend_logger
+from middlewares import PrometheusMetricsMiddleware
 from scheduls import update_data
 from src.routers import api_router, api_router_v2
 from src.database.db import db_create
 from src.params.config import config
 from src.shared.exceptions import InitializationError
+
+logger = logging.getLogger(__name__)
 
 
 # if config.use_sentry:
@@ -68,6 +73,7 @@ elif config.is_dev:
 else:
     raise InitializationError('Не получилось определить контур развертывания')
 
+app.add_middleware(PrometheusMetricsMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -76,6 +82,7 @@ app.add_middleware(
     allow_headers=['*']
 )
 
+app.mount("/metrics", make_asgi_app())
 app.include_router(api_router)
 app.include_router(api_router_v2)
 

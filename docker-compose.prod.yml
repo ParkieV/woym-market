@@ -12,6 +12,23 @@ services:
     expose:
       - 8000
 
+  node_exporter:
+    image: prom/node-exporter:v1.9.1
+    container_name: woym_market_node_exporter
+    restart: unless-stopped
+    pid: host
+    ports:
+      - "9100:9100"  # Prometheus node metrics scrape
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.rootfs=/rootfs"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+
   frontend:
     restart: unless-stopped
     env_file: front/.env.prod
