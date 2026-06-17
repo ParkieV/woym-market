@@ -26,8 +26,8 @@ services:
       - wb-mock
       - ozon-mock
     environment:
-      WB_API_BASE_URL: "http://localhost:8001"
-      OZON_API_BASE_URL: "http://localhost:8002"
+      WB_API_BASE_URL: http://wb-mock:8001
+      OZON_API_BASE_URL: http://ozon-mock:8002
     volumes:
       - ./logs:/backend/logs
     expose:
