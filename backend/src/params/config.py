@@ -15,7 +15,7 @@ class Config(BaseSettings):
     yandex_disk_work_dir: str
     use_sentry: bool
     sentry_sdk_dsn: str
-    loki_url: str
+    loki_url: str | None = None
     log_endpoints: bool
 
     @property

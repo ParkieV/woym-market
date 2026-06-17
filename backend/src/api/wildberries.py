@@ -1,10 +1,21 @@
 import asyncio
 import functools
 import inspect
+import os
+import re as _re
 from collections import defaultdict
 from datetime import datetime
 from math import ceil
 from typing import Any, AsyncGenerator, Callable, Awaitable, ParamSpec, TypeVar
+
+_WB_API_BASE_URL: str = os.getenv("WB_API_BASE_URL", "")
+_WB_HOSTS_RE = _re.compile(r"https://[a-z-]+\.wildberries\.ru")
+
+
+def _wb_url(url: str) -> str:
+    if not _WB_API_BASE_URL:
+        return url
+    return _WB_HOSTS_RE.sub(_WB_API_BASE_URL.rstrip("/"), url, count=1)
 
 from aiohttp import ClientSession
 from dateutil.relativedelta import relativedelta
@@ -65,7 +76,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             raise InitializationError(ApiTypes.WILDBERRIES, err.detail)
 
     async def validate_auth_data(self):
-        url = 'https://common-api.wildberries.ru/open-utils/tokens/introspect-v2'
+        url = _wb_url('https://common-api.wildberries.ru/open-utils/tokens/introspect-v2')
         headers = {'X-Introspect': self.token}
         response = await self.request('GET', url=url, headers=headers)
 
@@ -83,7 +94,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         items = await self._get_base_offer_data()
         items = {item['vendorCode']: item for item in items}
 
-        update_url = 'https://content-api.wildberries.ru/content/v2/cards/update'
+        update_url = _wb_url('https://content-api.wildberries.ru/content/v2/cards/update')
 
         def check_valid(x):
             return all((x.is_valid_name(), x.is_valid_description(), x.is_valid_vendor_code(), x.is_valid_sizes()))
@@ -220,7 +231,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             parser_logger.warning('Price task_id no gotten')
             return
 
-        url = 'https://discounts-prices-api.wildberries.ru/api/v2/history/tasks'
+        url = _wb_url('https://discounts-prices-api.wildberries.ru/api/v2/history/tasks')
         response = await self.request('GET', url=url, headers=self.auth_headers, params={'uploadID': task_id})
 
         if not response.ok:
@@ -237,7 +248,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             f'Task price upload ID({task_result_info.get("uploadID", "unknown")}) with status: {task_result_info.get("status", "unknown")} checked. \nAll goods: {task_result_info.get("overAllGoodsNumber", "unknown")}, without errors: {task_result_info.get("successGoodsNumber", "unknown")}')
 
     async def change_prices(self, data: list[APIPriceChangeData]) -> None:
-        url = 'https://discounts-prices-api.wildberries.ru/api/v2/upload/task'
+        url = _wb_url('https://discounts-prices-api.wildberries.ru/api/v2/upload/task')
         valid_price_data = [price_data for price_data in data if price_data.is_valid_target_price() and price_data.is_valid_vendor_code()]
         invalid_price_data = [price_data for price_data in data if not (price_data.is_valid_target_price() and price_data.is_valid_vendor_code())]
 
@@ -284,7 +295,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         parser_logger.info(f'{self.shop_name}(wildberries) prices updated: {len(valid_price_data)} of {len(data)}')
 
     async def _get_base_offer_data(self) -> list[dict]:
-        url = 'https://content-api.wildberries.ru/content/v2/get/cards/list?locale=ru'
+        url = _wb_url('https://content-api.wildberries.ru/content/v2/get/cards/list?locale=ru')
         limit = 100
         cursor = {
             "limit": limit
@@ -371,7 +382,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
 
     @async_rate_limiter(max_rate=10, period=6, interval=0.7)
     async def _get_offers_prices(self) -> dict[str, Any]:
-        url = 'https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter'
+        url = _wb_url('https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter')
 
         limit = 1000
         offset = 0
@@ -432,7 +443,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
     @add_custom_warehouses
     @async_rate_limiter(max_rate=6, period=60, interval=10)
     async def _get_warehouses(self) -> list[dict]:
-        url = 'https://supplies-api.wildberries.ru/api/v1/warehouses'
+        url = _wb_url('https://supplies-api.wildberries.ru/api/v1/warehouses')
         result = []
 
         response = await self.request('GET', url=url, headers=self.auth_headers)
@@ -459,13 +470,13 @@ class WildberriesApi(ApiGateway, IApiGateway):
         return result
 
     async def _errors_in_update(self) -> list[dict]:
-        url = 'https://content-api.wildberries.ru/content/v2/cards/error/list'
+        url = _wb_url('https://content-api.wildberries.ru/content/v2/cards/error/list')
         response = await self.request('GET', url=url, headers=self.auth_headers)
         json_response = await self._get_resp_body_json(response)
         return json_response.get('data', [])
 
     async def _get_stocks_on_warehouse(self, warehouse_id: int, data: dict[str, Any]) -> list[APIWarehouseOffer]:
-        url = f'https://marketplace-api.wildberries.ru/api/v3/stocks/{warehouse_id}'
+        url = _wb_url(f'https://marketplace-api.wildberries.ru/api/v3/stocks/{warehouse_id}')
         result = []
 
         body = {
@@ -493,7 +504,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
     @async_rate_limiter(max_rate=1, period=60)
     async def _get_stocks(self) -> defaultdict[Any, list]:
         date_from = '2000-06-20'
-        url = f'https://statistics-api.wildberries.ru/api/v1/supplier/stocks?dateFrom={date_from}'
+        url = _wb_url(f'https://statistics-api.wildberries.ru/api/v1/supplier/stocks?dateFrom={date_from}')
 
         response = await self.request('GET', url=url, headers=self.auth_headers)
         if not response.ok:
@@ -523,7 +534,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
         return result
 
     async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
-        url = 'https://statistics-api.wildberries.ru/api/v1/supplier/orders?dateFrom=2024-08-01'
+        url = _wb_url('https://statistics-api.wildberries.ru/api/v1/supplier/orders?dateFrom=2024-08-01')
         params = {
             'dateFrom': from_date.strftime('%Y-%m-%d'),
         }
@@ -593,7 +604,7 @@ class WildberriesApi(ApiGateway, IApiGateway):
             current_batch = vendor_codes[offset:offset + current_batch_size]
             offset += current_batch_size
 
-            url = 'https://seller-analytics-api.wildberries.ru/api/v2/stocks-report/products/groups'
+            url = _wb_url('https://seller-analytics-api.wildberries.ru/api/v2/stocks-report/products/groups')
             body = {
                 "nmIDs": current_batch,
                 "currentPeriod": {

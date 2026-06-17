@@ -65,7 +65,7 @@ if config.loki_url:
     import logging_loki
 
     _loki_handler = logging_loki.LokiHandler(
-        url=f"{config.loki_url}/loki/api/v1/push",
+        url=config.loki_url,
         tags={"app": "woym-market", "env": config.mode.lower()},
         version="1",
     )

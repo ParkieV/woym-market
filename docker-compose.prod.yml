@@ -1,4 +1,20 @@
 services:
+  wb-mock:
+    build:
+      context: mocks/wb-mock
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - 8001
+
+  ozon-mock:
+    build:
+      context: mocks/ozon-mock
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - 8002
+
   backend:
     restart: unless-stopped
     env_file: backend/.env.prod
@@ -7,6 +23,11 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - database
+      - wb-mock
+      - ozon-mock
+    environment:
+      WB_API_BASE_URL: "http://localhost:8001"
+      OZON_API_BASE_URL: "http://localhost:8002"
     volumes:
       - ./logs:/backend/logs
     expose:

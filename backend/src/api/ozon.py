@@ -1,9 +1,18 @@
 import asyncio
+import os
 from math import ceil
 from typing import Any, AsyncIterator
 from datetime import datetime
 from dataclasses import dataclass
 from collections.abc import Sequence, Mapping, AsyncGenerator
+
+_OZON_API_BASE_URL: str = os.getenv("OZON_API_BASE_URL", "")
+
+
+def _ozon_url(url: str) -> str:
+    if not _OZON_API_BASE_URL:
+        return url
+    return url.replace("https://api-seller.ozon.ru", _OZON_API_BASE_URL.rstrip("/"), 1)
 
 from aiohttp import ClientSession
 from starlette import status
@@ -43,7 +52,7 @@ class OzonApi(ApiGateway, IApiGateway):
         :param skus: Список СКУ товаров.
         :return: Информация о товарах;
         """
-        url = 'https://api-seller.ozon.ru/v4/product/info/attributes'
+        url = _ozon_url('https://api-seller.ozon.ru/v4/product/info/attributes')
         chunk_size = 1000
         for l in range(0, len(skus), chunk_size):
             body = {
@@ -83,7 +92,7 @@ class OzonApi(ApiGateway, IApiGateway):
         :param data: Список СКУ товаров.
         :return: Информация о цене товаров
         """
-        url = 'https://api-seller.ozon.ru/v5/product/info/prices'
+        url = _ozon_url('https://api-seller.ozon.ru/v5/product/info/prices')
         results = {}
         chunk_size = 1000
         for l in range(0, len(data), chunk_size):
@@ -124,7 +133,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 },
                 'limit': chunk_size
             }
-            response = await self.request('POST', url='https://api-seller.ozon.ru/v5/product/info/prices', headers=self.auth_headers,
+            response = await self.request('POST', url=_ozon_url('https://api-seller.ozon.ru/v5/product/info/prices'), headers=self.auth_headers,
                                          body=body)
 
             data = await self._get_resp_body_json(response, body=body)
@@ -157,7 +166,7 @@ class OzonApi(ApiGateway, IApiGateway):
             body = {
                 'skus': skus[i:i + chunk_size]
             }
-            response = await self.request('POST', url='https://api-seller.ozon.ru/v1/product/rating-by-sku',
+            response = await self.request('POST', url=_ozon_url('https://api-seller.ozon.ru/v1/product/rating-by-sku'),
                                          headers=self.auth_headers, body=body)
             await asyncio.sleep(1)
             data = await self._get_resp_body_json(response, body=body)
@@ -176,7 +185,7 @@ class OzonApi(ApiGateway, IApiGateway):
                 'offset': offset,
                 'warehouse_type': 'ALL'
             }
-            response = await self.request('POST', url='https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses',
+            response = await self.request('POST', url=_ozon_url('https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses'),
                                          headers=self.auth_headers, body=body)
 
             data = await self._get_resp_body_json(response, body)
@@ -214,7 +223,7 @@ class OzonApi(ApiGateway, IApiGateway):
 
     async def _get_clusters_info(self) -> list[APIWarehouse]:
         # url = 'https://seller-edu.ozon.ru/document-manager-api.kms/api/v2/seller-edu/document/public/by-path?path=%2Ffbo%2Fwarehouses%2Ftable-klastery'
-        url = 'https://api-seller.ozon.ru/v1/cluster/list'
+        url = _ozon_url('https://api-seller.ozon.ru/v1/cluster/list')
         response = await self.request(
             'POST', url=url, headers=self.auth_headers,
             body={
@@ -240,7 +249,7 @@ class OzonApi(ApiGateway, IApiGateway):
         Изменение информации о карточках в магазине
         :param data: Данные для обновления
         """
-        url = 'https://api-seller.ozon.ru/v3/product/import'
+        url = _ozon_url('https://api-seller.ozon.ru/v3/product/import')
 
         # Лямбда-выражение, определяющее корректность данных карточек
         def is_valid_offer_data(x):
@@ -378,7 +387,7 @@ class OzonApi(ApiGateway, IApiGateway):
         body = {
             'task_id': task_id,
         }
-        response = await self.request('POST', url='https://api-seller.ozon.ru/v1/product/import/info', body=body, headers=self.auth_headers, include_response_logs=True)
+        response = await self.request('POST', url=_ozon_url('https://api-seller.ozon.ru/v1/product/import/info'), body=body, headers=self.auth_headers, include_response_logs=True)
 
         if not response.ok:
             parser_logger.error(f'Cant check task({task_id}) status {response.text}')
@@ -516,7 +525,7 @@ class OzonApi(ApiGateway, IApiGateway):
 
             response = await self.request(
                 'POST',
-                url='https://api-seller.ozon.ru/v1/product/import/prices',
+                url=_ozon_url('https://api-seller.ozon.ru/v1/product/import/prices'),
                 headers=self.auth_headers,
                 body=body,
                 include_response_logs=True
@@ -545,7 +554,7 @@ class OzonApi(ApiGateway, IApiGateway):
 
             response = await self.request(
                 method='POST',
-                url='https://api-seller.ozon.ru/v3/product/list',
+                url=_ozon_url('https://api-seller.ozon.ru/v3/product/list'),
                 headers=self.auth_headers,
                 body=body
             )
@@ -572,7 +581,7 @@ class OzonApi(ApiGateway, IApiGateway):
             }
             response = await self.request(
                 'POST',
-                url='https://api-seller.ozon.ru/v3/product/info/list',
+                url=_ozon_url('https://api-seller.ozon.ru/v3/product/info/list'),
                 headers=self.auth_headers,
                 body=body
             )
@@ -643,7 +652,7 @@ class OzonApi(ApiGateway, IApiGateway):
 
             response = await self.request(
                 'POST',
-                url='https://api-seller.ozon.ru/v4/product/info/attributes',
+                url=_ozon_url('https://api-seller.ozon.ru/v4/product/info/attributes'),
                 headers=self.auth_headers,
                 body=body
             )
@@ -696,7 +705,7 @@ class OzonApi(ApiGateway, IApiGateway):
         return samples.get(value, None)
 
     async def get_orders(self, from_date: datetime, to_date: datetime) -> list[APIOrderData]:
-        url = 'https://api-seller.ozon.ru/v2/posting/fbo/list'
+        url = _ozon_url('https://api-seller.ozon.ru/v2/posting/fbo/list')
         body = {
             "dir": "ASC",
             "filter": {
@@ -779,7 +788,7 @@ class OzonApi(ApiGateway, IApiGateway):
             current_batch = skus[offset:offset + current_batch_size]
             offset += current_batch_size
 
-            url = 'https://api-seller.ozon.ru/v1/analytics/turnover/stocks'
+            url = _ozon_url('https://api-seller.ozon.ru/v1/analytics/turnover/stocks')
             body = {
                 "sku": current_batch,
             }
