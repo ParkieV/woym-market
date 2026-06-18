@@ -51,6 +51,7 @@ class APIOffer(BaseModel):
     # артикул - product id
     vendor_code: int | None = None
     search_words: str | None = None
+    hashtags: str | None = None #UsamG1t: additional field
     market: str = 'yandex'
 
     @field_validator('self_length', 'self_width', 'self_height', 'self_weight', mode='before')
@@ -121,7 +122,8 @@ class APIOfferChangeData(BaseModel):
     name: str | None = None
     description: str | None = None
     vendor_code: int | None = None
-    search_words: str | None = None
+    search_words: str | None = None # UsamG1t: Меняем на хештеги
+    hashtags: str | None = None # UsamG1t: Additional field for ozon
     barcodes: str | None = None
     self_weight: float | None = None
     self_length: float | None = Field(default=None, strict=False)
@@ -140,8 +142,11 @@ class APIOfferChangeData(BaseModel):
     def is_valid_description(self) -> bool:
         return isinstance(self.description, str)
 
-    def is_valid_search_words(self) -> bool:
+    def is_valid_search_words(self) -> bool: # UsamG1t: Меняем под хештеги
         return isinstance(self.search_words, str)
+
+    def is_valid_hashtags(self) -> bool: # UsamG1t: additional check for ozon
+        return isinstance(self.hashtags, str)
 
     def is_valid_sizes(self) -> (bool, dict):
         dimensions = namedtuple('dimensions', ('self_weight', 'self_width', 'self_height', 'self_length'))

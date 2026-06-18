@@ -100,7 +100,8 @@ async def duplicate_offers_to_catalog(session_factory) -> None:
                             sku=sku,
                             use_promotion_price=False,
                             supplier_available=False,
-                            search_words_changed=False) for sku in sku_set]
+                            search_words_changed=False,
+                            hashtags_changed=False) for sku in sku_set]
             await create_catalog_items(session, offers_dto)
         backend_logger.debug('Create catalog successfully!')
 

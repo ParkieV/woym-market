@@ -101,6 +101,7 @@ class OfferChange(BaseOffer):
     pricing_scheme_name: str = Field(title='Id схемы ценообразования')
     supplier_available: bool = Field(title='Наличие у поставщика')
     search_words: str | None = Field(title='Поисковые слова', max_length=255)
+    hashtags: str | None = Field(title='Хештеги', max_length=255)
     use_promotion_price: bool = Field(title='Акция')
     barcodes: str | None = Field(title='Штрихкоды')
 
@@ -164,6 +165,7 @@ class OfferOut(OfferChange):
     logistic_price: float | None = Field(title='Стоимость дополнительной логистики 1 литра')
     your_promotion_price: float | None = Field(title='Ваша цена по акции')
     search_words_changed: bool = Field(title='Поисковое слово изменено пользователем')
+    hashtags_changed: bool = Field(title='Хештег изменен пользователем')
 
     current_price: float | None = Field(title='Текущая цена')
     target_price: float | None = Field(title='Целевая цена')

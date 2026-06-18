@@ -43,6 +43,7 @@ from src.services.update_offer_from_api import UpdateOfferFromApi
 
 CONTROL_CHANGES = (
     'search_words',
+    'hashtags' # UsamG1t: add field
     'description',
     'name',
     'barcodes',
@@ -79,7 +80,7 @@ async def change_offers(offers_data: list[OfferChange],
         backend_logger.info(f'offer for change: {offers_data[0]}')
         changes = pd.DataFrame([offer.model_dump() for offer in offers_data])
 
-        await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=['name', 'description', 'barcodes', 'search_words'])
+        await db.update_offers(session, changes, mapping_columns=['name_of_shop', 'market'], detect_changes=['name', 'description', 'barcodes', 'search_words', 'hashtags']) # UsamG1t: Добавил хештеги для проверки
 
         to_sync_skus = [i.sku for i in offers_data if i.synchronization]
         sync_interactor = SynchronizationInteractor(
@@ -355,7 +356,8 @@ async def update_offers_attributes(offers: pd.DataFrame,
             sku=offer_data['sku'],
             market=offer_data['market'],
             name_of_shop=offer_data['name_of_shop'],
-            search_words=offer_data['search_words'],
+            search_words=offer_data['search_words'], 
+            hashtags=offer_data['hashtags'] if offer_data['market'] == 'ozon' else None, # UsamG1t: Additional field
             name=offer_data['name'],
             description=offer_data['description'],
             barcodes=offer_data['barcodes'],

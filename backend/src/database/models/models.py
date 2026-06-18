@@ -126,6 +126,8 @@ class Offer(Base):
     vendor_code = mapped_column(BigInteger, nullable=True, default=None)
     search_words = mapped_column(String, nullable=True, default=None)
     search_words_changed = mapped_column(Boolean, default=False, nullable=False)
+    hashtags = mapped_column(String, nullable=True, default=None)
+    hashtags_changed = mapped_column(Boolean, default=False, nullable=False)
     best_place_im_link = mapped_column(String, nullable=True, default=None)
 
     synchronization = mapped_column(Boolean, default=False, nullable=False)
@@ -322,7 +324,7 @@ class CatalogItem(Base):
     wholesale_dollar_cost_price = mapped_column(Float, nullable=True, default=None)
     supplier_available = mapped_column(Boolean, nullable=False, default=False)
     search_words = mapped_column(String, nullable=True, default=None, server_default=None)
-    search_words_changed = mapped_column(Boolean, nullable=False, default=False)
+    hashtags = mapped_column(String, nullable=True, default=None, server_default=None)
     name = mapped_column(String, nullable=True, default=None, server_default=None)
     barcodes = mapped_column(String, nullable=True, default=None, server_default=None)
     volume = mapped_column(Float, nullable=True, default=None)
@@ -339,6 +341,8 @@ class CatalogItem(Base):
     use_promotion_price_changed = mapped_column(Boolean, nullable=False, default=False)
     wholesale_dollar_cost_price_changed = mapped_column(Boolean, nullable=False, default=False)
     supplier_available_changed = mapped_column(Boolean, nullable=False, default=False)
+    search_words_changed = mapped_column(Boolean, nullable=False, default=False)
+    hashtags_changed = mapped_column(Boolean, nullable=False, default=False)
 
     reverse_sync_offer_id = mapped_column(Integer, ForeignKey('offers.id'), nullable=True, default=None)
 

@@ -45,11 +45,12 @@ class OfferRepository(IOfferRepository[PydanticModel]):
         ...
 
     async def offer_list(self,
+                         # UsamG1t: А хорошо ли писать session в документацию параметром, если это атрибут-дескриптор объекта?
                          chunk_size: int | None = None,
                          query_filter: IBaseFilter | None = None) -> AsyncGenerator[list[PydanticModel], None]:
         """
         Get offers from DB using chunks
-        :param session: SQLAlchemy asynchronous session
+        :param session: SQLAlchemy asynchronous session 
         :param chunk_size: size of chunk
         :param query_filter: filters for selecting offers
         :return: Batch of offers
@@ -181,8 +182,12 @@ async def update_offers(
             del offer['id']
 
         # Поисковые слова изменяются только у озона
-        if 'search_words' in offer and offer.get('market', None) != 'ozon':
+        if 'search_words' in offer and offer.get('market', None) != 'ozon': # UsamG1t: Будут ли меняться хештеги
             del offer['search_words']
+
+        # UsamG1t: Хештеги — только у озона
+        if 'hashtags' in offer and offer.get('market', None) != 'ozon': 
+            del offer['hashtags']
 
         if 'barcodes' in offer and offer.get('market', None) != 'yandex':
             del offer['barcodes']
@@ -421,6 +426,7 @@ async def reset_all_track_offers_markers(session: AsyncSession):
         self_height_changed=False,
         barcodes_changed=False,
         search_words_changed=False
+        hashtags_changed=False
     )
     await session.execute(stmp)
     await session.commit()

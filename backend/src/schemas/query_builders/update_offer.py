@@ -31,7 +31,7 @@ class CreateTempTable(BaseFilter):
 
         for row in self.data:
             for key, value in row.items():
-                if key == 'search_words':
+                if key == 'search_words' or key == 'hashtags': # UsamG1t: additional check
                     value = ''
                 if key == 'price_index':
                     query_create += f"{key} VARCHAR,\n\t"

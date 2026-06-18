@@ -86,16 +86,16 @@ class SyncUpdatingColumnFilter(BaseFilter[str]):
         updating_values = {col: f'catalog_items.{col}' for col in self.updating_columns}
 
         # Поисковые слова изменяются только для озона
-        update_search_words = {'search_words': """CASE
-            WHEN offers.market = 'ozon' THEN catalog_items.search_words
-            ELSE offers.search_words
-            END"""}
+        # update_search_words = {'search_words': """CASE # UsamG1t: Не используется, см L161
+        #     WHEN offers.market = 'ozon' THEN catalog_items.search_words
+        #     ELSE offers.search_words
+        #     END"""}
 
         # Штрихкоды изменяются только у яндекса
-        update_barcodes = {'barcodes': """CASE
-            WHEN offers.market = 'yandex' THEN catalog_items.barcodes
-            ELSE offers.barcodes
-            END"""}
+        # update_barcodes = {'barcodes': """CASE # UsamG1t: Не используется, см L162
+        #     WHEN offers.market = 'yandex' THEN catalog_items.barcodes
+        #     ELSE offers.barcodes
+        #     END"""}
 
         # Формируем словарь значений для проверки, что поле было изменено
         tracking_columns = {getattr(Offer, f'{column}_changed').name if getattr(Offer, f'{column}_changed', None) else None for column in self.updating_columns}
@@ -126,6 +126,17 @@ class SyncUpdatingColumnFilter(BaseFilter[str]):
                     ELSE offers.search_words_changed
                 END"""
         }
+
+        detect_hashtags_changes_for_ozon = { # UsamG1t: Добавил проверку на изменение поля
+            'hashtags_changed': """CASE
+                    WHEN offers.market = 'ozon' THEN (offers.hashtags_changed OR CONCAT(offers.hasgtags, '') != CONCAT(
+                        COALESCE(catalog_items.hashtags, offers.hashtags ), '')
+                    )
+                    ELSE offers.hashtags_changed
+                END"""
+        }
+
+        
 
         # Поисковые слова изменяемые только для озона, поэтому тречим изменения только у него
         # detect_search_words_changes_for_ozon = {
@@ -163,6 +174,7 @@ class SyncUpdatingColumnFilter(BaseFilter[str]):
         updating_values.update(detect_barcodes_changes_for_yandex)
         updating_values.update(detect_changes_values)
         updating_values.update(detect_search_words_changes_for_ozon)
+        updating_values.update(detect_hashtags_changes_for_ozon)
 
         for k, v in updating_values.items():
             query += f"{k} = {v},\n\t"
